@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acol Bidding Tutor</title>
+<style>
+  :root{
+    --bg:#0f1720; --panel:#182531; --panel2:#1f2f3d; --border:#2c3e50;
+    --text:#e7edf3; --muted:#93a4b5; --accent:#4fb3ff; --good:#3ecf8e; --bad:#ff6b6b;
+    --red:#ff5c5c; --black:#e7edf3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(180deg,#0b1319,#0f1720); color:var(--text); min-height:100vh;
+  }
+  #app{max-width:760px; margin:0 auto; padding:16px 14px 60px;}
+  h1{font-size:1.4rem; margin:6px 0 2px;}
+  .subtitle{color:var(--muted); font-size:0.9rem; margin-bottom:18px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:12px;}
+  .module-card{cursor:pointer; transition:border-color .15s, transform .1s;}
+  .module-card:hover{border-color:var(--accent);}
+  .module-card:active{transform:scale(0.99);}
+  .module-top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .module-name{font-weight:600; font-size:1.02rem;}
+  .module-desc{color:var(--muted); font-size:0.85rem; margin-top:4px; line-height:1.35;}
+  .badge{font-size:0.78rem; padding:4px 9px; border-radius:20px; white-space:nowrap; border:1px solid var(--border); background:var(--panel2); color:var(--muted);}
+  .badge.good{color:var(--good); border-color:#2a5f4a;}
+  .badge.mid{color:#e8c96a; border-color:#5a4f2a;}
+  .badge.bad{color:var(--bad); border-color:#5a2a2a;}
+  button{font-family:inherit; cursor:pointer;}
+  .btn{background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:9px 14px; font-size:0.9rem;}
+  .btn:hover{border-color:var(--accent);}
+  .btn-primary{background:var(--accent); color:#04202f; border:none; font-weight:600;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
+  .top-bar{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .link{color:var(--accent); background:none; border:none; padding:0; font-size:0.85rem; text-decoration:underline;}
+  table.auction{width:100%; border-collapse:collapse; margin-top:8px;}
+  table.auction th, table.auction td{border:1px solid var(--border); text-align:center; padding:7px 4px; font-size:0.88rem;}
+  table.auction th{background:var(--panel2); color:var(--muted); font-weight:600;}
+  table.auction td.you{color:var(--accent);}
+  table.auction td.placeholder{color:var(--accent); font-weight:700;}
+  .dealer-tag{font-size:0.7rem; color:#e8c96a;}
+  .hand-suits{display:flex; flex-direction:column; gap:6px; margin:10px 0;}
+  .suit-row{display:flex; align-items:center; gap:10px; font-size:1.15rem; background:var(--panel2); border-radius:8px; padding:6px 10px;}
+  .suit-sym{width:22px; text-align:center; font-size:1.3rem;}
+  .suit-sym.red{color:var(--red);}
+  .suit-sym.black{color:var(--black);}
+  .suit-cards{letter-spacing:2px; font-variant-numeric:tabular-nums;}
+  .hcp-line{color:var(--muted); font-size:0.9rem; margin-top:6px;}
+  .hcp-hidden{font-style:italic;}
+  .bid-picker{margin-top:14px;}
+  .special-row{display:flex; gap:8px; margin-bottom:10px;}
+  .bid-grid{display:grid; grid-template-columns:36px repeat(5,1fr); gap:5px; align-items:center;}
+  .bid-grid .lvl{color:var(--muted); font-size:0.8rem; text-align:center;}
+  .bid-btn{padding:8px 2px; border-radius:6px; border:1px solid var(--border); background:var(--panel2); color:var(--text); font-size:0.85rem;}
+  .bid-btn:disabled{opacity:0.25; cursor:not-allowed;}
+  .bid-btn:not(:disabled):hover{border-color:var(--accent);}
+  .col-head{text-align:center; font-size:0.75rem; color:var(--muted);}
+  .col-head.red{color:var(--red);}
+  .bid-btn[data-strain="D"], .bid-btn[data-strain="H"]{color:var(--red);}
+  .bid-btn[data-strain="C"], .bid-btn[data-strain="S"]{color:var(--black);}
+  .result-banner{padding:12px 14px; border-radius:10px; font-weight:700; font-size:1.05rem; margin-bottom:10px;}
+  .result-banner.correct{background:#123625; color:var(--good); border:1px solid #2a5f4a;}
+  .result-banner.incorrect{background:#3a1e1e; color:var(--bad); border:1px solid #5a2a2a;}
+  .reveal-line{margin:8px 0; font-size:0.92rem;}
+  .theory{background:var(--panel2); border-left:3px solid var(--accent); padding:10px 12px; border-radius:6px; font-size:0.88rem; color:var(--muted); margin-top:10px; line-height:1.45;}
+  .mnemonic{background:#2a2410; border:1px solid #5a4f2a; color:#e8c96a; padding:8px 12px; border-radius:6px; font-size:0.88rem; margin-top:10px; font-weight:600;}
+  .small-muted{color:var(--muted); font-size:0.8rem;}
+  details{margin-top:16px; color:var(--muted); font-size:0.85rem;}
+  summary{cursor:pointer;}
+  .you-cell-wrap{margin-top:2px;}
+
+  @media (max-width: 420px){
+    #app{padding:10px 8px 50px;}
+    h1{font-size:1.2rem;}
+    .card{padding:11px 10px;}
+    .bid-grid{grid-template-columns:26px repeat(5,1fr); gap:4px;}
+    .bid-btn{padding:9px 1px; font-size:0.78rem;}
+    .lvl{font-size:0.75rem;}
+    table.auction th, table.auction td{padding:6px 2px; font-size:0.8rem;}
+    .suit-row{font-size:1rem; padding:5px 8px;}
+    .suit-cards{letter-spacing:1px;}
+    .module-name{font-size:0.95rem;}
+    .badge{font-size:0.72rem; padding:3px 7px;}
+  }
+  @media (max-width: 340px){
+    .bid-btn{font-size:0.7rem; padding:8px 0;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- Core bridge utilities ---------------- */
+const SUITS = ['S','H','D','C']; // display order top-down
+const ORDER = ['C','D','H','S']; // rank order low->high (for bidding)
+const suitSymbol = {S:'♠',H:'♥',D:'♦',C:'♣'};
+const suitColor = {S:'black',H:'red',D:'red',C:'black'};
+const suitFullName = {C:'clubs',D:'diamonds',H:'hearts',S:'spades'};
+
+function rankLabel(v){ return v===14?'A':v===13?'K':v===12?'Q':v===11?'J':String(v); }
+function strainIndex(s){ return s==='N' ? 4 : ORDER.indexOf(s); }
+function bidRank(call){ return call.level*5 + strainIndex(call.strain); }
+function isMajorSuit(s){ return s==='H'||s==='S'; }
+
+function createDeck(){
+  const deck=[];
+  for(const s of ORDER){ for(let r=2;r<=14;r++){ deck.push({suit:s, rank:r}); } }
+  return deck;
+}
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+function dealHands(){
+  const deck = shuffle(createDeck());
+  const hands = { N:{C:[],D:[],H:[],S:[]}, E:{C:[],D:[],H:[],S:[]}, S:{C:[],D:[],H:[],S:[]}, W:{C:[],D:[],H:[],S:[]} };
+  const seats = ['N','E','S','W'];
+  for(let i=0;i<52;i++){
+    const seat = seats[Math.floor(i/13)];
+    hands[seat][deck[i].suit].push(deck[i].rank);
+  }
+  for(const seat of seats){ for(const s of ORDER){ hands[seat][s].sort((a,b)=>b-a); } }
+  return hands;
+}
+function calcHCP(hand){
+  let hcp=0;
+  for(const s of ORDER){ for(const r of hand[s]){ if(r===14) hcp+=4; else if(r===13) hcp+=3; else if(r===12) hcp+=2; else if(r===11) hcp+=1; } }
+  return hcp;
+}
+function lengths(hand){ return {C:hand.C.length, D:hand.D.length, H:hand.H.length, S:hand.S.length}; }
+function isBalancedShape(len){
+  const sorted = Object.values(len).sort((a,b)=>b-a).join('');
+  return sorted==='4333' || sorted==='4432' || sorted==='5332';
+}
+function shapeString(len){ return Object.values(len).sort((a,b)=>b-a).join('-'); }
+function countStopper(cards){
+  if(cards.includes(14)) return true;
+  if(cards.includes(13) && cards.length>=2) return true;
+  if(cards.includes(12) && cards.length>=3) return true;
+  if(cards.length>=4) return true;
+  return false;
+}
+function minLegalLevelForStrain(strain, lastRank){
+  const sIdx = strainIndex(strain);
+  for(let level=1; level<=7; level++){
+    if(level*5+sIdx > lastRank) return level;
+  }
+  return 7;
+}
+function computeCallLegality(auction){
+  // Our side = North/South, opponents = East/West. Returns which special calls are legal now (South to call).
+  let lastNonPass=null;
+  for(let i=auction.length-1;i>=0;i--){ if(auction[i].call!=='P'){ lastNonPass=auction[i]; break; } }
+  if(!lastNonPass) return {doubleLegal:false, redoubleLegal:false};
+  const isOpponent = s => s==='E' || s==='W';
+  if(lastNonPass.call==='X'){
+    return {doubleLegal:false, redoubleLegal: isOpponent(lastNonPass.seat)};
+  }
+  if(lastNonPass.call==='XX'){
+    return {doubleLegal:false, redoubleLegal:false};
+  }
+  return {doubleLegal: isOpponent(lastNonPass.seat), redoubleLegal:false};
+}
+
+function formatCall(call){
+  if(call==='P') return 'Pass';
+  if(call==='X') return 'Double';
+  if(call==='XX') return 'Redouble';
+  const strainDisp = call.strain==='N' ? 'NT' : suitSymbol[call.strain];
+  return `${call.level}${strainDisp}`;
+}
+function formatCallHTML(call){
+  if(call==='P') return 'Pass';
+  if(call==='X') return 'Double';
+  if(call==='XX') return 'Redouble';
+  const strainDisp = call.strain==='N' ? 'NT' : suitSymbol[call.strain];
+  if(call.strain==='N') return `${call.level}${strainDisp}`;
+  const cls = (call.strain==='D'||call.strain==='H') ? 'red' : 'black';
+  return `${call.level}<span class="${cls}">${strainDisp}</span>`;
+}
+function callsEqual(a,b){
+  if(a==='P'||a==='X'||a==='XX'||b==='P'||b==='X'||b==='XX') return a===b;
+  return a.level===b.level && a.strain===b.strain;
+}
+
+/* ---------------- Acol bidding engine ---------------- */
+
+function chooseSuitToOpen(len){
+  return chooseSuitToOpenDetailed(len).suit;
+}
+
+function chooseSuitToOpenDetailed(len){
+  const maxLen = Math.max(len.C,len.D,len.H,len.S);
+  const maxSuits = ORDER.filter(s=>len[s]===maxLen);
+  if(maxSuits.length===1){
+    return {suit:maxSuits[0], note:null};
+  }
+  if(maxLen>=5){
+    const suit = maxSuits.slice().sort((a,b)=>ORDER.indexOf(b)-ORDER.indexOf(a))[0];
+    const names = maxSuits.map(s=>suitFullName[s]).join(' and ');
+    return {suit, note:`Two ${maxLen}-card suits tied for longest (${names}) — with two suits of 5+ cards, Acol bids the higher-ranking one first, so 1${suit}. Mnemonic: fours go low, fives go high.`};
+  }
+  if(maxSuits.length===2){
+    const sorted = maxSuits.slice().sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));
+    const a=sorted[0], b=sorted[1];
+    const isMaj = s=> s==='H'||s==='S';
+    if(a==='C'&&b==='D'){
+      return {suit:'D', note:`4-4 in the minors (clubs and diamonds) — Acol opens the cheaper one, 1♦, keeping the auction flexible. Mnemonic: fours go low, fives go high.`};
+    }
+    if(a==='H'&&b==='S'){
+      return {suit:'H', note:`4-4 in the majors (hearts and spades) — bid the lower-ranking one, 1♥, and show spades next if needed. Mnemonic: fours go low, fives go high.`};
+    }
+    if(isMaj(a)&&!isMaj(b)){
+      return {suit:a, note:`4-4 across a major and a minor (${suitFullName[a]} and ${suitFullName[b]}), and they don't 'touch' in rank — with non-touching suits Acol prefers the major, so 1${a}.`};
+    }
+    if(isMaj(b)&&!isMaj(a)){
+      return {suit:b, note:`4-4 across a major and a minor (${suitFullName[a]} and ${suitFullName[b]}), and they don't 'touch' in rank — with non-touching suits Acol prefers the major, so 1${b}.`};
+    }
+    return {suit:b, note:`Two 4-card suits (${suitFullName[a]} and ${suitFullName[b]}) that don't 'touch' in rank — bid the higher-ranking one, 1${b}.`};
+  }
+  if(maxSuits.length===3){
+    const singleton = ORDER.find(s=>len[s]===1);
+    if(singleton){
+      const suit = singleton==='C' ? 'D' : ORDER[ORDER.indexOf(singleton)-1];
+      const note = singleton==='C'
+        ? `4-4-4-1 shape with a singleton club — clubs has nothing ranking below it, so Acol opens the cheapest of the three 4-card suits instead, 1♦.`
+        : `4-4-4-1 shape with a singleton ${suitFullName[singleton]} — Acol opens the suit ranking just below the singleton, so 1${suit}.`;
+      return {suit, note};
+    }
+  }
+  return {suit:maxSuits[0], note:null};
+}
+
+function evaluateOpening(hand){
+  const hcp = calcHCP(hand);
+  const len = lengths(hand);
+  const balanced = isBalancedShape(len);
+  if(hcp>=23){
+    return {call:{level:2,strain:'C'}, theoryKey:'strong2C',
+      reason:`With ${hcp} HCP (23+), you're too strong for a normal one-level opening — open the strong, artificial 2♣, forcing to game.`};
+  }
+  if(balanced && hcp>=20 && hcp<=22){
+    return {call:{level:2,strain:'N'}, theoryKey:'twoNT',
+      reason:`${hcp} HCP, balanced shape (${shapeString(len)}) — this is exactly the 2NT opening range (20-22 balanced).`};
+  }
+  if(balanced && hcp>=12 && hcp<=14){
+    return {call:{level:1,strain:'N'}, theoryKey:'oneNT',
+      reason:`${hcp} HCP, balanced shape (${shapeString(len)}) — a textbook 1NT opening (12-14 balanced).`};
+  }
+  if(balanced && hcp>=15 && hcp<=19){
+    const {suit, note} = chooseSuitToOpenDetailed(len);
+    return {call:{level:1,strain:suit}, theoryKey:'strongBalancedSuit',
+      reason:`${hcp} HCP balanced is too strong for 1NT (12-14) and not in the 2NT range — open your longest suit (1${suit}) and plan to show your extra strength with a jump no-trump rebid.${note?' '+note:''}`};
+  }
+  for(const s of ['S','H','D']){
+    if(len[s]===6 && hcp>=6 && hcp<=10){
+      return {call:{level:2,strain:s}, theoryKey:'weakTwo',
+        reason:`${hcp} HCP with a 6-card ${suitFullName[s]} suit — a Weak Two (roughly 6-10 HCP with a good 6-card suit), pre-emptive and descriptive.`};
+    }
+  }
+  for(const s of ['S','H','D','C']){
+    if(len[s]>=7 && hcp<=10){
+      const lvl = len[s]===7?3:4;
+      return {call:{level:lvl,strain:s}, theoryKey:'preempt',
+        reason:`${hcp} HCP with a ${len[s]}-card ${suitFullName[s]} suit — a pre-emptive opening at the ${lvl}-level, using up the opponents' bidding space while you're not strong enough for a normal opening.`};
+    }
+  }
+  if(hcp>=12){
+    const {suit, note} = chooseSuitToOpenDetailed(len);
+    return {call:{level:1,strain:suit}, theoryKey:'oneSuit',
+      reason:`${hcp} HCP, unbalanced (${shapeString(len)}) — open your longest suit, 1${suit}.${note?' '+note:''}`};
+  }
+  return {call:'P', theoryKey:'passOpen',
+    reason:`Only ${hcp} HCP — not enough to open in Acol (you generally need about 12+ points, or a long suit for a pre-empt), so Pass.`};
+}
+
+function respondToOneNT(hand){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  const majors = ['H','S'].filter(s=>len[s]>=4);
+  const fiveMajors = ['H','S'].filter(s=>len[s]>=5).sort((a,b)=>len[b]-len[a]);
+  if(fiveMajors.length>0 && hcp<=18){
+    const target = fiveMajors[0];
+    const transferSuit = target==='H' ? 'D' : 'H';
+    return {call:{level:2,strain:transferSuit}, theoryKey:'jacobyTransfer',
+      reason:`${hcp} HCP with a 5-card ${suitFullName[target]} suit opposite 1NT — transfer with 2${transferSuit}. This asks opener to bid 2${target}; you'll then pass with a weak hand, or bid on to invite or force to game depending on your point count.`};
+  }
+  if(hcp<=10){
+    return {call:'P', theoryKey:'ntPass',
+      reason:`${hcp} HCP, no 5-card major — not enough to invite opposite a 12-14 1NT, so Pass.`};
+  }
+  if(hcp<=12){
+    if(majors.length>0){
+      return {call:{level:2,strain:'C'}, theoryKey:'stayman',
+        reason:`${hcp} HCP with a 4-card major — bid 2♣ Stayman, asking opener for a 4-card major, to look for a fit before settling in no-trumps.`};
+    }
+    return {call:{level:2,strain:'N'}, theoryKey:'ntInvite',
+      reason:`${hcp} HCP, balanced, no 4-card major — invite game with 2NT.`};
+  }
+  if(hcp<=18){
+    if(majors.length>0){
+      return {call:{level:2,strain:'C'}, theoryKey:'staymanGame',
+        reason:`${hcp} HCP with a 4-card major and game-going values — bid 2♣ Stayman first to look for a 4-4 major fit before settling for 3NT.`};
+    }
+    return {call:{level:3,strain:'N'}, theoryKey:'ntGame',
+      reason:`${hcp} HCP, balanced, no 4-card major — bid game directly, 3NT.`};
+  }
+  if(hcp<=20){
+    return {call:{level:4,strain:'N'}, theoryKey:'quantitative',
+      reason:`${hcp} HCP — a quantitative raise to 4NT, inviting opener to bid on to 6NT with a maximum (14), or pass with a minimum (12).`};
+  }
+  return {call:{level:6,strain:'N'}, theoryKey:'ntSlam',
+    reason:`${hcp} HCP — combined with opener's 12-14 you're guaranteed at least 33-34 points, enough to bid the slam directly: 6NT.`};
+}
+
+function respondToSuitOpen(hand, openSuit){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  const support = len[openSuit];
+  const isMaj = isMajorSuit(openSuit);
+  const openIdx = ORDER.indexOf(openSuit);
+  const higherSuits = ORDER.filter((s,i)=> i>openIdx && len[s]>=4);
+  const anyNewSuit = ORDER.filter(s=> s!==openSuit && len[s]>=4).sort((a,b)=>len[b]-len[a]);
+
+  if(hcp<6){
+    return {call:'P', theoryKey:'suitPass', reason:`${hcp} HCP — not enough to respond (you need about 6+ points), so Pass.`};
+  }
+  if(hcp<=9){
+    if(support>=3 && isMaj){
+      return {call:{level:2,strain:openSuit}, theoryKey:'simpleRaise',
+        reason:`${hcp} HCP with ${support}-card support for opener's ${suitFullName[openSuit]} — a simple raise to 2${openSuit} (6-9 points, 3+ card support).`};
+    }
+    if(higherSuits.length>0){
+      const s = higherSuits[0];
+      return {call:{level:1,strain:s}, theoryKey:'newSuit1level',
+        reason:`${hcp} HCP with a 4-card ${suitFullName[s]} suit you can show at the one-level — bid 1${s} rather than raise or bid no-trumps; it keeps the bidding low and describes your hand accurately.`};
+    }
+    if(support>=3 && !isMaj){
+      return {call:{level:2,strain:openSuit}, theoryKey:'simpleRaise',
+        reason:`${hcp} HCP with ${support}-card support — a simple raise to 2${openSuit}.`};
+    }
+    return {call:{level:1,strain:'N'}, theoryKey:'oneNTResp',
+      reason:`${hcp} HCP, no fit and no 4-card suit biddable at the one-level — bid 1NT (6-9 points).`};
+  }
+  if(hcp<=12){
+    if(support>=4 && isMaj){
+      return {call:{level:3,strain:openSuit}, theoryKey:'jumpRaise',
+        reason:`${hcp} HCP with ${support}-card support — a jump raise to 3${openSuit}, invitational, showing 10-12 points and 4+ trumps.`};
+    }
+    if(anyNewSuit.length>0){
+      const s = anyNewSuit[0];
+      const level = ORDER.indexOf(s)>openIdx ? 1 : 2;
+      return {call:{level,strain:s}, theoryKey:'newSuit2level',
+        reason:`${hcp} HCP with a good 4+ card ${suitFullName[s]} suit — a change of suit is forcing for one round in Acol, so bid it to keep describing your hand.`};
+    }
+    return {call:{level:2,strain:'N'}, theoryKey:'twoNTResp',
+      reason:`${hcp} HCP, balanced, no fit — invite game with 2NT (10-12 points).`};
+  }
+  // 13+
+  if(support>=4 && isMaj){
+    return {call:{level:4,strain:openSuit}, theoryKey:'gameRaise',
+      reason:`${hcp} HCP with ${support}-card support — enough for game opposite an opening bid; bid straight to 4${openSuit}.`};
+  }
+  if(anyNewSuit.length>0 && hcp<=17){
+    const s = anyNewSuit[0];
+    const level = ORDER.indexOf(s)>openIdx ? 1 : 2;
+    return {call:{level,strain:s}, theoryKey:'newSuitGF',
+      reason:`${hcp} HCP with a good suit of your own — bid it (forcing), planning to bid on towards game.`};
+  }
+  return {call:{level:3,strain:'N'}, theoryKey:'threeNTResp',
+    reason:`${hcp} HCP, balanced, no major fit found — enough for game, bid 3NT.`};
+}
+
+function evaluateOvercall(hand, openSuit){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  const balanced = isBalancedShape(len);
+  if(balanced && hcp>=15 && hcp<=18 && countStopper(hand[openSuit])){
+    return {call:{level:1,strain:'N'}, theoryKey:'ntOvercall',
+      reason:`${hcp} HCP, balanced, with ${openSuit} stopped — a 1NT overcall shows 15-18 balanced with the opponent's suit under control.`};
+  }
+  const openIdx = ORDER.indexOf(openSuit);
+  const candidates = ORDER.filter(s=> s!==openSuit && len[s]>=5).sort((a,b)=>len[b]-len[a]);
+  if(candidates.length>0 && hcp>=8 && hcp<=16){
+    const s = candidates[0];
+    const level = ORDER.indexOf(s)>openIdx ? 1 : 2;
+    return {call:{level,strain:s}, theoryKey:'simpleOvercall',
+      reason:`${hcp} HCP with a decent 5+ card ${suitFullName[s]} suit — a simple overcall, ${level}${s}, showing a good suit and about 8-16 points.`};
+  }
+  return {call:'P', theoryKey:'overcallPass',
+    reason:`${hcp} HCP with no suitable 5-card suit or balanced no-trump shape to act on — Pass.`};
+}
+
+function evaluateTakeoutDouble(hand, openSuit){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  const shortage = len[openSuit]<=1;
+  const others = ORDER.filter(s=>s!==openSuit);
+  const supportCount = others.filter(s=>len[s]>=3).length;
+  if(hcp>=12 && shortage && supportCount>=3){
+    return {call:'X', theoryKey:'takeoutDouble',
+      reason:`${hcp} HCP with shortage in ${suitFullName[openSuit]} (${len[openSuit]} card${len[openSuit]===1?'':'s'}) and support (3+) for the other three suits — a classic takeout double, asking partner to bid their best suit.`};
+  }
+  return null;
+}
+
+function evaluateDirectSeatAction(hand, openSuit){
+  const dbl = evaluateTakeoutDouble(hand, openSuit);
+  if(dbl) return dbl;
+  return evaluateOvercall(hand, openSuit);
+}
+
+function evaluateBalancingAction(hand, openSuit){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  const shortage = len[openSuit]<=1;
+  const others = ORDER.filter(s=>s!==openSuit);
+  const supportCount = others.filter(s=>len[s]>=3).length;
+  if(hcp>=9 && shortage && supportCount>=3){
+    return {call:'X', theoryKey:'balancingDouble',
+      reason:`${hcp} HCP in the balancing seat — after two passes, partner is marked with some values, so you can double for take-out with a bit less than the 12+ you'd need directly (shortage in ${suitFullName[openSuit]}, support for the other suits).`};
+  }
+  const balanced = isBalancedShape(len);
+  if(balanced && hcp>=10 && hcp<=14 && countStopper(hand[openSuit])){
+    return {call:{level:1,strain:'N'}, theoryKey:'balancingNT',
+      reason:`${hcp} HCP balanced with ${openSuit} stopped, in the balancing seat — a lighter 1NT here (about 10-14, versus 15-18 direct) since two passes suggest the opponents don't have much between them.`};
+  }
+  const openIdx = ORDER.indexOf(openSuit);
+  const candidates = ORDER.filter(s=>s!==openSuit && len[s]>=5).sort((a,b)=>len[b]-len[a]);
+  if(candidates.length>0 && hcp>=6){
+    const s = candidates[0];
+    const level = ORDER.indexOf(s)>openIdx ? 1 : 2;
+    return {call:{level,strain:s}, theoryKey:'balancingOvercall',
+      reason:`${hcp} HCP with a 5-card ${suitFullName[s]} suit in the balancing seat — a lighter overcall is fine here, since both opponents have already shown weak hands (two passes).`};
+  }
+  return {call:'P', theoryKey:'balancingPass',
+    reason:`${hcp} HCP, no suitable shape to reopen with — Pass is a legitimate balancing-seat choice too (not every balancing seat requires action).`};
+}
+
+function respondAfterOvercall(hand, openSuit, overcallCall){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  const support = len[openSuit];
+  const isMaj = isMajorSuit(openSuit);
+  const overStrain = overcallCall.strain;
+  const overRank = bidRank(overcallCall);
+
+  if(hcp<6){
+    return {call:'P', theoryKey:'compPassWeak', reason:`${hcp} HCP — not enough to compete over the overcall, Pass.`};
+  }
+  if(support>=4){
+    let level;
+    if(hcp<=9) level=3;
+    else if(hcp<=12) level=3;
+    else level=4;
+    if(!isMaj && level>=4) level=4;
+    const minLevel = minLegalLevelForStrain(openSuit, overRank);
+    level = Math.max(level, minLevel);
+    return {call:{level,strain:openSuit}, theoryKey:'competitiveRaise',
+      reason:`${hcp} HCP with ${support}-card support for partner's ${suitFullName[openSuit]} — raise (to ${level}${openSuit} here); with 4+ trumps it pays to raise higher than you would uncontested, to compete for the contract and make life hard for the opponents.`};
+  }
+  if(overStrain!=='N'){
+    const unbidSuits = ORDER.filter(s=> s!==openSuit && s!==overStrain);
+    const has5PlusUnbid = unbidSuits.some(s=> len[s]>=5);
+    const has4PlusUnbid = unbidSuits.some(s=> len[s]>=4);
+    if(!has5PlusUnbid && has4PlusUnbid && hcp>=6 && hcp<=12){
+      const shownSuits = unbidSuits.filter(s=>len[s]>=4).map(s=>suitFullName[s]);
+      return {call:'X', theoryKey:'negativeDouble',
+        reason:`${hcp} HCP with no 4+ card support for partner and no 5-card suit of your own, but 4+ cards in ${shownSuits.join(' and ')} (the suit${shownSuits.length>1?'s':''} nobody has bid yet) — a negative double. It's take-out, asking partner to bid one of the unbid suits rather than showing penalty interest in ${overStrain}.`};
+    }
+  }
+  if(overStrain!=='N'){
+    const stop = countStopper(hand[overStrain]);
+    if(stop && hcp>=9 && hcp<=15){
+      const level = minLegalLevelForStrain('N', overRank);
+      return {call:{level,strain:'N'}, theoryKey:'competitiveNT',
+        reason:`${hcp} HCP with ${overStrain} stopped — bid no-trumps to show a stopper in the overcaller's suit and compete for the contract.`};
+    }
+  }
+  const openIdx = ORDER.indexOf(openSuit);
+  const overIdx = overStrain==='N'? 99 : ORDER.indexOf(overStrain);
+  const ownSuit = ORDER.filter(s=> s!==openSuit && s!==overStrain && len[s]>=5).sort((a,b)=>len[b]-len[a]);
+  if(ownSuit.length>0 && hcp>=10){
+    const s = ownSuit[0];
+    const level = minLegalLevelForStrain(s, overRank);
+    return {call:{level,strain:s}, theoryKey:'competitiveNewSuit',
+      reason:`${hcp} HCP with a good 5-card ${suitFullName[s]} suit of your own — bid it to show your hand, even though the overcall pushes you a level higher.`};
+  }
+  if(hcp>=13){
+    return {call:{level:overcallCall.level+1, strain: overStrain}, theoryKey:'cueBid',
+      reason:`${hcp} HCP — too strong to just compete at a low level. Cue-bidding the opponents' suit (${overStrain}) is an artificial, game-forcing move showing a big hand (often with support for partner) without yet committing to the final contract.`};
+  }
+  return {call:'P', theoryKey:'compPass', reason:`${hcp} HCP with no clear fit, suit, or stopper — Pass and defend.`};
+}
+
+function evaluateSlamResponse(hand, openCall){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  if(openCall.strain==='N'){
+    if(hcp>=19 && hcp<=20){
+      return {call:{level:4,strain:'N'}, theoryKey:'quantitative',
+        reason:`${hcp} HCP opposite a 12-14 1NT — a quantitative raise to 4NT invites opener to bid on to 6NT with a maximum (13-14), or pass with a minimum (12).`};
+    }
+    if(hcp>=21){
+      return {call:{level:6,strain:'N'}, theoryKey:'ntSlamDirect',
+        reason:`${hcp} HCP opposite 12-14 guarantees at least 33-34 combined points — bid the slam directly, 6NT.`};
+    }
+  } else {
+    const openSuit = openCall.strain;
+    const support = len[openSuit];
+    if(support>=4){
+      if(hcp>=18){
+        return {call:{level:4,strain:'N'}, theoryKey:'blackwood',
+          reason:`${hcp} HCP with a big trump fit (${support} cards) — you already know you want to be in slam if the ace-count is right, so bid 4NT Blackwood, asking partner how many aces they hold.`};
+      }
+      if(hcp>=16){
+        const shortSuits = ORDER.filter(s=>s!==openSuit).sort((a,b)=>len[a]-len[b]);
+        const shortSuit = shortSuits[0];
+        const minLvl = minLegalLevelForStrain(shortSuit, bidRank(openCall));
+        return {call:{level:minLvl, strain:shortSuit}, theoryKey:'trialCueBid',
+          reason:`${hcp} HCP with a good trump fit but not quite enough to blast into Blackwood — a cue-bid in ${suitFullName[shortSuit]} shows first/second round control there and slam interest, inviting partner to co-operate towards slam.`};
+      }
+    }
+  }
+  return {call:{level:4,strain: openCall.strain==='N'?'N':openCall.strain}, theoryKey:'slamFallbackGame',
+    reason:`Not quite enough for a slam try on this hand — settle in game.`};
+}
+
+function openerSecondSuit(hand, openSuit, responderSuit, lastRank){
+  const len = lengths(hand);
+  const candidates = ORDER.filter(s=> s!==openSuit && s!==responderSuit && len[s]>=4);
+  if(candidates.length===0) return null;
+  candidates.sort((a,b)=> len[b]-len[a] || ORDER.indexOf(a)-ORDER.indexOf(b));
+  const suit = candidates[0];
+  const level = minLegalLevelForStrain(suit, lastRank);
+  if(level>4) return null; // keep these auctions sane / low-level
+  return {level, strain:suit};
+}
+
+function evaluateFourthSuitForcing(hand, openSuit, responderSuit, openerRebidSuit){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  const fourthSuit = ORDER.find(s=> s!==openSuit && s!==responderSuit && s!==openerRebidSuit);
+  const supportOpen = len[openSuit];
+  const supportRebid = len[openerRebidSuit];
+  const lastRank = bidRank({level:2, strain:openerRebidSuit}); // rough, refined by caller normally
+  if((isMajorSuit(openerRebidSuit) && supportRebid>=3) || supportRebid>=4){
+    const level = hcp>=13 ? (isMajorSuit(openerRebidSuit)?4:5) : 3;
+    return {call:{level, strain:openerRebidSuit}, theoryKey:'gameRaise',
+      reason:`${hcp} HCP with ${supportRebid}-card support for opener's second suit — simplest to raise it now that a fit has turned up.`};
+  }
+  if(supportOpen>=4){
+    const level = hcp>=13 ? (isMajorSuit(openSuit)?4:5) : 3;
+    return {call:{level, strain:openSuit}, theoryKey:'gameRaise',
+      reason:`${hcp} HCP with ${supportOpen}-card support for opener's first suit — raise it now that you know the combined hand is worth it.`};
+  }
+  if(len[responderSuit]>=6){
+    return {call:{level:3, strain:responderSuit}, theoryKey:'newSuitGF',
+      reason:`${hcp} HCP with a 6-card suit of your own — simply rebid it rather than inventing an artificial bid.`};
+  }
+  if(countStopper(hand[fourthSuit]) && hcp>=10){
+    return {call:{level:3, strain:'N'}, theoryKey:'threeNTResp',
+      reason:`${hcp} HCP with ${fourthSuit} stopped — you can bid no-trumps naturally here instead of needing an artificial bid.`};
+  }
+  if(hcp>=10){
+    return {call:{level:2, strain:fourthSuit}, theoryKey:'fourthSuitForcing',
+      reason:`${hcp} HCP, game-forcing values, but no fit for either of partner's suits, no long rebiddable suit of your own, and no stopper in ${suitFullName[fourthSuit]} to bid no-trumps — bid the unbid suit (${fourthSuit}) artificially. It's forcing and simply asks partner to describe further.`};
+  }
+  return {call:'P', theoryKey:'fsfPass',
+    reason:`${hcp} HCP — not quite enough to force to game, so settle for a quiet pass here.`};
+}
+
+function gameLevelForSuit(suit){ return isMajorSuit(suit) ? 4 : 5; }
+
+function evaluateOpenerRebid(hand, openSuit, partnerCall){
+  const hcp = calcHCP(hand); const len = lengths(hand);
+  const band = hcp<=14 ? 'min' : (hcp<=16 ? 'invite' : 'max');
+  const partnerRank = bidRank(partnerCall);
+
+  if(partnerCall.strain===openSuit){
+    if(band==='min'){
+      return {call:'P', theoryKey:'openerRebidMinPass',
+        reason:`${hcp} HCP — a bare minimum opening (12-14), nothing extra to show. Partner's raise doesn't get you to game on its own, so Pass.`};
+    }
+    if(band==='invite'){
+      const level = Math.max(partnerCall.level+1, minLegalLevelForStrain(openSuit, partnerRank));
+      if(level>=gameLevelForSuit(openSuit)){
+        return {call:{level:gameLevelForSuit(openSuit), strain:openSuit}, theoryKey:'openerRebidGame',
+          reason:`${hcp} HCP — even your invite would already reach game here, so just bid it directly.`};
+      }
+      return {call:{level, strain:openSuit}, theoryKey:'openerRebidInvite',
+        reason:`${hcp} HCP — a good opening (15-16), one level above minimum. Invite game by bidding one more of the suit and let partner decide.`};
+    }
+    return {call:{level:gameLevelForSuit(openSuit), strain:openSuit}, theoryKey:'openerRebidGame',
+      reason:`${hcp} HCP — a strong opening (17+). With any raise from partner, you already know there's enough for game — bid it directly.`};
+  }
+
+  if(partnerCall.strain==='N'){
+    if(partnerCall.level===1){
+      if(band!=='min' && len[openSuit]>=6){
+        const level = band==='invite' ? 3 : 4;
+        return {call:{level, strain:openSuit}, theoryKey: band==='invite' ? 'openerRebidInvite' : 'openerRebidGame',
+          reason:`${hcp} HCP with a 6-card suit — rebid it to show the extra length and strength, ${level===4?'going all the way to game':'inviting game'}.`};
+      }
+      return {call:'P', theoryKey:'openerRebidMinPass',
+        reason:`${hcp} HCP — partner's 1NT response (6-9) caps the hand well below game, and you've nothing extra in shape to show, so Pass.`};
+    }
+    if(partnerCall.level===2){
+      if(hcp>=17){
+        return {call:{level:3,strain:'N'}, theoryKey:'openerRebidGame',
+          reason:`${hcp} HCP accepts partner's 2NT invitation (10-12) — combined that's enough for game, bid 3NT.`};
+      }
+      return {call:'P', theoryKey:'openerRebidMinPass',
+        reason:`${hcp} HCP — not enough extra to accept partner's 2NT invite, so Pass.`};
+    }
+  }
+
+  const responderSuit = partnerCall.strain;
+  if(len[responderSuit]>=4){
+    const minLevel = minLegalLevelForStrain(responderSuit, partnerRank);
+    let level = band==='min' ? minLevel : (band==='invite' ? minLevel+1 : gameLevelForSuit(responderSuit));
+    level = Math.max(level, minLevel);
+    const key = band==='max' ? 'openerRebidGame' : (band==='invite' ? 'openerRebidInvite' : 'openerRebidSupport');
+    return {call:{level, strain:responderSuit}, theoryKey:key,
+      reason:`${hcp} HCP with ${len[responderSuit]}-card support for partner's ${suitFullName[responderSuit]} — support them, choosing a level (${band==='min'?'minimum':band==='invite'?'invitational':'game'}) that tells partner exactly how strong you are.`};
+  }
+  if(len[openSuit]>=6){
+    const minLevel = minLegalLevelForStrain(openSuit, partnerRank);
+    let level = band==='min' ? minLevel : (band==='invite' ? minLevel+1 : gameLevelForSuit(openSuit));
+    level = Math.max(level, minLevel);
+    const key = band==='max' ? 'openerRebidGame' : (band==='invite' ? 'openerRebidInvite' : 'openerRebidRebidSuit');
+    return {call:{level, strain:openSuit}, theoryKey:key,
+      reason:`${hcp} HCP with a 6-card ${suitFullName[openSuit]} suit — rebid it to show the extra length, at a level that matches your strength.`};
+  }
+  const unbidSuits = ORDER.filter(s=> s!==openSuit && s!==responderSuit);
+  const hasStoppers = unbidSuits.every(s=> countStopper(hand[s]));
+  if(hasStoppers){
+    const minLevel = minLegalLevelForStrain('N', partnerRank);
+    let level = band==='min' ? minLevel : (band==='invite' ? minLevel+1 : 3);
+    if(band==='max') level = 3;
+    level = Math.max(level, minLevel);
+    return {call:{level, strain:'N'}, theoryKey:'openerRebidNT',
+      reason:`${hcp} HCP with both other suits (${unbidSuits.map(s=>suitFullName[s]).join(' and ')}) stopped and nothing extra to show in shape — rebid no-trumps, at a level that matches your strength.`};
+  }
+  const minLevel = minLegalLevelForStrain(openSuit, partnerRank);
+  return {call:{level:minLevel, strain:openSuit}, theoryKey:'openerRebidRebidSuit',
+    reason:`${hcp} HCP with no fit, no stopper everywhere, and nothing better on offer — repeat your original suit at the cheapest level as a last resort.`};
+}
+
+/* ---------------- Theory text library ---------------- */
+const THEORY = {
+  strong2C: "Any hand with 23+ HCP (or about 9 certain playing tricks) is opened 2♣ in Acol — it's artificial, forcing to game, and says nothing about clubs. Opener will describe their hand on the next round.",
+  twoNT: "2NT shows a balanced 20-22 point hand. It's a precise, descriptive opening that lets responder judge the combined strength immediately (similar to how 1NT works one level lower).",
+  oneNT: "1NT (12-14, balanced, usually no 5-card major) is one of the most useful bids in Acol — it defines your hand in one call, letting responder take control of the auction.",
+  strongBalancedSuit: "Balanced hands of 15-19 HCP are too strong for 1NT and don't fit 2NT's narrower range, so you open your best suit at the 1-level, intending to jump in no-trumps next go to show the extra strength.",
+  weakTwo: "Weak twos (2♦/2♥/2♠) show about 6-10 HCP and a good 6-card suit. They're pre-emptive: you're not strong enough to open normally, but a long suit is worth describing to make life hard for the opponents. Note 2♣ is reserved for strong hands, so there's no weak 2♣.",
+  preempt: "Pre-emptive openings (3-level or higher) show a long suit (7+ cards) and a weak hand overall (under about 10 HCP). The goal is to take up bidding space, not to invite partner to do anything in particular.",
+  oneSuit: "With 12+ points and an unbalanced hand, open your longest suit at the 1-level. When two suits tie for longest, Acol has clear tie-break rules covering touching 4-card suits, non-touching 4-card suits, 5-card-or-longer ties, and 4-4-4-1 shapes — see the note on this hand above for exactly which rule applied.",
+  passOpen: "You need about 12+ points (or a long suit worth a pre-empt) to open the bidding in Acol. With less, pass and let the auction develop.",
+  ntPass: "With 0-10 points and no long major opposite 1NT, there's rarely a better spot than 1NT itself — pass.",
+  stayman: "2♣ Stayman (over partner's 1NT) asks opener to bid a 4-card major if they have one. Use it whenever you have at least one 4-card major and enough values to want to compete for game or a good part score (about 11+).",
+  ntInvite: "With 11-12 balanced and no 4-card major, invite game directly with 2NT — opener passes with a minimum (12) or bids on with a maximum (14).",
+  staymanGame: "Even with game-forcing values, start with 2♣ Stayman when you hold a 4-card major opposite 1NT — finding a 4-4 major fit is often worth more tricks than settling straight for 3NT.",
+  ntGame: "With 13-18 balanced points and no 4-card major to investigate, there's enough for game — bid 3NT directly.",
+  quantitative: "A raise to 4NT after partner's no-trump-ish action, without ever mentioning aces, is 'quantitative' — purely inviting slam based on high-card strength, not Blackwood. Opener bids on with a maximum, or passes with a minimum.",
+  ntSlam: "When your combined point count is sure to reach the low-to-mid 30s, there's no need to investigate further — just bid the slam.",
+  suitPass: "Six points is the traditional minimum to respond to an opening bid in Acol. With less, pass — you're too weak to keep the auction alive.",
+  simpleRaise: "A simple raise (e.g. 1♥-2♥) shows 6-9 points and 3+ card support. It's a limit bid: descriptive, not forcing, telling opener your exact range so they can judge whether to go further.",
+  newSuit1level: "When you can bid your own 4-card suit at the 1-level (because it ranks higher than opener's suit), that's usually preferred over 1NT or a raise with a weak hand, since it keeps the bidding low while still describing your shape.",
+  oneNTResp: "1NT as a response (not an opening) shows about 6-9 points with no fit for opener and no biddable 4-card suit at the 1-level. It's the 'nothing else fits' response.",
+  jumpRaise: "A jump raise (e.g. 1♠-3♠) shows 10-12 points and 4+ card support — invitational to game, asking opener to bid on with anything extra.",
+  newSuit2level: "Any new suit bid by responder is forcing for one round in Acol, so bidding a good second suit at the 2-level (needing extra values since it's a level higher) keeps partner from passing while you explore for the best contract.",
+  twoNTResp: "With 10-12 balanced and no trump fit, 2NT invites game — a direct, limit bid that lets opener judge whether their hand has enough extra to continue.",
+  gameRaise: "With 13+ points and a 4-card fit for opener's major, you know your side belongs in game — bid it directly rather than inviting, since inviting risks being passed out below game.",
+  newSuitGF: "With game-going values (13-17) and a good suit of your own but no fit yet for opener, bid your suit — it's forcing, so the auction won't die below game.",
+  threeNTResp: "With 13-15+ balanced and no major fit uncovered, 3NT is usually the best final contract — bid it directly.",
+  compPassWeak: "When an opponent has intervened and you don't have the values to respond even in an uncontested auction, pass — don't feel obliged to bid just because the auction is still open.",
+  competitiveRaise: "Over an opponent's overcall, raising partner's suit with 4+ card support is often bid one level higher than you would in an uncontested auction ('pre-emptive raise') — the extra trump length makes it safer to compete, and it also removes bidding room from the opponents.",
+  competitiveNT: "Bidding no-trumps after an overcall shows a stopper in the overcalled suit plus enough general strength to compete there — it tells partner you can handle that suit if it's led.",
+  competitiveNewSuit: "Introducing your own good 5-card suit after an overcall is a natural, constructive bid — you need a bit more than usual since you're forced a level higher than an uncontested auction would require.",
+  cueBid: "A cue-bid of the opponents' suit (bidding a suit you have no length in, that they've bid) is artificial and game-forcing. It's used with big hands where you're not yet sure of the best strain, often promising support for partner.",
+  negativeDouble: "A negative double after partner opens and RHO overcalls is take-out, not penalty — it shows the unbid suit(s) (typically 4+ cards, often a major) with too little length for a natural bid and not enough trump support to raise partner. It asks partner to pick a suit rather than sit for penalties.",
+  jacobyTransfer: "A Jacoby transfer over 1NT — bidding one suit below your real 5+ card major (2♦ shows hearts, 2♥ shows spades) — forces opener to bid your major. It lets the stronger hand (opener) become declarer, hiding it from the opening lead, and it separates 'I have a 5-card major' from 'here's how strong I am', which you show on your next bid.",
+  fourthSuitForcing: "When you can't describe your hand naturally after two rounds of bidding (no fit found, no stopper to bid no-trumps, no long enough suit to rebid), bidding the one suit nobody has mentioned is an artificial, forcing relay — fourth-suit-forcing. It simply says 'I have game-going values and need more information', asking partner to describe further (often by bidding no-trumps with a stopper, or supporting one of your suits).",
+  compPass: "With no fit, no long suit, and no stopper, there's often nothing constructive to bid over an overcall — pass and let the opponents play it, planning to defend.",
+  takeoutDouble: "A takeout double shows about 12+ points, shortage (0-1 cards) in the opponent's suit, and support (3+, ideally 4+) for the other three suits. It asks partner to bid their best suit — you're not necessarily planning to defend.",
+  overcallPass: "Without the shape for a takeout double, a good 5+ card suit for an overcall, or a balanced 15-18 for 1NT, there's often nothing safe to bid — pass and await developments.",
+  simpleOvercall: "A simple overcall (roughly 8-16 points, 5+ card suit) shows a decent suit you're happy to have led, without promising the shape needed for a takeout double.",
+  ntOvercall: "A 1NT overcall (15-18 balanced, opponent's suit stopped) is a strong, precise bid — it says a lot in one call, much like a 1NT opening does.",
+  balancingDouble: "In the balancing (fourth) seat, two passes suggest the opponents are limited, so it's safe to reopen with slightly fewer points than a direct-seat takeout double (about 9-11+ instead of 12+), as long as the shape — shortage in their suit, support for the others — still fits.",
+  balancingNT: "A balancing 1NT is bid on a noticeably weaker range (about 10-14) than a direct-seat 1NT overcall (15-18), because two passes mean the opponents' side is unlikely to have much strength between them.",
+  balancingOvercall: "Overcalls made after two passes ('balancing') can be lighter than direct-seat overcalls for the same reason — the opponents have already denied extra strength, so it's safer to compete.",
+  balancingPass: "Not every balancing-seat hand needs to act — with a poor shape and modest values, passing and defending is often correct even in the fourth seat.",
+  blackwood: "4NT Blackwood asks partner how many aces they hold (5♣=0/4, 5♦=1, 5♥=2, 5♠=3). Use it once you know you have enough combined strength and a trump fit for slam, and you just need to check you're not missing two aces.",
+  trialCueBid: "A cue-bid (bidding a new suit below game after a fit is found) shows first- or second-round control in that suit and invites partner to co-operate towards slam, without committing beyond game if partner can't help.",
+  ntSlamDirect: "When the combined point count is certain to be enough (33+ for a small slam), there's no need to investigate further with Blackwood — just bid the slam.",
+  slamFallbackGame: "Not every strong-looking hand is a slam try — without the right combination of fit and high-card strength, settling safely in game is usually right.",
+  openerRebidMinPass: "As opener, your rebid tells partner exactly how much extra you have on top of your opening bid. A bare minimum (12-14, nothing extra to show) rebids as cheaply as possible — often just Pass — since the combined hand isn't worth game.",
+  openerRebidInvite: "A 'good' opening (about 15-16, sometimes 17) invites game on the rebid by bidding one level higher than the minimum requires — a jump. It tells partner 'I have a bit extra, decide if we have enough for game.'",
+  openerRebidGame: "With a strong opening (17+, or enough extra once you add partner's promised range), you already know the combined hand is worth game — bid it directly on your rebid rather than inviting.",
+  openerRebidSupport: "Once partner bids a new suit and you hold 4+ cards in it, support them — the level you choose (simple, jump, or game) tells partner exactly how strong your opening really was.",
+  openerRebidRebidSuit: "Repeating your own suit on the rebid shows extra length (usually 6+) rather than extra strength — the level you pick still narrows your point count for partner.",
+  openerRebidNT: "With no fit for partner and no extra length of your own, rebidding no-trumps promises stoppers in the suits nobody has bid, plus a hand strength shown precisely by the level (minimum, invitational, or game)."
+};
+
+const MNEMONICS = {
+  strong2C: "23 or more? Slam the door — 2♣.",
+  twoNT: "20, 21, 22 — straight to 2NT.",
+  oneNT: "12 to 14, balanced and neat — that's 1NT.",
+  strongBalancedSuit: "Too big for 1NT, too flat for 2NT — open your suit, jump in NT next.",
+  weakTwo: "Six-bagger, six-to-ten — weak two, don't overthink it.",
+  preempt: "Long and weak? Preempt and creep the level up.",
+  oneSuit: "Longest suit first; on a tie — fours go low, fives go high.",
+  passOpen: "Under 12? Zip it.",
+  ntPass: "0-10, no five-bagger — pass and stay in 1NT.",
+  stayman: "Four-card major? Ask first — Stayman, stay a while.",
+  ntInvite: "11-12, balanced — knock with 2NT.",
+  staymanGame: "Game-force with a major? Still ask first — Stayman before game.",
+  ntGame: "13-18, flat, no major — straight to 3NT.",
+  quantitative: "19-20? Quantify with 4NT — no aces asked.",
+  ntSlam: "21+? You already know enough — bid the slam.",
+  suitPass: "Under 6, say nothing.",
+  simpleRaise: "6-9 and a 3-card fit — raise once, keep it quiet.",
+  newSuit1level: "Cheap suit at the one-level beats NT or a raise — grab it.",
+  oneNTResp: "Nothing else fits, 6-9 — 1NT mops it up.",
+  jumpRaise: "10-12 with a 4-card fit — jump the raise, invite.",
+  newSuit2level: "A new suit is a promise — good for one round of forcing.",
+  twoNTResp: "10-12, flat, no fit — 2NT invites.",
+  gameRaise: "13+ and a fit — skip the chat, bid game.",
+  newSuitGF: "Good suit, game values, no fit yet — bid it, it's forcing.",
+  threeNTResp: "13-15+, flat, no major — 3NT and done.",
+  compPassWeak: "Under 6 even after an overcall — still pass.",
+  competitiveRaise: "Fit plus interference — raise one higher than usual, make them guess.",
+  competitiveNT: "Stopper in their suit — bid NT, show you're covered.",
+  competitiveNewSuit: "Good 5-bagger despite the overcall — bid it anyway, just a touch stronger.",
+  cueBid: "Big hand, no clear spot — cue their suit, force to game.",
+  negativeDouble: "No fit, no five, but 4+ somewhere unbid — double for takeout, not penalty.",
+  jacobyTransfer: "Five-card major over 1NT? Bid the suit below, let them declare.",
+  fourthSuitForcing: "Out of natural bids? Bid the fourth suit — it's a question, not a suit.",
+  compPass: "No fit, no suit, no stopper — pass and defend.",
+  takeoutDouble: "Short in their suit, support the rest, 12+ — double for takeout.",
+  overcallPass: "No shape, no suit, no stopper — pass.",
+  simpleOvercall: "Decent 5-bagger, 8-16 — bid it, simple as that.",
+  ntOvercall: "15-18, balanced, their suit stopped — 1NT overcall.",
+  balancingDouble: "Two passes already — lighten up, double on less.",
+  balancingNT: "Balancing 1NT is lighter — think 10-14, not 15-18.",
+  balancingOvercall: "Passed out twice already — bid a bit lighter here too.",
+  balancingPass: "Even in the pass-out seat, sometimes pass is still right.",
+  blackwood: "Fit and enough points — ask 'how many aces?' with 4NT.",
+  trialCueBid: "16-17 with a fit — show a control, invite slam.",
+  ntSlamDirect: "33+ combined — don't ask, just bid the slam.",
+  slamFallbackGame: "Not quite there — game is safe, don't overreach.",
+  openerRebidMinPass: "Nothing extra? Say nothing extra — pass or bid the cheapest spot.",
+  openerRebidInvite: "A bit extra (15-16)? Jump one level — invite, don't insist.",
+  openerRebidGame: "17+ or enough now revealed — stop inviting, just bid game.",
+  openerRebidSupport: "Partner named a suit you hold 4+ of — support it, let the level talk.",
+  openerRebidRebidSuit: "Six-plus in your own suit — say it again, louder (higher) if you're strong.",
+  openerRebidNT: "No fit, no extra length, both outside suits stopped — rebid NT and let the level show your strength."
+};
+
+/* ---------------- Modules ---------------- */
+const MODULES = [
+  {id:'opening', name:'Opening Bids', desc:'You are the dealer. Decide whether — and what — to open, including weak twos, pre-empts, 1NT/2NT and strong 2♣.'},
+  {id:'respond-noncomp', name:'Responding (Uncontested)', desc:'Partner opens 1 of a suit or 1NT, both opponents pass. What do you respond?'},
+  {id:'transfers', name:'Jacoby Transfers', desc:'Partner opens 1NT and you hold a 5-card major. Transfer into it rather than bidding it naturally.'},
+  {id:'respond-comp', name:'Responding (Competitive)', desc:'Partner opens, your right-hand opponent overcalls. What do you bid now?'},
+  {id:'negative-doubles', name:'Negative Doubles', desc:'Partner opens, RHO overcalls, and you have no trump fit — is it a negative double, a natural bid, or pass?'},
+  {id:'takeout-double', name:'Takeout Doubles', desc:'An opponent opens directly to your right. Double for takeout, overcall, or pass?'},
+  {id:'defensive-comp', name:'Defensive / Balancing Bidding', desc:'An opponent opens, it goes pass-pass to you in the balancing seat. Reopen or leave it?'},
+  {id:'fourth-suit-forcing', name:'Fourth-Suit-Forcing', desc:'Two rounds of bidding with no clear fit or stopper — bid the unbid suit artificially to keep the auction alive.'},
+  {id:'opener-rebids', name:"Opener's Rebids", desc:'You opened, partner responded — now narrow your exact strength down further, and show stoppers if you rebid no-trumps.'},
+  {id:'slam', name:'Slam Bidding', desc:'Partner opens and you hold a big hand with a fit or huge balanced values — Blackwood, cue-bids, or game?'}
+];
+
+/* ---------------- Scenario generation ---------------- */
+const MAX_ATTEMPTS = 20000;
+
+function generateScenario(moduleId){
+  let hands, dealerSeat, auction, correct;
+  let attempts=0;
+
+  if(moduleId==='opening'){
+    hands = dealHands();
+    dealerSeat='S'; auction=[];
+    correct = evaluateOpening(hands.S);
+  }
+
+  else if(moduleId==='respond-noncomp'){
+    let ne;
+    do{
+      hands = dealHands();
+      ne = evaluateOpening(hands.N);
+      attempts++;
+    } while(attempts<MAX_ATTEMPTS && (ne.call==='P' || ne.call.level!==1));
+    dealerSeat='N';
+    auction=[{seat:'N',call:ne.call},{seat:'E',call:'P'}];
+    correct = ne.call.strain==='N' ? respondToOneNT(hands.S) : respondToSuitOpen(hands.S, ne.call.strain);
+  }
+
+  else if(moduleId==='transfers'){
+    let ne;
+    do{
+      hands = dealHands();
+      ne = evaluateOpening(hands.N);
+      attempts++;
+    } while(attempts<MAX_ATTEMPTS && (ne.call==='P' || !(ne.call.level===1 && ne.call.strain==='N') ||
+            !['H','S'].some(s=>lengths(hands.S)[s]>=5) || calcHCP(hands.S)>18));
+    dealerSeat='N';
+    auction=[{seat:'N',call:ne.call},{seat:'E',call:'P'}];
+    correct = respondToOneNT(hands.S);
+  }
+
+  else if(moduleId==='respond-comp'){
+    let ne, ee;
+    do{
+      hands = dealHands();
+      ne = evaluateOpening(hands.N);
+      attempts++;
+      if(ne.call==='P' || ne.call.level!==1 || ne.call.strain==='N') { ee=null; continue; }
+      ee = evaluateOvercall(hands.E, ne.call.strain);
+    } while(attempts<MAX_ATTEMPTS && (!ee || ee.call==='P'));
+    dealerSeat='N';
+    auction=[{seat:'N',call:ne.call},{seat:'E',call:ee.call}];
+    correct = respondAfterOvercall(hands.S, ne.call.strain, ee.call);
+  }
+
+  else if(moduleId==='negative-doubles'){
+    let ne, ee, corr;
+    do{
+      hands = dealHands();
+      ne = evaluateOpening(hands.N);
+      attempts++;
+      if(ne.call==='P' || ne.call.level!==1 || ne.call.strain==='N') { ee=null; corr=null; continue; }
+      ee = evaluateOvercall(hands.E, ne.call.strain);
+      if(!ee || ee.call==='P' || ee.call.strain==='N') { corr=null; continue; }
+      const support = lengths(hands.S)[ne.call.strain];
+      if(support>=4) { corr=null; continue; } // clear-cut raise, not the point of this module
+      if(calcHCP(hands.S)<6) { corr=null; continue; } // trivial automatic pass, not an interesting decision
+      corr = respondAfterOvercall(hands.S, ne.call.strain, ee.call);
+    } while(attempts<MAX_ATTEMPTS && !corr);
+    dealerSeat='N';
+    auction=[{seat:'N',call:ne.call},{seat:'E',call:ee.call}];
+    correct = corr;
+  }
+
+  else if(moduleId==='takeout-double'){
+    // Real hands only produce a takeout double a small fraction of the time, so bias
+    // roughly 40% of deals toward that shape — otherwise the module is mostly Pass/overcalls
+    // and you'd rarely practise the double itself. The rest stay fully natural (any answer).
+    const wantDouble = Math.random() < 0.4;
+    let ee, corr;
+    do{
+      hands = dealHands();
+      ee = evaluateOpening(hands.E);
+      attempts++;
+      if(ee.call==='P' || ee.call.strain==='N' || ee.call.level!==1){ corr=null; continue; }
+      corr = evaluateDirectSeatAction(hands.S, ee.call.strain);
+      if(wantDouble && corr.call!=='X'){ corr=null; continue; }
+    } while(attempts<MAX_ATTEMPTS && !corr);
+    dealerSeat='E';
+    auction=[{seat:'E',call:ee.call}];
+    correct = corr;
+  }
+
+  else if(moduleId==='defensive-comp'){
+    let we, na, ea;
+    do{
+      hands = dealHands();
+      we = evaluateOpening(hands.W);
+      attempts++;
+      if(we.call==='P' || we.call.strain==='N' || we.call.level!==1){ na=null; continue; }
+      na = evaluateDirectSeatAction(hands.N, we.call.strain);
+      if(na.call!=='P'){ continue; }
+      ea = respondToSuitOpen(hands.E, we.call.strain);
+    } while(attempts<MAX_ATTEMPTS && (!na || na.call!=='P' || !ea || ea.call!=='P'));
+    dealerSeat='W';
+    auction=[{seat:'W',call:we.call},{seat:'N',call:'P'},{seat:'E',call:'P'}];
+    correct = evaluateBalancingAction(hands.S, we.call.strain);
+  }
+
+  else if(moduleId==='fourth-suit-forcing'){
+    let ne, sr, orRebid, corr;
+    do{
+      hands = dealHands();
+      attempts++;
+      ne = evaluateOpening(hands.N);
+      if(ne.call==='P' || ne.call.level!==1 || ne.call.strain==='N'){ sr=null; orRebid=null; corr=null; continue; }
+      sr = respondToSuitOpen(hands.S, ne.call.strain);
+      if(sr.call==='P' || sr.call==='X' || sr.call==='XX'){ orRebid=null; corr=null; continue; }
+      if(!['newSuit1level','newSuit2level','newSuitGF'].includes(sr.theoryKey)){ orRebid=null; corr=null; continue; }
+      orRebid = openerSecondSuit(hands.N, ne.call.strain, sr.call.strain, bidRank(sr.call));
+      if(!orRebid){ corr=null; continue; }
+      corr = evaluateFourthSuitForcing(hands.S, ne.call.strain, sr.call.strain, orRebid.strain);
+    } while(attempts<MAX_ATTEMPTS && (!corr || corr.theoryKey!=='fourthSuitForcing'));
+    dealerSeat='N';
+    auction=[{seat:'N',call:ne.call},{seat:'E',call:'P'},{seat:'S',call:sr.call},{seat:'W',call:'P'},{seat:'N',call:orRebid},{seat:'E',call:'P'}];
+    correct = corr;
+  }
+
+  else if(moduleId==='opener-rebids'){
+    let se, nr;
+    do{
+      hands = dealHands();
+      attempts++;
+      se = evaluateOpening(hands.S);
+      if(se.call==='P' || se.call.level!==1 || se.call.strain==='N'){ nr=null; continue; }
+      nr = respondToSuitOpen(hands.N, se.call.strain);
+    } while(attempts<MAX_ATTEMPTS && (!nr || nr.call==='P' || nr.call==='X' || nr.call==='XX'));
+    dealerSeat='S';
+    auction=[{seat:'S',call:se.call},{seat:'W',call:'P'},{seat:'N',call:nr.call},{seat:'E',call:'P'}];
+    correct = evaluateOpenerRebid(hands.S, se.call.strain, nr.call);
+  }
+
+  else if(moduleId==='slam'){
+    let ne, ok=false;
+    do{
+      hands = dealHands();
+      ne = evaluateOpening(hands.N);
+      attempts++;
+      ok=false;
+      if(ne.call!=='P'){
+        if(ne.call.strain==='N' && ne.call.level===1){
+          if(calcHCP(hands.S)>=19) ok=true;
+        } else if(ne.call.level===1 && isMajorSuit(ne.call.strain)){
+          const s = calcHCP(hands.S);
+          const supp = lengths(hands.S)[ne.call.strain];
+          if(supp>=4 && s>=16) ok=true;
+        }
+      }
+    } while(attempts<MAX_ATTEMPTS && !ok);
+    dealerSeat='N';
+    auction=[{seat:'N',call:ne.call},{seat:'E',call:'P'}];
+    correct = evaluateSlamResponse(hands.S, ne.call);
+  }
+
+  return {moduleId, hands, dealerSeat, auction, correct};
+}
+
+/* ---------------- Stats (persistent, offline via localStorage) ---------------- */
+const statsCache = {};
+function getStats(moduleId){
+  if(statsCache[moduleId]) return statsCache[moduleId];
+  let val = [];
+  try{
+    const raw = localStorage.getItem('bridge_stats_'+moduleId);
+    val = raw ? JSON.parse(raw) : [];
+  }catch(e){ val = []; }
+  statsCache[moduleId]=val;
+  return val;
+}
+function recordResult(moduleId, correctBool){
+  const cur = getStats(moduleId);
+  const updated = cur.concat([correctBool?1:0]).slice(-10);
+  statsCache[moduleId]=updated;
+  try{ localStorage.setItem('bridge_stats_'+moduleId, JSON.stringify(updated)); }catch(e){ /* storage unavailable, continue without saving */ }
+  return updated;
+}
+function statsBadge(stats){
+  if(!stats || stats.length===0) return {text:'Not attempted yet', cls:''};
+  const correct = stats.reduce((a,b)=>a+b,0);
+  const pct = Math.round((correct/stats.length)*100);
+  let cls='mid';
+  if(pct>=75) cls='good'; else if(pct<40) cls='bad';
+  return {text:`${correct}/${stats.length} correct (${pct}%)`, cls};
+}
+
+/* ---------------- Rendering ---------------- */
+const app = document.getElementById('app');
+let scenario=null;
+let picked=null;
+
+async function showMenu(){
+  scenario=null; picked=null;
+  let html = `<h1>Acol Bidding Tutor</h1>
+  <div class="subtitle">Practice real hands, one decision at a time. Pick a module to start.</div>`;
+  for(const m of MODULES){
+    const stats = await getStats(m.id);
+    const b = statsBadge(stats);
+    html += `<div class="card module-card" data-mod="${m.id}">
+      <div class="module-top">
+        <div class="module-name">${m.name}</div>
+        <div class="badge ${b.cls}">${b.text}</div>
+      </div>
+      <div class="module-desc">${m.desc}</div>
+    </div>`;
+  }
+  html += `<details><summary>About this tutor / simplifications</summary>
+    <div style="margin-top:8px;">This tutor teaches a simplified, common version of Acol: 1NT = 12-14, 2NT = 20-22, weak twos in diamonds/hearts/spades, strong 2♣, and negative doubles after an opponent's overcall. It omits some advanced tools (transfers, fourth-suit-forcing, support doubles) to keep each decision focused on core principles. Hands are dealt randomly and the "bots" (partner/opponents) follow the same rules described here.</div>
+  </details>`;
+  app.innerHTML = html;
+  app.querySelectorAll('.module-card').forEach(el=>{
+    el.addEventListener('click', ()=> startModule(el.dataset.mod));
+  });
+}
+
+function startModule(moduleId){
+  scenario = generateScenario(moduleId);
+  picked=null;
+  renderPlay();
+}
+
+function seatLabel(seat){ return seat==='S' ? 'S (You)' : seat; }
+
+function buildAuctionRows(dealerSeat, auction, southCall){
+  const seatsOrder=['N','E','S','W'];
+  const startIdx = seatsOrder.indexOf(dealerSeat);
+  const cells=[];
+  for(let i=0;i<startIdx;i++) cells.push(null);
+  auction.forEach(entry=>cells.push(entry));
+  if(southCall===undefined){
+    cells.push({seat:'S', call:'?', placeholder:true});
+  } else {
+    cells.push({seat:'S', call:southCall});
+  }
+  const rows=[];
+  for(let i=0;i<cells.length;i+=4) rows.push(cells.slice(i,i+4));
+  return rows;
+}
+
+function buildAuctionHtml(dealerSeat, auction, southCall){
+  const rows = buildAuctionRows(dealerSeat, auction, southCall);
+  let html = `<table class="auction"><thead><tr><th>N</th><th>E</th><th>S</th><th>W</th></tr></thead><tbody>`;
+  for(const row of rows){
+    html += '<tr>';
+    for(let i=0;i<4;i++){
+      const cell = row[i];
+      if(!cell){ html += '<td></td>'; continue; }
+      if(cell.placeholder){ html += `<td class="placeholder">?</td>`; continue; }
+      html += `<td class="${cell.seat==='S'?'you':''}">${formatCallHTML(cell.call)}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += `</tbody></table><div class="small-muted" style="margin-top:4px;">Dealer: ${dealerSeat}${dealerSeat==='S'?' (you)':''}. You are always South.</div>`;
+  return html;
+}
+
+function renderHandHTML(hand, revealHcp){
+  let html = `<div class="hand-suits">`;
+  for(const s of SUITS){
+    const cards = hand[s];
+    const cardsStr = cards.length ? cards.map(rankLabel).join(', ') : '—';
+    html += `<div class="suit-row"><div class="suit-sym ${suitColor[s]}">${suitSymbol[s]}</div><div class="suit-cards">${cardsStr}</div></div>`;
+  }
+  html += `</div>`;
+  if(revealHcp!==null){
+    html += `<div class="hcp-line">Points: <strong>${revealHcp} HCP</strong> &nbsp;·&nbsp; Shape: ${shapeString(lengths(hand))}</div>`;
+  } else {
+    html += `<div class="hcp-line hcp-hidden">Points: hidden until you bid</div>`;
+  }
+  return html;
+}
+
+function moduleName(id){ return MODULES.find(m=>m.id===id).name; }
+
+function renderPlay(){
+  const {moduleId, hands, dealerSeat, auction} = scenario;
+  const auctionHtml = buildAuctionHtml(dealerSeat, auction);
+
+  // Determine last contract call for legality
+  let lastContract = null;
+  for(const entry of auction){
+    if(entry.call!=='P' && entry.call!=='X' && entry.call!=='XX') lastContract = entry.call;
+  }
+  const lastRank = lastContract ? bidRank(lastContract) : -1;
+  const legality = computeCallLegality(auction);
+
+  let bidGrid = `<div class="bid-picker"><div class="special-row">
+    <button class="btn" data-special="P">Pass</button>
+    ${legality.doubleLegal ? `<button class="btn" data-special="X">Double</button>` : ``}
+    ${legality.redoubleLegal ? `<button class="btn" data-special="XX">Redouble</button>` : ``}
+  </div>`;
+  bidGrid += `<div class="bid-grid">
+    <div></div>
+    <div class="col-head black">♣</div><div class="col-head red">♦</div><div class="col-head red">♥</div><div class="col-head black">♠</div><div class="col-head">NT</div>`;
+  for(let level=1; level<=7; level++){
+    bidGrid += `<div class="lvl">${level}</div>`;
+    for(const strain of ['C','D','H','S','N']){
+      const rank = level*5+strainIndex(strain);
+      const disabled = rank<=lastRank;
+      bidGrid += `<button class="bid-btn" data-level="${level}" data-strain="${strain}" ${disabled?'disabled':''}>${level}${strain==='N'?'NT':suitSymbol[strain]}</button>`;
+    }
+  }
+  bidGrid += `</div></div>`;
+
+  app.innerHTML = `
+    <div class="top-bar">
+      <button class="link" id="backBtn">&larr; Back to modules</button>
+      <div class="small-muted">${moduleName(moduleId)}</div>
+    </div>
+    <div class="card">
+      <div style="font-weight:600; margin-bottom:4px;">Bidding so far</div>
+      ${auctionHtml}
+    </div>
+    <div class="card">
+      <div style="font-weight:600; margin-bottom:2px;">Your hand (South)</div>
+      ${renderHandHTML(hands.S, null)}
+    </div>
+    <div class="card">
+      <div style="font-weight:600; margin-bottom:6px;">What do you bid?</div>
+      ${bidGrid}
+    </div>
+  `;
+
+  document.getElementById('backBtn').addEventListener('click', showMenu);
+  app.querySelectorAll('[data-special]').forEach(btn=>{
+    btn.addEventListener('click', ()=> submitBid(btn.dataset.special));
+  });
+  app.querySelectorAll('.bid-btn:not([disabled])').forEach(btn=>{
+    btn.addEventListener('click', ()=> submitBid({level:parseInt(btn.dataset.level,10), strain:btn.dataset.strain}));
+  });
+}
+
+async function submitBid(call){
+  picked = call;
+  const correctCall = scenario.correct.call;
+  const isCorrect = callsEqual(picked, correctCall);
+  await recordResult(scenario.moduleId, isCorrect);
+  renderFeedback(isCorrect);
+}
+
+function renderFeedback(isCorrect){
+  const {hands, correct, dealerSeat, auction} = scenario;
+  const hcp = calcHCP(hands.S);
+  const theoryText = THEORY[correct.theoryKey] || '';
+  const mnemonicText = MNEMONICS[correct.theoryKey] || '';
+  const auctionHtml = buildAuctionHtml(dealerSeat, auction, picked);
+
+  let html = `<div class="top-bar">
+      <button class="link" id="backBtn2">&larr; Back to modules</button>
+      <div class="small-muted">${moduleName(scenario.moduleId)}</div>
+    </div>`;
+
+  html += `<div class="result-banner ${isCorrect?'correct':'incorrect'}">
+    ${isCorrect ? '✓ Correct!' : `✗ Not quite. You bid ${formatCallHTML(picked)}.`}
+  </div>`;
+
+  html += `<div class="card">
+    <div style="font-weight:600; margin-bottom:4px;">Bidding so far</div>
+    ${auctionHtml}
+  </div>`;
+
+  html += `<div class="card">
+    <div style="font-weight:600; margin-bottom:2px;">Your hand (revealed)</div>
+    ${renderHandHTML(hands.S, hcp)}
+  </div>`;
+
+  html += `<div class="card">
+    <div class="reveal-line"><strong>Correct bid: ${formatCallHTML(correct.call)}</strong></div>
+    <div class="reveal-line">${correct.reason}</div>
+    ${mnemonicText ? `<div class="mnemonic">💡 ${mnemonicText}</div>` : ``}
+    <div class="theory">${theoryText}</div>
+  </div>`;
+
+  html += `<div class="btn-row">
+    <button class="btn btn-primary" id="nextBtn">Next hand</button>
+    <button class="btn" id="menuBtn">Choose a different module</button>
+  </div>`;
+
+  app.innerHTML = html;
+  document.getElementById('backBtn2').addEventListener('click', showMenu);
+  document.getElementById('menuBtn').addEventListener('click', showMenu);
+  document.getElementById('nextBtn').addEventListener('click', ()=> startModule(scenario.moduleId));
+}
+
+/* ---------------- Init ---------------- */
+showMenu();
+
+})();
+</script>
+</body>
+</html>
