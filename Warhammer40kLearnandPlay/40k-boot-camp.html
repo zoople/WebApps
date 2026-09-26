@@ -46,6 +46,7 @@
   --reach:rgba(92,136,232,.28); --reach-edge:rgba(92,136,232,.7); --deploy-p:rgba(92,136,232,.06); --deploy-e:rgba(130,184,72,.06);
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
 #app{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:18px 60px}
 h1,h2,h3{text-wrap:balance;margin:0}
@@ -253,7 +254,7 @@ table.weap .kw{display:block;font-family:var(--f-mono);font-size:10px;color:var(
 </style>
 
 <div id="app">
-  <main id="scr-home" class="home"></main>
+  <main id="scr-home" class="home"><p class="reason" id="boot-status" style="padding-block:40px">Loading 40K Boot Camp…</p></main>
   <section id="scr-brief" class="brief" hidden></section>
   <section id="scr-battle" hidden>
     <div class="hud" id="hud"></div>
@@ -283,6 +284,13 @@ table.weap .kw{display:block;font-family:var(--f-mono);font-size:10px;color:var(
 <div class="modal" id="modal" hidden><div class="modal-card" id="modal-card" role="dialog" aria-modal="true"></div></div>
 
 <script>
+window.addEventListener('error', function(e){
+  var el = document.getElementById('boot-status');
+  if(el){ el.hidden = false; el.textContent = 'The game hit an error while starting: ' + (e.message || 'unknown error') + '. Try reloading the page.'; }
+});
+</script>
+<script>
+(() => {
 'use strict';
 /* ============================================================
    DATA
@@ -1537,6 +1545,7 @@ function openBrief(i){
 }
 
 showHome();
+})();
 </script>
 
 </body>
