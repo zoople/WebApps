@@ -133,9 +133,9 @@ table.ref td:first-child{text-align:left}
 @media (max-width:900px){.battle-grid{grid-template-columns:minmax(0,1fr)}}
 .board-col{display:flex;flex-direction:column;gap:10px;min-width:0}
 .board-wrap{position:relative;border:1px solid var(--line);border-radius:6px;overflow-x:auto;background:var(--field)}
-@media (max-width:640px){#board{width:620px;max-width:none}.board-hint{display:block!important}}
 .board-hint{display:none;font-size:12px;color:var(--muted)}
-#board{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#board{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+@media (max-width:640px){#board{width:680px;max-width:none}.board-hint{display:block!important}}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .panel{display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -1162,15 +1162,21 @@ function onNext(){
 /* board clicks */
 function boardCell(ev){
   const svg = $('#board'); const r = svg.getBoundingClientRect();
-  const x = Math.floor((ev.clientX - r.left) / r.width * BW), y = Math.floor((ev.clientY - r.top) / r.height * BH);
+  const fx = (ev.clientX - r.left) / r.width * BW, fy = (ev.clientY - r.top) / r.height * BH;
+  const x = Math.floor(fx), y = Math.floor(fy);
   if(x<0||y<0||x>=BW||y>=BH) return null;
-  return {x,y};
+  return {x, y, fx, fy};
 }
 $('#board').addEventListener('click', ev => {
   if(!G || G.over) return;
   const c = boardCell(ev); if(!c) return;
-  const clicked = unitAt(c.x,c.y);
   const sel = G.sel && unitById(G.sel);
+  let clicked = unitAt(c.x,c.y);
+  if(!clicked && G.mode!=='move'){
+    // forgive near-misses on small screens: take the closest token within about 1 inch
+    let bd = 1.05;
+    for(const u of alive()){ const d = Math.hypot(u.x+.5-c.fx, u.y+.5-c.fy); if(d < bd){ bd = d; clicked = u; } }
+  }
   if(G.mode==='move' && !clicked && myTurnFree()){ if(doMoveTo(c.x,c.y)) return; }
   if(clicked && sel && clicked.side !== sel.side){
     if(G.mode==='shoot' && myTurnFree() && !targetCheck(sel, WEAPONS[G.weapon], clicked)) return doShoot(sel, WEAPONS[G.weapon], clicked);
@@ -1310,7 +1316,7 @@ function btn(label, sub, onclick, opts={}){
   return `<button type="button" class="btn ${opts.primary?'btn-primary':''} ${opts.cls||''}" data-h="${id}" ${opts.disabled?'disabled':''}>${label}${sub?`<small>${sub}</small>`:''}</button>`;
 }
 let BTN_HANDLERS = {};
-document.addEventListener('click', ev => { const b = ev.target.closest('[data-h]'); if(b && !b.disabled && BTN_HANDLERS[b.dataset.h]) BTN_HANDLERS[b.dataset.h](); });
+function bindButtons(root){ root.querySelectorAll('[data-h]').forEach(b => { b.onclick = () => { if(!b.disabled && BTN_HANDLERS[b.dataset.h]) BTN_HANDLERS[b.dataset.h](); }; }); }
 
 function renderOrders(){
   const el = $('#orders'), nb = $('#next-btn');
@@ -1372,6 +1378,7 @@ function renderUnit(){
     <div class="chips"><span class="chip">${u.kw.join(' · ')}</span>${chips.join('')}</div>`;
   html += actionsFor(u);
   box.innerHTML = `<div class="box-title">Datasheet</div>${html}`;
+  bindButtons(box);
 }
 
 function actionsFor(u){
