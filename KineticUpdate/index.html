@@ -211,6 +211,30 @@
 
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 10px; font-weight: 700; z-index: 20; max-width: calc(100% - 32px); }
 
+  .sync { font-size: 0.74rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .sync[data-s="cloud"]::before { background: var(--good); }
+  .sync[data-s="error"]::before { background: var(--bad); }
+  .sync[data-s="syncing"]::before { background: var(--warn); }
+  .gen { font-family: var(--mono); font-size: 0.72rem; font-weight: 700; color: var(--accent-ink); background: var(--accent); border-radius: 5px; padding: 1px 6px; }
+
+  .sheet { position: fixed; inset: 0; z-index: 30; background: rgba(10,18,21,.55); display: flex; align-items: flex-end; justify-content: center; }
+  .sheet-inner { background: var(--paper); width: 100%; max-width: 640px; max-height: 92%; overflow-y: auto; border-radius: 18px 18px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+  .sheet-inner > *, .mut-body > * { flex-shrink: 0; }
+  .mut-opt { text-align: left; display: grid; grid-template-columns: 34px 1fr; gap: 2px 10px; padding: 11px 12px; font-weight: 400; }
+  .mut-opt .mi { grid-row: span 2; width: 30px; height: 30px; border-radius: 8px; background: var(--surface-2); display: grid; place-items: center; font-family: var(--mono); font-weight: 700; color: var(--accent); }
+  .mut-opt b { font-weight: 700; }
+  .mut-opt .md { font-size: 0.84rem; color: var(--muted); }
+  .mut-opt.rec { border-color: var(--accent); }
+  .mut-opt.rec b::after { content: "suggested"; margin-left: 8px; font-size: 0.68rem; font-family: var(--mono); color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
+  .mut-opt[aria-expanded="true"] { border-color: var(--ink); background: var(--surface); }
+  .mut-body { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 8px; }
+  .lineage { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 8px; }
+  .lineage li { position: relative; font-size: 0.86rem; }
+  .lineage li::before { content: ""; position: absolute; left: -21px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); }
+  .lineage li.now::before { background: var(--accent); border-color: var(--accent); }
+
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   @media (prefers-reduced-motion: no-preference) {
     .deal { animation: deal .35s cubic-bezier(.2,.8,.2,1); }
@@ -222,7 +246,7 @@
 
 <div class="wrap">
   <header class="top">
-    <h1>Kognetik Snack Deck</h1>
+    <div class="stack" style="gap:2px"><h1>Kognetik Snack Deck</h1><span id="sync-status" class="sync" data-s="local">Saved on this device only</span></div>
     <span class="psi-mark">Ψ = ∂S/∂R</span>
   </header>
 
@@ -295,6 +319,7 @@
     <!-- Step: result -->
     <div id="u-result" class="stack" hidden style="gap:14px">
       <div id="result-body" class="panel"></div>
+      <div id="result-actions" class="stack"></div>
       <button id="result-home-btn" class="btn-primary btn-block">Done</button>
     </div>
   </section>
@@ -313,6 +338,11 @@
 
   <!-- DECK TAB -->
   <section id="tab-deck" class="stack" hidden style="gap:18px">
+    <div class="stack" style="gap:10px">
+      <div class="spread"><h2>Your deck</h2><span class="small muted">cards evolve by mutation</span></div>
+      <p class="small muted">Each loop holds one live card. When the old rule keeps winning, you mutate the card: change one thing and it becomes the next generation. The lineage shows what you tried and how each generation did.</p>
+      <div id="deck-mine" class="stack" style="gap:12px"></div>
+    </div>
     <div class="panel">
       <h2>How a loop gets rewritten</h2>
       <ol class="steps">
@@ -320,6 +350,7 @@
         <li><div><b>Declare the rule.</b> <span class="muted">When [cue], I [automatic step], and it gives me [payoff]. Name the closure point, the last moment before the step completes, such as a hand on the cupboard door.</span></div></li>
         <li><div><b>Test one change.</b> <span class="muted">Insert one kognem at the closure point. You can add up to two modifiers. Keep it the same for at least five runs.</span></div></li>
         <li><div><b>Classify the result.</b> <span class="muted">Over comparable runs, did the old rule still reconstruct (Ψ = 0), is a different rule now running reliably (Ψ ≠ 0), or is there not enough evidence yet (Ψ undefined)?</span></div></li>
+        <li><div><b>Mutate and repeat.</b> <span class="muted">If Ψ = 0, change one thing about the card, such as an earlier insertion point, a new action or one modifier, and test the new generation. If Ψ ≠ 0 holds, keep it and move on to the next loop.</span></div></li>
       </ol>
       <p class="small muted">A kognem doesn't fight the craving or depend on willpower. It changes the order of steps at the point where the automatic loop closes. One good run is a state change. A mutation is a new rule that keeps showing up across runs.</p>
     </div>
@@ -382,6 +413,9 @@
   <button role="tab" data-tab="deck" aria-selected="false"><span class="ti">▤</span>Deck</button>
   <button role="tab" data-tab="log" aria-selected="false"><span class="ti">Ψ</span>Log</button>
 </nav>
+<div id="mutate" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="mut-title">
+  <div class="sheet-inner" id="mutate-inner"></div>
+</div>
 <div id="toast" class="toast" hidden></div>
 
 <script>
@@ -528,22 +562,129 @@
       test: { k: "inversion", mods: ["hidden"], action: K.inversion.plays[0], secs: 60 } }
   ];
 
-  let state = { v: 1, loops: [], logs: [], lastLoopId: "" };
+  let state = { v: 2, loops: [], logs: [], lastLoopId: "" };
 
   function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function safeSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
-  function save() { safeSet(STORE, JSON.stringify(state)); }
+  function save() { safeSet(STORE, JSON.stringify(state)); scheduleSync(); }
   function uid(p) { return p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   function load() {
     const raw = safeGet(STORE);
+    let ok = false;
     if (raw) {
-      try { const s = JSON.parse(raw); if (s && Array.isArray(s.loops) && Array.isArray(s.logs)) { state = s; return; } } catch (e) {}
+      try { const s = JSON.parse(raw); if (s && Array.isArray(s.loops) && Array.isArray(s.logs)) { state = s; ok = true; } } catch (e) {}
     }
-    state = { v: 1, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" };
-    migrateOld();
-    save();
+    if (!ok) {
+      state = { v: 2, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" };
+      migrateOld();
+    }
+    normalize();
+    safeSet(STORE, JSON.stringify(state));
+  }
+
+  // Bring older data up to the generation-aware shape.
+  function normalize() {
+    state.v = 2;
+    state.loops.forEach(l => {
+      l.test = l.test || { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs };
+      if (!K[l.test.k]) l.test.k = "pause";
+      l.test.mods = l.test.mods || [];
+      l.test.gen = l.test.gen || 1;
+      l.history = l.history || [];
+    });
+    state.logs.forEach(l => {
+      l.gen = l.gen || 1;
+      if (l.key && !/\|g\d+$/.test(l.key)) l.key += "|g1";
+      if (!l.key) l.key = testKey(l.k, l.mods, l.gen);
+    });
+  }
+
+  // ---------- Account sync (db capability) ----------
+  // Inside Claude the deck is kept in the artifact's private store, so it follows you across
+  // devices and Claude can read it in a later session. Hosted anywhere else it stays in this browser.
+  const sync = { db: null, status: "local", written: {}, months: new Set(), chain: Promise.resolve(), timer: null };
+  function monthKey(t) { const d = new Date(t); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+  function setSync(status) {
+    sync.status = status;
+    const el = document.getElementById("sync-status"); if (!el) return;
+    const text = { local: "Saved on this device only", syncing: "Connecting to your account…", cloud: "Saved to your Claude account", error: "Couldn't save to your account. Kept on this device." };
+    el.textContent = text[status] || "";
+    el.dataset.s = status;
+  }
+  function docsFromState() {
+    const docs = { "deck/state": { v: 2, loops: state.loops, lastLoopId: state.lastLoopId || "" } };
+    const months = {};
+    sync.months.forEach(m => { months[m] = []; });
+    state.logs.forEach(l => { const m = monthKey(l.t); (months[m] = months[m] || []).push(l); });
+    Object.keys(months).forEach(m => { sync.months.add(m); docs["logs/" + m] = { month: m, entries: months[m] }; });
+    return docs;
+  }
+  function scheduleSync() { if (!sync.db) return; clearTimeout(sync.timer); sync.timer = setTimeout(flushSync, 400); }
+  function flushSync() {
+    const docs = docsFromState();
+    Object.keys(docs).forEach(path => {
+      const body = clone(docs[path]), j = JSON.stringify(body);
+      if (sync.written[path] === j) return;
+      sync.written[path] = j;
+      sync.chain = sync.chain
+        .then(() => sync.db.doc(path).set(body))
+        .then(() => setSync("cloud"), e => {
+          if (sync.written[path] === j) delete sync.written[path];
+          setSync("error");
+          if (e && e.code === "quota_exceeded") toast("Your account storage for this deck is full. Copy a backup from the Log tab.");
+        });
+    });
+  }
+  function logsFromDocs(docs) {
+    const out = [];
+    docs.forEach(d => { sync.months.add(d.id); const b = d.data() || {}; sync.written["logs/" + d.id] = JSON.stringify(b); (b.entries || []).forEach(e => out.push(clone(e))); });
+    return out.sort((a, b) => a.t - b.t);
+  }
+  async function connectDb() {
+    if (!window.claude || typeof window.claude.use !== "function") return;
+    let db = null;
+    try { db = await window.claude.use("db"); } catch (e) { db = null; }
+    if (!db) return;
+    setSync("syncing");
+    try {
+      const [deck, logs] = await Promise.all([db.doc("deck/state").get(), db.collection("logs").get()]);
+      sync.db = db;
+      if (deck.exists) {
+        const b = deck.data() || {};
+        sync.written["deck/state"] = JSON.stringify(b);
+        state.loops = clone(b.loops || []);
+        state.lastLoopId = b.lastLoopId || "";
+        state.logs = logsFromDocs(logs.docs);
+        normalize();
+        safeSet(STORE, JSON.stringify(state));
+        flow.loopId = "";
+        renderAll();
+        setSync("cloud");
+      } else {
+        flushSync(); // first run in this account: upload what this browser has
+      }
+      db.doc("deck/state").onSnapshot(s => {
+        if (!s.exists || s.metadata.hasPendingWrites) return;
+        const j = JSON.stringify(s.data());
+        if (j === sync.written["deck/state"]) return;
+        sync.written["deck/state"] = j;
+        const b = s.data();
+        state.loops = clone(b.loops || []); state.lastLoopId = b.lastLoopId || "";
+        normalize(); safeSet(STORE, JSON.stringify(state)); renderAll(true);
+      }, () => setSync("error"));
+      db.collection("logs").onSnapshot(q => {
+        if (q.metadata.hasPendingWrites) return;
+        const changed = q.docs.some(d => JSON.stringify(d.data()) !== sync.written["logs/" + d.id]);
+        if (!changed) return;
+        state.logs = logsFromDocs(q.docs);
+        normalize(); safeSet(STORE, JSON.stringify(state)); renderAll(true);
+      }, () => setSync("error"));
+    } catch (e) {
+      sync.db = null;
+      setSync("error");
+    }
   }
 
   // Bring scenarios and history across from the earlier simulator, if this browser has them.
@@ -566,12 +707,12 @@
     (old.logs || []).forEach(l => {
       const loop = byTrigger[l.trigger]; if (!loop) return;
       state.logs.push({ id: uid("log"), t: Date.now(), loopId: loop.id, hunger: 0, k: loop.test.k, mods: [],
-        key: testKey(loop.test.k, []), outcome: l.status === "failed" ? "old" : "skip",
+         key: testKey(loop.test.k, [], 1), gen: 1, outcome: l.status === "failed" ? "old" : "skip",
         note: "Imported from the old simulator" + (l.reason ? ": " + l.reason : ""), imported: true });
     });
   }
 
-  function testKey(k, mods) { return k + "|" + (mods || []).slice().sort().join(","); }
+  function testKey(k, mods, gen) { return k + "|" + (mods || []).slice().sort().join(",") + "|g" + (gen || 1); }
   function loopById(id) { return state.loops.find(l => l.id === id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   function fmtSecs(s) { s = Math.max(0, Math.ceil(s)); const m = Math.floor(s / 60); return m + ":" + String(s % 60).padStart(2, "0"); }
@@ -585,7 +726,7 @@
     if (!loop.cue) missing.push("the cue");
     if (!loop.auto) missing.push("the automatic step");
     if (!loop.closure) missing.push("the closure point");
-    const key = testKey(loop.test.k, loop.test.mods);
+    const key = testKey(loop.test.k, loop.test.mods, loop.test.gen);
     const runs = state.logs.filter(l => l.loopId === loop.id && l.key === key && l.outcome !== "hungry");
     const recent = runs.slice(-WINDOW);
     const nNew = recent.filter(l => outClass(l.outcome) === "new").length;
@@ -600,10 +741,10 @@
         ? "The new rule is holding across " + runs.length + " runs. That's a mutation. Try dropping a modifier, or start work on your next loop."
         : "A different rule is reconstructing: " + nNew + " of the last " + WINDOW + ". Keep this card unchanged and see whether it holds to 10 runs." });
     if (nNew <= 1) {
-      let advice = "The old rule still reconstructs (" + (WINDOW - nNew) + " of " + WINDOW + "). Change one thing. ";
-      if (nMissed >= 3) advice += "Most runs missed the closure point, so the card isn't firing in time. Add a Setup modifier such as Cue note or Out of sight before changing the card.";
-      else if ((loop.test.mods || []).length < 2) advice += "Add one modifier, or swap to " + suggestNext(loop.test.k) + ".";
-      else advice += "Swap to " + suggestNext(loop.test.k) + " and drop the modifiers so you can see what changes.";
+      let advice = "The old rule still reconstructs (" + (WINDOW - nNew) + " of " + WINDOW + "). Mutate the card and change one thing. ";
+      if (nMissed >= 3) advice += "Most runs missed the closure point, so the card fires too late. Insert it earlier, or add Cue note or Out of sight.";
+      else if ((loop.test.mods || []).length < 2) advice += "Try adding one modifier, or rewriting the action. If this operator has had two or three generations, switch to " + suggestNext(loop.test.k) + ".";
+      else advice += "Try dropping a modifier, or switch to " + suggestNext(loop.test.k) + ".";
       return Object.assign(base, { cls: "zero", label: "Ψ = 0", advice });
     }
     return Object.assign(base, { cls: "drift", label: "Drift", advice: "The loop is moving but not stable yet (" + nNew + " of " + WINDOW + " new). Don't change anything yet. Five more runs with the same card will show whether it settles." });
@@ -616,7 +757,7 @@
   }
 
   function dotsHTML(loop, n) {
-    const key = testKey(loop.test.k, loop.test.mods);
+    const key = testKey(loop.test.k, loop.test.mods, loop.test.gen);
     const recent = state.logs.filter(l => l.loopId === loop.id).slice(-(n || 8));
     let html = "";
     for (let i = 0; i < (n || 8) - recent.length; i++) html += '<span class="dot" title="no run yet"></span>';
@@ -634,7 +775,7 @@
     const small = opts && opts.small;
     let html = '<div class="kcard' + (small ? " small-card" : "") + (opts && opts.deal ? " deal" : "") + '">';
     html += '<span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>";
-    html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.glyph + '</span><div><div class="code">' + k.code + " · KOGNEM · " + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
+    html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.glyph + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
     html += '<p class="action">' + esc(test.action || k.plays[0]) + "</p>";
     if (mods.length) {
       html += '<div class="row">' + mods.map(m => '<span class="mod"><span class="mg">' + esc(m.glyph) + "</span>" + esc(m.name) + "</span>").join("") + "</div>";
@@ -694,7 +835,7 @@
     if (randomise) {
       const pool = KOGNEMS.filter(k => k.id !== (flow.test && flow.test.k));
       const k = pool[Math.floor(Math.random() * pool.length)];
-      flow.test = { k: k.id, mods: [], action: k.plays[Math.floor(Math.random() * k.plays.length)], secs: k.secs };
+      flow.test = { k: k.id, mods: [], action: k.plays[Math.floor(Math.random() * k.plays.length)], secs: k.secs, gen: 1, wild: true };
       $("redraw-note").hidden = false;
     } else {
       flow.test = clone(loop.test);
@@ -764,7 +905,7 @@
     const loop = loopById(flow.loopId); if (!loop) return;
     const test = flow.test || loop.test;
     state.logs.push({ id: uid("log"), t: Date.now(), loopId: loop.id, hunger: flow.hunger || 0, k: test.k, mods: (test.mods || []).slice(),
-      key: testKey(test.k, test.mods), outcome: out, note: $("outcome-note").value.trim() });
+      gen: test.gen || 1, key: testKey(test.k, test.mods, test.gen), outcome: out, note: $("outcome-note").value.trim() });
     state.lastLoopId = loop.id;
     save();
     const c = classify(loop);
@@ -778,8 +919,153 @@
         : o.cls === "new" ? "One run is a state change. Enough of them in a row make a new rule." : "This run is left out of the loop's Ψ.") + "</p>" +
       '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + "</span>" + dotsHTML(loop, 8) + "</div>" +
       '<p class="advice">' + esc(c.advice) + "</p>";
+    const acts = $("result-actions");
+    if (c.cls === "zero") {
+      acts.innerHTML = '<button class="btn-primary btn-block" data-mutate="' + loop.id + '">Mutate the card → gen ' + ((loop.test.gen || 1) + 1) + "</button>";
+    } else if (o.cls === "old") {
+      acts.innerHTML = '<button class="btn-quiet" data-mutate="' + loop.id + '">Mutate now anyway</button>' +
+        '<p class="small muted">The method tests one version of a card over ' + WINDOW + " runs before changing it. If you change it after every miss, you never find out what works.</p>";
+    } else acts.innerHTML = "";
     flow.test = null; flow.hunger = 0;
     showStep("u-result");
+    renderAll();
+  }
+
+  $("result-actions").addEventListener("click", e => { const b = e.target.closest("[data-mutate]"); if (b) openMutate(b.dataset.mutate, true); });
+
+  // ---------- Mutation ----------
+  // A mutation changes exactly one thing about a loop's card and starts the next generation.
+  // The generation being replaced is archived with how it did, so the lineage stays readable.
+  function archiveGen(loop, change, reason) {
+    const key = testKey(loop.test.k, loop.test.mods, loop.test.gen);
+    const runs = state.logs.filter(l => l.loopId === loop.id && l.key === key && l.outcome !== "hungry");
+    const c = classify(loop);
+    loop.history = loop.history || [];
+    loop.history.push({ gen: loop.test.gen || 1, k: loop.test.k, mods: (loop.test.mods || []).slice(), action: loop.test.action,
+      secs: loop.test.secs, closure: loop.closure, runs: runs.length, nNew: runs.filter(l => outClass(l.outcome) === "new").length,
+      psi: c.label, cls: c.cls, ended: Date.now(), change, reason });
+  }
+
+  const WHY = [
+    { id: "late", label: "The card fired too late", rec: "earlier" },
+    { id: "strong", label: "The urge outlasted the card", rec: "longer" },
+    { id: "fit", label: "The action didn't fit the moment", rec: "rewrite" },
+    { id: "forgot", label: "I forgot the card existed", rec: "addmod" },
+    { id: "stale", label: "This operator feels used up", rec: "operator" }
+  ];
+  const mut = { loopId: "", why: "", open: "", fromResult: false };
+
+  function mutationOptions(loop) {
+    const t = loop.test, k = K[t.k];
+    const longer = Math.min(3600, Math.round((Number(t.secs) || k.secs) * 1.5));
+    const opts = [
+      { id: "earlier", icon: "⤒", title: "Insert earlier", desc: "Move the closure point one step upstream so the card fires before the loop has momentum." },
+      { id: "rewrite", icon: "✎", title: "Rewrite the action", desc: "Same operator, different move. Iterative rewrite in its purest form." },
+      { id: "longer", icon: "×1.5", title: "Longer timer", desc: "Run the card for " + fmtSecs(longer) + " instead of " + fmtSecs(t.secs) + "." }
+    ];
+    if ((t.mods || []).length < 2) opts.push({ id: "addmod", icon: "+", title: "Add a modifier", desc: "Change how the card is delivered, not what it does." });
+    if ((t.mods || []).length) opts.push({ id: "dropmod", icon: "−", title: "Drop a modifier", desc: "Check whether the modifier is helping or only adding friction." });
+    opts.push({ id: "operator", icon: "⇄", title: "Switch operator", desc: "The biggest jump. Use it when a family has had two or three generations without Ψ ≠ 0." });
+    return opts;
+  }
+
+  function openMutate(loopId, fromResult) {
+    const loop = loopById(loopId); if (!loop) return;
+    mut.loopId = loopId; mut.why = ""; mut.open = ""; mut.fromResult = !!fromResult;
+    renderMutate();
+    $("mutate").hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function closeMutate() { $("mutate").hidden = true; document.body.style.overflow = ""; }
+
+  function renderMutate() {
+    const loop = loopById(mut.loopId); if (!loop) return closeMutate();
+    const c = classify(loop);
+    const rec = mut.why ? (WHY.find(w => w.id === mut.why) || {}).rec : (c.nMissed >= 3 ? "earlier" : "");
+    const t = loop.test, k = K[t.k];
+    let html = '<div class="spread"><div class="stack" style="gap:2px"><span class="eyebrow">' + esc(loop.name) + '</span><h2 id="mut-title">Mutate gen ' + (t.gen || 1) + ' → gen ' + ((t.gen || 1) + 1) + '</h2></div><button class="btn-quiet" data-mclose="1" aria-label="Close">Close</button></div>';
+    html += cardHTML(t, null, { small: true });
+    html += '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + '</span><span class="small muted mono">' + c.nNew + "/" + c.recent.length + " new in window</span></div>";
+    html += '<div class="stack" style="gap:6px"><span class="eyebrow">What went wrong? (optional)</span><div class="row">' +
+      WHY.map(w => '<button class="chip" data-why="' + w.id + '" aria-pressed="' + (mut.why === w.id) + '">' + esc(w.label) + "</button>").join("") + "</div></div>";
+    html += '<div class="stack" style="gap:8px"><span class="eyebrow">Change one thing</span>';
+    mutationOptions(loop).forEach(o => {
+      const open = mut.open === o.id;
+      html += '<button class="mut-opt' + (rec === o.id ? " rec" : "") + '" data-mopt="' + o.id + '" aria-expanded="' + open + '"><span class="mi">' + esc(o.icon) + "</span><b>" + esc(o.title) + '</b><span class="md">' + esc(o.desc) + "</span></button>";
+      if (open) html += '<div class="mut-body">' + mutationBody(o.id, loop) + '<button class="btn-primary" data-mapply="' + o.id + '">Deal gen ' + ((t.gen || 1) + 1) + "</button></div>";
+    });
+    html += "</div>";
+    $("mutate-inner").innerHTML = html;
+  }
+
+  function mutationBody(id, loop) {
+    const t = loop.test, k = K[t.k];
+    if (id === "earlier") return '<label class="f" for="m-closure">New closure point, one step earlier<input id="m-closure" value="' + esc(loop.closure) + '" placeholder="e.g. the moment I think about standing up"></label>' +
+      '<p class="small muted">Was: ' + esc(loop.closure || "not declared") + ". Picture the loop backwards: what happens just before that?</p>";
+    if (id === "rewrite") return '<label class="f" for="m-action">New action<input id="m-action" value="' + esc(t.action) + '"></label>' +
+      '<div class="row">' + k.plays.filter(p => p !== t.action).map((p, i) => '<button class="chip" data-mplay="' + esc(p) + '" style="text-align:left">' + esc(p) + "</button>").join("") + "</div>";
+    if (id === "longer") return '<p class="small">The card keeps its action and modifiers. Only the timer changes.</p>';
+    if (id === "addmod") return '<div class="modgrid">' + Object.values(MODS).filter(m => !(t.mods || []).includes(m.id)).map(m =>
+      '<button class="modtoggle" data-mmod="' + m.id + '" aria-pressed="false"><b><span class="mono" style="color:var(--accent)">' + esc(m.glyph) + "</span> " + esc(m.name) + '</b><span class="muted">' + esc(m.text) + "</span></button>").join("") + "</div>";
+    if (id === "dropmod") return '<div class="modgrid">' + (t.mods || []).map(mid => MODS[mid]).filter(Boolean).map(m =>
+      '<button class="modtoggle" data-mmod="' + m.id + '" aria-pressed="false"><b>− ' + esc(m.name) + '</b><span class="muted">' + esc(m.text) + "</span></button>").join("") + "</div>";
+    if (id === "operator") return '<label class="f" for="m-k">New operator<select id="m-k">' + KOGNEMS.filter(x => x.id !== t.k).map(x =>
+      '<option value="' + x.id + '"' + (x.name === suggestNext(t.k) ? " selected" : "") + ">" + x.code + " · " + x.name + "</option>").join("") + "</select></label>" +
+      '<p class="small muted">Modifiers carry over. The action resets to the new operator\'s first snack play, and you can rewrite it later.</p>';
+    return "";
+  }
+
+  let mutPick = "";
+  $("mutate").addEventListener("click", e => {
+    if (e.target === $("mutate") || e.target.closest("[data-mclose]")) return closeMutate();
+    const w = e.target.closest("[data-why]");
+    if (w) { mut.why = mut.why === w.dataset.why ? "" : w.dataset.why; const r = (WHY.find(x => x.id === mut.why) || {}).rec; if (r) mut.open = r; mutPick = ""; renderMutate(); return; }
+    const o = e.target.closest("[data-mopt]");
+    if (o) { mut.open = mut.open === o.dataset.mopt ? "" : o.dataset.mopt; mutPick = ""; renderMutate(); return; }
+    const pl = e.target.closest("[data-mplay]");
+    if (pl) { const inp = document.getElementById("m-action"); if (inp) inp.value = pl.dataset.mplay; return; }
+    const mm = e.target.closest("[data-mmod]");
+    if (mm) { mutPick = mm.dataset.mmod; document.querySelectorAll("[data-mmod]").forEach(b => b.setAttribute("aria-pressed", b === mm)); return; }
+    const ap = e.target.closest("[data-mapply]");
+    if (ap) applyMutation(ap.dataset.mapply);
+  });
+
+  function applyMutation(kind) {
+    const loop = loopById(mut.loopId); if (!loop) return;
+    const t = clone(loop.test);
+    let change = "", closure = loop.closure;
+    if (kind === "earlier") {
+      const v = (document.getElementById("m-closure").value || "").trim();
+      if (!v || v === loop.closure) return toast("Write the earlier moment first");
+      closure = v; change = "Inserted earlier: " + v;
+    } else if (kind === "rewrite") {
+      const v = (document.getElementById("m-action").value || "").trim();
+      if (!v || v === t.action) return toast("Change the action text first");
+      t.action = v; change = "Rewrote the action";
+    } else if (kind === "longer") {
+      const was = Number(t.secs) || K[t.k].secs;
+      t.secs = Math.min(3600, Math.round(was * 1.5)); change = "Timer " + fmtSecs(was) + " → " + fmtSecs(t.secs);
+    } else if (kind === "addmod") {
+      if (!mutPick) return toast("Pick a modifier first");
+      t.mods = (t.mods || []).concat(mutPick); change = "Added " + MODS[mutPick].name;
+    } else if (kind === "dropmod") {
+      if (!mutPick) return toast("Pick the modifier to drop");
+      t.mods = (t.mods || []).filter(m => m !== mutPick); change = "Dropped " + MODS[mutPick].name;
+    } else if (kind === "operator") {
+      const nk = document.getElementById("m-k").value;
+      change = "Switched " + K[t.k].name + " → " + K[nk].name;
+      t.k = nk; t.action = K[nk].plays[0]; t.secs = K[nk].secs;
+    }
+    const why = (WHY.find(w => w.id === mut.why) || {}).label || "";
+    archiveGen(loop, change, why);
+    t.gen = (loop.test.gen || 1) + 1;
+    delete t.wild;
+    loop.test = t; loop.closure = closure;
+    delete loop.example;
+    save();
+    closeMutate();
+    toast("Gen " + t.gen + " dealt: " + change);
+    if (mut.fromResult) { showStep("u-checkin"); flow.loopId = loop.id; }
     renderAll();
   }
 
@@ -822,7 +1108,7 @@
       html += '<p class="rule-line"><b>WHEN</b>' + esc(loop.cue || "…") + " <b>THEN</b>" + esc(loop.auto || "…") + "</p></div>";
       html += '<span class="psi ' + c.cls + '">' + c.label + "</span></div>";
       html += cardHTML(loop.test, null, { small: true });
-      html += '<div class="spread">' + dotsHTML(loop, 8) + '<button class="btn-quiet" data-edit="' + loop.id + '">' + (open ? "Close" : "Edit loop") + "</button></div>";
+      html += '<div class="spread">' + dotsHTML(loop, 8) + '<span class="row" style="gap:0"><button class="btn-quiet" data-mutate="' + loop.id + '">Mutate</button><button class="btn-quiet" data-edit="' + loop.id + '">' + (open ? "Close" : "Edit") + "</button></span></div>";
       html += '<p class="small advice">' + esc(c.advice) + "</p>";
       if (open) html += editorHTML(loop);
       html += "</div>";
@@ -859,6 +1145,8 @@
 
   let draftMods = null;
   $("loops-list").addEventListener("click", e => {
+    const mb = e.target.closest("[data-mutate]");
+    if (mb) { openMutate(mb.dataset.mutate); return; }
     const ed = e.target.closest("[data-edit]");
     if (ed) { openLoopId = openLoopId === ed.dataset.edit ? "" : ed.dataset.edit; draftMods = null; renderLoops(); if (openLoopId) setTimeout(() => { const el = document.querySelector('[data-form="' + openLoopId + '"]'); el && el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 30); return; }
     const mt = e.target.closest("[data-mod]");
@@ -901,10 +1189,16 @@
     const form = e.target; const loop = loopById(form.dataset.form); if (!loop) return;
     const v = id => form.querySelector("#" + id).value.trim();
     const k = v("ed-k");
+    const sig = (t, closure) => JSON.stringify([t.k, (t.mods || []).slice().sort(), t.action, Number(t.secs), closure]);
+    const nextTest = { k, mods: draftMods ? draftMods.slice() : (loop.test.mods || []).slice(), action: v("ed-action") || K[k].plays[0],
+      secs: Math.min(3600, Math.max(5, parseInt(v("ed-secs"), 10) || K[k].secs)), gen: loop.test.gen || 1 };
+    if (sig(loop.test, loop.closure) !== sig(nextTest, v("ed-closure"))) {
+      archiveGen(loop, "Edited by hand", "");
+      nextTest.gen = (loop.test.gen || 1) + 1;
+    }
     loop.name = v("ed-name") || "Untitled loop";
     loop.cue = v("ed-cue"); loop.auto = v("ed-auto"); loop.payoff = v("ed-payoff"); loop.closure = v("ed-closure");
-    loop.test = { k, mods: draftMods ? draftMods.slice() : (loop.test.mods || []).slice(), action: v("ed-action") || K[k].plays[0],
-      secs: Math.min(3600, Math.max(5, parseInt(v("ed-secs"), 10) || K[k].secs)) };
+    loop.test = nextTest;
     delete loop.example;
     openLoopId = ""; draftMods = null; save(); renderAll(); toast("Loop saved");
   });
@@ -917,6 +1211,21 @@
 
   // ---------- Deck tab ----------
   function renderDeck() {
+    $("deck-mine").innerHTML = state.loops.length ? state.loops.map(loop => {
+      const c = classify(loop);
+      const hist = (loop.history || []).slice().reverse();
+      let h = '<div class="panel"><div class="spread"><h3>' + esc(loop.name) + '</h3><span class="psi ' + c.cls + '">' + c.label + "</span></div>";
+      h += cardHTML(loop.test, null, { small: true });
+      h += '<ul class="lineage"><li class="now"><b>Gen ' + (loop.test.gen || 1) + "</b> · live · " + c.runs + " run" + (c.runs === 1 ? "" : "s") + "</li>";
+      hist.forEach(g => {
+        h += "<li><b>Gen " + g.gen + "</b> · " + esc(K[g.k] ? K[g.k].name : g.k) + ((g.mods || []).length ? " + " + g.mods.map(m => MODS[m] ? MODS[m].name : m).join(", ") : "") +
+          ' · <span class="mono">' + g.nNew + "/" + g.runs + '</span> new · <span class="psi ' + g.cls + '" style="font-size:.7rem;padding:1px 6px">' + esc(g.psi) + "</span>" +
+          '<div class="small muted">→ ' + esc(g.change) + (g.reason ? " (" + esc(g.reason) + ")" : "") + "</div></li>";
+      });
+      h += "</ul>";
+      h += '<div class="row" style="justify-content:flex-end"><button class="btn-quiet" data-mutate="' + loop.id + '">Mutate card</button></div></div>';
+      return h;
+    }).join("") : '<div class="empty">Add a loop to start your deck.</div>';
     const stats = cardStats();
     $("deck-kognems").innerHTML = KOGNEMS.map(k => {
       const s = stats[k.id];
@@ -1015,12 +1324,12 @@
     try {
       const s = JSON.parse($("import-text").value);
       if (!s || !Array.isArray(s.loops) || !Array.isArray(s.logs)) throw new Error("shape");
-      state = s; save(); renderAll(); $("import-box").hidden = true; $("import-text").value = ""; toast("Backup restored");
+      state = s; normalize(); save(); renderAll(); $("import-box").hidden = true; $("import-text").value = ""; toast("Backup restored");
     } catch (e) { toast("That isn't a Snack Deck backup. Paste the full copied text."); }
   });
   $("reset-btn").addEventListener("click", () => { $("reset-btn").hidden = true; $("reset-confirm-btn").hidden = false; setTimeout(() => { $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; }, 5000); });
   $("reset-confirm-btn").addEventListener("click", () => {
-    state = { v: 1, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" }; save(); flow.loopId = ""; renderAll();
+    state = { v: 2, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" }; normalize(); save(); flow.loopId = ""; renderAll();
     $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; toast("Reset to example loops");
   });
 
@@ -1036,7 +1345,14 @@
   }
   document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
 
-  function renderAll() { if (!$("u-checkin").hidden) renderCheckin(); else renderHomeStatus(); renderLoops(); renderDeck(); renderLog(); }
+  function renderAll(remote) {
+    if (!$("u-checkin").hidden) renderCheckin(); else renderHomeStatus();
+    if (!(remote && openLoopId)) renderLoops();
+    renderDeck(); renderLog();
+    if (remote && !$("mutate").hidden) renderMutate();
+  }
+  $("deck-mine").addEventListener("click", e => { const b = e.target.closest("[data-mutate]"); if (b) openMutate(b.dataset.mutate); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("mutate").hidden) closeMutate(); });
 
   load();
   renderCheckin();
@@ -1045,6 +1361,7 @@
   let startTab = ["urge", "loops", "deck", "log"].includes(hashTab) ? hashTab : "urge";
   try { const s = sessionStorage.getItem("ksd_tab"); if (!hashTab && s) startTab = s; } catch (e) {}
   setTab(startTab);
+  connectDb();
 })();
 </script>
 </body>
