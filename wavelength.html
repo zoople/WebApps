@@ -87,8 +87,8 @@
   .score{flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 12px; border-radius:12px; background:var(--panel); border:2px solid transparent;}
   .score .n{font-family:var(--display); font-weight:800; font-size:1.35rem; font-variant-numeric:tabular-nums;}
   .score .nm{font-weight:700; font-size:.9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .score.a .nm{color:var(--teamA);} .score.b .nm{color:var(--teamB);}
-  .score.active.a{border-color:var(--teamA);} .score.active.b{border-color:var(--teamB);}
+  .score .nm{color:var(--muted);}
+  .score .nm2{font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
   .menu{min-height:44px; padding:0 12px; border-radius:12px; background:var(--panel); color:var(--muted); font-weight:700; font-size:.85rem;}
 
   .stage{display:flex; flex-direction:column; gap:14px; align-items:stretch;}
@@ -129,6 +129,33 @@
   label.check{display:flex; gap:10px; align-items:center; font-size:.92rem; border-radius:8px;}
   label.check input{width:22px; height:22px; accent-color:var(--b4);}
   .link-btn{color:var(--cream); text-decoration:underline; font-weight:700; padding:4px 2px; font-size:inherit;}
+  .plist{display:flex; flex-direction:column; gap:8px;}
+  .prow{display:flex; align-items:center; gap:10px;}
+  .prow i{width:14px; height:14px; border-radius:50%; flex:none;}
+  .prow input{flex:1; min-width:0;}
+  .prow .x{width:40px; height:40px; border-radius:10px; color:var(--muted); font-size:1.3rem; flex:none;}
+  .prow .x[disabled]{opacity:.3;}
+
+  .hintbox{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:10px;}
+  .hinthead{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .qbar{display:grid; grid-template-columns:repeat(4,1fr); gap:4px;}
+  .qbar span{height:6px; border-radius:6px; background:var(--line);}
+  .qbar span.on{background:var(--b4);}
+  .ideas{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px;}
+  .ideas li{background:var(--night); border-radius:10px; padding:9px 12px; font-weight:600;}
+
+  .results{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px;}
+  .results li{display:flex; align-items:center; gap:10px; background:var(--panel); border-radius:12px; padding:10px 14px; border:2px solid transparent;}
+  .results li.win{border-color:var(--b4);}
+  .results li i{width:14px; height:14px; border-radius:50%; flex:none;}
+  .results .nm{flex:1; min-width:0; font-weight:700; overflow-wrap:anywhere;}
+  .zone{font-family:var(--display); font-weight:800; font-size:1.2rem; font-variant-numeric:tabular-nums;}
+  .zone.z4{color:var(--b4);} .zone.z3{color:var(--b3);} .zone.z2{color:var(--b2);} .zone.z0{color:var(--muted);}
+  .board{width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums;}
+  .board th{font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); text-align:left; padding:6px 8px;}
+  .board td{padding:10px 8px; border-top:1px solid var(--line); font-weight:600;}
+  .board td i{display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:8px; vertical-align:-1px;}
+  .board th:nth-child(n+3),.board td:nth-child(n+3){text-align:right;}
   .toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); background:var(--cream); color:var(--ink); font-weight:700; padding:10px 16px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.35); max-width:calc(100% - 32px); z-index:10;}
 </style>
 
@@ -170,7 +197,7 @@
     ["Worst chore","Best chore"],["Low risk","High risk"],["Straightforward","Complicated"]
   ];
 
-  // ---------- small helpers ----------
+    // ---------- small helpers ----------
   const $ = (s, r = document) => r.querySelector(s);
   const app = $("#app");
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -179,6 +206,7 @@
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const lsDel = (k) => { try { localStorage.removeItem(k); } catch {} };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const COLORS = ["#e0263f", "#3d8bff", "#ff7ab8", "#2fb86c", "#9b6bff", "#ff9a2e", "#14b8c8", "#8a6a4a", "#5b6477", "#c9a400"];
   let toastTimer;
   function toast(msg) {
     const t = $("#toast"); t.textContent = msg; t.hidden = false;
@@ -186,7 +214,7 @@
   }
 
   // ---------- saved cards + settings (page db if available, else this device) ----------
-  // lib: { cards:[{id,l,r,on}], builtIn:true }
+  // lib: { cards:[{id,l,r,on,h?}], builtIn:true }  h = hint ideas for each quarter [[..],[..],[..],[..]]
   let lib = lsGet("wl.lib", { cards: [], builtIn: true });
   let storeMode = "device"; // "device" | "cloud"
   let db = null, writing = Promise.resolve();
@@ -217,12 +245,15 @@
   }
 
   // ---------- game state ----------
-  const blankSetup = () => ({ mode: "teams", names: ["Team 1", "Team 2"], target: 10, rounds: 7 });
-  let setup = lsGet("wl.setup", blankSetup());
-  let temp = lsGet("wl.temp", []); // this-game-only cards [{id,l,r}]
+  const blankSetup = () => ({ players: ["Player 1", "Player 2", "Player 3", "Player 4"], rounds: 8 });
+  let setup = lsGet("wl.setup", null);
+  if (!setup || !Array.isArray(setup.players)) setup = blankSetup();
+  let temp = lsGet("wl.temp", []); // this-game-only cards [{id,l,r,h?}]
   let game = lsGet("wl.game", null);
+  if (game && !Array.isArray(game.players)) game = null; // saved by an older version of the game
   let view = "setup";
   let writeOwn = false; // psychic "write my own" sheet open
+  let hint = { open: false, loading: false, error: "" };
 
   const saveSetup = () => lsSet("wl.setup", setup);
   const saveTemp = () => lsSet("wl.temp", temp);
@@ -231,8 +262,8 @@
   function pool() {
     const p = [];
     if (lib.builtIn) BUILTIN.forEach((c, i) => p.push({ id: "b" + i, l: c[0], r: c[1] }));
-    lib.cards.forEach(c => { if (c.on !== false) p.push({ id: c.id, l: c.l, r: c.r }); });
-    temp.forEach(c => p.push({ id: c.id, l: c.l, r: c.r }));
+    lib.cards.forEach(c => { if (c.on !== false) p.push(c); });
+    temp.forEach(c => p.push(c));
     return p;
   }
 
@@ -255,38 +286,41 @@
     game.targetPos = t;
   }
 
+  const guessersOf = (g) => g.players.map((_, i) => i).filter(i => i !== g.psychic);
+
   function newRound() {
-    game.card = drawCard() || { id: "none", l: "Left", r: "Right" };
+    const g = game;
+    g.psychic = (g.round - 1) % g.players.length;
+    g.card = drawCard() || { id: "none", l: "Left", r: "Right" };
     rollTarget();
-    game.needle = 50;
-    game.spinUsed = false;
-    game.swapUsed = false;
-    game.clue = "";
-    game.result = null;
-    game.phase = "pass-psychic";
+    g.spinUsed = false;
+    g.swapUsed = false;
+    g.clue = "";
+    g.guesses = {};
+    g.gi = 0;
+    g.needle = 50;
+    g.result = null;
+    g.phase = "pass-psychic";
     writeOwn = false;
+    hint = { open: false, loading: false, error: "" };
     saveGame();
   }
 
   function startGame() {
+    const names = setup.players.map((n, i) => n.trim() || `Player ${i + 1}`);
+    if (names.length < 2) { toast("Add at least two players"); return; }
     if (!pool().length) { toast("Add at least one card first"); return; }
-    const teams = setup.mode === "teams";
     game = {
-      mode: setup.mode,
-      teams: teams ? [{ name: setup.names[0].trim() || "Team 1", score: 0 }, { name: setup.names[1].trim() || "Team 2", score: 0 }] : [{ name: "Everyone", score: 0 }],
-      target: setup.target, rounds: setup.rounds, round: 1,
-      active: Math.random() < 0.5 || !teams ? 0 : 1,
-      used: [], history: []
+      players: names.map(name => ({ name, wins: 0, pts: 0 })),
+      rounds: setup.rounds, round: 1, used: []
     };
-    // Official catch-up: the team going second starts with 1 point
-    if (teams) game.teams[1 - game.active].score = 1;
     newRound();
     view = "game";
     try { navigator.wakeLock && navigator.wakeLock.request("screen").catch(() => {}); } catch {}
     render();
   }
 
-  function scoreFor(needle, target) {
+  function zonePoints(needle, target) {
     const d = Math.abs(needle - target);
     if (d <= 2.5) return 4;
     if (d <= 7.5) return 3;
@@ -295,37 +329,88 @@
   }
 
   function resolveRound() {
-    const g = game, pts = scoreFor(g.needle, g.targetPos);
-    const teams = g.mode === "teams";
-    const other = 1 - g.active;
-    g.teams[g.active].score += pts;
-    let again = false;
-    if (teams && pts === 4 && g.teams[g.active].score < g.teams[other].score) again = true;
-    g.result = { pts, again };
-    g.history.push({ card: g.card, pts });
-    // winner?
-    g.over = null;
-    if (teams) {
-      const [a, b] = g.teams;
-      if (a.score >= g.target || b.score >= g.target) {
-        if (a.score !== b.score) g.over = { winner: a.score > b.score ? 0 : 1 };
-        else g.result.tie = true;
-      }
-    } else if (g.round >= g.rounds) {
-      g.over = { total: g.teams[0].score };
-    }
+    const g = game;
+    const rows = guessersOf(g).map(i => {
+      const v = g.guesses[i], dist = Math.abs(v - g.targetPos);
+      return { i, v, dist, pts: zonePoints(v, g.targetPos) };
+    }).sort((a, b) => a.dist - b.dist);
+    const best = rows[0].dist;
+    rows.forEach(r => { r.win = Math.abs(r.dist - best) < 0.05; });
+    rows.forEach(r => { g.players[r.i].pts += r.pts; if (r.win) g.players[r.i].wins += 1; });
+    g.result = { rows };
+    g.revealed = false;
     g.phase = "reveal";
     saveGame();
   }
 
   function nextRound() {
     const g = game;
-    if (g.over) { g.phase = "over"; saveGame(); render(); return; }
-    g.bonus = !!(g.mode === "teams" && g.result.again);
-    if (!g.bonus && g.mode === "teams") g.active = 1 - g.active;
+    if (g.round >= g.rounds) { g.phase = "over"; saveGame(); render(); return; }
     g.round += 1;
     newRound();
     render();
+  }
+
+  // ---------- hints: ideas for the quarter the target sits in ----------
+  const quarterOf = (t) => clamp(Math.floor(t / 25), 0, 3);
+  function quarterLabel(q, c) {
+    return [`Far towards ${c.l}`, `Leaning ${c.l}`, `Leaning ${c.r}`, `Far towards ${c.r}`][q];
+  }
+  function hintsFor(card) {
+    const src = lib.cards.find(c => c.id === card.id) || temp.find(c => c.id === card.id);
+    return (src && src.h) || card.h || null;
+  }
+  const validHints = (h) => Array.isArray(h) && h.length === 4 && h.every(q => Array.isArray(q) && q.length && q.every(x => typeof x === "string"));
+
+  async function askForHints() {
+    const g = game, card = g.card;
+    hint = { open: true, loading: true, error: "" }; render();
+    let sample = null;
+    try { sample = window.claude && typeof window.claude.use === "function" ? await window.claude.use("sample") : null; } catch {}
+    if (!sample) { hint = { open: true, loading: false, error: "Hints for this card aren't available here." }; render(); return; }
+    const prompt = `We're playing the party game Wavelength at an adult party with a gay friend group.
+The spectrum card runs from "${card.l}" (left) to "${card.r}" (right).
+Split the spectrum into four quarters: Q1 = strongly ${card.l}, Q2 = leaning ${card.l}, Q3 = leaning ${card.r}, Q4 = strongly ${card.r}.
+For each quarter give 3 short, funny, widely recognisable example clues (under 8 words each) that most people would place in that quarter.
+Cheeky and camp is welcome. Nothing hateful, and don't make sexual claims about real, named people.
+Reply with only JSON in this shape: {"q":[["a","b","c"],["a","b","c"],["a","b","c"],["a","b","c"]]}`;
+    try {
+      const res = await sample.json(prompt, { modelTier: "quick" });
+      const h = res && res.q;
+      if (!validHints(h)) throw { code: "bad_shape" };
+      if (game !== g || g.card.id !== card.id) return; // card changed while waiting
+      g.card.h = h;
+      const saved = lib.cards.find(c => c.id === card.id);
+      if (saved) { saved.h = h; persistLib(); }
+      const t = temp.find(c => c.id === card.id);
+      if (t) { t.h = h; saveTemp(); }
+      saveGame();
+      hint = { open: true, loading: false, error: "" };
+    } catch (e) {
+      const msg = e && e.code === "not_granted" ? "Hints need permission to ask Claude. Allow it next time you're asked."
+        : e && e.code === "rate_limited" ? "Too many hint requests. Try again in a minute."
+        : "Couldn't get hints for this card. Try again.";
+      hint = { open: true, loading: false, error: msg };
+    }
+    if (game === g && g.phase === "psychic") render();
+  }
+
+  function hintHTML() {
+    const g = game, c = g.card;
+    if (!hint.open) return `<button class="btn ghost block" data-act="hint">Need a hint?</button>`;
+    const q = quarterOf(g.targetPos);
+    const h = hintsFor(c);
+    const bar = [0, 1, 2, 3].map(i => `<span class="${i === q ? "on" : ""}"></span>`).join("");
+    let body;
+    if (h) body = `<ul class="ideas">${h[q].map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    else if (hint.loading) body = `<p class="muted small">Thinking of ideas…</p>`;
+    else if (hint.error) body = `<p class="muted small">${esc(hint.error)}</p>${hint.error.startsWith("Couldn't") ? `<button class="btn" data-act="hint-retry">Try again</button>` : ""}`;
+    else body = `<button class="btn" data-act="hint-retry">Get ideas</button>`;
+    return `<div class="hintbox">
+      <div class="hinthead"><span class="label">Hint · ${esc(quarterLabel(q, c))}</span><button class="link-btn" data-act="hint-close">Hide</button></div>
+      <div class="qbar" aria-hidden="true">${bar}</div>
+      ${body}
+    </div>`;
   }
 
   // ---------- dial ----------
@@ -339,7 +424,8 @@
     return `M0,0 L${f(x1)},${f(y1)} A${r},${r} 0 0 1 ${f(x2)},${f(y2)} Z`;
   }
 
-  function dialSVG({ showTarget, coverOpen, needle, interactive, animateOpen, noNeedle }) {
+  // needles: [{v, color, label?, drag?}]
+  function dialSVG({ showTarget, coverOpen, animateOpen, needles = [] }) {
     const t = game.targetPos;
     const bands = [
       [t - 12.5, t - 7.5, "var(--b2)", "2"], [t - 7.5, t - 2.5, "var(--b3)", "3"], [t - 2.5, t + 2.5, "var(--b4)", "4"],
@@ -356,12 +442,17 @@
       const [x1, y1] = pt(i * 5, 101), [x2, y2] = pt(i * 5, i % 5 ? 104 : 107);
       return `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="#a9b1cc" stroke-width="${i % 5 ? .6 : 1.1}"/>`;
     }).join("");
-    const [nx, ny] = pt(needle, 96);
     const coverCls = "cover" + (coverOpen && !animateOpen ? " open" : "");
+    const lines = needles.map(n => {
+      const [x, y] = pt(n.v, 96), [lx, ly] = pt(n.v, 104);
+      return `<line ${n.drag ? 'id="needle"' : ""} x1="0" y1="0" x2="${f(x)}" y2="${f(y)}" stroke="${n.color}" stroke-width="3.2" stroke-linecap="round"/>` +
+        (n.label ? `<circle cx="${f(lx)}" cy="${f(ly)}" r="6" fill="${n.color}" stroke="#16203a" stroke-width="1"/><text x="${f(lx)}" y="${f(ly)}" text-anchor="middle" dominant-baseline="central" font-size="${n.label.length > 1 ? 5 : 6.5}" font-weight="700" fill="#fff">${esc(n.label)}</text>` : "");
+    }).join("");
+    const hub = needles.length === 1 ? needles[0].color : "#f3e9d2";
     return `
-    <svg class="dial${interactive ? " drag" : ""}" id="dial" viewBox="-112 -112 224 124" role="img" aria-label="Dial. Needle at ${Math.round(needle)} of 100${showTarget || coverOpen ? ", target centred at " + Math.round(t) : ""}">
+    <svg class="dial${needles.some(n => n.drag) ? " drag" : ""}" id="dial" viewBox="-112 -114 224 126" role="img" aria-label="Dial${coverOpen ? ", target centred at " + Math.round(t) + " of 100" : ""}">
       <defs>
-        <clipPath id="upper"><rect x="-112" y="-112" width="224" height="112"/></clipPath>
+        <clipPath id="upper"><rect x="-112" y="-114" width="224" height="114"/></clipPath>
       </defs>
       ${ticks}
       <g clip-path="url(#upper)">
@@ -373,9 +464,9 @@
           <circle r="${R}" fill="none" stroke="var(--screen2)" stroke-width="2"/>
         </g>
       </g>
-      ${noNeedle ? "" : `<line id="needle" x1="0" y1="0" x2="${f(nx)}" y2="${f(ny)}" stroke="var(--needle)" stroke-width="3.2" stroke-linecap="round"/>`}
-      <circle r="11" fill="var(--needle)"/>
-      <circle r="4" fill="#f3e9d2"/>
+      ${lines}
+      <circle r="11" fill="${hub}"/>
+      <circle r="4" fill="${needles.length === 1 ? "#f3e9d2" : "#16203a"}"/>
     </svg>`;
   }
 
@@ -417,40 +508,51 @@
       <div class="l">${esc(c.l)}</div><div class="mid" aria-hidden="true">⟷</div><div class="r">${esc(c.r)}</div></div>`;
   }
 
+  // Short needle label: first letter, or two letters if that clashes, or the player number
+  function tagFor(i) {
+    const names = game.players.map(p => p.name.trim().toUpperCase());
+    for (const len of [1, 2]) {
+      const t = names[i].slice(0, len);
+      if (t && names.filter((n, j) => j !== i && n.slice(0, len) === t).length === 0) return t;
+    }
+    return String(i + 1);
+  }
+  const nameTag = (i) => `<b style="color:${COLORS[i % COLORS.length]}">${esc(game.players[i].name)}</b>`;
+
   function topbar() {
     const g = game;
-    const chips = g.teams.map((t, i) => `<div class="score ${i ? "b" : "a"}${g.mode === "teams" && g.active === i ? " active" : ""}"><span class="nm">${esc(t.name)}</span><span class="n">${t.score}</span></div>`).join("");
-    const extra = g.mode === "coop" ? `<div class="score"><span class="nm">Round</span><span class="n">${Math.min(g.round, g.rounds)}/${g.rounds}</span></div>` : "";
-    return `<div class="topbar"><div class="scores">${chips}${extra}</div><button class="menu" data-act="menu">Menu</button></div>`;
+    return `<div class="topbar">
+      <div class="score" style="flex:none"><span class="nm">Round</span><span class="n">${Math.min(g.round, g.rounds)}/${g.rounds}</span></div>
+      <div class="score" style="justify-content:flex-start"><span class="nm" style="flex:none">Psychic</span><span class="nm2">${esc(g.players[g.psychic].name)}</span></div>
+      <button class="menu" data-act="menu">Menu</button></div>`;
   }
-
-  const teamCls = (i) => game.mode === "teams" ? (i ? "team-b" : "team-a") : "";
-  const teamName = (i) => game.mode === "teams" ? game.teams[i].name : "your group";
 
   function renderGame() {
     const g = game;
+    const ps = g.players[g.psychic];
+    const gs = guessersOf(g);
     let body = "";
-    const a = g.active, other = 1 - a;
 
     if (g.phase === "pass-psychic") {
       body = `<div class="pass">
         <div class="eye" aria-hidden="true">${eyeIcon()}</div>
-        <p class="label">Round ${g.round}${g.bonus ? " · bonus turn" : ""}</p>
-        <p class="big"><span class="${teamCls(a)}">${esc(g.mode === "teams" ? g.teams[a].name : "Pick a Psychic")}</span>${g.mode === "teams" ? ", pick a Psychic" : ""}</p>
-        <p class="muted">Hand the phone to the Psychic. Everyone else looks away.</p>
-        <button class="btn primary block" data-act="to-psychic">I'm the Psychic, show me</button>
+        <p class="label">Round ${g.round} of ${g.rounds}</p>
+        <p class="big">${esc(ps.name)} is the Psychic</p>
+        <p class="muted">Hand the phone to ${esc(ps.name)}. Everyone else looks away.</p>
+        <button class="btn primary block" data-act="to-psychic">I'm ${esc(ps.name)}, show me</button>
       </div>`;
     }
 
     else if (g.phase === "psychic") {
       body = `<div class="stage">
-        <div class="who"><p class="label">Psychic only</p><h2>Give a clue that lands on the <span style="color:var(--b4)">4</span></h2></div>
-        <div class="dialwrap">${dialSVG({ showTarget: true, coverOpen: true, needle: 50, interactive: false, noNeedle: true })}</div>
-        ${g.card ? spectrumHTML(g.card) : ""}
+        <div class="who"><p class="label">${esc(ps.name)} only</p><h2>Give a clue that lands on the <span style="color:var(--b4)">4</span></h2></div>
+        <div class="dialwrap">${dialSVG({ showTarget: true, coverOpen: true })}</div>
+        ${spectrumHTML(g.card)}
         ${writeOwn ? writeOwnSheet() : `<div class="row">
           <button class="btn" data-act="respin" ${g.spinUsed ? "disabled" : ""}>${g.spinUsed ? "Re-spin used" : "Re-spin target"}</button>
           <button class="btn" data-act="reroll" ${g.swapUsed ? "disabled" : ""}>${g.swapUsed ? "New card used" : "New card"}</button>
         </div>
+        ${hintHTML()}
         <p class="note" style="text-align:center">One re-spin and one new card per turn. <button class="link-btn" data-act="write-own">Write my own card</button></p>`}
         <div class="field"><label class="label" for="clue">Your clue (optional, shown to guessers)</label>
           <input type="text" id="clue" maxlength="80" placeholder="Say it out loud, or type it here" value="${esc(g.clue)}"></div>
@@ -459,59 +561,57 @@
     }
 
     else if (g.phase === "pass-guess") {
+      const i = gs[g.gi];
       body = `<div class="pass">
-        <div class="eye" aria-hidden="true">${eyeIcon(true)}</div>
-        <p class="big">Target hidden</p>
-        <p class="muted">Hand the phone to ${esc(teamName(a))}. The Psychic stays quiet from here.</p>
-        <button class="btn primary block" data-act="to-guess">Start guessing</button>
+        <div class="eye" aria-hidden="true" style="background:${COLORS[i % COLORS.length]}">${eyeIcon(true)}</div>
+        <p class="label">Guess ${g.gi + 1} of ${gs.length}</p>
+        <p class="big">Pass to ${esc(g.players[i].name)}</p>
+        <p class="muted">Only ${esc(g.players[i].name)} looks. Everyone guesses on their own, so no peeking at other guesses.</p>
+        <button class="btn primary block" data-act="to-guess">I'm ${esc(g.players[i].name)}</button>
       </div>`;
     }
 
     else if (g.phase === "guess") {
+      const i = gs[g.gi], col = COLORS[i % COLORS.length];
       body = `<div class="stage">
-        <div class="who"><p class="label ${teamCls(a)}">${esc(g.mode === "teams" ? g.teams[a].name : "Everyone")} · guessing</p><h2>Drag the needle to the clue</h2></div>
-        ${g.clue ? `<div class="clue"><span class="label">Clue</span><b>${esc(g.clue)}</b></div>` : ""}
-        <div class="dialwrap" id="dialwrap">${dialSVG({ showTarget: false, coverOpen: false, needle: g.needle, interactive: true })}</div>
+        <div class="who"><p class="label">${nameTag(i)} · guess ${g.gi + 1} of ${gs.length}</p><h2>Drag the needle to the clue</h2></div>
+        ${g.clue ? `<div class="clue"><span class="label">Clue from ${esc(ps.name)}</span><b>${esc(g.clue)}</b></div>` : ""}
+        <div class="dialwrap">${dialSVG({ needles: [{ v: g.needle, color: col, drag: true }] })}</div>
         ${spectrumHTML(g.card)}
         <div class="nudge"><button class="btn" data-act="nudge" data-d="-1" aria-label="Nudge left">‹</button><span class="hint">Drag the dial or nudge</span><button class="btn" data-act="nudge" data-d="1" aria-label="Nudge right">›</button></div>
-        <button class="btn primary block" data-act="lock">Lock in guess</button>
+        <button class="btn primary block" data-act="lock">Lock in ${esc(g.players[i].name)}'s guess</button>
       </div>`;
     }
 
-
     else if (g.phase === "reveal") {
-      const r = g.result;
-      const msg = { 4: "Bullseye!", 3: "So close", 2: "On the edge", 0: "Missed it" }[r.pts];
-      let sub = g.mode === "teams" ? `${esc(g.teams[a].name)} +${r.pts}` : `+${r.pts} points`;
-      let foot = "";
-      if (g.over) foot = `<button class="btn primary block" data-act="next">See the result</button>`;
-      else {
-        if (r.tie) foot += `<p class="muted small" style="text-align:center">Tied past ${g.target}. Keep playing until someone pulls ahead.</p>`;
-        if (r.again) foot += `<p class="small" style="text-align:center;color:var(--b4)">Bullseye while behind: ${esc(g.teams[a].name)} goes again.</p>`;
-        foot += `<button class="btn primary block" data-act="next">Next round</button>`;
-      }
+      const rows = g.result.rows;
+      const winners = rows.filter(r => r.win).map(r => g.players[r.i].name);
+      const head = winners.length > 1 ? `${winners.map(esc).join(" & ")} tie!` : `${esc(winners[0])} wins the round!`;
+      const needles = rows.slice().reverse().map(r => ({ v: r.v, color: COLORS[r.i % COLORS.length], label: tagFor(r.i) }));
+      const list = rows.map(r => `<li class="${r.win ? "win" : ""}">
+          <i style="background:${COLORS[r.i % COLORS.length]}"></i>
+          <span class="nm">${esc(g.players[r.i].name)}${r.win ? " 👑" : ""}</span>
+          <span class="zone z${r.pts}">${r.pts ? "+" + r.pts : "0"}</span></li>`).join("");
+      const last = g.round >= g.rounds;
       body = `<div class="stage">
-        <div class="dialwrap">${dialSVG({ showTarget: true, coverOpen: true, needle: g.needle, interactive: false, animateOpen: !g.revealed })}</div>
+        <div class="dialwrap">${dialSVG({ showTarget: true, coverOpen: true, animateOpen: !g.revealed, needles })}</div>
         ${spectrumHTML(g.card)}
         ${g.clue ? `<p class="muted" style="text-align:center">Clue: <b style="color:var(--cream)">${esc(g.clue)}</b></p>` : ""}
-        <div class="result"><div class="pts p${r.pts}">${r.pts ? "+" + r.pts : "0"}</div><h2>${msg}</h2><p class="muted">${sub}</p></div>
-        <div class="legend"><span><i style="background:var(--b4)"></i>4</span><span><i style="background:var(--b3)"></i>3</span><span><i style="background:var(--b2)"></i>2</span></div>
-        ${foot}
+        <div class="result"><h2>${head}</h2><p class="muted small">Closest guess wins. Zone points add up for the tiebreak.</p></div>
+        <ol class="results">${list}</ol>
+        <button class="btn primary block" data-act="next">${last ? "See final scores" : "Next round"}</button>
+        ${last ? "" : `<button class="link-btn" style="align-self:center" data-act="finish">End game now</button>`}
       </div>`;
     }
 
     else if (g.phase === "over") {
-      let head, sub;
-      if (g.mode === "teams") {
-        const w = g.teams[g.over.winner];
-        head = `<span class="${teamCls(g.over.winner)}">${esc(w.name)}</span> win`;
-        sub = `${g.teams[0].score} to ${g.teams[1].score} after ${g.round} rounds`;
-      } else {
-        const t = g.over.total, max = g.rounds * 4, p = t / max;
-        head = `${t} points`;
-        sub = p >= .75 ? "Telepathic. You share one brain." : p >= .55 ? "Seriously in sync." : p >= .35 ? "Decent vibes. Room to grow." : "Were you even in the same room?";
-      }
-      body = `<div class="pass"><p class="label">Game over</p><p class="big">${head}</p><p class="muted">${sub}</p>
+      const board = g.players.map((p, i) => ({ ...p, i })).sort((a, b) => b.wins - a.wins || b.pts - a.pts);
+      const top = board.filter(p => p.wins === board[0].wins && p.pts === board[0].pts);
+      const head = top.length > 1 ? `${top.map(p => esc(p.name)).join(" & ")} tie` : `${esc(top[0].name)} wins`;
+      body = `<div class="stage" style="padding-top:20px">
+        <p class="label" style="text-align:center">Game over</p>
+        <p class="big" style="text-align:center;font-family:var(--display);font-size:2.2rem;font-weight:800;line-height:1.05">${head}</p>
+        ${leaderboard(board)}
         <div class="row"><button class="btn primary" data-act="rematch">Play again</button><button class="btn" data-act="to-setup-end">Change setup</button></div></div>`;
     }
 
@@ -523,6 +623,12 @@
     }
     const clue = $("#clue");
     if (clue) clue.addEventListener("input", () => { g.clue = clue.value; saveGame(); });
+  }
+
+  function leaderboard(board) {
+    return `<table class="board"><thead><tr><th></th><th>Player</th><th>Wins</th><th>Points</th></tr></thead><tbody>
+      ${board.map((p, k) => `<tr><td>${k + 1}</td><td><i style="background:${COLORS[p.i % COLORS.length]}"></i>${esc(p.name)}</td><td>${p.wins}</td><td>${p.pts}</td></tr>`).join("")}
+      </tbody></table>`;
   }
 
   function writeOwnSheet() {
@@ -541,38 +647,33 @@
   }
 
   function renderSetup() {
-    const teams = setup.mode === "teams";
     const n = pool().length;
+    const live = game && game.phase !== "over";
     const savedList = lib.cards.length
       ? lib.cards.map(c => `<div class="ci${c.on === false ? " off" : ""}"><input type="checkbox" data-act="saved-toggle" data-id="${c.id}" ${c.on === false ? "" : "checked"} aria-label="Use ${esc(c.l)} to ${esc(c.r)}"><span class="pair">${esc(c.l)} <i>⟷</i> ${esc(c.r)}</span><button class="x" data-act="saved-del" data-id="${c.id}" aria-label="Delete">×</button></div>`).join("")
       : `<p class="empty">None yet. Cards you save stay here for every game.</p>`;
     const tempList = temp.length
       ? temp.map(c => `<div class="ci"><span class="pair">${esc(c.l)} <i>⟷</i> ${esc(c.r)}</span><button class="x" data-act="temp-keep" data-id="${c.id}" aria-label="Save for future games" title="Save for future games">☆</button><button class="x" data-act="temp-del" data-id="${c.id}" aria-label="Remove">×</button></div>`).join("")
       : `<p class="empty">Cards just for tonight. They aren't kept for future games unless you tap ☆.</p>`;
+    const players = setup.players.map((p, i) => `<div class="prow">
+        <i style="background:${COLORS[i % COLORS.length]}"></i>
+        <input type="text" id="p${i}" maxlength="16" value="${esc(p)}" aria-label="Player ${i + 1} name">
+        <button class="x" data-act="p-del" data-i="${i}" aria-label="Remove player" ${setup.players.length <= 2 ? "disabled" : ""}>×</button></div>`).join("");
 
     app.innerHTML = `
       <header class="hero">
         <p class="kicker">Pass-the-phone party game</p>
         <h1>Pocket Wavelength</h1>
-        <p class="muted">One Psychic sees the hidden target on the dial and gives a clue. Their team turns the needle to where they think it is.</p>
+        <p class="muted">One Psychic sees the hidden target and gives a clue. Everyone else guesses on their own. Closest guess wins the round.</p>
       </header>
-      ${game && game.phase !== "over" ? `<div class="banner"><div><b>Game in progress</b><p class="small" style="opacity:.85">${game.teams.map(t => esc(t.name) + " " + t.score).join(" · ")}</p></div><button class="btn" data-act="resume">Resume</button></div>` : ""}
+      ${live ? `<div class="banner"><div><b>Game in progress</b><p class="small" style="opacity:.85">Round ${game.round} of ${game.rounds}</p></div><button class="btn" data-act="resume">Resume</button></div>` : ""}
 
       <section class="section" aria-label="Players">
-        <div class="seg" role="group" aria-label="Mode">
-          <button data-act="mode" data-m="teams" aria-pressed="${teams}">Two teams</button>
-          <button data-act="mode" data-m="coop" aria-pressed="${!teams}">Co-op</button>
-        </div>
-        ${teams ? `
-          <div class="two">
-            <div class="field"><label class="label" for="n0">Team 1</label><input type="text" id="n0" maxlength="20" value="${esc(setup.names[0])}"></div>
-            <div class="field"><label class="label" for="n1">Team 2</label><input type="text" id="n1" maxlength="20" value="${esc(setup.names[1])}"></div>
-          </div>
-          <div class="stepper"><span>Play to</span><div class="ctl"><button data-act="step" data-k="target" data-d="-1" aria-label="Fewer points">−</button><span>${setup.target}</span><button data-act="step" data-k="target" data-d="1" aria-label="More points">+</button></div></div>
-          <p class="note">Teams take turns being Psychic. A bullseye while behind earns another turn.</p>`
-        : `
-          <div class="stepper"><span>Rounds</span><div class="ctl"><button data-act="step" data-k="rounds" data-d="-1" aria-label="Fewer rounds">−</button><span>${setup.rounds}</span><button data-act="step" data-k="rounds" data-d="1" aria-label="More rounds">+</button></div></div>
-          <p class="note">Everyone on one side. Rotate the Psychic each round and chase the highest total.</p>`}
+        <h3>Players <span class="tag">${setup.players.length}</span></h3>
+        <div class="plist">${players}</div>
+        <button class="btn ghost" data-act="p-add" ${setup.players.length >= 10 ? "disabled" : ""}>+ Add player</button>
+        <div class="stepper"><span>Rounds</span><div class="ctl"><button data-act="step" data-d="-1" aria-label="Fewer rounds">−</button><span>${setup.rounds}</span><button data-act="step" data-d="1" aria-label="More rounds">+</button></div></div>
+        <p class="note">The Psychic role moves to the next player each round. Everyone else places a secret guess.</p>
       </section>
 
       <section class="section" aria-label="Cards">
@@ -597,9 +698,9 @@
         <p class="note">${storeMode === "cloud" ? "Saved to this page, so they follow you to any device." : "Saved on this device."} Untick a card to leave it out without deleting it.</p>
       </section>
 
-      <button class="btn primary block" data-act="start" ${n ? "" : "disabled"}>${game && game.phase !== "over" ? "Start a new game" : "Start game"} · ${n} card${n === 1 ? "" : "s"}</button>
+      <button class="btn primary block" data-act="start" ${n ? "" : "disabled"}>${live ? "Start a new game" : "Start game"} · ${n} card${n === 1 ? "" : "s"}</button>
     `;
-    ["n0", "n1"].forEach((id, i) => { const el = $("#" + id); if (el) el.addEventListener("input", () => { setup.names[i] = el.value; saveSetup(); }); });
+    setup.players.forEach((_, i) => { const el = $("#p" + i); el.addEventListener("input", () => { setup.players[i] = el.value; saveSetup(); }); });
     ["add-l", "add-r"].forEach(id => $("#" + id).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addCard(false); } }));
   }
 
@@ -619,20 +720,17 @@
 
   function render() {
     if (view === "game" && game) renderGame(); else renderSetup();
-    window.scrollTo(0, 0);
   }
+  function go() { render(); window.scrollTo(0, 0); }
 
   // ---------- events ----------
   app.addEventListener("click", (e) => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const act = b.dataset.act, g = game;
     switch (act) {
-      case "mode": setup.mode = b.dataset.m; saveSetup(); render(); break;
-      case "step": {
-        const k = b.dataset.k, d = +b.dataset.d;
-        setup[k] = k === "target" ? clamp(setup[k] + d, 3, 30) : clamp(setup[k] + d, 1, 30);
-        saveSetup(); render(); break;
-      }
+      case "p-add": setup.players.push(`Player ${setup.players.length + 1}`); saveSetup(); render(); { const el = $("#p" + (setup.players.length - 1)); el && el.select(); } break;
+      case "p-del": if (setup.players.length > 2) { setup.players.splice(+b.dataset.i, 1); saveSetup(); render(); } break;
+      case "step": setup.rounds = clamp(setup.rounds + (+b.dataset.d), 1, 40); saveSetup(); render(); break;
       case "builtin": lib.builtIn = !lib.builtIn; persistLib(); render(); break;
       case "add-temp": addCard(false); break;
       case "add-save": addCard(true); break;
@@ -643,17 +741,20 @@
       case "temp-keep": {
         const c = temp.find(x => x.id === b.dataset.id); if (!c) break;
         temp = temp.filter(x => x !== c); saveTemp();
-        lib.cards.unshift({ id: uid("s"), l: c.l, r: c.r, on: true }); persistLib(); render(); toast("Moved to your saved cards"); break;
+        lib.cards.unshift({ id: uid("s"), l: c.l, r: c.r, on: true, ...(c.h ? { h: c.h } : {}) }); persistLib(); render(); toast("Moved to your saved cards"); break;
       }
       case "start":
         if (game && game.phase !== "over" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Tap again to end the current game"; break; }
         startGame(); break;
-      case "resume": view = "game"; render(); break;
-      case "menu": view = "setup"; render(); break;
+      case "resume": view = "game"; go(); break;
+      case "menu": view = "setup"; go(); break;
 
-      case "to-psychic": g.phase = "psychic"; saveGame(); render(); break;
+      case "to-psychic": g.phase = "psychic"; saveGame(); go(); break;
       case "respin": if (g.spinUsed) break; g.spinUsed = true; rollTarget(); saveGame(); render(); toast("Target re-spun"); break;
-      case "reroll": { if (g.swapUsed) break; const c = drawCard(g.card && g.card.id); if (c) g.card = c; g.swapUsed = true; saveGame(); render(); break; }
+      case "reroll": { if (g.swapUsed) break; const c = drawCard(g.card && g.card.id); if (c) g.card = c; g.swapUsed = true; hint = { open: false, loading: false, error: "" }; saveGame(); render(); break; }
+      case "hint": hint.open = true; if (hintsFor(g.card)) render(); else askForHints(); break;
+      case "hint-retry": askForHints(); break;
+      case "hint-close": hint.open = false; render(); break;
       case "write-own": writeOwn = true; render(); setTimeout(() => $("#own-l") && $("#own-l").focus(), 30); break;
       case "own-cancel": writeOwn = false; render(); break;
       case "own-use": {
@@ -661,24 +762,28 @@
         const card = { id: uid("t"), l: p.l, r: p.r };
         if ($("#own-save").checked) { card.id = uid("s"); lib.cards.unshift({ ...card, on: true }); persistLib(); }
         else { temp.unshift(card); saveTemp(); }
-        g.used.push(card.id); g.card = card; writeOwn = false; saveGame(); render(); break;
+        g.used.push(card.id); g.card = card; writeOwn = false; hint = { open: false, loading: false, error: "" }; saveGame(); render(); break;
       }
-      case "hide": g.phase = "pass-guess"; saveGame(); render(); break;
-      case "to-guess": g.phase = "guess"; saveGame(); render(); break;
+      case "hide": g.phase = "pass-guess"; g.gi = 0; hint.open = false; saveGame(); go(); break;
+      case "to-guess": g.needle = 50; g.phase = "guess"; saveGame(); go(); break;
       case "nudge": g.needle = clamp(g.needle + (+b.dataset.d), 0, 100); saveGame(); redrawNeedle(); break;
-      case "lock":
-        g.revealed = false; resolveRound(); render();
-        break;
-      case "next": nextRound(); break;
+      case "lock": {
+        const gs = guessersOf(g);
+        g.guesses[gs[g.gi]] = g.needle;
+        if (g.gi + 1 < gs.length) { g.gi += 1; g.phase = "pass-guess"; saveGame(); }
+        else resolveRound();
+        go(); break;
+      }
+      case "next": nextRound(); window.scrollTo(0, 0); break;
+      case "finish": g.phase = "over"; saveGame(); go(); break;
       case "rematch": startGame(); break;
-      case "to-setup-end": game = null; saveGame(); view = "setup"; render(); break;
+      case "to-setup-end": game = null; saveGame(); view = "setup"; go(); break;
     }
   });
 
   // keep the game if the page reloads mid-round
-  if (game && game.phase === "side") game.phase = "guess";
   if (game && game.phase && game.phase !== "over") view = "game";
-  render();
+  go();
   connectDb();
 })();
 </script>
