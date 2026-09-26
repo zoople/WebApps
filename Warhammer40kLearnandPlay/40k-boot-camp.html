@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+<title>40K Boot Camp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#D9DAD2; --surface:#EFEFE9; --surface-2:#E2E3DA; --ink:#1B1E21; --muted:#575E64; --line:#BABEB3;
+  --brass:#8A6818; --brass-ink:#FFF8E4; --brass-soft:rgba(138,104,24,.12);
+  --marine:#2C51A6; --ork:#3F6E1B; --tok-ink:#FFFFFF;
+  --good:#276F33; --bad:#A6281D; --warn:#8A6818;
+  --field:#CDC5AB; --grid:rgba(60,48,24,.13); --grid-major:rgba(60,48,24,.30);
+  --ruin:#8D877B; --ruin-edge:#4E4940; --crater:#B4A583; --crater-edge:#7D6F52;
+  --reach:rgba(44,81,166,.25); --reach-edge:rgba(44,81,166,.55); --deploy-p:rgba(44,81,166,.07); --deploy-e:rgba(63,110,27,.08);
+  --f-display:'Pirata One','UnifrakturMaguntia',Georgia,serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0F1114; --surface:#171A1E; --surface-2:#1F2328; --ink:#E7E4DA; --muted:#98A0A8; --line:#2F343B;
+    --brass:#D6AC55; --brass-ink:#1A1405; --brass-soft:rgba(214,172,85,.12);
+    --marine:#5C88E8; --ork:#82B848; --tok-ink:#0C0F12;
+    --good:#5DC26D; --bad:#E65B4D; --warn:#D6AC55;
+    --field:#27281F; --grid:rgba(230,220,190,.06); --grid-major:rgba(230,220,190,.16);
+    --ruin:#4B4942; --ruin-edge:#8A847A; --crater:#3A3428; --crater-edge:#6B5E45;
+    --reach:rgba(92,136,232,.28); --reach-edge:rgba(92,136,232,.7); --deploy-p:rgba(92,136,232,.06); --deploy-e:rgba(130,184,72,.06);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0F1114; --surface:#171A1E; --surface-2:#1F2328; --ink:#E7E4DA; --muted:#98A0A8; --line:#2F343B;
+  --brass:#D6AC55; --brass-ink:#1A1405; --brass-soft:rgba(214,172,85,.12);
+  --marine:#5C88E8; --ork:#82B848; --tok-ink:#0C0F12;
+  --good:#5DC26D; --bad:#E65B4D; --warn:#D6AC55;
+  --field:#27281F; --grid:rgba(230,220,190,.06); --grid-major:rgba(230,220,190,.16);
+  --ruin:#4B4942; --ruin-edge:#8A847A; --crater:#3A3428; --crater-edge:#6B5E45;
+  --reach:rgba(92,136,232,.28); --reach-edge:rgba(92,136,232,.7); --deploy-p:rgba(92,136,232,.06); --deploy-e:rgba(130,184,72,.06);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+#app{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:18px 60px}
+h1,h2,h3{text-wrap:balance;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,.cell-hit:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono)}
+.btn{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 13px;font-size:14px;line-height:1.25;text-align:left}
+.btn:hover:not(:disabled){border-color:var(--brass)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{background:var(--brass);color:var(--brass-ink);border-color:var(--brass);font-weight:600}
+.btn-ghost{background:transparent}
+.btn small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.btn-primary small{color:inherit;opacity:.8}
+.link{background:none;border:none;padding:0;color:var(--brass);text-decoration:underline;text-underline-offset:3px;font-size:14px}
+
+/* ---------- Home ---------- */
+.home{max-width:760px;margin:0 auto}
+.mast{padding-block:18px 8px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.mast h1{font-family:var(--f-display);font-weight:400;font-size:clamp(44px,9vw,76px);line-height:.95;letter-spacing:.01em}
+.mast h1 span{color:var(--brass)}
+.mast p{max-width:62ch;color:var(--muted);margin:10px 0 0}
+.turn-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:4px 0 28px}
+.turn-strip div{border-top:3px solid var(--brass);padding-top:6px;font-size:12.5px;color:var(--muted);line-height:1.35}
+.turn-strip b{display:block;color:var(--ink);font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+@media (max-width:560px){.turn-strip{grid-template-columns:1fr 1fr}.turn-strip div:last-child{grid-column:span 2}}
+.missions{display:flex;flex-direction:column;gap:10px}
+.mission{display:grid;grid-template-columns:54px 1fr auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;text-align:left;width:100%}
+.mission:hover{border-color:var(--brass)}
+.mission .num{font-family:var(--f-display);font-size:40px;line-height:1;color:var(--brass);text-align:center}
+.mission h3{font-family:var(--f-display);font-weight:400;font-size:25px;line-height:1.1}
+.mission p{margin:3px 0 0;color:var(--muted);font-size:13.5px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:3px;padding:1px 6px;color:var(--muted)}
+.status{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.status.done{color:var(--good);border-color:var(--good)}
+@media (max-width:520px){.mission{grid-template-columns:40px 1fr}.mission .status{grid-column:2;justify-self:start}.mission .num{font-size:32px}}
+.fineprint{margin-top:28px;color:var(--muted);font-size:12.5px;max-width:66ch}
+.fineprint details{margin-top:10px}
+.fineprint summary{cursor:pointer;color:var(--ink)}
+.fineprint ul{padding-left:18px;margin:6px 0}
+
+/* ---------- Briefing ---------- */
+.brief{max-width:720px;margin:0 auto}
+.brief-head{padding-block:10px 14px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.brief-head h2{font-family:var(--f-display);font-weight:400;font-size:clamp(34px,7vw,52px);line-height:1}
+.lesson h3{font-size:17px;margin:22px 0 6px}
+.lesson p,.lesson li{max-width:66ch}
+.lesson ul,.lesson ol{padding-left:20px}
+.lesson li{margin:3px 0}
+.lesson .kbd{font-family:var(--f-mono);font-size:13px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:0 5px}
+.tablewrap{overflow-x:auto;margin:8px 0}
+table.ref{border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.ref th,table.ref td{border:1px solid var(--line);padding:5px 9px;text-align:center}
+table.ref th{background:var(--surface-2);font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+table.ref td:first-child{text-align:left}
+.callout{border-left:3px solid var(--brass);background:var(--brass-soft);padding:10px 14px;margin:14px 0;border-radius:0 6px 6px 0}
+.goalbox{background:var(--surface);border:1px solid var(--brass);border-radius:8px;padding:14px 16px;margin:26px 0 14px}
+.goalbox h3{margin:0 0 4px;font-size:15px}
+.quiz{margin-top:26px}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:10px}
+.q p{margin:0 0 8px;font-weight:500}
+.q .opts{display:flex;flex-wrap:wrap;gap:6px}
+.q .opts .btn.right{border-color:var(--good);color:var(--good);font-weight:600}
+.q .opts .btn.wrong{border-color:var(--bad);color:var(--bad)}
+.q .why{margin-top:8px;font-size:13.5px;color:var(--muted)}
+.deploy-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+
+/* ---------- Battle ---------- */
+.hud{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.hud h2{font-family:var(--f-display);font-weight:400;font-size:26px;line-height:1;margin-right:auto}
+.hud .grp{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.hud .grp b{font-weight:600}
+.hud .lbl{color:var(--muted);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+.phases{display:flex;gap:3px;width:100%;overflow-x:auto}
+.ph{flex:1;min-width:64px;font-family:var(--f-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;text-align:center;padding:5px 4px;border-radius:3px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.ph.on{background:var(--brass);border-color:var(--brass);color:var(--brass-ink);font-weight:600}
+.ph.off{opacity:.35;text-decoration:line-through}
+.ph.past{color:var(--ink)}
+.side-flag{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;color:var(--tok-ink)}
+.side-flag.player{background:var(--marine)}
+.side-flag.enemy{background:var(--ork)}
+.battle-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+@media (max-width:900px){.battle-grid{grid-template-columns:minmax(0,1fr)}}
+.board-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.board-wrap{position:relative;border:1px solid var(--line);border-radius:6px;overflow-x:auto;background:var(--field)}
+@media (max-width:640px){#board{width:620px;max-width:none}.board-hint{display:block!important}}
+.board-hint{display:none;font-size:12px;color:var(--muted)}
+#board{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.box-title{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.orders{border-color:var(--brass)}
+.orders p{margin:0 0 6px}
+.orders p:last-child{margin-bottom:0}
+.orders .who{font-weight:600}
+.next-btn{width:100%;text-align:center;padding:11px}
+.actions{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.actions .row{display:flex;flex-wrap:wrap;gap:6px}
+.actions .btn{flex:1 1 150px}
+.reason{font-size:13px;color:var(--muted);margin:4px 0 0}
+.reason.bad{color:var(--bad)}
+.targets .btn.no{opacity:.6;cursor:not-allowed}
+/* datasheet */
+.ds-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ds-name{font-weight:600;font-size:15.5px}
+.ds-fac{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+.ds-fac.player{color:var(--marine)}
+.ds-fac.enemy{color:var(--ork)}
+table.stats{width:100%;border-collapse:collapse;margin:8px 0 2px;font-variant-numeric:tabular-nums}
+table.stats th{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);font-weight:600;padding:2px 0;border-bottom:1px solid var(--line);cursor:help}
+table.stats td{text-align:center;font-family:var(--f-mono);font-size:16px;font-weight:600;padding:3px 0}
+.statkey{font-size:11px;color:var(--muted);line-height:1.35}
+.weap-wrap{overflow-x:auto}
+table.weap{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px;font-variant-numeric:tabular-nums}
+table.weap th{font-family:var(--f-mono);font-size:10px;color:var(--muted);font-weight:600;text-align:center;border-bottom:1px solid var(--line);padding:2px 3px}
+table.weap th:first-child,table.weap td:first-child{text-align:left}
+table.weap td{text-align:center;font-family:var(--f-mono);padding:3px}
+table.weap td:first-child{font-family:var(--f-body);font-size:13px}
+table.weap .kw{display:block;font-family:var(--f-mono);font-size:10px;color:var(--brass);letter-spacing:.04em;text-transform:uppercase}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.chip{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;border-radius:3px;padding:1px 6px;border:1px solid var(--line);color:var(--muted)}
+.chip.warn{color:var(--bad);border-color:var(--bad)}
+.chip.ok{color:var(--good);border-color:var(--good)}
+.models-line{font-size:13px;color:var(--muted);margin-top:4px}
+.pips{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.pip{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--muted)}
+.pip.alive.player{background:var(--marine);border-color:var(--marine)}
+.pip.alive.enemy{background:var(--ork);border-color:var(--ork)}
+.pip.hurt{background:linear-gradient(90deg,var(--bad) 50%,transparent 50%)!important}
+/* dice tray */
+.tray{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.tray-title{font-weight:600;font-size:13.5px;margin-bottom:4px}
+.tray-row{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:5px 0;border-top:1px dashed var(--line)}
+.tray-row:first-of-type{border-top:none}
+.tray-lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+.tray-note{font-size:12.5px;color:var(--muted)}
+.tray-sum{font-size:13px;font-weight:600;margin-top:3px}
+.dice{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.die{width:21px;height:21px;border-radius:4px;display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;font-weight:600;border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted)}
+.die.ok{border-color:var(--good);color:var(--good);background:transparent}
+.die.no{opacity:.55;text-decoration:line-through}
+.die{animation:roll .32s ease-out both}
+@keyframes roll{from{transform:rotate(-90deg) scale(.4);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.die{animation:none}}
+.tray-line{font-size:13px;margin-top:4px}
+.tray-line.good{color:var(--good)}
+.tray-line.bad{color:var(--bad)}
+/* roster & log */
+.roster{display:flex;flex-direction:column;gap:4px}
+.r-item{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center;padding:5px 7px;border-radius:5px;border:1px solid transparent;background:transparent;text-align:left;width:100%;font-size:13px}
+.r-item:hover{border-color:var(--line)}
+.r-item.sel{border-color:var(--brass);background:var(--brass-soft)}
+.r-item.dead{opacity:.4;text-decoration:line-through}
+.r-dot{width:10px;height:10px;border-radius:50%}
+.r-dot.player{background:var(--marine)}
+.r-dot.enemy{background:var(--ork);border-radius:2px}
+.r-meta{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.log{max-height:260px;overflow-y:auto;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.log div{line-height:1.4}
+.log .h{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--brass);margin-top:6px}
+.log .good{color:var(--good)}
+.log .bad{color:var(--bad)}
+.log .dim{color:var(--muted)}
+/* svg board */
+.b-grid{stroke:var(--grid);stroke-width:.03}
+.b-grid.major{stroke:var(--grid-major);stroke-width:.05}
+.ruin{fill:var(--ruin);stroke:var(--ruin-edge);stroke-width:.06}
+.ruin-wall{fill:none;stroke:var(--ruin-edge);stroke-width:.22;stroke-linecap:square}
+.crater{fill:var(--crater);stroke:var(--crater-edge);stroke-width:.06;stroke-dasharray:.18 .12}
+.obj-ring{fill:none;stroke-width:.06;stroke-dasharray:.25 .18;stroke:var(--muted);opacity:.7}
+.obj-ring.player{stroke:var(--marine);opacity:1}
+.obj-ring.enemy{stroke:var(--ork);opacity:1}
+.obj-fill{opacity:.08;fill:var(--muted)}
+.obj-fill.player{fill:var(--marine);opacity:.12}
+.obj-fill.enemy{fill:var(--ork);opacity:.12}
+.obj-mark{fill:var(--surface);stroke:var(--brass);stroke-width:.08}
+.obj-num{font-family:var(--f-mono);font-size:.42px;font-weight:600;fill:var(--brass);text-anchor:middle;dominant-baseline:central}
+.reach{fill:var(--reach)}
+.range-ring{fill:none;stroke:var(--reach-edge);stroke-width:.05;stroke-dasharray:.3 .2}
+.tok-body.player{fill:var(--marine)}
+.tok-body.enemy{fill:var(--ork)}
+.tok-body{stroke:var(--ground);stroke-width:.05}
+.tok.sel .tok-body{stroke:var(--brass);stroke-width:.12}
+.tok.done{opacity:.5}
+.tok.shocked .tok-body{stroke:var(--bad);stroke-dasharray:.14 .1;stroke-width:.1}
+.tok-lbl{font-family:var(--f-mono);font-size:.27px;font-weight:600;fill:var(--tok-ink);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.tok-n{font-family:var(--f-mono);font-size:.24px;font-weight:600;fill:var(--ink);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.tok-badge{fill:var(--surface);stroke:var(--line);stroke-width:.03}
+.tgt-ring{fill:none;stroke:var(--bad);stroke-width:.08;stroke-dasharray:.2 .12}
+.tgt-ring.ok{animation:spin 6s linear infinite;transform-box:fill-box;transform-origin:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.tgt-ring.ok{animation:none}}
+.measure{stroke:var(--brass);stroke-width:.06;stroke-dasharray:.2 .12}
+.measure-lbl{font-family:var(--f-mono);font-size:.4px;font-weight:600;fill:var(--ink);paint-order:stroke;stroke:var(--field);stroke-width:.14px;text-anchor:middle}
+.zone-lbl{font-family:var(--f-mono);font-size:.34px;letter-spacing:.05em;fill:var(--muted);opacity:.8}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(8,10,12,.55);display:grid;place-items:center;padding:16px;z-index:20}
+.modal-card{background:var(--surface);border:1px solid var(--brass);border-radius:10px;max-width:560px;width:100%;max-height:86vh;overflow-y:auto;padding:18px 20px}
+.modal-card h3{font-family:var(--f-display);font-weight:400;font-size:32px;line-height:1.05;margin-bottom:6px}
+.modal-card .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.modal-card .btns .btn{text-align:center}
+</style>
+
+<div id="app">
+  <main id="scr-home" class="home"></main>
+  <section id="scr-brief" class="brief" hidden></section>
+  <section id="scr-battle" hidden>
+    <div class="hud" id="hud"></div>
+    <div class="battle-grid">
+      <div class="board-col">
+        <div class="board-wrap"><svg id="board" viewBox="0 0 24 16" role="img" aria-label="Battlefield, 24 by 16 inches"></svg></div>
+        <div class="board-hint">Swipe the board sideways to see the whole battlefield.</div>
+        <div class="legend">
+          <span><i style="background:var(--marine);border-radius:50%"></i>Your units</span>
+          <span><i style="background:var(--ork)"></i>Orks</span>
+          <span><i style="background:var(--ruin)"></i>Ruins (block sight)</span>
+          <span><i style="background:var(--crater)"></i>Crater</span>
+          <span>1 square = 1″</span>
+        </div>
+        <div class="tray" id="tray" hidden></div>
+      </div>
+      <aside class="panel">
+        <div class="box orders" id="orders"></div>
+        <button class="btn btn-primary next-btn" id="next-btn" type="button">End phase</button>
+        <div class="box" id="unit-box"></div>
+        <div class="box"><div class="box-title">Forces</div><div class="roster" id="roster"></div></div>
+        <div class="box"><div class="box-title">Battle log</div><div class="log" id="log"></div></div>
+      </aside>
+    </div>
+  </section>
+</div>
+<div class="modal" id="modal" hidden><div class="modal-card" id="modal-card" role="dialog" aria-modal="true"></div></div>
+
+<script>
+'use strict';
+/* ============================================================
+   DATA
+   ============================================================ */
+const BW = 24, BH = 16;
+const PHASES = ['command','movement','shooting','charge','fight'];
+const PN = {command:'Command',movement:'Movement',shooting:'Shooting',charge:'Charge',fight:'Fight'};
+
+const WEAPONS = {
+  boltRifle:   {name:'Bolt rifle', range:24, A:2, skill:3, S:4, AP:-1, D:1, kw:['Assault','Heavy']},
+  boltgun:     {name:'Boltgun', range:24, A:1, skill:3, S:4, AP:0, D:1, kw:['Rapid Fire 1']},
+  boltPistol:  {name:'Bolt pistol', range:12, A:1, skill:3, S:4, AP:0, D:1, kw:['Pistol']},
+  hbPistol:    {name:'Heavy bolt pistol', range:18, A:1, skill:3, S:4, AP:-1, D:1, kw:['Pistol']},
+  plasma:      {name:'Plasma incinerator', range:24, A:2, skill:3, S:7, AP:-2, D:1, kw:['Assault','Heavy']},
+  melta:       {name:'Melta rifle', range:12, A:1, skill:3, S:9, AP:-4, D:'D6', kw:['Heavy','Melta 2']},
+  slugga:      {name:'Slugga', range:12, A:1, skill:5, S:4, AP:0, D:1, kw:['Pistol']},
+  grotBlasta:  {name:'Grot blasta', range:18, A:1, skill:4, S:3, AP:0, D:1, kw:[]},
+  bigShoota:   {name:'Big shoota', range:36, A:3, skill:5, S:5, AP:0, D:1, kw:['Rapid Fire 1']},
+  ccw:         {name:'Close combat weapon', melee:true, A:3, skill:3, S:4, AP:0, D:1, kw:[]},
+  chainsword:  {name:'Astartes chainsword', melee:true, A:4, skill:3, S:4, AP:-1, D:1, kw:[]},
+  gravisFists: {name:'Close combat weapon', melee:true, A:3, skill:3, S:5, AP:0, D:1, kw:[]},
+  choppa:      {name:'Choppa', melee:true, A:3, skill:3, S:4, AP:-1, D:1, kw:[]},
+  grotFists:   {name:'Close combat weapon', melee:true, A:1, skill:5, S:2, AP:0, D:1, kw:[]},
+  dreadKlaw:   {name:'Dread klaw', melee:true, A:4, skill:3, S:12, AP:-2, D:3, kw:[]},
+};
+
+const SHEETS = {
+  intercessors: {name:'Intercessor Squad', short:'INT', side:'player', M:6,T:4,Sv:3,W:2,Ld:6,OC:2, models:5, ranged:['boltRifle','boltPistol'], melee:['ccw'], kw:['Infantry','Grenades']},
+  assault:      {name:'Assault Intercessors', short:'ASL', side:'player', M:6,T:4,Sv:3,W:2,Ld:6,OC:2, models:5, ranged:['hbPistol'], melee:['chainsword'], kw:['Infantry','Grenades']},
+  hellblasters: {name:'Hellblaster Squad', short:'HEL', side:'player', M:6,T:4,Sv:3,W:2,Ld:6,OC:1, models:5, ranged:['plasma','boltPistol'], melee:['ccw'], kw:['Infantry']},
+  tacticals:    {name:'Tactical Squad', short:'TAC', side:'player', M:6,T:4,Sv:3,W:2,Ld:6,OC:2, models:5, ranged:['boltgun','boltPistol'], melee:['ccw'], kw:['Infantry','Grenades']},
+  eradicators:  {name:'Eradicator Squad', short:'ERA', side:'player', M:5,T:6,Sv:2,W:3,Ld:6,OC:1, models:3, ranged:['melta'], melee:['gravisFists'], kw:['Infantry']},
+  boyz:         {name:'Boyz', short:'BOY', side:'enemy', M:6,T:5,Sv:5,W:1,Ld:7,OC:2, models:10, ranged:['slugga'], melee:['choppa'], kw:['Infantry','Grenades']},
+  gretchin:     {name:'Gretchin', short:'GRT', side:'enemy', M:8,T:2,Sv:7,W:1,Ld:8,OC:2, models:10, ranged:['grotBlasta'], melee:['grotFists'], kw:['Infantry']},
+  deffDread:    {name:'Deff Dread', short:'DRD', side:'enemy', M:8,T:9,Sv:2,W:10,Ld:8,OC:3, models:1, ranged:['bigShoota'], melee:['dreadKlaw'], kw:['Vehicle','Walker']},
+};
+
+const STRATS = [
+  {name:'Command Re-roll', when:'After you roll for a charge or a Battle-shock test', what:'Re-roll that roll.'},
+  {name:'Go to Ground', when:'When one of your Infantry units is picked as the target of an enemy’s shooting', what:'Until the end of the phase it has a 6+ invulnerable save and the Benefit of Cover.'},
+  {name:'Grenade', when:'Your Shooting phase', what:'Pick a Grenades unit that hasn’t shot and isn’t in Engagement Range. Pick an enemy within 8″ that it can see. Roll six D6: each 4+ is one mortal wound. That unit can’t shoot afterwards.'},
+];
+
+const LEVELS = [
+{
+  id:1, name:'Boots on the Ground', teaches:'Datasheets, inches, the Movement phase',
+  tags:['Datasheet','Move','Advance','Engagement Range'],
+  phases:['movement'], rounds:2, enemyAI:false, keywords:false, cover:false, battleshock:false, scoring:false, strats:false,
+  goal:'Get your Intercessors within 3″ of the objective marker before the end of battle round 2.',
+  win:'reach',
+  terrain:[{t:'ruin',x:13,y:2,w:2,h:3},{t:'ruin',x:6,y:11,w:3,h:2}],
+  objectives:[{x:18,y:8}],
+  units:[['intercessors','player',2,8],['gretchin','enemy',9,8,6]],
+  lesson:`
+<p>Warhammer 40,000 is played on a table with armies of miniatures. Distances are measured in inches (″), and every rule comes from two places: the <b>core rules</b> (the same for everyone) and each unit’s <b>datasheet</b>.</p>
+<h3>The battle and the turn</h3>
+<p>A game lasts <b>5 battle rounds</b>. In each round both players take a turn. Your turn always runs through five phases in the same order:</p>
+<ol><li><b>Command</b>: gain Command Points, check morale.</li><li><b>Movement</b>: move your units.</li><li><b>Shooting</b>: shoot with your units.</li><li><b>Charge</b>: rush into close combat.</li><li><b>Fight</b>: units in combat attack.</li></ol>
+<p>This mission only uses the Movement phase. Each later mission switches on one more piece.</p>
+<h3>Reading a datasheet</h3>
+<p>A <b>unit</b> is a group of models that act together. Here is your squad of five Intercessors:</p>
+<div class="tablewrap"><table class="ref"><tr><th>M</th><th>T</th><th>Sv</th><th>W</th><th>Ld</th><th>OC</th></tr><tr><td style="text-align:center">6″</td><td>4</td><td>3+</td><td>2</td><td>6+</td><td>2</td></tr></table></div>
+<ul>
+<li><b>M (Move)</b>: how many inches the unit can move.</li>
+<li><b>T (Toughness)</b>: how hard it is to wound. Higher is tougher.</li>
+<li><b>Sv (Save)</b>: the dice roll its armour needs to stop a wound.</li>
+<li><b>W (Wounds)</b>: how much damage each model takes before it dies.</li>
+<li><b>Ld (Leadership)</b>: nerve. Used for Battle-shock tests.</li>
+<li><b>OC (Objective Control)</b>: how much each model counts for when holding objectives.</li>
+</ul>
+<p>You only need M today. Tap any unit on the board to see its full datasheet.</p>
+<h3>Moving</h3>
+<p>In the Movement phase, each of your units does one of these:</p>
+<ul>
+<li><b>Normal Move</b>: move up to its M in inches.</li>
+<li><b>Advance</b>: roll one D6 and add it to M for this move. The catch: a unit that Advances usually can’t shoot or charge this turn.</li>
+<li><b>Remain Stationary</b>: don’t move. (Some heavy weapons reward this later.)</li>
+<li><b>Fall Back</b>: only for units already locked in combat. More in Mission 3.</li>
+</ul>
+<div class="callout"><b>Engagement Range is 1″.</b> A Normal Move or Advance can never end within 1″ of an enemy. On this board that means you can’t stop on a square touching an enemy token, diagonals included.</div>
+<p>In this game each unit is a single token and distances are measured centre to centre. The real game measures between the closest model bases.</p>`,
+  quiz:[
+    {q:'Your Intercessors have M 6″. You Advance and roll a 4. How far can they move?', opts:['4″','6″','10″'], a:2, why:'Advance adds the D6 roll to M: 6 + 4 = 10″. The cost is that they usually can’t shoot or charge this turn.'},
+    {q:'Can a unit finish a Normal Move ½″ away from an enemy unit?', opts:['Yes','No'], a:1, why:'No. Normal Moves and Advances can’t end within Engagement Range (1″) of an enemy. Only a charge gets you that close.'},
+  ],
+  debrief:'You read a datasheet, measured in inches, and used Advance to cover extra ground. Next: making the enemy regret standing in the open.'
+},
+{
+  id:2, name:'Open Fire', teaches:'The attack sequence: hit, wound, save, damage',
+  tags:['Range','Line of sight','Hit','Wound','Save','Damage'],
+  phases:['movement','shooting'], rounds:3, enemyAI:false, keywords:false, cover:false, battleshock:false, scoring:false, strats:false,
+  goal:'Wipe out the 10 Boyz by the end of battle round 3. They’re sleeping off a party and won’t fight back.',
+  win:'destroy',
+  terrain:[{t:'ruin',x:8,y:9,w:3,h:4},{t:'ruin',x:14,y:2,w:2,h:3}],
+  objectives:[],
+  units:[['intercessors','player',3,4],['hellblasters','player',3,11],['boyz','enemy',18,8]],
+  lesson:`
+<p>Every attack in the game, shooting or melee, uses the same four steps. Learn these once and you know how most of the game works.</p>
+<h3>Picking a target</h3>
+<p>In your Shooting phase, pick one of your units and a weapon, then an enemy unit that is:</p>
+<ul><li>within the weapon’s <b>Range</b>, and</li><li><b>visible</b>: you can draw a line to it. Ruins block that line.</li></ul>
+<h3>The weapon profile</h3>
+<div class="tablewrap"><table class="ref"><tr><th>Weapon</th><th>Range</th><th>A</th><th>BS</th><th>S</th><th>AP</th><th>D</th></tr>
+<tr><td>Bolt rifle</td><td>24″</td><td>2</td><td>3+</td><td>4</td><td>-1</td><td>1</td></tr>
+<tr><td>Plasma incinerator</td><td>24″</td><td>2</td><td>3+</td><td>7</td><td>-2</td><td>1</td></tr></table></div>
+<p><b>A</b> is attacks per model, so 5 Intercessors with bolt rifles make 10 attacks.</p>
+<h3>1 · Hit roll</h3>
+<p>Roll a D6 per attack. Each roll equal to or above the <b>BS</b> (Ballistic Skill) hits. A 6 always hits and a 1 always misses.</p>
+<h3>2 · Wound roll</h3>
+<p>Roll a D6 per hit. Compare the weapon’s <b>S</b> (Strength) to the target’s <b>T</b> (Toughness):</p>
+<div class="tablewrap"><table class="ref"><tr><th>Strength vs Toughness</th><th>Need</th></tr>
+<tr><td>S is double T or more</td><td>2+</td></tr><tr><td>S is greater than T</td><td>3+</td></tr><tr><td>S equals T</td><td>4+</td></tr><tr><td>S is less than T</td><td>5+</td></tr><tr><td>S is half T or less</td><td>6+</td></tr></table></div>
+<h3>3 · Saving throw</h3>
+<p>Your opponent rolls a D6 per wound, needing the target’s <b>Sv</b>. The weapon’s <b>AP</b> (Armour Penetration) makes it worse: AP -1 turns a 5+ save into 6+. If the result goes past 6+, no save is possible. A 1 always fails.</p>
+<h3>4 · Damage</h3>
+<p>Each failed save deals <b>D</b> damage to one model. When a model runs out of Wounds it’s removed. Leftover damage from a single attack is lost: it doesn’t spill onto the next model.</p>
+<div class="callout">Boyz are <b>T5</b> with a <b>5+</b> save. Bolt rifles (S4, AP-1) need 5+ to wound and leave them a 6+ save. Plasma (S7, AP-2) wounds on 3+ and leaves them no save at all. Pick the right gun for the job.</div>`,
+  quiz:[
+    {q:'A Strength 4 weapon shoots a Toughness 5 Ork. What do you need to wound?', opts:['3+','4+','5+'], a:2, why:'S is less than T, so you need 5+.'},
+    {q:'An Ork with a 5+ save is hit by an AP -2 weapon. What does it need to save?', opts:['5+','6+','It can’t save'], a:2, why:'5+ worsened by 2 is 7+. A D6 can’t roll a 7, so the save automatically fails.'},
+  ],
+  debrief:'You ran the full attack sequence: hit, wound, save, damage. Strength and AP decide which gun is right for which target. Next: the Orks wake up, and they want to get close.'
+},
+{
+  id:3, name:'Get Stuck In', teaches:'Charges, the Fight phase, fighting back',
+  tags:['Charge','2D6','Fight','WS','Pistols','Fall Back'],
+  phases:['movement','shooting','charge','fight'], rounds:4, enemyAI:true, keywords:false, cover:false, battleshock:false, scoring:false, strats:false,
+  goal:'Destroy the Boyz before the end of battle round 4. This time they move, shoot and charge.',
+  win:'destroy',
+  terrain:[{t:'ruin',x:11,y:1,w:2,h:3},{t:'ruin',x:11,y:12,w:2,h:3},{t:'ruin',x:6,y:6,w:1,h:4}],
+  objectives:[],
+  units:[['intercessors','player',3,4],['assault','player',4,11],['boyz','enemy',19,8,8]],
+  lesson:`
+<p>Orks want to be in close combat. Some of your units do too: Assault Intercessors carry chainswords.</p>
+<h3>The Charge phase</h3>
+<ul>
+<li>Pick a unit within <b>12″</b> of an enemy. It can’t charge if it Advanced or Fell Back this turn.</li>
+<li>Roll <b>2D6</b>. That’s how far it can move this charge.</li>
+<li>It must finish within <b>Engagement Range (1″)</b> of the target. If the roll isn’t enough, it stays where it is.</li>
+</ul>
+<p>The game shows the roll you need and your odds before you roll.</p>
+<h3>The Fight phase</h3>
+<ul>
+<li>Every unit within Engagement Range of an enemy fights, <b>on both sides</b>. Your units will fight back in the Orks’ turn too.</li>
+<li><b>Units that charged fight first.</b> After that, players take turns picking units, starting with the player whose turn it isn’t.</li>
+<li>Melee attacks use the same four steps as shooting, with <b>WS</b> (Weapon Skill) in place of BS. Melee weapons have no range.</li>
+</ul>
+<h3>Being in combat</h3>
+<ul>
+<li>A unit in Engagement Range can only shoot <b>Pistols</b>, and only at an enemy it’s in combat with.</li>
+<li>You can’t shoot at an enemy that’s in combat with your own units.</li>
+<li>In the Movement phase, a unit in combat can only Remain Stationary or <b>Fall Back</b> (move away). A unit that Falls Back can’t shoot or charge that turn.</li>
+</ul>
+<div class="callout">Charging is a gamble worth taking with the right unit. Being the charger means you strike first, before the enemy can hit back.</div>`,
+  quiz:[
+    {q:'Your unit Advanced this turn. Can it declare a charge?', opts:['Yes','No'], a:1, why:'No. Advancing or Falling Back rules out charging that turn.'},
+    {q:'Your unit charged the Boyz this turn. Who fights first?', opts:['Your unit','The Boyz','Roll off'], a:0, why:'Charging units fight first. After that, the players alternate, starting with the player whose turn it isn’t.'},
+  ],
+  debrief:'You charged, fought, and took hits back. Next: winning the game is about territory, not just kills.'
+},
+{
+  id:4, name:'Hold the Line', teaches:'Objectives, Command Points, Battle-shock',
+  tags:['Objective Control','Victory Points','CP','Battle-shock'],
+  phases:['command','movement','shooting','charge','fight'], rounds:4, enemyAI:true, keywords:false, cover:false, battleshock:true, scoring:true, strats:false,
+  goal:'Finish battle round 4 with more Victory Points than the Orks. You score 5 VP for each objective you control at the end of your turn.',
+  win:'vp',
+  terrain:[{t:'ruin',x:9,y:2,w:2,h:3},{t:'ruin',x:14,y:11,w:2,h:3},{t:'ruin',x:15,y:5,w:1,h:2},{t:'ruin',x:8,y:10,w:1,h:2}],
+  objectives:[{x:5,y:12},{x:12,y:8},{x:19,y:3}],
+  units:[['intercessors','player',3,11],['assault','player',4,7],['hellblasters','player',3,3],
+         ['boyz','enemy',20,4],['boyz','enemy',20,11],['gretchin','enemy',22,8]],
+  lesson:`
+<p>Kills don’t win games of 40K. <b>Victory Points</b> do, and most of them come from holding <b>objective markers</b>.</p>
+<h3>Objective Control</h3>
+<ul>
+<li>A unit is on an objective if it’s within <b>3″</b> of the marker.</li>
+<li>Add up the <b>OC of every model</b> each player has there. Higher total controls it. A tie means nobody does.</li>
+<li>5 Intercessors are OC 2 each, so OC 10. 10 Boyz are OC 20. Killing models lowers their total.</li>
+</ul>
+<p>In this mission you score <b>5 VP per objective you control at the end of each of your turns</b>. The Orks do the same in theirs. (Real missions vary in when and how you score. This is a simplified version.)</p>
+<h3>The Command phase</h3>
+<ul>
+<li>At the start of it, <b>both players gain 1 Command Point (CP)</b>. You’ll spend CP on Stratagems in Mission 5. For now, watch it build up.</li>
+<li>Then each of your units that is <b>below half strength</b> takes a <b>Battle-shock test</b>: roll 2D6. If the total equals or beats its <b>Ld</b>, it passes.</li>
+<li>A failed unit is <b>Battle-shocked</b> until your next Command phase. Its OC drops to <b>0</b>, so it can’t hold objectives.</li>
+</ul>
+<div class="callout">Below half strength means fewer than half the models it started with. 10 Boyz become vulnerable at 4 left. A single big model counts when it’s below half its Wounds.</div>`,
+  quiz:[
+    {q:'3 Boyz (OC 2) and 2 Intercessors (OC 2) are both within 3″ of an objective. Who controls it?', opts:['The Orks','You','Nobody'], a:0, why:'Orks have 3 × 2 = 6. You have 2 × 2 = 4. The higher total controls it.'},
+    {q:'A unit with Ld 7+ takes a Battle-shock test and rolls a total of 6. What happens?', opts:['It passes','It’s Battle-shocked'], a:1, why:'It needed 7 or more. It’s Battle-shocked: OC 0 until its next Command phase.'},
+  ],
+  debrief:'You played for objectives, earned Command Points, and saw morale matter. The last mission puts it all together, with your CP finally worth spending.'
+},
+{
+  id:5, name:'Full Battle', teaches:'Weapon abilities, cover, Stratagems, vehicles',
+  tags:['Assault','Heavy','Rapid Fire','Melta','Cover','Stratagems'],
+  phases:['command','movement','shooting','charge','fight'], rounds:5, enemyAI:true, keywords:true, cover:true, battleshock:true, scoring:true, strats:true,
+  goal:'A full five-round battle. Have more Victory Points than the Orks when it ends. Watch out for the Deff Dread.',
+  win:'vp',
+  terrain:[{t:'ruin',x:8,y:6,w:2,h:2},{t:'ruin',x:14,y:8,w:2,h:2},{t:'ruin',x:10,y:0,w:2,h:2},{t:'ruin',x:12,y:14,w:2,h:2},
+           {t:'crater',x:11,y:10,w:2,h:2},{t:'crater',x:12,y:4,w:1,h:1},{t:'crater',x:17,y:4,w:2,h:1},{t:'crater',x:5,y:3,w:1,h:2}],
+  objectives:[{x:4,y:12},{x:12,y:4},{x:11,y:11},{x:19,y:3}],
+  units:[['tacticals','player',2,12],['intercessors','player',3,4],['assault','player',4,8],['eradicators','player',2,8],
+         ['boyz','enemy',20,5],['boyz','enemy',20,11],['deffDread','enemy',21,8],['gretchin','enemy',22,2]],
+  lesson:`
+<p>This is close to a real game: five battle rounds, every phase, and the last layer of rules.</p>
+<h3>Weapon abilities</h3>
+<p>Keywords in brackets on a weapon change how it works. The common ones:</p>
+<ul>
+<li><b>Assault</b>: can shoot even if the unit Advanced.</li>
+<li><b>Heavy</b>: +1 to hit if the unit Remained Stationary this turn.</li>
+<li><b>Pistol</b>: can shoot while in Engagement Range, at the enemy it’s fighting.</li>
+<li><b>Rapid Fire X</b>: X extra attacks per model if the target is within half range.</li>
+<li><b>Melta X</b>: X extra damage per attack if the target is within half range.</li>
+</ul>
+<h3>Cover</h3>
+<p>A unit standing in terrain, or shot through terrain right next to it, has the <b>Benefit of Cover</b>: +1 to its saving throw against shooting. The exception: a model with a save of 3+ or better gets nothing from cover against AP 0 attacks.</p>
+<h3>Invulnerable saves and mortal wounds</h3>
+<ul><li>An <b>invulnerable save</b> ignores AP. When a unit has one, it uses whichever save is better.</li>
+<li><b>Mortal wounds</b> skip the hit, wound and save rolls. Each one is 1 damage, and unlike normal damage it carries over to the next model.</li></ul>
+<h3>Stratagems</h3>
+<p>Now your CP are worth something. Each Stratagem costs <b>1 CP</b> and can be used once per phase:</p>
+<ul>${STRATS.map(s=>`<li><b>${s.name}</b>: ${s.when.charAt(0).toLowerCase()+s.when.slice(1)}. ${s.what}</li>`).join('')}</ul>
+<p>The game will offer Command Re-roll and Go to Ground when they apply. Grenade is a button in your Shooting phase. The Orks have CP too, and they’ll re-roll failed charges.</p>
+<h3>Vehicles</h3>
+<p>The Deff Dread is <b>T9</b> with a <b>2+</b> save and 10 Wounds. Bolters barely scratch it (S4 vs T9 needs a 6 to wound). Your Eradicators’ melta rifles are built for this: S9, AP-4, D6 damage, +2 more up close. Vehicles can’t enter ruins.</p>`,
+  quiz:[
+    {q:'Your Intercessors didn’t move this turn. Their bolt rifle has [HEAVY] and BS 3+. What do they need to hit?', opts:['2+','3+','4+'], a:0, why:'Heavy gives +1 to hit for Remaining Stationary, so a 2 now hits.'},
+    {q:'An Intercessor (Sv 3+) in a ruin is shot by an AP 0 slugga. What does it save on?', opts:['2+','3+'], a:1, why:'Cover doesn’t help models with a 3+ or better save against AP 0. Against AP -1 it would count.'},
+  ],
+  debrief:'That’s the core of Warhammer 40,000. Everything else in the game builds on these five phases and the four-step attack.'
+},
+];
+
+const NEXT_STEPS = ['Characters and Leaders joining units','Army building: points, Detachments and army rules','Deep Strike, reserves and transports','Pile In and Consolidate moves in the Fight phase','Fire Overwatch and Heroic Intervention','More weapon abilities: Lethal Hits, Sustained Hits, Devastating Wounds, Blast, Torrent','Secondary missions and mission packs','Unit coherency and measuring from bases'];
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const d6 = () => 1 + Math.floor(Math.random()*6);
+const rollN = n => Array.from({length:n}, d6);
+const sum = a => a.reduce((x,y)=>x+y,0);
+const fmt = n => (Math.round(n*10)/10).toString();
+const pct = p => Math.round(p*100) + '%';
+const plural = (n, one, many) => n === 1 ? one : (many || one + 's');
+let SPEED = 650;
+
+let PROGRESS = {};
+try { PROGRESS = JSON.parse(localStorage.getItem('bootcamp40k.v1') || '{}') || {}; } catch(e) { PROGRESS = {}; }
+function saveProgress(){ try { localStorage.setItem('bootcamp40k.v1', JSON.stringify(PROGRESS)); } catch(e) {} }
+try { const s = localStorage.getItem('bootcamp40k.speed'); if (s) SPEED = +s || 650; } catch(e) {}
+
+function P2D6(n){ let c=0; for(let a=1;a<=6;a++) for(let b=1;b<=6;b++) if(a+b>=n) c++; return c/36; }
+function woundNeed(S,T){ if(S>=2*T) return 2; if(S>T) return 3; if(S===T) return 4; if(S*2<=T) return 6; return 5; }
+function woundWhy(S,T){ if(S>=2*T) return 'S is double T or more'; if(S>T) return 'S beats T'; if(S===T) return 'S equals T'; if(S*2<=T) return 'S is half T or less'; return 'S is below T'; }
+const hasKw = (w,k) => (w.kw||[]).some(x => x.startsWith(k));
+const kwNum = (w,k) => { const f=(w.kw||[]).find(x=>x.startsWith(k)); return f ? (parseInt(f.slice(k.length),10)||0) : 0; };
+const dStr = d => typeof d === 'number' ? String(d) : d;
+const other = s => s === 'player' ? 'enemy' : 'player';
+const cdist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+const cheb = (a,b) => Math.max(Math.abs(a.x-b.x), Math.abs(a.y-b.y));
+const inER = (a,b) => cheb(a,b) <= 1;
+
+/* ============================================================
+   GAME STATE
+   ============================================================ */
+let G = null;
+let uidN = 0;
+const gone = g => G !== g || g.over;
+
+function makeUnit(key, side, x, y, models){
+  const s = SHEETS[key];
+  const n = models || s.models;
+  return {id:'u'+(++uidN), key, side, x, y, name:s.name, short:s.short, M:s.M, T:s.T, Sv:s.Sv, W:s.W, Ld:s.Ld, OC:s.OC,
+    ranged:s.ranged.slice(), melee:s.melee.slice(), kw:s.kw.slice(), models:n, start:n, curW:s.W,
+    moveType:null, advRoll:0, shot:false, charged:false, chargeTried:false, fought:false, shocked:false, gtg:null};
+}
+const alive = side => G.units.filter(u => u.models > 0 && (!side || u.side === side));
+const unitById = id => G.units.find(u => u.id === id);
+const unitAt = (x,y) => alive().find(u => u.x === x && u.y === y);
+const terrainAt = (x,y) => (x<0||y<0||x>=BW||y>=BH) ? null : G.terrain[y*BW+x];
+const engagedWith = u => alive(other(u.side)).filter(e => inER(u,e));
+const isEngaged = u => engagedWith(u).length > 0;
+const phase = () => PHASES[G.phaseIdx];
+const phaseKey = () => G.round + '-' + G.active + '-' + phase();
+const belowHalf = u => u.start > 1 ? u.models*2 < u.start : u.curW*2 < u.W;
+const ocOf = u => u.shocked ? 0 : u.OC * u.models;
+function passable(u,x,y){ if(x<0||y<0||x>=BW||y>=BH) return false; if(terrainAt(x,y)==='ruin' && u.kw.includes('Vehicle')) return false; return true; }
+
+function lineCells(a,b){
+  const ax=a.x+.5, ay=a.y+.5, bx=b.x+.5, by=b.y+.5;
+  const n = Math.max(1, Math.ceil(Math.hypot(bx-ax,by-ay)*10));
+  const seen = new Set(), out = [];
+  for(let i=0;i<=n;i++){ const t=i/n; const x=Math.floor(ax+(bx-ax)*t), y=Math.floor(ay+(by-ay)*t); const k=x+','+y; if(!seen.has(k)){ seen.add(k); out.push({x,y}); } }
+  return out;
+}
+function visible(a,b){
+  for(const c of lineCells(a,b)){
+    if(terrainAt(c.x,c.y)==='ruin'){ if(cheb(c,a)<=1 || cheb(c,b)<=1) continue; return false; }
+  }
+  return true;
+}
+function hasCoverFrom(tgt, att){
+  if(terrainAt(tgt.x,tgt.y)) return true;
+  for(const c of lineCells(att,tgt)){ if(c.x===att.x&&c.y===att.y) continue; if(terrainAt(c.x,c.y) && cheb(c,tgt)<=1) return true; }
+  return false;
+}
+function reachable(u, r){
+  const out = [], foes = alive(other(u.side));
+  for(let y=0;y<BH;y++) for(let x=0;x<BW;x++){
+    if(x===u.x && y===u.y) continue;
+    if(!passable(u,x,y) || unitAt(x,y)) continue;
+    if(Math.hypot(x-u.x,y-u.y) > r + 1e-9) continue;
+    if(foes.some(e => cheb({x,y},e) <= 1)) continue;
+    out.push({x,y});
+  }
+  return out;
+}
+function chargeCells(u,t){
+  const out=[];
+  for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+    if(!dx && !dy) continue;
+    const x=t.x+dx, y=t.y+dy;
+    if(!passable(u,x,y)) continue;
+    const occ = unitAt(x,y); if(occ && occ !== u) continue;
+    out.push({x,y,d:Math.hypot(x-u.x,y-u.y)});
+  }
+  return out.sort((a,b)=>a.d-b.d);
+}
+function chargeNeed(u,t){ const c = chargeCells(u,t); return c.length ? Math.max(2, Math.ceil(c[0].d - 1e-9)) : null; }
+function control(o){
+  let p=0,e=0;
+  for(const u of alive()) if(Math.hypot(u.x-o.x,u.y-o.y) <= 3 + 1e-9){ if(u.side==='player') p+=ocOf(u); else e+=ocOf(u); }
+  return {p, e, owner: p>e ? 'player' : e>p ? 'enemy' : null};
+}
+
+/* eligibility (returns reasons so the game can teach) */
+function usableRanged(u){
+  const kwOn = G.level.keywords, eng = isEngaged(u);
+  return u.ranged.map(k => WEAPONS[k]).filter(w => {
+    if(eng) return hasKw(w,'Pistol');
+    if(u.moveType==='advance') return kwOn && hasKw(w,'Assault');
+    return true;
+  });
+}
+function shootBlock(u){
+  if(u.shot) return 'Already shot this phase.';
+  if(u.moveType==='fallback') return 'It Fell Back this turn, so it can’t shoot.';
+  if(!usableRanged(u).length){
+    if(isEngaged(u)) return 'It’s in Engagement Range and has no Pistol, so it can’t shoot. It will fight in the Fight phase.';
+    if(u.moveType==='advance') return G.level.keywords ? 'It Advanced and has no Assault weapon, so it can’t shoot.' : 'It Advanced this turn, so it can’t shoot.';
+    return 'No usable weapons.';
+  }
+  return null;
+}
+function targetCheck(u,w,t){
+  if(isEngaged(u)) return inER(u,t) ? null : 'Pistols in combat must target the unit you’re fighting';
+  const d = cdist(u,t);
+  if(d > w.range + 1e-9) return `Out of range: ${fmt(d)}″ (range ${w.range}″)`;
+  if(!visible(u,t)) return 'Not visible: ruins block line of sight';
+  if(alive(u.side).some(f => inER(f,t))) return 'In combat with your own unit, so you can’t shoot it';
+  return null;
+}
+function chargeBlock(u){
+  if(u.chargeTried) return 'Already declared a charge this phase.';
+  if(u.moveType==='advance') return 'It Advanced this turn, so it can’t charge.';
+  if(u.moveType==='fallback') return 'It Fell Back this turn, so it can’t charge.';
+  if(isEngaged(u)) return 'Already in Engagement Range.';
+  if(!alive(other(u.side)).some(t => cdist(u,t) <= 12 + 1e-9)) return 'No enemy within 12″.';
+  return null;
+}
+function chargeTargetCheck(u,t){
+  const d = cdist(u,t);
+  if(d > 12 + 1e-9) return `Too far: ${fmt(d)}″ (max 12″)`;
+  const need = chargeNeed(u,t);
+  if(need === null) return 'No free space next to it';
+  if(need > 12) return 'Can’t reach even on a 12';
+  return null;
+}
+
+/* expected damage for AI choices */
+function pSucc(need){ need = Math.min(Math.max(need,2),7); return (7-need)/6; }
+function saveNeedFor(att,t,w,melee,gtg){
+  let need = t.Sv - w.AP;
+  let cover = false;
+  if(!melee && G.level.cover && (gtg || hasCoverFrom(t,att)) && !(t.Sv <= 3 && w.AP === 0)) { need -= 1; cover = true; }
+  let inv = gtg ? 6 : null, usedInv = false;
+  if(inv && inv < need){ need = inv; usedInv = true; }
+  return {need, cover, usedInv};
+}
+function expDmg(att,t,w,melee){
+  const d = cdist(att,t), half = !melee && d <= w.range/2;
+  let A = w.A + (G.level.keywords && half ? kwNum(w,'Rapid Fire') : 0);
+  let hitNeed = w.skill - (G.level.keywords && hasKw(w,'Heavy') && att.moveType==='stationary' ? 1 : 0);
+  const sv = saveNeedFor(att,t,w,melee,false).need;
+  let D = typeof w.D === 'number' ? w.D : (w.D==='D6' ? 3.5 : 2);
+  if(G.level.keywords && half) D += kwNum(w,'Melta');
+  return att.models * A * pSucc(hitNeed) * pSucc(woundNeed(w.S,t.T)) * (1 - pSucc(sv)) * Math.min(D, t.W) / t.W;
+}
+
+/* ============================================================
+   DICE TRAY + LOG
+   ============================================================ */
+const trayEl = $('#tray');
+const Tray = {
+  begin(title){ trayEl.hidden = false; trayEl.innerHTML = `<div class="tray-title">${title}</div>`; },
+  async row(label, note, rolls, okFn, summary){
+    const r = document.createElement('div'); r.className = 'tray-row';
+    const dice = rolls.map((v,i) => `<span class="die ${okFn(v)?'ok':'no'}" style="animation-delay:${Math.min(i*18,400)}ms">${v}</span>`).join('');
+    r.innerHTML = `<div class="tray-lbl">${label}</div><div><div class="tray-note">${note}</div>${rolls.length?`<div class="dice">${dice}</div>`:''}${summary?`<div class="tray-sum">${summary}</div>`:''}</div>`;
+    trayEl.appendChild(r);
+    await sleep(SPEED);
+  },
+  line(text, cls){ const d=document.createElement('div'); d.className='tray-line '+(cls||''); d.innerHTML=text; trayEl.appendChild(d); }
+};
+function log(text, cls){ G.log.push({text, cls: cls||''}); if(G.log.length>200) G.log.shift(); renderLog(); }
+
+/* ============================================================
+   COMBAT
+   ============================================================ */
+function applyDamage(u, dmg, spill){
+  let killed = 0;
+  while(dmg > 0 && u.models > 0){
+    const take = Math.min(dmg, u.curW);
+    u.curW -= take; dmg -= take;
+    if(u.curW <= 0){ u.models--; killed++; u.curW = u.W; }
+    if(!spill) break;
+  }
+  return killed;
+}
+function sideName(u){ return u.side==='player' ? 'Your ' + u.name : u.name; }
+
+async function resolveAttack(att, tgt, w, melee){
+  const L = G.level, kwOn = L.keywords;
+  const d = cdist(att,tgt), half = !melee && d <= w.range/2;
+  const gtg = !melee && tgt.gtg === phaseKey();
+  const notes = [];
+  let perModel = w.A;
+  const rf = kwOn && !melee ? kwNum(w,'Rapid Fire') : 0;
+  if(rf && half){ perModel += rf; notes.push(`Rapid Fire ${rf}: +${rf} attack${rf>1?'s':''} per model at half range`); }
+  const attacks = att.models * perModel;
+  const heavy = kwOn && !melee && hasKw(w,'Heavy') && att.moveType==='stationary';
+  const hitNeedMod = Math.max(2, w.skill - (heavy?1:0));
+
+  Tray.begin(`${esc(sideName(att))} ${melee?'fight':'shoot'} ${esc(tgt.name)} <span class="mono" style="font-weight:400;color:var(--muted)">· ${esc(w.name)}</span>`);
+  const aNote = `${att.models} ${plural(att.models,'model')} × ${perModel} ${plural(perModel,'attack')} = <b>${attacks}</b>` + (notes.length ? ' · ' + notes.join(' · ') : '');
+
+  // 1. HIT
+  const hr = rollN(attacks);
+  const hitOk = v => v !== 1 && (v === 6 || v >= hitNeedMod);
+  const hits = hr.filter(hitOk).length;
+  await Tray.row('Hit', `${aNote}<br>Need ${hitNeedMod}+ (${melee?'WS':'BS'} ${w.skill}+${heavy?', Heavy +1 for staying still':''})`, hr, hitOk, `${hits} ${plural(hits,'hit')}`);
+  if(!hits){ Tray.line('No hits. Nothing happens.', 'bad'); log(`${sideName(att)} ${melee?'fight':'shoot at'} ${tgt.name}: no hits.`, 'dim'); return 0; }
+
+  // 2. WOUND
+  const wn = woundNeed(w.S, tgt.T);
+  const wr = rollN(hits);
+  const woundOk = v => v !== 1 && v >= wn;
+  const wounds = wr.filter(woundOk).length;
+  await Tray.row('Wound', `S${w.S} vs T${tgt.T}: ${woundWhy(w.S,tgt.T)}, need ${wn}+`, wr, woundOk, `${wounds} ${plural(wounds,'wound')}`);
+  if(!wounds){ Tray.line('No wounds. Nothing happens.', 'bad'); log(`${sideName(att)} → ${tgt.name}: ${hits} ${plural(hits,'hit')}, no wounds.`, 'dim'); return 0; }
+
+  // 3. SAVE
+  const sv = saveNeedFor(att, tgt, w, melee, gtg);
+  let saveNote = `Sv ${tgt.Sv}+` + (w.AP ? ` with AP${w.AP}` : '') + (sv.cover ? ', +1 for cover' : '');
+  if(!melee && L.cover && (gtg || hasCoverFrom(tgt,att)) && !sv.cover) saveNote += ' (cover doesn’t help a 3+ save vs AP 0)';
+  if(sv.usedInv) saveNote = `Go to Ground: 6+ invulnerable save, better than the armour save here`;
+  let failed;
+  if(sv.need > 6){
+    failed = wounds;
+    await Tray.row('Save', `${saveNote} → ${sv.need}+, impossible on a D6. No save.`, [], ()=>false, `${failed} unsaved`);
+  } else {
+    const sr = rollN(wounds);
+    const saveOk = v => v !== 1 && v >= sv.need;
+    const saved = sr.filter(saveOk).length;
+    failed = wounds - saved;
+    await Tray.row('Save', `${saveNote} → need ${sv.need}+ (rolled by the defender)`, sr, saveOk, `${saved} saved · ${failed} unsaved`);
+  }
+  if(!failed){ Tray.line('Armour holds. No damage.', 'bad'); log(`${sideName(att)} → ${tgt.name}: ${wounds} ${plural(wounds,'wound')}, all saved.`, 'dim'); return 0; }
+
+  // 4. DAMAGE
+  const melta = kwOn && !melee && half ? kwNum(w,'Melta') : 0;
+  let dmgRolls = [], killed = 0, total = 0;
+  for(let i=0;i<failed;i++){
+    let dmg = typeof w.D === 'number' ? w.D : (w.D==='D6' ? d6() : Math.ceil(d6()/2));
+    if(typeof w.D !== 'number') dmgRolls.push(dmg);
+    dmg += melta; total += dmg;
+    killed += applyDamage(tgt, dmg, false);
+  }
+  const dNote = `${failed} unsaved × ${dStr(w.D)} damage` + (melta ? ` +${melta} each from Melta (half range)` : '') + ` = ${total} against W${tgt.W} models. Excess damage on a model is lost.`;
+  await Tray.row('Damage', dNote, dmgRolls, ()=>true, '');
+  const hurt = tgt.models > 0 && tgt.curW < tgt.W ? ` (one model is wounded: ${tgt.curW}/${tgt.W} W left)` : '';
+  const out = tgt.models <= 0
+    ? `${tgt.name} destroyed!`
+    : `${killed} ${plural(killed,'model')} slain. ${tgt.models} left${hurt}.`;
+  Tray.line(out, tgt.side==='enemy' ? 'good' : 'bad');
+  log(`${sideName(att)} → ${tgt.name}: ${out}`, tgt.side==='enemy' ? 'good' : 'bad');
+  if(tgt.models <= 0 && G.sel === tgt.id) G.sel = null;
+  return killed;
+}
+
+async function resolveGrenade(u, t){
+  G.cp.player--; G.used.add('Grenade');
+  Tray.begin(`Stratagem: Grenade · ${esc(u.name)} → ${esc(t.name)}`);
+  const r = rollN(6); const mw = r.filter(v=>v>=4).length;
+  await Tray.row('Roll', 'Six D6, each 4+ is a mortal wound (no hit, wound or save rolls)', r, v=>v>=4, `${mw} mortal ${plural(mw,'wound')}`);
+  let killed = 0; for(let i=0;i<mw;i++) killed += applyDamage(t,1,true);
+  const out = t.models<=0 ? `${t.name} destroyed!` : `${killed} ${plural(killed,'model')} slain.`;
+  Tray.line(out, 'good'); log(`Grenade (1 CP): ${u.name} → ${t.name}: ${out}`, 'good');
+  u.shot = true;
+}
+
+/* ============================================================
+   FLOW
+   ============================================================ */
+function startLevel(idx){
+  if(G) G.over = true;
+  $('#modal').hidden = true;
+  const L = LEVELS[idx]; uidN = 0;
+  G = {level:L, idx, round:1, active:'player', phaseIdx:-1, units:[], terrain:new Array(BW*BH).fill(null),
+       objectives:L.objectives.map((o,i)=>({...o, n:i+1})), cp:{player:0,enemy:0}, vp:{player:0,enemy:0},
+       sel:null, mode:null, weapon:null, chargeTarget:null, moveR:0, moveKind:null, busy:false, waiting:null,
+       used:new Set(), log:[], over:false, fightNext:null, hover:null, bravery:false};
+  for(const t of L.terrain) for(let y=t.y;y<t.y+t.h;y++) for(let x=t.x;x<t.x+t.w;x++) G.terrain[y*BW+x]=t.t;
+  for(const [k,s,x,y,n] of L.units){ const u = makeUnit(k,s,x,y,n); if(L.id===1 && s==='enemy') u.name = 'Gretchin (asleep)'; G.units.push(u); }
+  trayEl.hidden = true; trayEl.innerHTML = '';
+  show('battle');
+  log(`Mission ${L.id}: ${L.name}`, 'h');
+  log(L.goal, 'dim');
+  G.sel = alive('player')[0].id;
+  startTurn('player');
+}
+
+async function startTurn(side){
+  G.active = side; G.phaseIdx = -1;
+  for(const u of alive(side)){ u.moveType=null; u.advRoll=0; u.shot=false; u.charged=false; u.chargeTried=false; }
+  log(`Round ${G.round} · ${side==='player'?'Your turn':'Ork turn'}`, 'h');
+  await advancePhase();
+}
+
+async function advancePhase(){
+  const g = G;
+  if(gone(g)) return;
+  G.mode=null; G.weapon=null; G.chargeTarget=null; G.used.clear();
+  do { G.phaseIdx++; } while(G.phaseIdx < PHASES.length && !G.level.phases.includes(PHASES[G.phaseIdx]));
+  if(G.phaseIdx >= PHASES.length) return endTurn();
+  const ph = phase();
+  render();
+  if(ph === 'command'){ G.busy = true; render(); await commandPhase(G.active); if(gone(g)) return; G.busy = false; }
+  if(ph === 'fight'){ for(const u of alive()) u.fought=false; G.fightNext = other(G.active); }
+  if(G.active === 'enemy'){
+    G.busy = true; render();
+    await sleep(SPEED*0.5);
+    if(ph==='movement') await aiMove();
+    else if(ph==='shooting') await aiShoot();
+    else if(ph==='charge') await aiCharge();
+    else if(ph==='fight') await fightLoop();
+    if(gone(g)) return;
+    G.busy = false;
+    await sleep(SPEED*0.3);
+    if(gone(g)) return;
+    return advancePhase();
+  }
+  if(ph === 'fight') await fightLoop();
+  if(gone(g)) return;
+  render();
+}
+
+async function commandPhase(side){
+  const g = G;
+  G.cp.player++; G.cp.enemy++;
+  log('Command phase: both players gain 1 CP.', 'dim');
+  for(const u of alive(side)) u.shocked = false;
+  if(!G.level.battleshock) return;
+  const tests = alive(side).filter(belowHalf);
+  if(!tests.length){ log(`No ${side==='player'?'units of yours':'Ork units'} below half strength. No Battle-shock tests.`, 'dim'); return; }
+  for(const u of tests){ if(gone(g)) return; await battleShock(u); }
+}
+
+async function battleShock(u){
+  Tray.begin(`Battle-shock test · ${esc(sideName(u))}`);
+  let r = rollN(2); let pass = sum(r) >= u.Ld;
+  await Tray.row('2D6', `${u.name} is below half strength. Need ${u.Ld}+ (Ld)`, r, ()=>pass, `Total ${sum(r)}: ${pass?'passed':'failed'}`);
+  if(!pass && u.side==='player' && canStrat('Command Re-roll')){
+    const yes = await ask('Failed Battle-shock test', `<p>${esc(u.name)} rolled ${sum(r)} and needed ${u.Ld}. If it stays Battle-shocked its OC drops to 0 until your next Command phase.</p><p>Spend <b>1 CP</b> on <b>Command Re-roll</b> to roll again? You have ${G.cp.player} CP.</p>`, [['Re-roll (1 CP)',true],['Accept result',false]]);
+    if(yes){ G.cp.player--; G.used.add('Command Re-roll'); r = rollN(2); pass = sum(r) >= u.Ld; await Tray.row('Re-roll', 'Command Re-roll', r, ()=>pass, `Total ${sum(r)}: ${pass?'passed':'failed'}`); log('Command Re-roll (1 CP) on the Battle-shock test.', 'dim'); }
+  }
+  u.shocked = !pass;
+  Tray.line(pass ? `${u.name} hold their nerve.` : `${u.name} are Battle-shocked: OC 0 until their next Command phase.`, pass===(u.side==='player') ? 'good' : 'bad');
+  log(`${sideName(u)}: Battle-shock test ${sum(r)} vs ${u.Ld}+ → ${pass?'passed':'Battle-shocked (OC 0)'}.`, pass===(u.side==='player')?'good':'bad');
+  render();
+}
+
+async function endTurn(){
+  const side = G.active;
+  if(G.level.scoring){
+    const held = G.objectives.filter(o => control(o).owner === side);
+    const pts = held.length * 5;
+    G.vp[side] += pts;
+    log(`${side==='player'?'You':'The Orks'} control ${held.length} ${plural(held.length,'objective')}${held.length?' ('+held.map(o=>'#'+o.n).join(', ')+')':''}: +${pts} VP. Score ${G.vp.player}–${G.vp.enemy}.`, side==='player' ? (pts?'good':'dim') : (pts?'bad':'dim'));
+  }
+  if(checkEnd(false)) return;
+  if(side==='player' && G.level.enemyAI) return startTurn('enemy');
+  if(G.round >= G.level.rounds){ checkEnd(true); return; }
+  G.round++;
+  if(!G.level.enemyAI) log('The Orks are asleep, so they skip their turn.', 'dim');
+  startTurn('player');
+}
+
+function evaluate(final){
+  const L = G.level;
+  const P = alive('player').length, E = alive('enemy').length;
+  if(L.win === 'reach'){
+    if(control(G.objectives[0]).owner === 'player') return 'win';
+    return final ? 'lose' : null;
+  }
+  if(L.win === 'destroy'){
+    if(!E) return 'win';
+    if(!P) return 'lose';
+    return final ? 'lose' : null;
+  }
+  if(!E) return 'win';
+  if(!P) return 'lose';
+  if(!final) return null;
+  return G.vp.player > G.vp.enemy ? 'win' : G.vp.player < G.vp.enemy ? 'lose' : 'draw';
+}
+function checkEnd(final){
+  if(G.over) return true;
+  const r = evaluate(final);
+  if(r){ finish(r); return true; }
+  return false;
+}
+function finish(result){
+  G.over = true; G.busy = false; G.mode = null;
+  const L = G.level;
+  if(result === 'win'){ PROGRESS[L.id] = {won:true}; saveProgress(); }
+  render();
+  const title = result==='win' ? 'Victory' : result==='draw' ? 'Draw' : 'Defeat';
+  let why = '';
+  if(L.win==='reach') why = result==='win' ? 'Objective secured.' : 'You didn’t reach the objective in time. Try Advancing: the extra D6 inches add up.';
+  else if(L.win==='destroy') why = result==='win' ? 'The Boyz are wiped out.' : (alive('player').length ? 'Time ran out with Orks still standing.' : 'Your squads were destroyed.');
+  else why = `Final score: you ${G.vp.player}, Orks ${G.vp.enemy}.` + (!alive('enemy').length ? ' The Ork army was wiped out.' : !alive('player').length ? ' Your army was wiped out.' : '');
+  const next = LEVELS[G.idx+1];
+  let body = `<p>${why}</p><p>${L.debrief}</p>`;
+  if(L.id === 5) body += `<p><b>Where to go next.</b> Rules this primer skipped:</p><ul>${NEXT_STEPS.map(s=>`<li>${s}</li>`).join('')}</ul>`;
+  if(result !== 'win') body += `<p class="reason">Dice are random. Retrying is part of learning the odds.</p>`;
+  const btns = [];
+  if(result !== 'win') btns.push(['Retry mission','retry']);
+  if(next) btns.push([`Mission ${next.id}: ${next.name}`, 'next']);
+  if(result === 'win' && !next) btns.push(['Play again','retry']);
+  btns.push(['All missions','home']);
+  ask(title, body, btns).then(v => {
+    if(v==='retry') startLevel(G.idx);
+    else if(v==='next') openBrief(G.idx+1);
+    else if(v==='home') showHome();
+  });
+}
+
+/* ---------- fight sequencing ---------- */
+async function fightLoop(){
+  const g = G;
+  while(!gone(g)){
+    const el = alive().filter(u => !u.fought && isEngaged(u));
+    if(!el.length) break;
+    const chargers = el.filter(u => u.charged && u.side === G.active);
+    let side, pool;
+    if(chargers.length){ side = G.active; pool = chargers; }
+    else { side = G.fightNext; pool = el.filter(u=>u.side===side); if(!pool.length){ side = other(side); pool = el.filter(u=>u.side===side); } }
+    if(side === 'enemy'){
+      G.busy = true; render();
+      await sleep(SPEED*0.5);
+      const u = pool[0], w = WEAPONS[u.melee[0]];
+      const t = engagedWith(u).sort((a,b)=>expDmg(u,b,w,true)-expDmg(u,a,w,true))[0];
+      log(`${u.name} fight${chargers.length?' (charged, so they fight first)':''}.`, 'dim');
+      await resolveAttack(u, t, w, true);
+      if(gone(g)) return;
+      u.fought = true;
+      G.busy = false;
+    } else {
+      const wasBusy = G.busy; G.busy = false;
+      await new Promise(res => {
+        G.waiting = {kind:'fight', pool: pool.map(u=>u.id), first: !!chargers.length, res};
+        if(!pool.some(u=>u.id===G.sel)) G.sel = pool[0].id;
+        G.mode = null;
+        render();
+      });
+      G.waiting = null; G.busy = wasBusy;
+    }
+    if(!chargers.length) G.fightNext = other(side);
+    if(checkEnd(false)) return;
+    render();
+  }
+  if(!gone(g)) log('No units left to fight.', 'dim');
+}
+
+/* ============================================================
+   AI (the Orks)
+   ============================================================ */
+function aiGoal(u){
+  const ps = alive('player'); if(!ps.length) return null;
+  const near = ps.slice().sort((a,b)=>cdist(u,a)-cdist(u,b))[0];
+  const toUnit = {x:near.x, y:near.y, type:'unit'};
+  if(!G.level.scoring) return toUnit;
+  const objs = G.objectives.slice().sort((a,b)=>cdist(u,a)-cdist(u,b));
+  const onObj = objs.find(o => cdist(u,o) <= 3);
+  if(u.key === 'gretchin'){
+    if(onObj) return {x:onObj.x, y:onObj.y, type:'obj', hold:true};
+    const o = objs.find(o => control(o).owner !== 'enemy') || objs[0];
+    return {x:o.x, y:o.y, type:'obj'};
+  }
+  if(cdist(u,near) <= u.M + 13) return toUnit;
+  const o = objs.find(o => control(o).owner !== 'enemy');
+  if(onObj && control(onObj).owner !== 'enemy') return {x:onObj.x, y:onObj.y, type:'obj', hold:true};
+  return o ? {x:o.x, y:o.y, type:'obj'} : toUnit;
+}
+
+async function aiMove(){
+  const g = G;
+  for(const u of alive('enemy')){
+    if(gone(g)) return;
+    if(isEngaged(u)){ u.moveType='stationary'; log(`${u.name} stay locked in combat.`, 'dim'); continue; }
+    const goal = aiGoal(u);
+    if(!goal || goal.hold){ u.moveType='stationary'; if(goal) log(`${u.name} Remain Stationary on objective #${G.objectives.find(o=>o.x===goal.x&&o.y===goal.y).n}.`, 'dim'); continue; }
+    const d = Math.hypot(goal.x-u.x, goal.y-u.y);
+    const adv = goal.type==='unit' ? (d - u.M > 12.5) : (d > u.M + 2.5);
+    let R = u.M, roll = 0;
+    if(adv){ roll = d6(); R += roll; }
+    const cells = reachable(u, R);
+    let best = null, bd = Math.hypot(goal.x-u.x,goal.y-u.y);
+    for(const c of cells){ const cd = Math.hypot(goal.x-c.x,goal.y-c.y) + (terrainAt(c.x,c.y)&&G.level.cover?-0.3:0); if(cd < bd - 0.01){ bd = cd; best = c; } }
+    if(!best){ u.moveType='stationary'; log(`${u.name} Remain Stationary.`, 'dim'); continue; }
+    const dist = Math.hypot(best.x-u.x,best.y-u.y);
+    u.x = best.x; u.y = best.y; u.moveType = adv ? 'advance' : 'normal';
+    G.sel = u.id;
+    log(adv ? `${u.name} Advance (rolled ${roll}, up to ${R}″) and move ${fmt(dist)}″.` : `${u.name} move ${fmt(dist)}″.`);
+    render();
+    await sleep(SPEED*0.7);
+  }
+}
+
+async function aiShoot(){
+  const g = G;
+  for(const u of alive('enemy')){
+    if(gone(g)) return;
+    if(u.models<=0 || shootBlock(u)) continue;
+    let best = null;
+    for(const w of usableRanged(u)) for(const t of alive('player')){
+      if(targetCheck(u,w,t)) continue;
+      const e = expDmg(u,t,w,false);
+      if(!best || e > best.e) best = {w,t,e};
+    }
+    if(!best) continue;
+    const t = best.t;
+    G.sel = u.id; render();
+    if(t.kw.includes('Infantry') && canStrat('Go to Ground') && t.gtg !== phaseKey()){
+      const yes = await ask('Your unit is under fire', `<p>${esc(u.name)} are shooting at your <b>${esc(t.name)}</b> with ${esc(best.w.name)}s.</p><p>Use <b>Go to Ground</b> for <b>1 CP</b>? They get a 6+ invulnerable save and the Benefit of Cover for the rest of this phase. You have ${G.cp.player} CP.</p>`, [['Go to Ground (1 CP)',true],['No',false]]);
+      if(yes){ G.cp.player--; G.used.add('Go to Ground'); t.gtg = phaseKey(); log(`Go to Ground (1 CP): ${t.name} take cover.`, 'good'); }
+    }
+    await resolveAttack(u, t, best.w, false);
+    if(gone(g)) return;
+    u.shot = true;
+    if(checkEnd(false)) return;
+    render();
+    await sleep(SPEED*0.4);
+  }
+}
+
+async function aiCharge(){
+  const g = G;
+  for(const u of alive('enemy')){
+    if(gone(g)) return;
+    if(u.key==='gretchin' || chargeBlock(u)) continue;
+    const opts = alive('player').filter(t => !chargeTargetCheck(u,t)).map(t => ({t, need:chargeNeed(u,t)})).sort((a,b)=>a.need-b.need);
+    if(!opts.length) continue;
+    const {t, need} = opts[0];
+    u.chargeTried = true; G.sel = u.id; render();
+    Tray.begin(`${esc(u.name)} charge your ${esc(t.name)}`);
+    let r = rollN(2), ok = sum(r) >= need;
+    await Tray.row('2D6', `Need ${need}+ to reach Engagement Range (${pct(P2D6(need))} chance)`, r, ()=>ok, `Total ${sum(r)}: ${ok?'success':'failed'}`);
+    if(!ok && G.level.strats && G.cp.enemy >= 1){
+      G.cp.enemy--; r = rollN(2); ok = sum(r) >= need;
+      await Tray.row('Re-roll', 'The Orks spend 1 CP on Command Re-roll', r, ()=>ok, `Total ${sum(r)}: ${ok?'success':'failed'}`);
+      log('The Orks use Command Re-roll (1 CP) on their charge.', 'dim');
+    }
+    if(ok){ const c = chargeCells(u,t)[0]; u.x=c.x; u.y=c.y; u.charged=true; Tray.line(`WAAAGH! ${u.name} crash into your ${t.name}.`, 'bad'); log(`${u.name} charge your ${t.name} (rolled ${sum(r)}, needed ${need}).`, 'bad'); }
+    else { Tray.line(`${u.name} fall short.`, 'good'); log(`${u.name} fail their charge (rolled ${sum(r)}, needed ${need}).`, 'good'); }
+    render();
+    await sleep(SPEED*0.6);
+  }
+}
+
+/* ============================================================
+   PLAYER ACTIONS
+   ============================================================ */
+function canStrat(name){ return G.level.strats && G.cp.player >= 1 && !G.used.has(name); }
+function myTurnFree(){ return G && !G.over && !G.busy && G.active==='player' && !G.waiting; }
+
+function selectUnit(id){ G.sel = id; G.mode = null; G.weapon = null; G.chargeTarget = null; render(); }
+
+async function actMove(kind){
+  const u = unitById(G.sel); if(!u || !myTurnFree()) return;
+  if(kind==='stationary'){ u.moveType='stationary'; log(`${u.name} Remain Stationary.`); G.mode=null; render(); return; }
+  if(kind==='advance'){
+    const r = d6(); u.advRoll = r;
+    Tray.begin(`${esc(u.name)} Advance`);
+    await Tray.row('D6', `Advance roll, added to M ${u.M}″`, [r], ()=>true, `Move up to ${u.M + r}″ this phase`);
+    log(`${u.name} Advance: rolled ${r}, can move up to ${u.M + r}″.`);
+  }
+  G.moveKind = kind; G.moveR = kind==='advance' ? u.M + u.advRoll : u.M; G.mode = 'move';
+  render();
+}
+function doMoveTo(x,y){
+  const u = unitById(G.sel);
+  const ok = reachable(u, G.moveR).some(c => c.x===x && c.y===y);
+  if(!ok) return false;
+  const dist = Math.hypot(x-u.x, y-u.y);
+  u.x = x; u.y = y; u.moveType = G.moveKind;
+  const label = {normal:'Normal Move', advance:'Advance', fallback:'Fall Back'}[G.moveKind];
+  log(`${u.name}: ${label} ${fmt(dist)}″.`);
+  G.mode = null;
+  if(!checkEnd(false)) render();
+  return true;
+}
+async function doShoot(u, w, t){
+  G.busy = true; G.mode = null; render();
+  await resolveAttack(u, t, w, false);
+  u.shot = true; G.busy = false;
+  if(!checkEnd(false)) render();
+}
+async function doGrenade(u, t){
+  G.busy = true; G.mode = null; render();
+  await resolveGrenade(u, t);
+  G.busy = false;
+  if(!checkEnd(false)) render();
+}
+async function doCharge(u, t){
+  const need = chargeNeed(u,t);
+  G.busy = true; u.chargeTried = true; render();
+  Tray.begin(`${esc(u.name)} charge ${esc(t.name)}`);
+  let r = rollN(2), ok = sum(r) >= need;
+  await Tray.row('2D6', `Need ${need}+ to reach Engagement Range (${pct(P2D6(need))} chance)`, r, ()=>ok, `Total ${sum(r)}: ${ok?'success':'failed'}`);
+  if(!ok && canStrat('Command Re-roll')){
+    const yes = await ask('Charge failed', `<p>You rolled ${sum(r)} and needed ${need}.</p><p>Spend <b>1 CP</b> on <b>Command Re-roll</b> to roll both dice again? You have ${G.cp.player} CP.</p>`, [['Re-roll (1 CP)',true],['Accept result',false]]);
+    if(yes){ G.cp.player--; G.used.add('Command Re-roll'); r = rollN(2); ok = sum(r) >= need; await Tray.row('Re-roll', 'Command Re-roll', r, ()=>ok, `Total ${sum(r)}: ${ok?'success':'failed'}`); log('Command Re-roll (1 CP) on the charge.', 'dim'); }
+  }
+  if(ok){ const c = chargeCells(u,t)[0]; u.x=c.x; u.y=c.y; u.charged=true; Tray.line(`${u.name} slam into ${t.name}. They’ll fight first.`, 'good'); log(`${u.name} charge ${t.name} (rolled ${sum(r)}, needed ${need}).`, 'good'); }
+  else { Tray.line(`${u.name} fall short and stay put.`, 'bad'); log(`${u.name} fail the charge (rolled ${sum(r)}, needed ${need}).`, 'bad'); }
+  G.busy = false; G.mode = null; G.chargeTarget = null;
+  render();
+}
+async function doFight(u, t){
+  const w = WEAPONS[u.melee[0]];
+  G.busy = true; render();
+  await resolveAttack(u, t, w, true);
+  u.fought = true; G.busy = false;
+  const res = G.waiting && G.waiting.res; G.waiting = null;
+  if(res) res();
+}
+
+function onNext(){
+  if(!myTurnFree()) return;
+  if(phase()==='movement'){ for(const u of alive('player')) if(!u.moveType) u.moveType='stationary'; }
+  G.sel = G.sel && unitById(G.sel)?.models>0 ? G.sel : null;
+  advancePhase();
+}
+
+/* board clicks */
+function boardCell(ev){
+  const svg = $('#board'); const r = svg.getBoundingClientRect();
+  const x = Math.floor((ev.clientX - r.left) / r.width * BW), y = Math.floor((ev.clientY - r.top) / r.height * BH);
+  if(x<0||y<0||x>=BW||y>=BH) return null;
+  return {x,y};
+}
+$('#board').addEventListener('click', ev => {
+  if(!G || G.over) return;
+  const c = boardCell(ev); if(!c) return;
+  const clicked = unitAt(c.x,c.y);
+  const sel = G.sel && unitById(G.sel);
+  if(G.mode==='move' && !clicked && myTurnFree()){ if(doMoveTo(c.x,c.y)) return; }
+  if(clicked && sel && clicked.side !== sel.side){
+    if(G.mode==='shoot' && myTurnFree() && !targetCheck(sel, WEAPONS[G.weapon], clicked)) return doShoot(sel, WEAPONS[G.weapon], clicked);
+    if(G.mode==='grenade' && myTurnFree() && grenadeTargets(sel).includes(clicked)) return doGrenade(sel, clicked);
+    if(G.mode==='charge' && myTurnFree() && !chargeTargetCheck(sel, clicked)){ G.chargeTarget = clicked.id; render(); return; }
+    if(G.waiting && G.waiting.kind==='fight' && !G.busy && G.waiting.pool.includes(sel.id) && inER(sel,clicked)) return doFight(sel, clicked);
+  }
+  if(clicked){ selectUnit(clicked.id); return; }
+});
+$('#board').addEventListener('pointermove', ev => {
+  if(!G || ev.pointerType==='touch') return;
+  const c = boardCell(ev);
+  const k = c ? c.x+','+c.y : null;
+  if(k !== G.hover){ G.hover = k; renderMeasure(); }
+});
+$('#board').addEventListener('pointerleave', () => { if(G){ G.hover = null; renderMeasure(); } });
+$('#next-btn').addEventListener('click', onNext);
+
+function grenadeTargets(u){
+  return alive('enemy').filter(t => cdist(u,t) <= 8 + 1e-9 && visible(u,t) && !alive('player').some(f=>inER(f,t)));
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  if(!G) return;
+  renderHud(); renderBoard(); renderOrders(); renderUnit(); renderRoster(); renderLog();
+}
+
+function renderHud(){
+  const L = G.level;
+  const phs = PHASES.map((p,i) => `<span class="ph ${!L.phases.includes(p)?'off':''} ${i===G.phaseIdx?'on':''} ${i<G.phaseIdx&&L.phases.includes(p)?'past':''}">${PN[p]}</span>`).join('');
+  $('#hud').innerHTML = `
+    <h2>${L.id} · ${esc(L.name)}</h2>
+    <span class="grp"><span class="lbl">Round</span><b>${G.round}/${L.rounds}</b></span>
+    <span class="side-flag ${G.active}">${G.active==='player'?'Your turn':'Ork turn'}</span>
+    ${L.phases.includes('command') ? `<span class="grp"><span class="lbl">CP</span><b>${G.cp.player}</b><span class="lbl">vs</span>${G.cp.enemy}</span>` : ''}
+    ${L.scoring ? `<span class="grp"><span class="lbl">VP</span><b>${G.vp.player}</b><span class="lbl">vs</span>${G.vp.enemy}</span>` : ''}
+    <span class="grp">
+      <button class="link" type="button" id="hud-brief">Briefing</button>
+      <button class="link" type="button" id="hud-speed">Dice: ${SPEED<400?'fast':'normal'}</button>
+      <button class="link" type="button" id="hud-quit">Quit</button>
+    </span>
+    <div class="phases" aria-label="Phases">${phs}</div>`;
+  $('#hud-brief').onclick = () => ask(`Briefing · ${L.name}`, `<div class="lesson">${L.lesson}</div><div class="goalbox"><h3>Mission goal</h3>${esc(L.goal)}</div>`, [['Back to battle',1]]);
+  $('#hud-speed').onclick = () => { SPEED = SPEED<400 ? 650 : 220; try{ localStorage.setItem('bootcamp40k.speed', SPEED); }catch(e){} renderHud(); };
+  $('#hud-quit').onclick = async () => { const v = await ask('Leave this battle?', '<p>Progress in this battle will be lost.</p>', [['Leave',true],['Keep playing',false]]); if(v){ G.over = true; showHome(); } };
+}
+
+function tokShape(u){
+  if(u.side==='player') return `<circle class="tok-body player" r=".44"/>`;
+  if(u.kw.includes('Vehicle')) return `<polygon class="tok-body enemy" points="-.46,-.2 -.2,-.46 .2,-.46 .46,-.2 .46,.2 .2,.46 -.2,.46 -.46,.2"/>`;
+  return `<rect class="tok-body enemy" x="-.42" y="-.42" width=".84" height=".84" rx=".1"/>`;
+}
+
+function renderBoard(){
+  const s = [], L = G.level, sel = G.sel && unitById(G.sel);
+  // deployment tint + grid
+  s.push(`<rect x="0" y="0" width="${BW}" height="${BH}" fill="var(--field)"/>`);
+  s.push(`<rect x="0" y="0" width="6" height="${BH}" fill="var(--deploy-p)"/><rect x="${BW-6}" y="0" width="6" height="${BH}" fill="var(--deploy-e)"/>`);
+  for(let x=1;x<BW;x++) s.push(`<line class="b-grid ${x%6===0?'major':''}" x1="${x}" y1="0" x2="${x}" y2="${BH}"/>`);
+  for(let y=1;y<BH;y++) s.push(`<line class="b-grid ${y%6===0?'major':''}" x1="0" y1="${y}" x2="${BW}" y2="${y}"/>`);
+  // terrain
+  for(const t of L.terrain){
+    if(t.t==='ruin'){
+      s.push(`<rect class="ruin" x="${t.x+.04}" y="${t.y+.04}" width="${t.w-.08}" height="${t.h-.08}" rx=".06"/>`);
+      s.push(`<path class="ruin-wall" d="M${t.x+.2} ${t.y+t.h*.7} V${t.y+.2} H${t.x+t.w*.75}"/>`);
+      if(t.w*t.h>2) s.push(`<path class="ruin-wall" d="M${t.x+t.w-.2} ${t.y+t.h*.45} V${t.y+t.h-.2} H${t.x+t.w*.45}"/>`);
+    } else {
+      s.push(`<ellipse class="crater" cx="${t.x+t.w/2}" cy="${t.y+t.h/2}" rx="${t.w/2-.06}" ry="${t.h/2-.06}"/>`);
+    }
+  }
+  // objectives
+  for(const o of G.objectives){
+    const c = control(o), own = c.owner || '';
+    s.push(`<circle class="obj-fill ${own}" cx="${o.x+.5}" cy="${o.y+.5}" r="3"/><circle class="obj-ring ${own}" cx="${o.x+.5}" cy="${o.y+.5}" r="3"/>`);
+  }
+  // move highlights
+  if(G.mode==='move' && sel){
+    for(const c of reachable(sel, G.moveR)) s.push(`<rect class="reach" x="${c.x+.06}" y="${c.y+.06}" width=".88" height=".88" rx=".08"/>`);
+    s.push(`<circle class="range-ring" cx="${sel.x+.5}" cy="${sel.y+.5}" r="${G.moveR}"/>`);
+  }
+  if(G.mode==='shoot' && sel) s.push(`<circle class="range-ring" cx="${sel.x+.5}" cy="${sel.y+.5}" r="${WEAPONS[G.weapon].range}"/>`);
+  if(G.mode==='grenade' && sel) s.push(`<circle class="range-ring" cx="${sel.x+.5}" cy="${sel.y+.5}" r="8"/>`);
+  if(G.mode==='charge' && sel) s.push(`<circle class="range-ring" cx="${sel.x+.5}" cy="${sel.y+.5}" r="12"/>`);
+  for(const o of G.objectives) s.push(`<circle class="obj-mark" cx="${o.x+.5}" cy="${o.y+.5}" r=".36"/><text class="obj-num" x="${o.x+.5}" y="${o.y+.52}">${o.n}</text>`);
+  // units
+  const tgtIds = new Set(), badIds = new Set();
+  if(sel && sel.side==='player'){
+    const foes = alive('enemy');
+    if(G.mode==='shoot') foes.forEach(t => (targetCheck(sel,WEAPONS[G.weapon],t)?badIds:tgtIds).add(t.id));
+    if(G.mode==='grenade'){ const ok = grenadeTargets(sel); foes.forEach(t => (ok.includes(t)?tgtIds:badIds).add(t.id)); }
+    if(G.mode==='charge') foes.forEach(t => (chargeTargetCheck(sel,t)?badIds:tgtIds).add(t.id));
+    if(G.waiting && G.waiting.pool.includes(sel.id)) engagedWith(sel).forEach(t => tgtIds.add(t.id));
+  }
+  const pl = phase();
+  for(const u of alive()){
+    let done = false;
+    if(G.active==='player' && u.side==='player' && !G.over){
+      if(pl==='movement') done = !!u.moveType && !(G.mode==='move' && G.sel===u.id);
+      if(pl==='shooting') done = !!shootBlock(u);
+      if(pl==='charge') done = !!chargeBlock(u);
+    }
+    if(G.waiting && u.side==='player') done = !G.waiting.pool.includes(u.id);
+    const cls = ['tok', G.sel===u.id?'sel':'', done?'done':'', u.shocked?'shocked':''].join(' ');
+    s.push(`<g class="${cls}" transform="translate(${u.x+.5} ${u.y+.5})">${tokShape(u)}<text class="tok-lbl" y=".02">${u.short}</text>`);
+    s.push(`<circle class="tok-badge" cx=".36" cy="-.36" r=".21"/><text class="tok-n" x=".36" y="-.35">${u.start>1?u.models:u.curW}</text>`);
+    if(tgtIds.has(u.id)) s.push(`<circle class="tgt-ring ok" r=".62"/>`);
+    s.push(`</g>`);
+  }
+  if(G.chargeTarget){ const t = unitById(G.chargeTarget); if(t) s.push(`<circle cx="${t.x+.5}" cy="${t.y+.5}" r=".7" fill="none" stroke="var(--brass)" stroke-width=".1"/>`); }
+  s.push(`<g id="measure"></g>`);
+  $('#board').innerHTML = s.join('');
+  renderMeasure();
+  const wrap = $('#board').parentElement;
+  if(sel && wrap.scrollWidth > wrap.clientWidth + 4){
+    const px = (sel.x + .5) / BW * wrap.scrollWidth;
+    if(px < wrap.scrollLeft + 40 || px > wrap.scrollLeft + wrap.clientWidth - 40) wrap.scrollLeft = px - wrap.clientWidth/2;
+  }
+}
+
+function renderMeasure(){
+  const g = $('#measure'); if(!g) return;
+  const sel = G.sel && unitById(G.sel);
+  if(!G.hover || !sel || sel.models<=0){ g.innerHTML=''; return; }
+  const [x,y] = G.hover.split(',').map(Number);
+  if(x===sel.x && y===sel.y){ g.innerHTML=''; return; }
+  const d = Math.hypot(x-sel.x, y-sel.y);
+  const mx = (sel.x+x)/2+.5, my = (sel.y+y)/2+.5 - .25;
+  g.innerHTML = `<line class="measure" x1="${sel.x+.5}" y1="${sel.y+.5}" x2="${x+.5}" y2="${y+.5}"/><text class="measure-lbl" x="${mx}" y="${my}">${fmt(d)}″</text>`;
+}
+
+function btn(label, sub, onclick, opts={}){
+  const id = 'b' + Math.random().toString(36).slice(2,8);
+  BTN_HANDLERS[id] = onclick;
+  return `<button type="button" class="btn ${opts.primary?'btn-primary':''} ${opts.cls||''}" data-h="${id}" ${opts.disabled?'disabled':''}>${label}${sub?`<small>${sub}</small>`:''}</button>`;
+}
+let BTN_HANDLERS = {};
+document.addEventListener('click', ev => { const b = ev.target.closest('[data-h]'); if(b && !b.disabled && BTN_HANDLERS[b.dataset.h]) BTN_HANDLERS[b.dataset.h](); });
+
+function renderOrders(){
+  const el = $('#orders'), nb = $('#next-btn');
+  const ph = phase(), L = G.level;
+  let html = '';
+  const sel = G.sel && unitById(G.sel);
+  nb.disabled = !myTurnFree();
+  nb.textContent = G.over ? 'Battle over' : G.active==='enemy' ? 'Ork turn in progress…' : G.waiting ? 'Pick a unit to fight' : `End ${PN[ph]} phase →`;
+  if(G.over){ html = `<p>The battle is over.</p>`; }
+  else if(G.active==='enemy' && !G.waiting){
+    html = `<p class="who">Ork turn · ${PN[ph]} phase</p><p>Watch what they do. Each roll is explained in the dice tray.</p>`;
+  } else if(G.waiting && G.waiting.kind==='fight'){
+    html = `<p class="who">${G.active==='enemy'?'Ork turn · ':''}Fight phase: your pick</p><p>${G.waiting.first?'Your charging units fight first.':'Players take turns picking units to fight.'} Pick one of your units in combat, then attack.</p>`;
+  } else {
+    const H = {
+      command: `<p class="who">Command phase</p><p>Both players gained 1 CP${L.battleshock?' and your units below half strength took Battle-shock tests':''}. Nothing else to do here.</p>`,
+      movement: `<p class="who">Movement phase</p><p>Pick a unit, then choose how it moves: <b>Normal Move</b>, <b>Advance</b> or <b>Remain Stationary</b>. Units you don’t move Remain Stationary.</p>`,
+      shooting: `<p class="who">Shooting phase</p><p>Pick a unit, choose a weapon, then a target. Targets must be in range and visible.</p>`,
+      charge: `<p class="who">Charge phase</p><p>Units within 12″ of an enemy can charge. Roll 2D6 to see if they reach.</p>`,
+      fight: `<p class="who">Fight phase</p><p>All fights are resolved. End the phase to finish your turn.</p>`,
+    };
+    html = H[ph] || '';
+    if(L.id===1 && ph==='movement') html += `<p>Objective: within 3″ of marker #1 (the dashed circle) by the end of round ${L.rounds}.</p>`;
+  }
+  el.innerHTML = `<div class="box-title">Orders</div>${html}`;
+}
+
+function statTable(u){
+  const shocked = u.shocked ? ' (0 while shocked)' : '';
+  return `<table class="stats"><tr>
+    <th title="Move: inches per Normal Move">M</th><th title="Toughness: compared to weapon Strength">T</th><th title="Save: roll needed to stop a wound">Sv</th><th title="Wounds per model">W</th><th title="Leadership: Battle-shock target on 2D6">Ld</th><th title="Objective Control per model">OC</th></tr>
+    <tr><td>${u.M}″</td><td>${u.T}</td><td>${u.Sv<=6?u.Sv+'+':'–'}</td><td>${u.W}</td><td>${u.Ld}+</td><td>${u.OC}</td></tr></table>
+    <div class="statkey">M move · T toughness · Sv save · W wounds each · Ld leadership · OC objective control${shocked}</div>`;
+}
+function weapRows(keys, melee){
+  return keys.map(k => { const w = WEAPONS[k];
+    return `<tr><td>${esc(w.name)}${w.kw.length?`<span class="kw">[${w.kw.join(', ')}]</span>`:''}</td><td>${melee?'Melee':w.range+'″'}</td><td>${w.A}</td><td>${w.skill}+</td><td>${w.S}</td><td>${w.AP}</td><td>${dStr(w.D)}</td></tr>`; }).join('');
+}
+
+function renderUnit(){
+  const box = $('#unit-box');
+  BTN_HANDLERS = {};
+  const u = G.sel && unitById(G.sel);
+  if(!u || u.models<=0){ box.innerHTML = `<div class="box-title">Unit</div><p class="reason">Tap a unit on the board or in the Forces list to see its datasheet.</p>`; return; }
+  const pips = Array.from({length:u.start}, (_,i) => `<span class="pip ${i<u.models?'alive '+u.side:''} ${i===0&&u.curW<u.W&&u.models>0?'hurt':''}"></span>`).join('');
+  const chips = [];
+  if(u.moveType && G.active===u.side) chips.push(`<span class="chip">${{normal:'Moved',advance:'Advanced',stationary:'Stationary',fallback:'Fell back'}[u.moveType]}</span>`);
+  if(u.charged) chips.push(`<span class="chip ok">Charged</span>`);
+  if(isEngaged(u)) chips.push(`<span class="chip warn">In combat</span>`);
+  if(u.shocked) chips.push(`<span class="chip warn">Battle-shocked</span>`);
+  if(belowHalf(u)) chips.push(`<span class="chip warn">Below half strength</span>`);
+  if(G.level.cover && terrainAt(u.x,u.y)) chips.push(`<span class="chip ok">In cover</span>`);
+  if(G.level.scoring) chips.push(`<span class="chip">OC total ${ocOf(u)}</span>`);
+  let html = `<div class="ds-head"><span class="ds-name">${esc(u.name)}</span><span class="ds-fac ${u.side}">${u.side==='player'?'Space Marines':'Orks'}</span></div>
+    ${statTable(u)}
+    <div class="models-line">${u.start>1 ? `${u.models}/${u.start} models` : `${u.curW}/${u.W} wounds left`}${u.start>1&&u.curW<u.W?` · one model on ${u.curW}/${u.W} W`:''}</div>
+    ${u.start>1?`<div class="pips">${pips}</div>`:''}
+    <div class="weap-wrap"><table class="weap"><tr><th>Weapon</th><th>Rng</th><th>A</th><th>${'BS/WS'}</th><th>S</th><th>AP</th><th>D</th></tr>${weapRows(u.ranged,false)}${weapRows(u.melee,true)}</table></div>
+    <div class="chips"><span class="chip">${u.kw.join(' · ')}</span>${chips.join('')}</div>`;
+  html += actionsFor(u);
+  box.innerHTML = `<div class="box-title">Datasheet</div>${html}`;
+}
+
+function actionsFor(u){
+  if(G.over) return '';
+  // fight picks can happen on either turn
+  if(G.waiting && G.waiting.kind==='fight'){
+    if(u.side!=='player') return `<p class="reason">Select one of your units in combat to fight.</p>`;
+    if(!G.waiting.pool.includes(u.id)) return `<p class="reason">${u.fought?'Already fought this phase.':isEngaged(u)?'Can’t fight yet: charging units go first.':'Not in combat.'}</p>`;
+    const w = WEAPONS[u.melee[0]];
+    const ts = engagedWith(u).map(t => btn(`Fight ${esc(t.name)}`, `${esc(w.name)} · ${u.models*w.A} attacks, WS ${w.skill}+`, () => doFight(u,t), {primary:true})).join('');
+    return `<div class="actions"><div class="row targets">${ts}</div></div>`;
+  }
+  if(u.side !== 'player') return G.active==='player' ? `<p class="reason">Enemy unit. Hover or tap to check distances from your selected unit.</p>` : '';
+  if(!myTurnFree()) return '';
+  const ph = phase(), A = [];
+  if(ph==='movement'){
+    if(G.mode==='move' && G.sel===u.id){
+      A.push(`<p class="reason">Tap a highlighted square to move up to ${G.moveR}″. ${G.moveKind==='fallback'?'You must end outside Engagement Range.':'You can’t end within 1″ of an enemy.'}</p>`);
+      if(G.moveKind!=='advance') A.push(`<div class="row">${btn('Cancel','',()=>{G.mode=null;render();},{cls:'btn-ghost'})}</div>`);
+      else A.push(`<div class="row">${btn('Stay where it is','Still counts as having Advanced',()=>{u.moveType='advance';G.mode=null;log(`${u.name} Advanced but didn’t move.`);render();},{cls:'btn-ghost'})}</div>`);
+    } else if(u.moveType) A.push(`<p class="reason">Already moved this phase.</p>`);
+    else if(isEngaged(u)){
+      A.push(`<p class="reason">In Engagement Range: it can only Remain Stationary or Fall Back.</p>`);
+      A.push(`<div class="row">${btn('Fall Back',`Up to ${u.M}″, must end out of combat. Then can’t shoot or charge.`,()=>actMove('fallback'))}${btn('Remain Stationary','Stay and keep fighting',()=>actMove('stationary'))}</div>`);
+    } else {
+      A.push(`<div class="row">${btn('Normal Move',`Up to ${u.M}″`,()=>actMove('normal'),{primary:true})}${btn('Advance',`${u.M}″ + D6. ${G.level.phases.includes('shooting')?(G.level.keywords?'Only Assault weapons can shoot after.':'Can’t shoot or charge after.'):'Can’t shoot or charge after.'}`,()=>actMove('advance'))}</div>`);
+      A.push(`<div class="row">${btn('Remain Stationary', G.level.keywords?'Heavy weapons get +1 to hit':'Don’t move',()=>actMove('stationary'))}</div>`);
+    }
+  }
+  if(ph==='shooting'){
+    const blk = shootBlock(u);
+    if(blk) A.push(`<p class="reason">${blk}</p>`);
+    else if(G.mode==='shoot' && G.weapon){
+      const w = WEAPONS[G.weapon];
+      const rows = alive('enemy').map(t => { const why = targetCheck(u,w,t); const d = cdist(u,t);
+        return why ? btn(`${esc(t.name)}`, why, ()=>{}, {disabled:true, cls:'no'})
+                   : btn(`Shoot ${esc(t.name)}`, `${fmt(d)}″ away${G.level.cover && hasCoverFrom(t,u)?' · in cover':''}${G.level.keywords&&d<=w.range/2&&(hasKw(w,'Rapid Fire')||hasKw(w,'Melta'))?' · half range bonus':''}`, ()=>doShoot(u,w,t), {primary:true}); }).join('');
+      A.push(`<p class="reason">${esc(w.name)}: pick a target (or tap one on the board).</p><div class="row targets">${rows}</div><div class="row">${btn('Back','',()=>{G.mode=null;render();},{cls:'btn-ghost'})}</div>`);
+    } else if(G.mode==='grenade'){
+      const ok = grenadeTargets(u);
+      const rows = alive('enemy').map(t => ok.includes(t) ? btn(`Grenade ${esc(t.name)}`, `${fmt(cdist(u,t))}″ away`, ()=>doGrenade(u,t), {primary:true}) : btn(esc(t.name), cdist(u,t)>8?`Too far: ${fmt(cdist(u,t))}″ (max 8″)`:'Not a valid target', ()=>{}, {disabled:true, cls:'no'})).join('');
+      A.push(`<p class="reason">Grenade (1 CP): pick an enemy within 8″ that this unit can see.</p><div class="row targets">${rows}</div><div class="row">${btn('Back','',()=>{G.mode=null;render();},{cls:'btn-ghost'})}</div>`);
+    } else {
+      const ws = usableRanged(u).map(w => { const k = Object.keys(WEAPONS).find(k=>WEAPONS[k]===w);
+        return btn(`Shoot: ${esc(w.name)}`, `${w.range}″ · ${u.models*w.A} attacks${w.kw.length?' · '+w.kw.join(', '):''}`, ()=>{G.mode='shoot';G.weapon=k;render();}, {primary:true}); }).join('');
+      A.push(`<div class="row">${ws}</div>`);
+      if(u.ranged.length>1 && !isEngaged(u)) A.push(`<p class="reason">A unit shoots one weapon profile here. Pistols are for when you’re stuck in combat.</p>`);
+      if(G.level.strats && u.kw.includes('Grenades') && !isEngaged(u)) A.push(`<div class="row">${btn('Stratagem: Grenade (1 CP)', canStrat('Grenade') ? 'Six D6, each 4+ is a mortal wound. Uses up this unit’s shooting.' : (G.cp.player<1?'Not enough CP':'Already used this phase'), ()=>{G.mode='grenade';render();}, {disabled:!canStrat('Grenade')})}</div>`);
+    }
+  }
+  if(ph==='charge'){
+    const blk = chargeBlock(u);
+    if(blk) A.push(`<p class="reason">${blk}</p>`);
+    else if(G.mode==='charge'){
+      const t = G.chargeTarget && unitById(G.chargeTarget);
+      if(t){
+        const need = chargeNeed(u,t);
+        A.push(`<p class="reason">${esc(t.name)} is ${fmt(cdist(u,t))}″ away. To end within 1″ you need <b>${need}+ on 2D6</b>: ${pct(P2D6(need))} chance.</p>`);
+        A.push(`<div class="row">${btn(`Roll 2D6 · need ${need}+`, '', ()=>doCharge(u,t), {primary:true})}${btn('Back','',()=>{G.chargeTarget=null;render();},{cls:'btn-ghost'})}</div>`);
+      } else {
+        const rows = alive('enemy').map(t => { const why = chargeTargetCheck(u,t);
+          return why ? btn(esc(t.name), why, ()=>{}, {disabled:true, cls:'no'}) : btn(`Charge ${esc(t.name)}`, `${fmt(cdist(u,t))}″ · need ${chargeNeed(u,t)}+ (${pct(P2D6(chargeNeed(u,t)))})`, ()=>{G.chargeTarget=t.id;render();}, {primary:true}); }).join('');
+        A.push(`<p class="reason">Pick a target within 12″.</p><div class="row targets">${rows}</div><div class="row">${btn('Back','',()=>{G.mode=null;render();},{cls:'btn-ghost'})}</div>`);
+      }
+    } else A.push(`<div class="row">${btn('Declare a charge','Pick a target within 12″, then roll 2D6',()=>{G.mode='charge';render();},{primary:true})}</div>`);
+  }
+  if(ph==='fight') A.push(`<p class="reason">${isEngaged(u)?(u.fought?'Already fought this phase.':''):'Not in combat.'}</p>`);
+  if(ph==='command') A.push('');
+  return A.length ? `<div class="actions">${A.join('')}</div>` : '';
+}
+
+function renderRoster(){
+  const rows = G.units.slice().sort((a,b)=> (a.side===b.side?0:a.side==='player'?-1:1)).map(u => {
+    const meta = u.models<=0 ? 'destroyed' : (u.start>1 ? `${u.models}/${u.start}` : `${u.curW}/${u.W} W`) + (u.shocked?' · shocked':'');
+    return `<button type="button" class="r-item ${G.sel===u.id?'sel':''} ${u.models<=0?'dead':''}" data-u="${u.id}" ${u.models<=0?'disabled':''}><span class="r-dot ${u.side}"></span><span>${esc(u.name)}</span><span class="r-meta">${meta}</span></button>`;
+  }).join('');
+  let obj = '';
+  if(G.objectives.length && G.level.id>1){
+    obj = `<div class="box-title" style="margin-top:10px">Objectives (OC within 3″)</div>` + G.objectives.map(o => { const c = control(o);
+      return `<div class="r-item" style="cursor:default"><span class="r-dot" style="background:var(--brass)"></span><span>#${o.n} · ${c.owner==='player'?'<b style="color:var(--marine)">Yours</b>':c.owner==='enemy'?'<b style="color:var(--ork)">Orks</b>':'Nobody'}</span><span class="r-meta">${c.p} vs ${c.e}</span></div>`; }).join('');
+  }
+  $('#roster').innerHTML = rows + obj;
+  $('#roster').querySelectorAll('[data-u]').forEach(b => b.onclick = () => selectUnit(b.dataset.u));
+}
+function renderLog(){
+  const el = $('#log'); if(!el || !G) return;
+  el.innerHTML = G.log.slice().reverse().map(l => `<div class="${l.cls}">${esc(l.text)}</div>`).join('');
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+function ask(title, body, buttons){
+  return new Promise(res => {
+    const m = $('#modal'), c = $('#modal-card');
+    c.innerHTML = `<h3>${esc(title)}</h3><div>${body}</div><div class="btns">${buttons.map((b,i)=>`<button type="button" class="btn ${i===0?'btn-primary':''}" data-i="${i}">${esc(b[0])}</button>`).join('')}</div>`;
+    m.hidden = false;
+    c.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { m.hidden = true; res(buttons[+b.dataset.i][1]); });
+    const first = c.querySelector('[data-i]'); if(first) first.focus({preventScroll:true});
+    c.scrollTop = 0;
+  });
+}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+function show(which){
+  $('#scr-home').hidden = which!=='home';
+  $('#scr-brief').hidden = which!=='brief';
+  $('#scr-battle').hidden = which!=='battle';
+  window.scrollTo(0,0);
+}
+function showHome(){
+  const el = $('#scr-home');
+  el.innerHTML = `
+    <header class="mast">
+      <div class="eyebrow">An unofficial primer · 10th edition core rules, simplified</div>
+      <h1>40K <span>Boot Camp</span></h1>
+      <p>Five short battles against the Orks. Each one switches on another layer of the rules, from moving a single squad to a full five-round game with Stratagems. Every dice roll is shown and explained.</p>
+    </header>
+    <div class="eyebrow" style="margin-bottom:8px">Every turn, in this order</div>
+    <div class="turn-strip">
+      <div><b>Command</b>Gain CP, test morale</div><div><b>Movement</b>Move, Advance or hold</div><div><b>Shooting</b>Hit, wound, save, damage</div><div><b>Charge</b>2D6 to reach combat</div><div><b>Fight</b>Chargers strike first</div>
+    </div>
+    <div class="eyebrow" style="margin-bottom:8px">Missions</div>
+    <div class="missions">${LEVELS.map((L,i) => `
+      <button type="button" class="mission" data-l="${i}">
+        <span class="num">${L.id}</span>
+        <span><h3>${esc(L.name)}</h3><p>${esc(L.teaches)}</p><span class="tags">${L.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</span></span>
+        <span class="status ${PROGRESS[L.id]?'done':''}">${PROGRESS[L.id]?'Won':'Not played'}</span>
+      </button>`).join('')}
+    </div>
+    <div class="fineprint">
+      <p>Fan-made learning tool. Not affiliated with or endorsed by Games Workshop. Unit profiles are simplified from the 10th edition datasheets.</p>
+      <details><summary>How this game simplifies the real rules</summary><ul>
+        <li>Each unit is one token on a 1″ grid. Distances are measured centre to centre, not base to base.</li>
+        <li>A unit shoots one weapon profile per phase.</li>
+        <li>No Pile In or Consolidate moves, no Overwatch, no Characters or Leaders.</li>
+        <li>Objectives score at the end of each player’s turn from round 1.</li>
+        <li>Faction and Detachment rules (like the Orks’ Waaagh!) are left out.</li>
+      </ul></details>
+    </div>`;
+  el.querySelectorAll('[data-l]').forEach(b => b.onclick = () => openBrief(+b.dataset.l));
+  show('home');
+}
+function openBrief(i){
+  const L = LEVELS[i], el = $('#scr-brief');
+  el.innerHTML = `
+    <div class="brief-head"><button class="link" type="button" id="br-back">← All missions</button>
+      <div class="eyebrow" style="margin-top:12px">Mission ${L.id} of ${LEVELS.length} · ${esc(L.teaches)}</div>
+      <h2>${esc(L.name)}</h2></div>
+    <div class="lesson">${L.lesson}</div>
+    <div class="quiz"><div class="eyebrow">Check your understanding</div>
+      ${L.quiz.map((q,qi)=>`<div class="q" data-q="${qi}"><p>${esc(q.q)}</p><div class="opts">${q.opts.map((o,oi)=>`<button type="button" class="btn" data-o="${oi}">${esc(o)}</button>`).join('')}</div><div class="why" hidden></div></div>`).join('')}
+    </div>
+    <div class="goalbox"><h3>Mission goal</h3>${esc(L.goal)}<div class="reason" style="margin-top:6px">${L.rounds} battle ${plural(L.rounds,'round')} · phases: ${L.phases.map(p=>PN[p]).join(', ')}</div></div>
+    <div class="deploy-row"><button type="button" class="btn btn-primary" id="br-go">Deploy</button></div>`;
+  el.querySelectorAll('.q').forEach(qEl => {
+    const q = L.quiz[+qEl.dataset.q];
+    qEl.querySelectorAll('[data-o]').forEach(b => b.onclick = () => {
+      const oi = +b.dataset.o;
+      qEl.querySelectorAll('[data-o]').forEach(x => x.classList.remove('right','wrong'));
+      b.classList.add(oi===q.a?'right':'wrong');
+      if(oi!==q.a) qEl.querySelector(`[data-o="${q.a}"]`).classList.add('right');
+      const w = qEl.querySelector('.why'); w.hidden = false; w.textContent = (oi===q.a?'Correct. ':'Not quite. ') + q.why;
+    });
+  });
+  $('#br-back').onclick = showHome;
+  $('#br-go').onclick = () => startLevel(i);
+  show('brief');
+}
+
+showHome();
+</script>
+
+</body>
+</html>
