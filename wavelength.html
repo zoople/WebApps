@@ -20,6 +20,7 @@
     --display:"Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
     --body:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
   }
+  *,*::before,*::after{box-sizing:border-box;}
   html,body{background:var(--night); color:var(--cream);}
   body{font-family:var(--body); font-size:16px; line-height:1.45; -webkit-tap-highlight-color:transparent;}
   #app{max-width:520px; margin:0 auto; padding-inline:16px; padding-block:14px 40px; display:flex; flex-direction:column; gap:16px;}
@@ -127,6 +128,7 @@
   .sheet{display:flex; flex-direction:column; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px;}
   label.check{display:flex; gap:10px; align-items:center; font-size:.92rem; border-radius:8px;}
   label.check input{width:22px; height:22px; accent-color:var(--b4);}
+  .link-btn{color:var(--cream); text-decoration:underline; font-weight:700; padding:4px 2px; font-size:inherit;}
   .toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); background:var(--cream); color:var(--ink); font-weight:700; padding:10px 16px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.35); max-width:calc(100% - 32px); z-index:10;}
 </style>
 
@@ -257,6 +259,8 @@
     game.card = drawCard() || { id: "none", l: "Left", r: "Right" };
     rollTarget();
     game.needle = 50;
+    game.spinUsed = false;
+    game.swapUsed = false;
     game.clue = "";
     game.result = null;
     game.phase = "pass-psychic";
@@ -443,7 +447,11 @@
         <div class="who"><p class="label">Psychic only</p><h2>Give a clue that lands on the <span style="color:var(--b4)">4</span></h2></div>
         <div class="dialwrap">${dialSVG({ showTarget: true, coverOpen: true, needle: 50, interactive: false, noNeedle: true })}</div>
         ${g.card ? spectrumHTML(g.card) : ""}
-        ${writeOwn ? writeOwnSheet() : `<div class="row"><button class="btn" data-act="reroll">New card</button><button class="btn" data-act="write-own">Write my own</button></div>`}
+        ${writeOwn ? writeOwnSheet() : `<div class="row">
+          <button class="btn" data-act="respin" ${g.spinUsed ? "disabled" : ""}>${g.spinUsed ? "Re-spin used" : "Re-spin target"}</button>
+          <button class="btn" data-act="reroll" ${g.swapUsed ? "disabled" : ""}>${g.swapUsed ? "New card used" : "New card"}</button>
+        </div>
+        <p class="note" style="text-align:center">One re-spin and one new card per turn. <button class="link-btn" data-act="write-own">Write my own card</button></p>`}
         <div class="field"><label class="label" for="clue">Your clue (optional, shown to guessers)</label>
           <input type="text" id="clue" maxlength="80" placeholder="Say it out loud, or type it here" value="${esc(g.clue)}"></div>
         <button class="btn primary block" data-act="hide">Hide the target</button>
@@ -644,7 +652,8 @@
       case "menu": view = "setup"; render(); break;
 
       case "to-psychic": g.phase = "psychic"; saveGame(); render(); break;
-      case "reroll": { const c = drawCard(g.card && g.card.id); if (c) g.card = c; rollTarget(); saveGame(); render(); break; }
+      case "respin": if (g.spinUsed) break; g.spinUsed = true; rollTarget(); saveGame(); render(); toast("Target re-spun"); break;
+      case "reroll": { if (g.swapUsed) break; const c = drawCard(g.card && g.card.id); if (c) g.card = c; g.swapUsed = true; saveGame(); render(); break; }
       case "write-own": writeOwn = true; render(); setTimeout(() => $("#own-l") && $("#own-l").focus(), 30); break;
       case "own-cancel": writeOwn = false; render(); break;
       case "own-use": {
@@ -652,7 +661,7 @@
         const card = { id: uid("t"), l: p.l, r: p.r };
         if ($("#own-save").checked) { card.id = uid("s"); lib.cards.unshift({ ...card, on: true }); persistLib(); }
         else { temp.unshift(card); saveTemp(); }
-        g.used.push(card.id); g.card = card; rollTarget(); writeOwn = false; saveGame(); render(); break;
+        g.used.push(card.id); g.card = card; writeOwn = false; saveGame(); render(); break;
       }
       case "hide": g.phase = "pass-guess"; saveGame(); render(); break;
       case "to-guess": g.phase = "guess"; saveGame(); render(); break;
