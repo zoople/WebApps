@@ -234,6 +234,44 @@
   .loop-grid.compact .ltile .le { font-size: 1.5rem; }
   .loop-grid.compact .ltile .ln { font-size: 0.92rem; }
   .loop-grid.compact .ltile .lk { display: none; }
+  /* Run screen: the card and its button always fit one screen */
+  body.running header.top { display: none; }
+  body.running .wrap { padding-block: 12px 0; }
+  #u-card { display: flex; flex-direction: column; gap: 10px;
+    height: calc(100vh - 88px - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 88px - env(safe-area-inset-bottom, 0px)); }
+  #u-card[hidden] { display: none; }
+  #dealt-card { flex: 1 1 auto; min-height: 0; display: flex; }
+  #dealt-card .kcard { flex: 1; min-height: 0; overflow-y: auto; gap: clamp(6px, 1.4vh, 12px); padding: clamp(12px, 2.2vh, 18px); }
+  #dealt-card .kcard .kname { font-size: clamp(1.1rem, 2.8vh, 1.5rem); }
+  #dealt-card .kcard .glyph { width: clamp(34px, 5vh, 46px); height: clamp(34px, 5vh, 46px); font-size: clamp(1.1rem, 3vh, 1.5rem); }
+  .run-foot { flex: none; display: flex; flex-direction: column; gap: 2px; }
+  .run-foot .btn-primary { min-height: clamp(48px, 7vh, 60px); font-size: 1.08rem; font-family: var(--display); }
+  .run-hint { font-size: 0.82rem; color: var(--muted); }
+
+  .run-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: clamp(4px, 1vh, 8px); }
+  .run-list li button { width: 100%; text-align: left; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start;
+    padding: clamp(6px, 1.2vh, 10px) 10px; border-radius: 12px; border: 1.5px solid transparent; background: transparent; min-height: 0;
+    font-weight: 700; font-size: clamp(1rem, 2.3vh, 1.2rem); line-height: 1.3; color: var(--ink); }
+  .run-list .tick { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center;
+    font-family: var(--mono); font-size: 0.85rem; margin-top: 1px; }
+  .run-list li.ismod .tick { border-color: var(--accent); color: var(--accent); }
+  .run-list li.todo button { opacity: 0.42; }
+  .run-list li.cur button { border-color: var(--accent); background: var(--accent-soft); }
+  .run-list li.cur .tick { background: var(--surface); }
+  .run-list li.done button { color: var(--muted); }
+  .run-list li.done .txt { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .run-list li.done .tick { background: var(--good); border-color: var(--good); color: var(--paper); }
+  .run-list .dur { font-family: var(--mono); font-size: 0.78rem; font-weight: 500; color: var(--muted); margin-left: 6px; white-space: nowrap; }
+  .run-list .tap { display: block; font-size: 0.78rem; font-weight: 400; color: var(--accent); margin-top: 2px; }
+  .st-timer { grid-column: 2; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .st-timer .num { font-family: var(--mono); font-weight: 700; font-size: clamp(2rem, 6vh, 3rem); line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .st-timer .tbar { height: 8px; border-radius: 4px; background: var(--surface); overflow: hidden; }
+  .st-timer .tbar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
+  .st-timer .sub { font-size: 0.8rem; font-weight: 400; color: var(--muted); }
+  .st-start { grid-column: 2; margin-top: 6px; min-height: 40px; padding: 6px 14px; justify-self: start; }
+  @media (prefers-reduced-motion: no-preference) { .run-list li.cur.timeup button { animation: pulse 1s ease-in-out infinite; } @keyframes pulse { 50% { background: var(--good-soft); border-color: var(--good); } } }
+
   .loop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .ltile { position: relative; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 12px 12px;
     min-height: 118px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 400; overflow: hidden; }
@@ -313,37 +351,16 @@
       <div id="home-status"></div>
     </div>
 
-    <!-- Step: card -->
-    <div id="u-card" class="stack" hidden style="gap:14px">
+    <!-- Step: run the card -->
+    <div id="u-card" hidden>
       <div id="dealt-card"></div>
-      <button id="start-timer-btn" class="btn-primary btn-big btn-block">Start</button>
-      <div class="row" style="justify-content:space-between">
-        <button id="redraw-btn" class="btn-quiet">Draw a different card</button>
-        <button id="skip-timer-btn" class="btn-quiet">Done already, log it</button>
-      </div>
-      <p id="redraw-note" class="small muted" hidden>Wild card: this run won't count toward your loop's card.</p>
-      <button class="btn-quiet u-cancel">Cancel</button>
-    </div>
-
-    <!-- Step: timer -->
-    <div id="u-timer" class="stack" hidden style="gap:14px">
-      <div class="panel" style="align-items:center; text-align:center">
-        <span id="timer-kname" class="eyebrow"></span>
-        <div id="timer-action" style="text-align:left; align-self:stretch"></div>
-        <div class="timer">
-          <svg viewBox="0 0 100 100" aria-hidden="true">
-            <circle cx="50" cy="50" r="45" fill="none" stroke="var(--surface-2)" stroke-width="6"></circle>
-            <circle id="timer-ring" cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="282.74" stroke-dashoffset="0"></circle>
-          </svg>
-          <div>
-            <div id="timer-num" class="t-num">0:00</div>
-            <div id="timer-sub" class="t-sub">stay with it</div>
-          </div>
+      <div class="run-foot">
+        <button id="run-log-btn" class="btn-primary btn-block">Log what happened</button>
+        <div class="row" style="justify-content:space-between">
+          <button id="redraw-btn" class="btn-quiet">Draw a different card</button>
+          <button class="btn-quiet u-cancel">Cancel</button>
         </div>
-
       </div>
-      <button id="timer-done-btn" class="btn-primary btn-big btn-block">Log what happened</button>
-      <button class="btn-quiet u-cancel">Cancel, don't log</button>
     </div>
 
     <!-- Step: outcome -->
@@ -880,7 +897,8 @@
     html += '<span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>";
     html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
     if (loop && !small && loop.closure) html += '<p class="card-when">When: <b>' + esc(loop.closure) + "</b></p>";
-    html += stepsHTML(test);
+    if (opts && opts.run) html += '<p class="run-hint">Tap each step when it\'s done.</p>' + runStepsHTML();
+    else html += stepsHTML(test);
     if (!small && (mods.length || (loop && (loop.cue || loop.payoff)))) {
       html += '<details class="more"><summary>More info</summary><div class="more-body">';
       mods.forEach(m => { html += "<p><b>" + esc(m.name) + (m.when === "setup" ? " (set up beforehand)" : "") + ":</b> " + esc(m.when === "setup" ? m.step : m.text) + "</p>"; });
@@ -895,8 +913,8 @@
   // ---------- Urge flow ----------
   const flow = { loopId: "", hunger: 0, test: null, endAt: 0, total: 0, tick: null, wake: null, alerted: false };
   const $ = id => document.getElementById(id);
-  const steps = ["u-checkin", "u-card", "u-timer", "u-outcome", "u-result"];
-  function showStep(id) { steps.forEach(s => { $(s).hidden = s !== id; }); window.scrollTo(0, 0); }
+  const steps = ["u-checkin", "u-card", "u-outcome", "u-result"];
+  function showStep(id) { steps.forEach(s => { $(s).hidden = s !== id; }); document.body.classList.toggle("running", id === "u-card"); window.scrollTo(0, 0); }
 
   function pickLoop() {
     if (loopById(state.defaultLoopId)) return state.defaultLoopId;
@@ -935,20 +953,64 @@
       '<p class="small">' + esc(c.advice) + "</p></div></details>";
   }
 
+  // The step that carries the card's timer: the first one about waiting or breathing, else the first action.
+  function timedIndex(steps) {
+    let i = steps.findIndex(st => !st.mod && /\b(wait|minutes?|timer|breath|breathe|brews?|until)\b/i.test(st.text));
+    if (i < 0) i = steps.findIndex(st => !st.mod);
+    return i;
+  }
+
   function dealCard(randomise) {
     const loop = loopById(flow.loopId); if (!loop) return;
+    stopTimer();
     if (randomise) {
       const pool = KOGNEMS.filter(k => k.id !== (flow.test && flow.test.k));
       const k = pool[Math.floor(Math.random() * pool.length)];
       flow.test = { k: k.id, mods: [], action: k.plays[Math.floor(Math.random() * k.plays.length)], secs: k.secs, gen: 1, wild: true };
-      $("redraw-note").hidden = false;
     } else {
       flow.test = clone(loop.test);
-      $("redraw-note").hidden = true;
     }
-    $("dealt-card").innerHTML = cardHTML(flow.test, loop, { deal: true });
-    $("start-timer-btn").textContent = "Start · " + fmtSecs(effSecs(flow.test));
+    flow.steps = stepsFor(flow.test);
+    flow.timedIdx = timedIndex(flow.steps);
+    flow.cur = 0; flow.endAt = 0; flow.alerted = false;
+    renderRun();
     showStep("u-card");
+  }
+
+  function runStepsHTML() {
+    const total = effSecs(flow.test);
+    return '<ol class="run-list">' + flow.steps.map((st, i) => {
+      const state = i < flow.cur ? "done" : i === flow.cur ? "cur" : "todo";
+      const timed = i === flow.timedIdx;
+      let inner = '<span class="tick" aria-hidden="true">' + (state === "done" ? "✓" : i + 1) + '</span><span class="txt">' + esc(st.text) +
+        (timed && state !== "cur" ? '<span class="dur">⏱ ' + fmtSecs(total) + "</span>" : "") +
+        (state === "cur" && !(timed && flow.endAt) && !(timed && i === 0) ? '<span class="tap">Tap when done</span>' : "") + "</span>";
+      if (state === "cur" && timed && flow.endAt) {
+        inner += '<span class="st-timer"><span class="num" id="run-num">' + fmtSecs(total) + '</span><span class="tbar"><i id="run-bar"></i></span><span class="sub" id="run-sub">Stay with it. Tap when done.</span></span>';
+      }
+      const li = '<li class="' + state + (st.mod ? " ismod" : "") + (state === "cur" && flow.alerted ? " timeup" : "") + '">' +
+        '<button type="button" data-step="' + i + '"' + (state !== "cur" ? ' tabindex="-1"' : "") + ">" + inner + "</button>";
+      const startBtn = state === "cur" && timed && !flow.endAt && i === 0
+        ? '<button type="button" class="btn-primary st-start" data-start="1">▶ Start ' + fmtSecs(total) + " timer</button>" : "";
+      return li + startBtn + "</li>";
+    }).join("") + "</ol>";
+  }
+
+  function renderRun() {
+    const loop = loopById(flow.loopId);
+    $("dealt-card").innerHTML = cardHTML(flow.test, loop, { run: true });
+    $("redraw-btn").hidden = flow.cur > 0;
+    if (flow.endAt) updateTimer();
+  }
+
+  function tickStep(i) {
+    if (i !== flow.cur) return;
+    if (i === flow.timedIdx) stopTimer();
+    flow.cur++;
+    if (flow.cur >= flow.steps.length) { renderRun(); setTimeout(() => { if (!$("u-card").hidden) showOutcome(); }, 450); return; }
+    if (flow.cur === flow.timedIdx) startTimer(); else renderRun();
+    const cur = document.querySelector(".run-list li.cur");
+    if (cur) cur.scrollIntoView({ block: "nearest" });
   }
 
   let audioCtx = null;
@@ -963,31 +1025,29 @@
   }
 
   function startTimer() {
-    const k = K[flow.test.k];
     flow.total = effSecs(flow.test);
     flow.endAt = Date.now() + flow.total * 1000;
     flow.alerted = false;
-    $("timer-kname").textContent = k.code + " · " + k.name;
-    $("timer-action").innerHTML = stepsHTML(flow.test);
     beep(660, 0.15);
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(w => { flow.wake = w; }).catch(() => {}); } catch (e) {}
-    showStep("u-timer");
+    renderRun();
     clearInterval(flow.tick);
     flow.tick = setInterval(updateTimer, 200);
     updateTimer();
   }
   function updateTimer() {
+    const num = document.getElementById("run-num"); if (!num) return;
     const left = Math.max(0, (flow.endAt - Date.now()) / 1000);
-    $("timer-num").textContent = fmtSecs(left);
-    $("timer-ring").setAttribute("stroke-dashoffset", String(282.74 * (1 - left / flow.total)));
+    num.textContent = fmtSecs(left);
+    document.getElementById("run-bar").style.width = (100 * (1 - left / flow.total)).toFixed(1) + "%";
     const frac = left / flow.total;
-    $("timer-sub").textContent = left <= 0 ? "time's up" : frac > 0.66 ? "the urge is peaking" : frac > 0.33 ? "stay with it" : "almost there";
+    document.getElementById("run-sub").textContent = left <= 0 ? "Time's up. Tap to tick it off." : frac > 0.66 ? "The urge is peaking. Stay with it." : frac > 0.33 ? "Stay with it." : "Almost there.";
     if (left <= 0 && !flow.alerted) {
       flow.alerted = true; clearInterval(flow.tick);
       beep(880, 0.35); setTimeout(() => beep(1175, 0.4), 250);
       try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch (e) {}
       releaseWake();
-      setTimeout(() => { if (!$("u-timer").hidden) showOutcome(); }, 900);
+      const cur = document.querySelector(".run-list li.cur"); if (cur) cur.classList.add("timeup");
     }
   }
   function releaseWake() { try { flow.wake && flow.wake.release(); } catch (e) {} flow.wake = null; }
@@ -1218,9 +1278,11 @@
     flow.test = clone(loop.test); showOutcome(true);
   });
   $("redraw-btn").addEventListener("click", () => dealCard(true));
-  $("start-timer-btn").addEventListener("click", startTimer);
-  $("skip-timer-btn").addEventListener("click", () => showOutcome());
-  $("timer-done-btn").addEventListener("click", () => showOutcome());
+  $("run-log-btn").addEventListener("click", () => showOutcome());
+  $("dealt-card").addEventListener("click", e => {
+    if (e.target.closest("[data-start]")) { startTimer(); return; }
+    const b = e.target.closest("[data-step]"); if (b) tickStep(Number(b.dataset.step));
+  });
   $("outcome-list").addEventListener("click", e => { const b = e.target.closest("[data-out]"); if (b) logOutcome(b.dataset.out); });
   $("result-home-btn").addEventListener("click", () => { flow.loopId = ""; showStep("u-checkin"); renderCheckin(); });
   document.querySelectorAll(".u-cancel").forEach(b => b.addEventListener("click", cancelFlow));
@@ -1473,6 +1535,7 @@
   function setTab(name) {
     document.querySelectorAll("nav.tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
     ["urge", "loops", "deck", "log"].forEach(t => { $("tab-" + t).hidden = t !== name; });
+    document.body.classList.toggle("running", name === "urge" && !$("u-card").hidden);
     try { sessionStorage.setItem("ksd_tab", name); } catch (e) {}
     window.scrollTo(0, 0);
   }
