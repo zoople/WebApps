@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kognetik Snack Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root {
+    --paper: #EDF0EA;
+    --surface: #FFFFFF;
+    --surface-2: #E1E7DF;
+    --ink: #17242A;
+    --muted: #56686C;
+    --line: #C8D2CB;
+    --accent: #7A2E5C;
+    --accent-soft: #F1E2EB;
+    --accent-ink: #FFFFFF;
+    --good: #1E7548;
+    --good-soft: #DDEFE3;
+    --bad: #A93E2B;
+    --bad-soft: #F6E0DA;
+    --warn: #8F5E00;
+    --warn-soft: #F5EBD2;
+    --shadow: 0 1px 0 rgba(23,36,42,.06), 0 8px 24px -12px rgba(23,36,42,.25);
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #10191C; --surface: #172226; --surface-2: #1F2D32; --ink: #E6EDE9; --muted: #93A6A7;
+      --line: #2C3C41; --accent: #DE93BF; --accent-soft: #3A2231; --accent-ink: #2A0E1F;
+      --good: #62C997; --good-soft: #173328; --bad: #EC8A73; --bad-soft: #3A221C; --warn: #E3B559; --warn-soft: #362C16;
+      --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 26px -14px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #10191C; --surface: #172226; --surface-2: #1F2D32; --ink: #E6EDE9; --muted: #93A6A7;
+    --line: #2C3C41; --accent: #DE93BF; --accent-soft: #3A2231; --accent-ink: #2A0E1F;
+    --good: #62C997; --good-soft: #173328; --bad: #EC8A73; --bad-soft: #3A221C; --warn: #E3B559; --warn-soft: #362C16;
+    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 26px -14px rgba(0,0,0,.8);
+  }
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--body); font-size: 16px; line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 110px; display: flex; flex-direction: column; gap: 18px; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.15; }
+  h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.01em; }
+  h2 { font-size: 1.2rem; font-weight: 700; }
+  h3 { font-size: 1.02rem; font-weight: 700; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.86rem; }
+  .eyebrow { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 700; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .spread { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+  header.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  header.top .psi-mark { font-family: var(--mono); color: var(--accent); font-size: 0.85rem; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  button, .btn {
+    font: inherit; font-weight: 700; cursor: pointer; border-radius: 10px; min-height: 46px; padding: 10px 16px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    transition: transform .08s, background .15s, border-color .15s;
+  }
+  button:active { transform: scale(0.98); }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn-ghost { background: transparent; }
+  .btn-quiet { background: transparent; border-color: transparent; color: var(--muted); min-height: 38px; padding: 6px 10px; font-weight: 700; }
+  .btn-danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+  .btn-block { width: 100%; }
+  .btn-big { min-height: 64px; font-size: 1.15rem; font-family: var(--display); letter-spacing: 0.01em; }
+
+  .chip {
+    min-height: 40px; padding: 7px 13px; border-radius: 999px; font-weight: 700; font-size: 0.92rem;
+    background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .chip .ct { font-family: var(--mono); font-size: 0.75rem; opacity: .7; margin-left: 4px; }
+
+  .seg { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+  .seg button { border: 0; border-radius: 0; min-height: 50px; padding: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-family: var(--mono); font-size: 1.05rem; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button small { font-family: var(--body); font-size: 0.62rem; font-weight: 400; color: var(--muted); line-height: 1.1; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button[aria-pressed="true"] small { color: var(--accent-ink); }
+
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--muted); font-weight: 700; }
+  input, select, textarea {
+    font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); border: 1px solid var(--line);
+    border-radius: 9px; padding: 10px 12px; width: 100%;
+  }
+  textarea { min-height: 90px; font-family: var(--mono); font-size: 13px; }
+
+  /* Playing-card look for kognems */
+  .kcard {
+    position: relative; background: var(--surface); border: 1.5px solid var(--ink); border-radius: 16px;
+    padding: 18px 18px 16px 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+  }
+  .kcard .corner { display: flex; align-items: center; gap: 10px; }
+  .kcard .glyph {
+    width: 44px; height: 44px; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center; font-size: 1.45rem; font-weight: 700; flex: none; font-family: var(--mono);
+  }
+  .kcard .kname { font-family: var(--display); font-weight: 800; font-size: 1.5rem; line-height: 1.05; letter-spacing: -0.015em; }
+  .kcard .code { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; }
+  .kcard .action { font-size: 1.18rem; line-height: 1.4; font-weight: 700; }
+  .kcard .bg-glyph { position: absolute; right: -10px; bottom: -34px; font-size: 9rem; line-height: 1; color: var(--ink); opacity: 0.05; pointer-events: none; font-family: var(--mono); }
+  .kcard.small-card { padding: 14px; border-width: 1px; border-color: var(--line); box-shadow: none; }
+  .kcard.small-card .kname { font-size: 1.2rem; }
+  .kcard.small-card .glyph { width: 36px; height: 36px; font-size: 1.15rem; }
+
+  .mod { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--ink); border: 1px dashed var(--accent); border-radius: 8px; padding: 4px 9px; font-size: 0.86rem; font-weight: 700; }
+  .mod .mg { font-family: var(--mono); color: var(--accent); }
+
+  .insert-at { border-top: 1px dashed var(--line); padding-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 0.9rem; }
+  .insert-at dt { color: var(--muted); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .06em; padding-top: 2px; }
+  .insert-at dd { margin: 0; }
+
+  /* Timer */
+  .timer { display: grid; place-items: center; position: relative; margin: 4px auto; width: min(260px, 70vw); aspect-ratio: 1; max-width: 100%; }
+  .timer svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer .t-num { font-family: var(--mono); font-weight: 700; font-size: 3.2rem; font-variant-numeric: tabular-nums; }
+  .timer .t-sub { font-size: 0.8rem; color: var(--muted); text-align: center; }
+
+  /* Outcomes */
+  .outcomes { display: grid; gap: 8px; }
+  .outcome { text-align: left; display: grid; grid-template-columns: 14px 1fr; gap: 2px 12px; align-items: start; padding: 12px 14px; }
+  .outcome .sw { width: 14px; height: 14px; border-radius: 4px; margin-top: 4px; }
+  .outcome .ol { font-weight: 700; }
+  .outcome .od { grid-column: 2; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+  .sw.new { background: var(--good); } .sw.old { background: var(--bad); } .sw.hun { background: var(--warn); }
+
+  /* Psi status */
+  .psi { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-weight: 700; font-size: 0.8rem; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .psi.mut { background: var(--good-soft); color: var(--good); }
+  .psi.zero { background: var(--bad-soft); color: var(--bad); }
+  .psi.drift { background: var(--warn-soft); color: var(--warn); }
+  .psi.undef { background: var(--surface-2); color: var(--muted); }
+  .dots { display: flex; gap: 5px; align-items: center; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--surface-2); border: 1.5px solid transparent; }
+  .dot.new { background: var(--good); } .dot.old { background: var(--bad); } .dot.hun { background: var(--warn); }
+  .dot.other { opacity: .35; }
+  .advice { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; }
+
+  /* Loops */
+  .loop-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .rule-line { font-size: 0.92rem; }
+  .rule-line b { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); letter-spacing: .05em; margin-right: 4px; }
+  .example-tag { font-size: 0.7rem; font-weight: 700; color: var(--warn); border: 1px solid var(--warn); border-radius: 5px; padding: 0 5px; margin-left: 6px; vertical-align: middle; }
+  .modgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .modtoggle { text-align: left; font-weight: 400; font-size: 0.85rem; padding: 8px 10px; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
+  .modtoggle b { font-size: 0.9rem; }
+  .modtoggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .modtoggle:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* Deck */
+  .steps { display: grid; gap: 10px; counter-reset: s; }
+  .steps li { list-style: none; display: grid; grid-template-columns: 30px 1fr; gap: 10px; }
+  .steps li::before { counter-increment: s; content: counter(s); font-family: var(--mono); font-weight: 700; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center; font-size: 0.85rem; }
+  .steps { padding: 0; margin: 0; }
+  .plays { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.92rem; }
+  .deck-grid { display: grid; gap: 12px; }
+  details.kd summary { cursor: pointer; list-style: none; }
+  details.kd summary::-webkit-details-marker { display: none; }
+  details.kd[open] .more-hint { display: none; }
+
+  /* Log */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .stat .v { font-family: var(--mono); font-weight: 700; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 0.74rem; color: var(--muted); line-height: 1.25; }
+  .chart { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--c); }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
+  th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  th.n { text-align: right; }
+  .bar { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; min-width: 60px; }
+  .bar i { display: block; height: 100%; background: var(--good); }
+  .hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .hist li { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 0.88rem; }
+  .hist .dot { margin-top: 3px; }
+  .empty { padding: 18px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
+
+  /* Bottom tabs */
+  nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  }
+  nav.tabs button { border: 0; background: transparent; min-height: 52px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 0.78rem; color: var(--muted); padding: 4px; border-radius: 10px; }
+  nav.tabs button .ti { font-family: var(--mono); font-size: 1.15rem; line-height: 1.2; }
+  nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); }
+
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 10px; font-weight: 700; z-index: 20; max-width: calc(100% - 32px); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .deal { animation: deal .35s cubic-bezier(.2,.8,.2,1); }
+    @keyframes deal { from { transform: translateY(18px) rotate(-2deg); opacity: .4; } to { transform: none; opacity: 1; } }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Kognetik Snack Deck</h1>
+    <span class="psi-mark">Ψ = ∂S/∂R</span>
+  </header>
+
+  <!-- URGE TAB -->
+  <section id="tab-urge" class="stack" style="gap:16px">
+    <!-- Step: check-in -->
+    <div id="u-checkin" class="stack" style="gap:16px">
+      <div class="panel">
+        <div class="stack" style="gap:6px">
+          <span class="eyebrow">Which loop is running?</span>
+          <div id="loop-chips" class="row"></div>
+        </div>
+        <div class="stack" style="gap:6px">
+          <span class="eyebrow">Body hunger right now</span>
+          <div id="hunger-seg" class="seg" role="group" aria-label="Body hunger 1 to 5"></div>
+          <p id="hunger-hint" class="small muted"></p>
+        </div>
+      </div>
+      <button id="deal-btn" class="btn-primary btn-big btn-block">Deal my card</button>
+      <button id="already-btn" class="btn-ghost btn-block">I already ate it. Log the miss</button>
+      <div id="home-status" class="panel" hidden></div>
+    </div>
+
+    <!-- Step: card -->
+    <div id="u-card" class="stack" hidden style="gap:14px">
+      <div id="dealt-card"></div>
+      <button id="start-timer-btn" class="btn-primary btn-big btn-block">Start</button>
+      <div class="row" style="justify-content:space-between">
+        <button id="redraw-btn" class="btn-quiet">Draw a different card</button>
+        <button id="skip-timer-btn" class="btn-quiet">Done already, log it</button>
+      </div>
+      <p id="redraw-note" class="small muted" hidden>This run uses a different card, so it won't count toward the loop's current test.</p>
+      <button class="btn-quiet u-cancel">Cancel</button>
+    </div>
+
+    <!-- Step: timer -->
+    <div id="u-timer" class="stack" hidden style="gap:14px">
+      <div class="panel" style="align-items:center; text-align:center">
+        <span id="timer-kname" class="eyebrow"></span>
+        <p id="timer-action" style="font-weight:700; font-size:1.1rem"></p>
+        <div class="timer">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="var(--surface-2)" stroke-width="6"></circle>
+            <circle id="timer-ring" cx="50" cy="50" r="45" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="282.74" stroke-dashoffset="0"></circle>
+          </svg>
+          <div>
+            <div id="timer-num" class="t-num">0:00</div>
+            <div id="timer-sub" class="t-sub">stay with it</div>
+          </div>
+        </div>
+        <p id="timer-mods" class="small muted"></p>
+      </div>
+      <button id="timer-done-btn" class="btn-primary btn-big btn-block">Log what happened</button>
+      <button class="btn-quiet u-cancel">Cancel, don't log</button>
+    </div>
+
+    <!-- Step: outcome -->
+    <div id="u-outcome" class="stack" hidden style="gap:12px">
+      <div class="stack" style="gap:4px">
+        <span class="eyebrow">Classify this run</span>
+        <h2>Which rule ran?</h2>
+      </div>
+      <div id="outcome-list" class="outcomes"></div>
+      <label class="f" for="outcome-note">Note (optional)
+        <input id="outcome-note" type="text" placeholder="e.g. had tea instead, urge gone in 4 min">
+      </label>
+      <button class="btn-quiet u-cancel">Cancel, don't log</button>
+    </div>
+
+    <!-- Step: result -->
+    <div id="u-result" class="stack" hidden style="gap:14px">
+      <div id="result-body" class="panel"></div>
+      <button id="result-home-btn" class="btn-primary btn-block">Done</button>
+    </div>
+  </section>
+
+  <!-- LOOPS TAB -->
+  <section id="tab-loops" class="stack" hidden style="gap:14px">
+    <div class="spread">
+      <div class="stack" style="gap:2px">
+        <h2>Your snack loops</h2>
+        <p class="small muted">Each loop is one declared rule with one change under test.</p>
+      </div>
+      <button id="new-loop-btn" class="btn-primary" style="min-height:40px">+ Loop</button>
+    </div>
+    <div id="loops-list" class="stack" style="gap:12px"></div>
+  </section>
+
+  <!-- DECK TAB -->
+  <section id="tab-deck" class="stack" hidden style="gap:18px">
+    <div class="panel">
+      <h2>How a loop gets rewritten</h2>
+      <ol class="steps">
+        <li><div><b>Spot the recurring case.</b> <span class="muted">The same kind of situation keeps coming back: 3pm at the desk, the TV going on, walking past the kitchen.</span></div></li>
+        <li><div><b>Declare the rule.</b> <span class="muted">When [cue], I [automatic step], and it gives me [payoff]. Name the closure point, the last moment before the step completes, such as a hand on the cupboard door.</span></div></li>
+        <li><div><b>Test one change.</b> <span class="muted">Insert one kognem at the closure point. You can add up to two modifiers. Keep it the same for at least five runs.</span></div></li>
+        <li><div><b>Classify the result.</b> <span class="muted">Over comparable runs, did the old rule still reconstruct (Ψ = 0), is a different rule now running reliably (Ψ ≠ 0), or is there not enough evidence yet (Ψ undefined)?</span></div></li>
+      </ol>
+      <p class="small muted">A kognem doesn't fight the craving or depend on willpower. It changes the order of steps at the point where the automatic loop closes. One good run is a state change. A mutation is a new rule that keeps showing up across runs.</p>
+    </div>
+
+    <div class="stack" style="gap:10px">
+      <div class="spread"><h2>Kognem cards</h2><span class="small muted mono">7 operators</span></div>
+      <div id="deck-kognems" class="deck-grid"></div>
+    </div>
+
+    <div class="stack" style="gap:10px">
+      <div class="spread"><h2>Modifiers</h2><span class="small muted mono">max 2 per test</span></div>
+      <p class="small muted">A modifier changes how a kognem is delivered without changing the kognem itself. Adding or removing one counts as a new test.</p>
+      <div id="deck-mods" class="stack" style="gap:14px"></div>
+    </div>
+  </section>
+
+  <!-- LOG TAB -->
+  <section id="tab-log" class="stack" hidden style="gap:16px">
+    <div class="stats" id="log-stats"></div>
+    <div class="panel">
+      <div class="spread"><h3>When urges hit</h3><span class="small muted">by hour of day</span></div>
+      <div id="hour-chart"></div>
+      <div class="legend">
+        <span style="--c: var(--good)">new rule ran</span>
+        <span style="--c: var(--bad)">old rule ran</span>
+        <span style="--c: var(--warn)">real hunger</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Which cards work for you</h3>
+      <div id="card-table" class="tbl-wrap"></div>
+    </div>
+    <div class="stack" style="gap:8px">
+      <h3>History</h3>
+      <ul id="history" class="hist"></ul>
+    </div>
+    <div class="panel">
+      <h3>Backup</h3>
+      <p class="small muted">Your data only lives in this browser. Copy a backup now and then, and paste it back here to restore it or move it to another device.</p>
+      <div class="row">
+        <button id="export-btn">Copy backup</button>
+        <button id="import-toggle-btn" class="btn-ghost">Restore from backup</button>
+      </div>
+      <div id="import-box" class="stack" hidden>
+        <textarea id="import-text" placeholder="Paste backup JSON here"></textarea>
+        <button id="import-btn" class="btn-primary">Replace my data with this backup</button>
+      </div>
+      <textarea id="export-fallback" readonly hidden></textarea>
+      <div class="row" style="justify-content:flex-end">
+        <button id="reset-btn" class="btn-danger" style="min-height:38px">Reset everything</button>
+        <button id="reset-confirm-btn" class="btn-danger" hidden style="min-height:38px">Tap again to erase all loops and logs</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="urge" aria-selected="true"><span class="ti">◉</span>Urge</button>
+  <button role="tab" data-tab="loops" aria-selected="false"><span class="ti">↻</span>Loops</button>
+  <button role="tab" data-tab="deck" aria-selected="false"><span class="ti">▤</span>Deck</button>
+  <button role="tab" data-tab="log" aria-selected="false"><span class="ti">Ψ</span>Log</button>
+</nav>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- The deck ----------
+  // The seven operators of the Kognem Operator System, each with snack-specific plays.
+  const KOGNEMS = [
+    { id: "pause", code: "K1", glyph: "‖", name: "Pause",
+      what: "Put a gap between the cue and the automatic step. The loop needs momentum to close, and a gap takes it away.",
+      snack: "Best at the physical closure point, with your hand on the cupboard, fridge or wrapper.",
+      secs: 30,
+      plays: [
+        "Hands off the handle. Five slow breaths before you open anything.",
+        "Drink a full glass of water, then decide.",
+        "Put the snack on the counter, step back, and wait for the timer.",
+        "Feet flat, shoulders down, three breaths out longer than in."
+      ],
+      fail: "The snack was eaten before the pause started." },
+    { id: "inversion", code: "K2", glyph: "⇄", name: "Inversion",
+      what: "Run the opposite of the automatic step. If the loop moves toward food, move away from it.",
+      snack: "Works well on walk-past and boredom loops that start with movement.",
+      secs: 60,
+      plays: [
+        "Turn round and leave the kitchen. Walk to a different room.",
+        "Close the cupboard and put something away instead of taking something out.",
+        "Brush your teeth. It closes the eating window.",
+        "Stand up and stretch instead of reaching down for the bag."
+      ],
+      fail: "The usual reach happened instead of the opposite move." },
+    { id: "scaling", code: "K3", glyph: "↕", name: "Scaling",
+      what: "Keep the step but change its size. Shrink the portion, slow the speed, or exaggerate the urge until it looks silly.",
+      snack: "Use it when you'll eat something either way. It turns autopilot eating into a deliberate, smaller act.",
+      secs: 45,
+      plays: [
+        "Take one piece and put the pack back before the first bite.",
+        "Plate it and sit down. Never eat straight from the bag.",
+        "Eat the first three bites at half speed and put it down between bites.",
+        "Picture the urge at ten times the size, then make your actual movement tiny."
+      ],
+      fail: "Ate the full usual amount at the usual speed." },
+    { id: "index", code: "K4", glyph: "➚", name: "Index-Shift",
+      what: "Keep the reach but change what it points at. The loop runs and lands on a different target.",
+      snack: "Good when the payoff is the break or the texture, not the food itself.",
+      secs: 60,
+      plays: [
+        "Hand goes to the water bottle, tea or sparkling water instead.",
+        "Chew gum or have a mint. Same mouth action, different target.",
+        "Go to the fruit bowl, which you set up in advance.",
+        "Shift the break to a two-minute task: a text, a plant, a stretch."
+      ],
+      fail: "Attention stayed locked on the snack." },
+    { id: "frame", code: "K5", glyph: "❝", name: "Frame-Exposure",
+      what: "Say the rule out loud while it runs. A rule you can see is no longer fully automatic.",
+      snack: "Strong for stress and 'I deserve it' loops, where the rule hides behind a feeling.",
+      secs: 20,
+      plays: [
+        "Say it: \"This is the 3pm boredom loop, not hunger.\"",
+        "Rate your hunger 1 to 5 out loud before touching anything.",
+        "Name the payoff: \"I want a break, not biscuits.\"",
+        "Write the rule on a sticky note: When ___, I ___."
+      ],
+      fail: "Didn't name the rule before acting." },
+    { id: "temporal", code: "K6", glyph: "◷", name: "Temporal Decoupling",
+      what: "Pull the cue and the response apart in time. The urge fires now, and the answer comes later.",
+      snack: "The strongest card for cravings. Most urges fade within 10 to 15 minutes if the loop can't close.",
+      secs: 600,
+      plays: [
+        "Not now. If I still want it in 10 minutes, I'll have it plated.",
+        "Move it to the next planned snack time and write the time down.",
+        "Let the urge rise and fall like a wave, noticing its peak.",
+        "Finish one small task first, then decide."
+      ],
+      fail: "Ate before the delay ran out." },
+    { id: "rewrite", code: "K7", glyph: "↻", name: "Iterative Rewrite",
+      what: "Replace the automatic step with a planned substitute, and improve it a little after each run.",
+      snack: "Use it once you know the loop's payoff. Match the substitute to that payoff: crunch, sweet, warmth or a break.",
+      secs: 120,
+      plays: [
+        "Planned swap: apple and peanut butter, plated.",
+        "Tea ritual: kettle on, stand at the window while it brews.",
+        "Protein swap: yogurt or a boiled egg from the fridge.",
+        "Crunch swap: carrots or cucumber, prepped in advance."
+      ],
+      fail: "Went back to the old snack instead of the substitute." }
+  ];
+  const K = Object.fromEntries(KOGNEMS.map(k => [k.id, k]));
+
+  const MOD_GROUPS = [
+    { name: "Voice", mods: [
+      { id: "aloud", glyph: "“", name: "Out loud", text: "Say the action out loud as you do it." },
+      { id: "written", glyph: "✎", name: "Written", text: "Write one line in your notes first: the cue and what you're doing." } ] },
+    { name: "Body", mods: [
+      { id: "anchor", glyph: "◆", name: "Anchor gesture", text: "Start with the same gesture every time, such as a hand on your chest or a thumb press." },
+      { id: "water", glyph: "≈", name: "Water first", text: "Drink a glass of water before the card starts." } ] },
+    { name: "Place", mods: [
+      { id: "leave", glyph: "⇥", name: "Change room", text: "Run the card somewhere other than the kitchen." },
+      { id: "seated", glyph: "▭", name: "Plate & seat", text: "If you eat anything, plate it and sit at a table with no screen." } ] },
+    { name: "Time", mods: [
+      { id: "double", glyph: "×2", name: "Double time", text: "The timer runs twice as long.", mult: 2 },
+      { id: "repeat", glyph: "+1", name: "Second round", text: "If the urge is still there when the timer ends, run the card once more." } ] },
+    { name: "Social", mods: [
+      { id: "witness", glyph: "◎", name: "Witness", text: "Text someone: \"Snack urge, running my card.\"" } ] },
+    { name: "Setup", mods: [
+      { id: "hidden", glyph: "▢", name: "Out of sight", text: "The trigger snack is kept in an opaque box or on a high shelf." },
+      { id: "cue", glyph: "!", name: "Cue note", text: "A sticky note at the closure point, such as the cupboard door, names the card." } ] }
+  ];
+  const MODS = {};
+  MOD_GROUPS.forEach(g => g.mods.forEach(m => { MODS[m.id] = Object.assign({ group: g.name }, m); }));
+
+  const OUTCOMES = [
+    { id: "skip", cls: "new", label: "No snack", desc: "The urge passed and nothing was eaten." },
+    { id: "swap", cls: "new", label: "Swapped", desc: "Had the planned substitute or something else instead." },
+    { id: "small", cls: "new", label: "Ate less, on purpose", desc: "A deliberate smaller portion, plated. Not autopilot." },
+    { id: "old", cls: "old", label: "Old loop ran", desc: "Did the card, then ate the usual thing the usual way." },
+    { id: "missed", cls: "old", label: "Missed the closure point", desc: "It was eaten before I remembered the card." },
+    { id: "hungry", cls: "hun", label: "Real hunger, ate a proper snack", desc: "Body hunger, not the loop. Doesn't count against the test." }
+  ];
+  const OUT = Object.fromEntries(OUTCOMES.map(o => [o.id, o]));
+
+  const HUNGER = [
+    { v: 1, l: "none" }, { v: 2, l: "slight" }, { v: 3, l: "some" }, { v: 4, l: "hungry" }, { v: 5, l: "empty" }
+  ];
+
+  // ---------- State ----------
+  const STORE = "kognetik_snack_deck_v1";
+  const EXAMPLE_LOOPS = [
+    { id: "ex-desk", example: true, name: "Afternoon desk slump",
+      cue: "3 to 4pm, energy dips at my desk", auto: "walk to the kitchen and grab biscuits",
+      payoff: "a break and a sugar hit", closure: "standing up from the desk",
+      test: { k: "temporal", mods: ["water"], action: K.temporal.plays[0], secs: 600 } },
+    { id: "ex-tv", example: true, name: "Evening TV",
+      cue: "sitting down in front of the TV after dinner", auto: "open crisps or chocolate and eat from the pack",
+      payoff: "something to do with my hands, comfort", closure: "opening the snack cupboard",
+      test: { k: "scaling", mods: ["seated"], action: K.scaling.plays[1], secs: 45 } },
+    { id: "ex-stress", example: true, name: "Work stress spike",
+      cue: "a tense meeting or message", auto: "go straight for something sweet",
+      payoff: "calm down, a reward", closure: "hand reaching for the snack drawer",
+      test: { k: "frame", mods: ["aloud"], action: K.frame.plays[2], secs: 20 } },
+    { id: "ex-walk", example: true, name: "Kitchen walk-past",
+      cue: "passing the kitchen and seeing food out", auto: "grab a handful without thinking",
+      payoff: "none really, it's automatic", closure: "hand going into the bag or tub",
+      test: { k: "inversion", mods: ["hidden"], action: K.inversion.plays[0], secs: 60 } }
+  ];
+
+  let state = { v: 1, loops: [], logs: [], lastLoopId: "" };
+
+  function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function safeSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+  function save() { safeSet(STORE, JSON.stringify(state)); }
+  function uid(p) { return p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function load() {
+    const raw = safeGet(STORE);
+    if (raw) {
+      try { const s = JSON.parse(raw); if (s && Array.isArray(s.loops) && Array.isArray(s.logs)) { state = s; return; } } catch (e) {}
+    }
+    state = { v: 1, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" };
+    migrateOld();
+    save();
+  }
+
+  // Bring scenarios and history across from the earlier simulator, if this browser has them.
+  function migrateOld() {
+    const raw = safeGet("kognetik_state_v11");
+    if (!raw) return;
+    let old; try { old = JSON.parse(raw); } catch (e) { return; }
+    if (!old || !Array.isArray(old.scenarios)) return;
+    const map = { "Pause": "pause", "Inversion": "inversion", "Scaling": "scaling", "Index-Shift": "index",
+      "Frame-Exposure": "frame", "Iterative Rewrite": "rewrite" };
+    const toK = s => { const name = String(s || "").split(" ").slice(1).join(" "); return map[name] || "pause"; };
+    const byTrigger = {};
+    old.scenarios.forEach(sc => {
+      const m = (sc.mutations && sc.mutations[0]) || {};
+      const k = toK(m.kognem);
+      const loop = { id: uid("loop"), name: sc.trigger || "Imported loop", cue: sc.trigger || "", auto: "", payoff: "", closure: "",
+        test: { k, mods: [], action: m.action || K[k].plays[0], secs: Math.max(5, parseInt(m.duration, 10) || K[k].secs) } };
+      state.loops.push(loop); byTrigger[sc.trigger] = loop;
+    });
+    (old.logs || []).forEach(l => {
+      const loop = byTrigger[l.trigger]; if (!loop) return;
+      state.logs.push({ id: uid("log"), t: Date.now(), loopId: loop.id, hunger: 0, k: loop.test.k, mods: [],
+        key: testKey(loop.test.k, []), outcome: l.status === "failed" ? "old" : "skip",
+        note: "Imported from the old simulator" + (l.reason ? ": " + l.reason : ""), imported: true });
+    });
+  }
+
+  function testKey(k, mods) { return k + "|" + (mods || []).slice().sort().join(","); }
+  function loopById(id) { return state.loops.find(l => l.id === id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  function fmtSecs(s) { s = Math.max(0, Math.ceil(s)); const m = Math.floor(s / 60); return m + ":" + String(s % 60).padStart(2, "0"); }
+  function effSecs(test) { let s = Number(test.secs) || K[test.k].secs; (test.mods || []).forEach(id => { if (MODS[id] && MODS[id].mult) s *= MODS[id].mult; }); return s; }
+  function outClass(o) { return OUT[o] ? OUT[o].cls : "old"; }
+
+  // ---------- Classification (Ψ) ----------
+  const WINDOW = 5;
+  function classify(loop) {
+    const missing = [];
+    if (!loop.cue) missing.push("the cue");
+    if (!loop.auto) missing.push("the automatic step");
+    if (!loop.closure) missing.push("the closure point");
+    const key = testKey(loop.test.k, loop.test.mods);
+    const runs = state.logs.filter(l => l.loopId === loop.id && l.key === key && l.outcome !== "hungry");
+    const recent = runs.slice(-WINDOW);
+    const nNew = recent.filter(l => outClass(l.outcome) === "new").length;
+    const nMissed = recent.filter(l => l.outcome === "missed").length;
+    const base = { runs: runs.length, recent, nNew, nMissed };
+    if (missing.length) return Object.assign(base, { cls: "undef", label: "Ψ undefined",
+      advice: "The rule isn't fully declared yet. Add " + missing.join(", ") + ", or there's nothing to compare the runs against." });
+    if (recent.length < WINDOW) return Object.assign(base, { cls: "undef", label: "Ψ undefined",
+      advice: recent.length + " of " + WINDOW + " runs logged with this card. Keep the card the same until there are " + WINDOW + ", or the result won't tell you anything." });
+    if (nNew >= 4) return Object.assign(base, { cls: "mut", label: "Ψ ≠ 0",
+      advice: runs.length >= 10
+        ? "The new rule is holding across " + runs.length + " runs. That's a mutation. Try dropping a modifier, or start work on your next loop."
+        : "A different rule is reconstructing: " + nNew + " of the last " + WINDOW + ". Keep this card unchanged and see whether it holds to 10 runs." });
+    if (nNew <= 1) {
+      let advice = "The old rule still reconstructs (" + (WINDOW - nNew) + " of " + WINDOW + "). Change one thing. ";
+      if (nMissed >= 3) advice += "Most runs missed the closure point, so the card isn't firing in time. Add a Setup modifier such as Cue note or Out of sight before changing the card.";
+      else if ((loop.test.mods || []).length < 2) advice += "Add one modifier, or swap to " + suggestNext(loop.test.k) + ".";
+      else advice += "Swap to " + suggestNext(loop.test.k) + " and drop the modifiers so you can see what changes.";
+      return Object.assign(base, { cls: "zero", label: "Ψ = 0", advice });
+    }
+    return Object.assign(base, { cls: "drift", label: "Drift", advice: "The loop is moving but not stable yet (" + nNew + " of " + WINDOW + " new). Don't change anything yet. Five more runs with the same card will show whether it settles." });
+  }
+  function suggestNext(k) {
+    // Rough order from gentlest to strongest for snacking loops.
+    const order = ["frame", "pause", "index", "scaling", "inversion", "rewrite", "temporal"];
+    const i = order.indexOf(k);
+    return K[order[(i + 1) % order.length]].name;
+  }
+
+  function dotsHTML(loop, n) {
+    const key = testKey(loop.test.k, loop.test.mods);
+    const recent = state.logs.filter(l => l.loopId === loop.id).slice(-(n || 8));
+    let html = "";
+    for (let i = 0; i < (n || 8) - recent.length; i++) html += '<span class="dot" title="no run yet"></span>';
+    recent.forEach(l => {
+      const o = OUT[l.outcome];
+      html += '<span class="dot ' + outClass(l.outcome) + (l.key !== key ? " other" : "") + '" title="' + esc((o ? o.label : l.outcome) + (l.key !== key ? " (different card)" : "")) + '"></span>';
+    });
+    return '<span class="dots" aria-label="recent runs">' + html + "</span>";
+  }
+
+  // ---------- Card rendering ----------
+  function cardHTML(test, loop, opts) {
+    const k = K[test.k];
+    const mods = (test.mods || []).map(id => MODS[id]).filter(Boolean);
+    const small = opts && opts.small;
+    let html = '<div class="kcard' + (small ? " small-card" : "") + (opts && opts.deal ? " deal" : "") + '">';
+    html += '<span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>";
+    html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.glyph + '</span><div><div class="code">' + k.code + " · KOGNEM · " + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
+    html += '<p class="action">' + esc(test.action || k.plays[0]) + "</p>";
+    if (mods.length) {
+      html += '<div class="row">' + mods.map(m => '<span class="mod"><span class="mg">' + esc(m.glyph) + "</span>" + esc(m.name) + "</span>").join("") + "</div>";
+      if (!small) html += '<div class="stack small" style="gap:4px">' + mods.map(m => '<p><b>' + esc(m.name) + ":</b> " + esc(m.text) + "</p>").join("") + "</div>";
+    }
+    if (loop && !small) {
+      html += '<dl class="insert-at">';
+      if (loop.closure) html += "<dt>Insert at</dt><dd>" + esc(loop.closure) + "</dd>";
+      if (loop.cue || loop.auto) html += "<dt>Old rule</dt><dd>When " + esc(loop.cue || "…") + ", I " + esc(loop.auto || "…") + "</dd>";
+      if (loop.payoff) html += "<dt>It wants</dt><dd>" + esc(loop.payoff) + "</dd>";
+      html += "</dl>";
+    }
+    html += "</div>";
+    return html;
+  }
+
+  // ---------- Urge flow ----------
+  const flow = { loopId: "", hunger: 0, test: null, endAt: 0, total: 0, tick: null, wake: null, alerted: false };
+  const $ = id => document.getElementById(id);
+  const steps = ["u-checkin", "u-card", "u-timer", "u-outcome", "u-result"];
+  function showStep(id) { steps.forEach(s => { $(s).hidden = s !== id; }); window.scrollTo(0, 0); }
+
+  function renderCheckin() {
+    const chips = $("loop-chips");
+    if (!state.loops.length) {
+      chips.innerHTML = '<p class="small muted">No loops yet. Add one in the Loops tab.</p>';
+    } else {
+      if (!flow.loopId || !loopById(flow.loopId)) flow.loopId = loopById(state.lastLoopId) ? state.lastLoopId : state.loops[0].id;
+      chips.innerHTML = state.loops.map(l => {
+        const n = state.logs.filter(x => x.loopId === l.id).length;
+        return '<button class="chip" data-loop="' + l.id + '" aria-pressed="' + (l.id === flow.loopId) + '">' + esc(l.name) + '<span class="ct">' + n + "</span></button>";
+      }).join("");
+    }
+    $("hunger-seg").innerHTML = HUNGER.map(h => '<button data-h="' + h.v + '" aria-pressed="' + (flow.hunger === h.v) + '">' + h.v + "<small>" + h.l + "</small></button>").join("");
+    $("hunger-hint").textContent = flow.hunger >= 4
+      ? "That sounds like real hunger. Eat a proper planned snack, plated and seated. It won't count against the loop."
+      : flow.hunger ? "Low body hunger, so this is probably the loop and not your stomach." : "Pick a number. It separates the loop from actual hunger.";
+    $("deal-btn").textContent = flow.hunger >= 4 ? "Log a planned snack" : "Deal my card";
+    $("deal-btn").disabled = !state.loops.length;
+    renderHomeStatus();
+  }
+
+  function renderHomeStatus() {
+    const loop = loopById(flow.loopId);
+    const box = $("home-status");
+    if (!loop) { box.hidden = true; return; }
+    const c = classify(loop);
+    box.hidden = false;
+    box.innerHTML = '<div class="spread"><span class="eyebrow">' + esc(loop.name) + ' · current test</span><span class="psi ' + c.cls + '">' + c.label + "</span></div>" +
+      cardHTML(loop.test, null, { small: true }) +
+      '<div class="spread">' + dotsHTML(loop, 8) + '<span class="small muted mono">' + c.runs + " runs</span></div>" +
+      '<p class="small advice">' + esc(c.advice) + "</p>";
+  }
+
+  function dealCard(randomise) {
+    const loop = loopById(flow.loopId); if (!loop) return;
+    if (randomise) {
+      const pool = KOGNEMS.filter(k => k.id !== (flow.test && flow.test.k));
+      const k = pool[Math.floor(Math.random() * pool.length)];
+      flow.test = { k: k.id, mods: [], action: k.plays[Math.floor(Math.random() * k.plays.length)], secs: k.secs };
+      $("redraw-note").hidden = false;
+    } else {
+      flow.test = clone(loop.test);
+      $("redraw-note").hidden = true;
+    }
+    $("dealt-card").innerHTML = cardHTML(flow.test, loop, { deal: true });
+    $("start-timer-btn").textContent = "Start · " + fmtSecs(effSecs(flow.test));
+    showStep("u-card");
+  }
+
+  let audioCtx = null;
+  function beep(freq, dur) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.12, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function startTimer() {
+    const k = K[flow.test.k];
+    flow.total = effSecs(flow.test);
+    flow.endAt = Date.now() + flow.total * 1000;
+    flow.alerted = false;
+    $("timer-kname").textContent = k.code + " · " + k.name;
+    $("timer-action").textContent = flow.test.action;
+    $("timer-mods").textContent = (flow.test.mods || []).map(id => MODS[id] ? MODS[id].name : "").filter(Boolean).join(" · ");
+    beep(660, 0.15);
+    try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(w => { flow.wake = w; }).catch(() => {}); } catch (e) {}
+    showStep("u-timer");
+    clearInterval(flow.tick);
+    flow.tick = setInterval(updateTimer, 200);
+    updateTimer();
+  }
+  function updateTimer() {
+    const left = Math.max(0, (flow.endAt - Date.now()) / 1000);
+    $("timer-num").textContent = fmtSecs(left);
+    $("timer-ring").setAttribute("stroke-dashoffset", String(282.74 * (1 - left / flow.total)));
+    const frac = left / flow.total;
+    $("timer-sub").textContent = left <= 0 ? "time's up" : frac > 0.66 ? "the urge is peaking" : frac > 0.33 ? "stay with it" : "almost there";
+    if (left <= 0 && !flow.alerted) {
+      flow.alerted = true; clearInterval(flow.tick);
+      beep(880, 0.35); setTimeout(() => beep(1175, 0.4), 250);
+      try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch (e) {}
+      releaseWake();
+      setTimeout(() => { if (!$("u-timer").hidden) showOutcome(); }, 900);
+    }
+  }
+  function releaseWake() { try { flow.wake && flow.wake.release(); } catch (e) {} flow.wake = null; }
+  function stopTimer() { clearInterval(flow.tick); releaseWake(); }
+
+  function showOutcome(onlyMissed) {
+    stopTimer();
+    const k = flow.test ? K[flow.test.k] : null;
+    const list = onlyMissed ? OUTCOMES.filter(o => o.id === "missed" || o.id === "hungry") : OUTCOMES;
+    $("outcome-list").innerHTML = list.map(o => {
+      const d = o.id === "old" && k ? k.fail + " " + o.desc : o.desc;
+      return '<button class="outcome" data-out="' + o.id + '"><span class="sw ' + o.cls + '"></span><span class="ol">' + o.label + '</span><span class="od">' + esc(d) + "</span></button>";
+    }).join("");
+    $("outcome-note").value = "";
+    showStep("u-outcome");
+  }
+
+  function logOutcome(out) {
+    const loop = loopById(flow.loopId); if (!loop) return;
+    const test = flow.test || loop.test;
+    state.logs.push({ id: uid("log"), t: Date.now(), loopId: loop.id, hunger: flow.hunger || 0, k: test.k, mods: (test.mods || []).slice(),
+      key: testKey(test.k, test.mods), outcome: out, note: $("outcome-note").value.trim() });
+    state.lastLoopId = loop.id;
+    save();
+    const c = classify(loop);
+    const o = OUT[out];
+    const heads = { new: "A different rule ran.", old: "The old rule ran. That's still data.", hun: "Real hunger, handled on purpose." };
+    $("result-body").innerHTML =
+      '<span class="eyebrow">' + esc(loop.name) + "</span>" +
+      "<h2>" + heads[o.cls] + "</h2>" +
+      '<p class="muted">' + (o.cls === "old"
+        ? "One run doesn't classify anything. The question is whether the old rule keeps reconstructing across runs."
+        : o.cls === "new" ? "One run is a state change. Enough of them in a row make a new rule." : "This run is left out of the loop's Ψ.") + "</p>" +
+      '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + "</span>" + dotsHTML(loop, 8) + "</div>" +
+      '<p class="advice">' + esc(c.advice) + "</p>";
+    flow.test = null; flow.hunger = 0;
+    showStep("u-result");
+    renderAll();
+  }
+
+  function cancelFlow() { stopTimer(); flow.test = null; showStep("u-checkin"); renderCheckin(); }
+
+  $("loop-chips").addEventListener("click", e => {
+    const b = e.target.closest("[data-loop]"); if (!b) return;
+    flow.loopId = b.dataset.loop; renderCheckin();
+  });
+  $("hunger-seg").addEventListener("click", e => {
+    const b = e.target.closest("[data-h]"); if (!b) return;
+    const v = Number(b.dataset.h); flow.hunger = flow.hunger === v ? 0 : v; renderCheckin();
+  });
+  $("deal-btn").addEventListener("click", () => {
+    if (flow.hunger >= 4) { flow.test = clone(loopById(flow.loopId).test); $("outcome-note").value = ""; logOutcome("hungry"); return; }
+    dealCard(false);
+  });
+  $("already-btn").addEventListener("click", () => {
+    const loop = loopById(flow.loopId); if (!loop) return;
+    flow.test = clone(loop.test); showOutcome(true);
+  });
+  $("redraw-btn").addEventListener("click", () => dealCard(true));
+  $("start-timer-btn").addEventListener("click", startTimer);
+  $("skip-timer-btn").addEventListener("click", () => showOutcome());
+  $("timer-done-btn").addEventListener("click", () => showOutcome());
+  $("outcome-list").addEventListener("click", e => { const b = e.target.closest("[data-out]"); if (b) logOutcome(b.dataset.out); });
+  $("result-home-btn").addEventListener("click", () => { showStep("u-checkin"); renderCheckin(); });
+  document.querySelectorAll(".u-cancel").forEach(b => b.addEventListener("click", cancelFlow));
+
+  // ---------- Loops tab ----------
+  let openLoopId = "";
+  function renderLoops() {
+    const box = $("loops-list");
+    if (!state.loops.length) { box.innerHTML = '<div class="empty">No loops yet. Add the snack moment that happens most often.</div>'; return; }
+    box.innerHTML = state.loops.map(loop => {
+      const c = classify(loop);
+      const open = openLoopId === loop.id;
+      let html = '<div class="panel" data-loopcard="' + loop.id + '">';
+      html += '<div class="loop-head"><div class="stack" style="gap:4px"><h3>' + esc(loop.name) + (loop.example ? '<span class="example-tag">example</span>' : "") + "</h3>";
+      html += '<p class="rule-line"><b>WHEN</b>' + esc(loop.cue || "…") + " <b>THEN</b>" + esc(loop.auto || "…") + "</p></div>";
+      html += '<span class="psi ' + c.cls + '">' + c.label + "</span></div>";
+      html += cardHTML(loop.test, null, { small: true });
+      html += '<div class="spread">' + dotsHTML(loop, 8) + '<button class="btn-quiet" data-edit="' + loop.id + '">' + (open ? "Close" : "Edit loop") + "</button></div>";
+      html += '<p class="small advice">' + esc(c.advice) + "</p>";
+      if (open) html += editorHTML(loop);
+      html += "</div>";
+      return html;
+    }).join("");
+  }
+
+  function editorHTML(loop) {
+    const t = loop.test, k = K[t.k];
+    const f = (id, label, val, ph) => '<label class="f" for="' + id + '">' + label + '<input id="' + id + '" value="' + esc(val) + '" placeholder="' + esc(ph) + '"></label>';
+    let html = '<form class="stack ed" data-form="' + loop.id + '" style="border-top:1px dashed var(--line); padding-top:12px">';
+    html += '<span class="eyebrow">Declare the rule</span>';
+    html += f("ed-name", "Loop name", loop.name, "e.g. Afternoon desk slump");
+    html += f("ed-cue", "When (cue and context)", loop.cue, "e.g. 3 to 4pm, energy dips at my desk");
+    html += f("ed-auto", "I automatically…", loop.auto, "e.g. walk to the kitchen and grab biscuits");
+    html += f("ed-payoff", "It gives me (payoff)", loop.payoff, "e.g. a break, a sugar hit");
+    html += f("ed-closure", "Closure point: the last moment before it completes", loop.closure, "e.g. hand on the cupboard door");
+    html += '<span class="eyebrow" style="margin-top:6px">The one change under test</span>';
+    html += '<label class="f" for="ed-k">Kognem<select id="ed-k">' + KOGNEMS.map(x => '<option value="' + x.id + '"' + (x.id === t.k ? " selected" : "") + ">" + x.code + " · " + x.name + "</option>").join("") + "</select></label>";
+    html += '<label class="f" for="ed-play">Snack play<select id="ed-play"><option value="">Custom (type below)</option>' + k.plays.map((p, i) => '<option value="' + i + '"' + (p === t.action ? " selected" : "") + ">" + esc(p) + "</option>").join("") + "</select></label>";
+    html += '<label class="f" for="ed-action">Exact action<input id="ed-action" value="' + esc(t.action) + '"></label>';
+    html += '<label class="f" for="ed-secs">Timer, seconds<input id="ed-secs" type="number" min="5" max="3600" value="' + esc(t.secs) + '" inputmode="numeric"></label>';
+    html += '<span class="f">Modifiers (up to 2)</span><div class="modgrid" id="ed-mods">' + Object.values(MODS).map(m => {
+      const on = (t.mods || []).includes(m.id);
+      const full = !on && (t.mods || []).length >= 2;
+      return '<button type="button" class="modtoggle" data-mod="' + m.id + '" aria-pressed="' + on + '"' + (full ? " disabled" : "") + '><b><span class="mono" style="color:var(--accent)">' + esc(m.glyph) + "</span> " + esc(m.name) + '</b><span class="muted">' + esc(m.text) + "</span></button>";
+    }).join("") + "</div>";
+    html += '<p class="small muted">Changing the kognem or modifiers starts a new test. Past runs stay in the log but won\'t count toward the new Ψ.</p>';
+    html += '<div class="row"><button type="submit" class="btn-primary">Save loop</button><button type="button" class="btn-ghost" data-cancel="1">Cancel</button>';
+    html += '<span style="flex:1"></span><button type="button" class="btn-danger" data-del="' + loop.id + '" style="min-height:40px">Delete</button></div>';
+    html += "</form>";
+    return html;
+  }
+
+  let draftMods = null;
+  $("loops-list").addEventListener("click", e => {
+    const ed = e.target.closest("[data-edit]");
+    if (ed) { openLoopId = openLoopId === ed.dataset.edit ? "" : ed.dataset.edit; draftMods = null; renderLoops(); if (openLoopId) setTimeout(() => { const el = document.querySelector('[data-form="' + openLoopId + '"]'); el && el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 30); return; }
+    const mt = e.target.closest("[data-mod]");
+    if (mt) {
+      const form = mt.closest("form"); const loop = loopById(form.dataset.form);
+      if (!draftMods) draftMods = (loop.test.mods || []).slice();
+      const id = mt.dataset.mod, i = draftMods.indexOf(id);
+      if (i >= 0) draftMods.splice(i, 1); else if (draftMods.length < 2) draftMods.push(id);
+      form.querySelectorAll("[data-mod]").forEach(b => {
+        const on = draftMods.includes(b.dataset.mod);
+        b.setAttribute("aria-pressed", on); b.disabled = !on && draftMods.length >= 2;
+      });
+      return;
+    }
+    if (e.target.closest("[data-cancel]")) { openLoopId = ""; draftMods = null; renderLoops(); return; }
+    const del = e.target.closest("[data-del]");
+    if (del) {
+      if (del.dataset.armed) {
+        state.loops = state.loops.filter(l => l.id !== del.dataset.del);
+        state.logs = state.logs.filter(l => l.loopId !== del.dataset.del);
+        openLoopId = ""; save(); renderAll(); toast("Loop deleted");
+      } else { del.dataset.armed = "1"; del.textContent = "Tap again to delete loop and its runs"; }
+    }
+  });
+  $("loops-list").addEventListener("change", e => {
+    const form = e.target.closest("form"); if (!form) return;
+    if (e.target.id === "ed-k") {
+      const k = K[e.target.value];
+      form.querySelector("#ed-play").innerHTML = '<option value="">Custom (type below)</option>' + k.plays.map((p, i) => '<option value="' + i + '"' + (i === 0 ? " selected" : "") + ">" + esc(p) + "</option>").join("");
+      form.querySelector("#ed-action").value = k.plays[0];
+      form.querySelector("#ed-secs").value = k.secs;
+    }
+    if (e.target.id === "ed-play" && e.target.value !== "") {
+      const k = K[form.querySelector("#ed-k").value];
+      form.querySelector("#ed-action").value = k.plays[Number(e.target.value)];
+    }
+  });
+  $("loops-list").addEventListener("submit", e => {
+    e.preventDefault();
+    const form = e.target; const loop = loopById(form.dataset.form); if (!loop) return;
+    const v = id => form.querySelector("#" + id).value.trim();
+    const k = v("ed-k");
+    loop.name = v("ed-name") || "Untitled loop";
+    loop.cue = v("ed-cue"); loop.auto = v("ed-auto"); loop.payoff = v("ed-payoff"); loop.closure = v("ed-closure");
+    loop.test = { k, mods: draftMods ? draftMods.slice() : (loop.test.mods || []).slice(), action: v("ed-action") || K[k].plays[0],
+      secs: Math.min(3600, Math.max(5, parseInt(v("ed-secs"), 10) || K[k].secs)) };
+    delete loop.example;
+    openLoopId = ""; draftMods = null; save(); renderAll(); toast("Loop saved");
+  });
+  $("new-loop-btn").addEventListener("click", () => {
+    const loop = { id: uid("loop"), name: "New loop", cue: "", auto: "", payoff: "", closure: "",
+      test: { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs } };
+    state.loops.unshift(loop); openLoopId = loop.id; draftMods = null; save(); renderAll();
+    setTimeout(() => { const el = document.getElementById("ed-name"); el && (el.select(), el.scrollIntoView({ block: "center" })); }, 30);
+  });
+
+  // ---------- Deck tab ----------
+  function renderDeck() {
+    const stats = cardStats();
+    $("deck-kognems").innerHTML = KOGNEMS.map(k => {
+      const s = stats[k.id];
+      return '<details class="kd"><summary>' +
+        '<div class="kcard small-card"><span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>" +
+        '<div class="spread"><div class="corner"><span class="glyph" aria-hidden="true">' + k.glyph + '</span><div><div class="code">' + k.code + " · default " + fmtSecs(k.secs) + '</div><div class="kname">' + k.name + "</div></div></div>" +
+        (s && s.n ? '<span class="psi ' + (s.rate >= 0.6 ? "mut" : s.rate <= 0.3 ? "zero" : "drift") + '">' + Math.round(s.rate * 100) + "% · " + s.n + "</span>" : "") + "</div>" +
+        "<p>" + esc(k.what) + '</p><p class="small muted more-hint">Tap for snack plays</p></div></summary>' +
+        '<div class="stack" style="padding:10px 4px 4px; gap:8px"><p class="small"><b>For snacking:</b> ' + esc(k.snack) + '</p><ul class="plays">' + k.plays.map(p => "<li>" + esc(p) + "</li>").join("") + '</ul><p class="small muted"><b>Counts as the old rule when:</b> ' + esc(k.fail) + "</p></div></details>";
+    }).join("");
+    $("deck-mods").innerHTML = MOD_GROUPS.map(g =>
+      '<div class="stack" style="gap:6px"><span class="eyebrow">' + g.name + '</span><div class="modgrid">' +
+      g.mods.map(m => '<div class="modtoggle" style="border:1px solid var(--line); border-radius:10px; background:var(--surface)"><b><span class="mono" style="color:var(--accent)">' + esc(m.glyph) + "</span> " + esc(m.name) + '</b><span class="muted">' + esc(m.text) + "</span></div>").join("") +
+      "</div></div>").join("");
+  }
+
+  // ---------- Log tab ----------
+  function cardStats() {
+    const s = {};
+    state.logs.forEach(l => {
+      if (l.outcome === "hungry" || l.imported) return;
+      s[l.k] = s[l.k] || { n: 0, win: 0 };
+      s[l.k].n++; if (outClass(l.outcome) === "new") s[l.k].win++;
+    });
+    Object.values(s).forEach(x => { x.rate = x.n ? x.win / x.n : 0; });
+    return s;
+  }
+
+  function renderLog() {
+    const logs = state.logs.filter(l => !l.imported);
+    const since = Date.now() - 14 * 864e5;
+    const recent = logs.filter(l => l.t >= since && l.outcome !== "hungry");
+    const newRate = recent.length ? Math.round(100 * recent.filter(l => outClass(l.outcome) === "new").length / recent.length) : null;
+    const withH = logs.filter(l => l.hunger);
+    const lowH = withH.length ? Math.round(100 * withH.filter(l => l.hunger <= 2).length / withH.length) : null;
+    $("log-stats").innerHTML =
+      '<div class="stat"><div class="v">' + logs.length + '</div><div class="l">urges logged</div></div>' +
+      '<div class="stat"><div class="v" style="color:var(--good)">' + (newRate == null ? "–" : newRate + "%") + '</div><div class="l">new rule ran, last 14 days</div></div>' +
+      '<div class="stat"><div class="v" style="color:var(--accent)">' + (lowH == null ? "–" : lowH + "%") + '</div><div class="l">at hunger 1–2 (the loop, not your stomach)</div></div>';
+
+    // Hour chart
+    const bins = Array.from({ length: 24 }, () => ({ new: 0, old: 0, hun: 0 }));
+    logs.forEach(l => { bins[new Date(l.t).getHours()][outClass(l.outcome)]++; });
+    const max = Math.max(1, ...bins.map(b => b.new + b.old + b.hun));
+    const W = 480, H = 130, padL = 22, padB = 20, padT = 8, bw = (W - padL) / 24;
+    const y = v => padT + (H - padT - padB) * (1 - v / max);
+    let svg = '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Urges by hour of day">';
+    [0, max].forEach(v => {
+      svg += '<line x1="' + padL + '" x2="' + W + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)" stroke-width="1"></line>';
+      svg += '<text x="' + (padL - 5) + '" y="' + (y(v) + 4) + '" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--mono)">' + v + "</text>";
+    });
+    bins.forEach((b, h) => {
+      let base = 0; const x = padL + h * bw + 2, w = bw - 4;
+      [["new", "var(--good)"], ["old", "var(--bad)"], ["hun", "var(--warn)"]].forEach(([k, col]) => {
+        if (!b[k]) return;
+        const y1 = y(base + b[k]), y0 = y(base);
+        svg += '<rect x="' + x.toFixed(1) + '" y="' + y1.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (y0 - y1).toFixed(1) + '" fill="' + col + '" rx="1.5"></rect>';
+        base += b[k];
+      });
+    });
+    [0, 6, 12, 18].forEach(h => {
+      svg += '<text x="' + (padL + h * bw + bw / 2) + '" y="' + (H - 5) + '" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--mono)">' + String(h).padStart(2, "0") + ":00</text>";
+    });
+    svg += "</svg>";
+    $("hour-chart").innerHTML = logs.length ? svg : '<div class="empty">Your urge times will show here after the first few logs. Most people find one or two peak hours.</div>';
+
+    // Card table
+    const st = cardStats();
+    const rows = KOGNEMS.filter(k => st[k.id]).sort((a, b) => st[b.id].rate - st[a.id].rate);
+    $("card-table").innerHTML = rows.length
+      ? "<table><thead><tr><th>Card</th><th class=\"n\">Runs</th><th class=\"n\">New rule</th><th></th></tr></thead><tbody>" +
+        rows.map(k => '<tr><td><span class="mono" style="color:var(--accent)">' + k.glyph + "</span> " + k.name + '</td><td class="n">' + st[k.id].n + '</td><td class="n">' + Math.round(st[k.id].rate * 100) + '%</td><td><div class="bar"><i style="width:' + Math.round(st[k.id].rate * 100) + '%"></i></div></td></tr>').join("") +
+        "</tbody></table>"
+      : '<div class="empty">No runs yet. Cards are ranked here by how often a new rule ran.</div>';
+
+    // History
+    const hist = state.logs.slice(-60).reverse();
+    $("history").innerHTML = hist.length ? hist.map(l => {
+      const loop = loopById(l.loopId), o = OUT[l.outcome], k = K[l.k];
+      const d = new Date(l.t);
+      const when = d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return '<li><span class="dot ' + outClass(l.outcome) + '"></span><div><b>' + esc(o ? o.label : l.outcome) + '</b> <span class="muted">· ' + esc(loop ? loop.name : "deleted loop") + "</span>" +
+        '<div class="small muted">' + (k ? k.name : "") + ((l.mods || []).length ? " + " + l.mods.map(m => MODS[m] ? MODS[m].name : m).join(", ") : "") + (l.hunger ? " · hunger " + l.hunger : "") + "</div>" +
+        (l.note ? '<div class="small">' + esc(l.note) + "</div>" : "") + '</div><span class="small muted mono">' + (l.imported ? "import" : when) + "</span></li>";
+    }).join("") : '<li class="empty" style="display:block">Nothing logged yet. When the next snack urge hits, open the Urge tab.</li>';
+  }
+
+  // Backup
+  $("export-btn").addEventListener("click", () => {
+    const txt = JSON.stringify(state);
+    const fb = () => { const t = $("export-fallback"); t.hidden = false; t.value = txt; t.select(); toast("Select all and copy the text below"); };
+    try { navigator.clipboard.writeText(txt).then(() => toast("Backup copied"), fb); } catch (e) { fb(); }
+  });
+  $("import-toggle-btn").addEventListener("click", () => { $("import-box").hidden = !$("import-box").hidden; });
+  $("import-btn").addEventListener("click", () => {
+    try {
+      const s = JSON.parse($("import-text").value);
+      if (!s || !Array.isArray(s.loops) || !Array.isArray(s.logs)) throw new Error("shape");
+      state = s; save(); renderAll(); $("import-box").hidden = true; $("import-text").value = ""; toast("Backup restored");
+    } catch (e) { toast("That isn't a Snack Deck backup. Paste the full copied text."); }
+  });
+  $("reset-btn").addEventListener("click", () => { $("reset-btn").hidden = true; $("reset-confirm-btn").hidden = false; setTimeout(() => { $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; }, 5000); });
+  $("reset-confirm-btn").addEventListener("click", () => {
+    state = { v: 1, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" }; save(); flow.loopId = ""; renderAll();
+    $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; toast("Reset to example loops");
+  });
+
+  // ---------- Shell ----------
+  let toastT = null;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
+
+  function setTab(name) {
+    document.querySelectorAll("nav.tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+    ["urge", "loops", "deck", "log"].forEach(t => { $("tab-" + t).hidden = t !== name; });
+    try { sessionStorage.setItem("ksd_tab", name); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+
+  function renderAll() { if (!$("u-checkin").hidden) renderCheckin(); else renderHomeStatus(); renderLoops(); renderDeck(); renderLog(); }
+
+  load();
+  renderCheckin();
+  renderLoops(); renderDeck(); renderLog();
+  const hashTab = (location.hash || "").slice(1);
+  let startTab = ["urge", "loops", "deck", "log"].includes(hashTab) ? hashTab : "urge";
+  try { const s = sessionStorage.getItem("ksd_tab"); if (!hashTab && s) startTab = s; } catch (e) {}
+  setTab(startTab);
+})();
+</script>
+</body>
+</html>
