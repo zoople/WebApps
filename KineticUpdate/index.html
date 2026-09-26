@@ -113,8 +113,8 @@
   }
   .kcard .corner { display: flex; align-items: center; gap: 10px; }
   .kcard .glyph {
-    width: 44px; height: 44px; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
-    display: grid; place-items: center; font-size: 1.45rem; font-weight: 700; flex: none; font-family: var(--mono);
+    width: 46px; height: 46px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--accent);
+    display: grid; place-items: center; font-size: 1.5rem; flex: none; line-height: 1;
   }
   .kcard .kname { font-family: var(--display); font-weight: 800; font-size: 1.5rem; line-height: 1.05; letter-spacing: -0.015em; }
   .kcard .code { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; }
@@ -139,8 +139,10 @@
 
   /* Outcomes */
   .outcomes { display: grid; gap: 8px; }
-  .outcome { text-align: left; display: grid; grid-template-columns: 14px 1fr; gap: 2px 12px; align-items: start; padding: 12px 14px; }
-  .outcome .sw { width: 14px; height: 14px; border-radius: 4px; margin-top: 4px; }
+  .outcomes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .outcome { text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; min-height: 92px; border-radius: 14px; position: relative; overflow: hidden; }
+  .outcome .oe { font-size: 1.6rem; line-height: 1; }
+  .outcome .sw { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; }
   .outcome .ol { font-weight: 700; }
   .outcome .od { grid-column: 2; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
   .sw.new { background: var(--good); } .sw.old { background: var(--bad); } .sw.hun { background: var(--warn); }
@@ -211,6 +213,34 @@
 
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 10px; font-weight: 700; z-index: 20; max-width: calc(100% - 32px); }
 
+  details.more > summary { list-style: none; cursor: pointer; font-size: 0.82rem; font-weight: 700; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; }
+  details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary::before { content: "›"; font-family: var(--mono); display: inline-block; transition: transform .15s; }
+  details.more[open] > summary::before { transform: rotate(90deg); }
+  details.more > .more-body { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; font-size: 0.9rem; }
+
+  .loop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .ltile { position: relative; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 12px 12px;
+    min-height: 118px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 400; overflow: hidden; }
+  .ltile .le { font-size: 2rem; line-height: 1; }
+  .ltile .ln { font-family: var(--display); font-weight: 700; font-size: 1.02rem; line-height: 1.15; }
+  .ltile .lk { font-size: 0.76rem; color: var(--muted); }
+  .ltile .star { position: absolute; top: 8px; right: 10px; font-size: 0.9rem; color: var(--accent); }
+  .ltile[aria-pressed="true"] { border-color: var(--ink); box-shadow: var(--shadow); background: var(--surface); }
+  .ltile[aria-pressed="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--accent); }
+  .ltile.add { border-style: dashed; align-items: center; justify-content: center; color: var(--muted); background: transparent; }
+  .ltile.add .le { font-size: 1.6rem; }
+  .hunger { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .hunger button { min-height: 64px; padding: 6px 2px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-weight: 400; }
+  .hunger button .he { font-size: 1.5rem; line-height: 1; }
+  .hunger button small { font-size: 0.7rem; color: var(--muted); }
+  .hunger button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .emoji-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .emoji-row button { min-height: 40px; min-width: 44px; padding: 4px; font-size: 1.3rem; border-radius: 10px; }
+  .emoji-row button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .check { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 0.92rem; }
+  .check input { width: 22px; height: 22px; accent-color: var(--accent); }
+
   .sync { font-size: 0.74rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
   .sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
   .sync[data-s="cloud"]::before { background: var(--good); }
@@ -246,7 +276,7 @@
 
 <div class="wrap">
   <header class="top">
-    <div class="stack" style="gap:2px"><h1>Kognetik Snack Deck</h1><span id="sync-status" class="sync" data-s="local">Saved on this device only</span></div>
+    <h1>Kognetik Snack Deck</h1>
     <span class="psi-mark">Ψ = ∂S/∂R</span>
   </header>
 
@@ -254,20 +284,18 @@
   <section id="tab-urge" class="stack" style="gap:16px">
     <!-- Step: check-in -->
     <div id="u-checkin" class="stack" style="gap:16px">
-      <div class="panel">
-        <div class="stack" style="gap:6px">
-          <span class="eyebrow">Which loop is running?</span>
-          <div id="loop-chips" class="row"></div>
-        </div>
-        <div class="stack" style="gap:6px">
-          <span class="eyebrow">Body hunger right now</span>
-          <div id="hunger-seg" class="seg" role="group" aria-label="Body hunger 1 to 5"></div>
-          <p id="hunger-hint" class="small muted"></p>
-        </div>
+      <div class="stack" style="gap:8px">
+        <div class="spread"><span class="eyebrow">What's pulling you?</span><span id="default-ctl"></span></div>
+        <div id="loop-chips" class="loop-grid"></div>
+      </div>
+      <div class="stack" style="gap:8px">
+        <span class="eyebrow">How hungry is your body?</span>
+        <div id="hunger-seg" class="hunger" role="group" aria-label="Body hunger 1 to 5"></div>
+        <p id="hunger-hint" class="small" hidden></p>
       </div>
       <button id="deal-btn" class="btn-primary btn-big btn-block">Deal my card</button>
-      <button id="already-btn" class="btn-ghost btn-block">I already ate it. Log the miss</button>
-      <div id="home-status" class="panel" hidden></div>
+      <button id="already-btn" class="btn-quiet btn-block">I already ate it</button>
+      <div id="home-status"></div>
     </div>
 
     <!-- Step: card -->
@@ -278,7 +306,7 @@
         <button id="redraw-btn" class="btn-quiet">Draw a different card</button>
         <button id="skip-timer-btn" class="btn-quiet">Done already, log it</button>
       </div>
-      <p id="redraw-note" class="small muted" hidden>This run uses a different card, so it won't count toward the loop's current test.</p>
+      <p id="redraw-note" class="small muted" hidden>Wild card: this run won't count toward your loop's card.</p>
       <button class="btn-quiet u-cancel">Cancel</button>
     </div>
 
@@ -306,8 +334,7 @@
     <!-- Step: outcome -->
     <div id="u-outcome" class="stack" hidden style="gap:12px">
       <div class="stack" style="gap:4px">
-        <span class="eyebrow">Classify this run</span>
-        <h2>Which rule ran?</h2>
+        <h2>What happened?</h2>
       </div>
       <div id="outcome-list" class="outcomes"></div>
       <label class="f" for="outcome-note">Note (optional)
@@ -329,7 +356,6 @@
     <div class="spread">
       <div class="stack" style="gap:2px">
         <h2>Your snack loops</h2>
-        <p class="small muted">Each loop is one declared rule with one change under test.</p>
       </div>
       <button id="new-loop-btn" class="btn-primary" style="min-height:40px">+ Loop</button>
     </div>
@@ -340,19 +366,8 @@
   <section id="tab-deck" class="stack" hidden style="gap:18px">
     <div class="stack" style="gap:10px">
       <div class="spread"><h2>Your deck</h2><span class="small muted">cards evolve by mutation</span></div>
-      <p class="small muted">Each loop holds one live card. When the old rule keeps winning, you mutate the card: change one thing and it becomes the next generation. The lineage shows what you tried and how each generation did.</p>
+      <details class="more"><summary>More info</summary><div class="more-body muted">Each loop holds one live card. When the old rule keeps winning, you mutate the card: change one thing and it becomes the next generation. The lineage shows what you tried and how each generation did.</div></details>
       <div id="deck-mine" class="stack" style="gap:12px"></div>
-    </div>
-    <div class="panel">
-      <h2>How a loop gets rewritten</h2>
-      <ol class="steps">
-        <li><div><b>Spot the recurring case.</b> <span class="muted">The same kind of situation keeps coming back: 3pm at the desk, the TV going on, walking past the kitchen.</span></div></li>
-        <li><div><b>Declare the rule.</b> <span class="muted">When [cue], I [automatic step], and it gives me [payoff]. Name the closure point, the last moment before the step completes, such as a hand on the cupboard door.</span></div></li>
-        <li><div><b>Test one change.</b> <span class="muted">Insert one kognem at the closure point. You can add up to two modifiers. Keep it the same for at least five runs.</span></div></li>
-        <li><div><b>Classify the result.</b> <span class="muted">Over comparable runs, did the old rule still reconstruct (Ψ = 0), is a different rule now running reliably (Ψ ≠ 0), or is there not enough evidence yet (Ψ undefined)?</span></div></li>
-        <li><div><b>Mutate and repeat.</b> <span class="muted">If Ψ = 0, change one thing about the card, such as an earlier insertion point, a new action or one modifier, and test the new generation. If Ψ ≠ 0 holds, keep it and move on to the next loop.</span></div></li>
-      </ol>
-      <p class="small muted">A kognem doesn't fight the craving or depend on willpower. It changes the order of steps at the point where the automatic loop closes. One good run is a state change. A mutation is a new rule that keeps showing up across runs.</p>
     </div>
 
     <div class="stack" style="gap:10px">
@@ -361,10 +376,20 @@
     </div>
 
     <div class="stack" style="gap:10px">
-      <div class="spread"><h2>Modifiers</h2><span class="small muted mono">max 2 per test</span></div>
-      <p class="small muted">A modifier changes how a kognem is delivered without changing the kognem itself. Adding or removing one counts as a new test.</p>
+      <div class="spread"><h2>Modifiers</h2><span class="small muted mono">max 2 per card</span></div>
+      <details class="more"><summary>More info</summary><div class="more-body muted">A modifier changes how a kognem is delivered without changing the kognem itself. Adding or removing one counts as a new test.</div></details>
       <div id="deck-mods" class="stack" style="gap:14px"></div>
     </div>
+    <details class="more panel"><summary>How the method works</summary><div class="more-body">
+      <ol class="steps">
+        <li><div><b>Spot the recurring case.</b> <span class="muted">The same kind of situation keeps coming back: 3pm at the desk, the TV going on, walking past the kitchen.</span></div></li>
+        <li><div><b>Declare the rule.</b> <span class="muted">When [cue], I [automatic step], and it gives me [payoff]. Name the closure point, the last moment before the step completes, such as a hand on the cupboard door.</span></div></li>
+        <li><div><b>Test one change.</b> <span class="muted">Insert one kognem at the closure point. You can add up to two modifiers. Keep it the same for at least five runs.</span></div></li>
+        <li><div><b>Classify the result.</b> <span class="muted">Over comparable runs, did the old rule still reconstruct (Ψ = 0), is a different rule now running reliably (Ψ ≠ 0), or is there not enough evidence yet (Ψ undefined)?</span></div></li>
+        <li><div><b>Mutate and repeat.</b> <span class="muted">If Ψ = 0, change one thing about the card, such as an earlier insertion point, a new action or one modifier, and test the new generation. If Ψ ≠ 0 holds, keep it and move on to the next loop.</span></div></li>
+      </ol>
+      <p class="small muted">A kognem doesn't fight the craving or depend on willpower. It changes the order of steps at the point where the automatic loop closes. One good run is a state change. A mutation is a new rule that keeps showing up across runs.</p>
+    </div></details>
   </section>
 
   <!-- LOG TAB -->
@@ -387,9 +412,9 @@
       <h3>History</h3>
       <ul id="history" class="hist"></ul>
     </div>
-    <div class="panel">
-      <h3>Backup</h3>
-      <p class="small muted">Your data only lives in this browser. Copy a backup now and then, and paste it back here to restore it or move it to another device.</p>
+    <details class="more panel"><summary>Account &amp; data</summary><div class="more-body">
+      <span id="sync-status" class="sync" data-s="local">Saved on this device only</span>
+      <p id="sync-note" class="small muted">Copy a backup now and then. Paste it back here to restore it or move it to another device.</p>
       <div class="row">
         <button id="export-btn">Copy backup</button>
         <button id="import-toggle-btn" class="btn-ghost">Restore from backup</button>
@@ -403,7 +428,7 @@
         <button id="reset-btn" class="btn-danger" style="min-height:38px">Reset everything</button>
         <button id="reset-confirm-btn" class="btn-danger" hidden style="min-height:38px">Tap again to erase all loops and logs</button>
       </div>
-    </div>
+    </div></details>
   </section>
 </div>
 
@@ -413,6 +438,13 @@
   <button role="tab" data-tab="deck" aria-selected="false"><span class="ti">▤</span>Deck</button>
   <button role="tab" data-tab="log" aria-selected="false"><span class="ti">Ψ</span>Log</button>
 </nav>
+<div id="addloop" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="add-title">
+  <div class="sheet-inner">
+    <div class="spread"><h2 id="add-title">Add a loop</h2><button class="btn-quiet" data-aclose="1">Close</button></div>
+    <p class="small muted">Pick the moment that sounds like you. You can change the details later.</p>
+    <div id="add-grid" class="loop-grid"></div>
+  </div>
+</div>
 <div id="mutate" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="mut-title">
   <div class="sheet-inner" id="mutate-inner"></div>
 </div>
@@ -504,6 +536,8 @@
       fail: "Went back to the old snack instead of the substitute." }
   ];
   const K = Object.fromEntries(KOGNEMS.map(k => [k.id, k]));
+  const K_EMOJI = { pause: "⏸️", inversion: "↩️", scaling: "📏", index: "🎯", frame: "🗣️", temporal: "⏳", rewrite: "✏️" };
+  KOGNEMS.forEach(k => { k.emoji = K_EMOJI[k.id]; });
 
   const MOD_GROUPS = [
     { name: "Voice", mods: [
@@ -528,39 +562,66 @@
   MOD_GROUPS.forEach(g => g.mods.forEach(m => { MODS[m.id] = Object.assign({ group: g.name }, m); }));
 
   const OUTCOMES = [
-    { id: "skip", cls: "new", label: "No snack", desc: "The urge passed and nothing was eaten." },
-    { id: "swap", cls: "new", label: "Swapped", desc: "Had the planned substitute or something else instead." },
-    { id: "small", cls: "new", label: "Ate less, on purpose", desc: "A deliberate smaller portion, plated. Not autopilot." },
-    { id: "old", cls: "old", label: "Old loop ran", desc: "Did the card, then ate the usual thing the usual way." },
-    { id: "missed", cls: "old", label: "Missed the closure point", desc: "It was eaten before I remembered the card." },
-    { id: "hungry", cls: "hun", label: "Real hunger, ate a proper snack", desc: "Body hunger, not the loop. Doesn't count against the test." }
+    { id: "skip", emoji: "✅", cls: "new", label: "No snack", desc: "The urge passed and nothing was eaten." },
+    { id: "swap", emoji: "🔄", cls: "new", label: "Swapped", desc: "Had the planned substitute or something else instead." },
+    { id: "small", emoji: "🍽️", cls: "new", label: "Ate less, on purpose", desc: "A deliberate smaller portion, plated. Not autopilot." },
+    { id: "old", emoji: "🍪", cls: "old", label: "Old loop ran", desc: "Did the card, then ate the usual thing the usual way." },
+    { id: "missed", emoji: "⏰", cls: "old", label: "Missed the moment", desc: "It was eaten before I remembered the card." },
+    { id: "hungry", emoji: "🍎", cls: "hun", label: "Real hunger", desc: "Body hunger, not the loop. Doesn't count against the test." }
   ];
   const OUT = Object.fromEntries(OUTCOMES.map(o => [o.id, o]));
 
   const HUNGER = [
-    { v: 1, l: "none" }, { v: 2, l: "slight" }, { v: 3, l: "some" }, { v: 4, l: "hungry" }, { v: 5, l: "empty" }
+    { v: 1, e: "😌", l: "not" }, { v: 2, e: "🙂", l: "a bit" }, { v: 3, e: "😐", l: "some" }, { v: 4, e: "😋", l: "hungry" }, { v: 5, e: "😫", l: "starving" }
   ];
 
   // ---------- State ----------
   const STORE = "kognetik_snack_deck_v1";
-  const EXAMPLE_LOOPS = [
-    { id: "ex-desk", example: true, name: "Afternoon desk slump",
+  // Ready-made loops. The first four seed a new deck; all of them appear under "Add a loop".
+  const TEMPLATES = [
+    { tid: "desk", emoji: "💻", name: "Afternoon desk slump",
       cue: "3 to 4pm, energy dips at my desk", auto: "walk to the kitchen and grab biscuits",
       payoff: "a break and a sugar hit", closure: "standing up from the desk",
       test: { k: "temporal", mods: ["water"], action: K.temporal.plays[0], secs: 600 } },
-    { id: "ex-tv", example: true, name: "Evening TV",
-      cue: "sitting down in front of the TV after dinner", auto: "open crisps or chocolate and eat from the pack",
-      payoff: "something to do with my hands, comfort", closure: "opening the snack cupboard",
-      test: { k: "scaling", mods: ["seated"], action: K.scaling.plays[1], secs: 45 } },
-    { id: "ex-stress", example: true, name: "Work stress spike",
+    { tid: "bored", emoji: "🥱", name: "Boredom",
+      cue: "nothing grabbing me, restless or putting something off", auto: "go looking in the cupboard for something to eat",
+      payoff: "stimulation, something to do", closure: "opening the cupboard or fridge",
+      test: { k: "index", mods: [], action: K.index.plays[3], secs: 60 } },
+    { tid: "stress", emoji: "😤", name: "Work stress spike",
       cue: "a tense meeting or message", auto: "go straight for something sweet",
       payoff: "calm down, a reward", closure: "hand reaching for the snack drawer",
       test: { k: "frame", mods: ["aloud"], action: K.frame.plays[2], secs: 20 } },
-    { id: "ex-walk", example: true, name: "Kitchen walk-past",
+    { tid: "walk", emoji: "🚶", name: "Kitchen walk-past",
       cue: "passing the kitchen and seeing food out", auto: "grab a handful without thinking",
       payoff: "none really, it's automatic", closure: "hand going into the bag or tub",
-      test: { k: "inversion", mods: ["hidden"], action: K.inversion.plays[0], secs: 60 } }
+      test: { k: "inversion", mods: ["hidden"], action: K.inversion.plays[0], secs: 60 } },
+    { tid: "sweet", emoji: "🍫", name: "After-dinner sweet tooth",
+      cue: "finishing dinner", auto: "reach for chocolate or dessert",
+      payoff: "a sweet end to the meal", closure: "getting up from the table",
+      test: { k: "rewrite", mods: [], action: K.rewrite.plays[1], secs: 120 } },
+    { tid: "night", emoji: "🌙", name: "Late-night grazing",
+      cue: "late evening, tired but still up", auto: "graze in the kitchen",
+      payoff: "winding down, comfort", closure: "walking into the kitchen",
+      test: { k: "inversion", mods: [], action: K.inversion.plays[2], secs: 60 } },
+    { tid: "office", emoji: "🍩", name: "Office treats",
+      cue: "cakes or biscuits out at work", auto: "take one because they're there",
+      payoff: "joining in, it's free", closure: "reaching for the plate",
+      test: { k: "frame", mods: [], action: K.frame.plays[1], secs: 20 } },
+    { tid: "tired", emoji: "🔋", name: "Low energy",
+      cue: "tired and flat", auto: "reach for sugar for a lift",
+      payoff: "a quick energy boost", closure: "opening the snack drawer",
+      test: { k: "pause", mods: [], action: K.pause.plays[1], secs: 30 } },
+    { tid: "tv", emoji: "📺", name: "TV snacking",
+      cue: "sitting down in front of the TV", auto: "open crisps or chocolate and eat from the pack",
+      payoff: "something to do with my hands, comfort", closure: "opening the snack cupboard",
+      test: { k: "scaling", mods: ["seated"], action: K.scaling.plays[1], secs: 45 } }
   ];
+  const TPL = Object.fromEntries(TEMPLATES.map(t => [t.tid, t]));
+  function loopFromTemplate(t, id) {
+    const l = clone(t); delete l.tid; l.id = id || uid("loop"); l.example = true; l.history = []; l.test.gen = 1; return l;
+  }
+  const EXAMPLE_LOOPS = ["desk", "bored", "stress", "walk"].map(tid => loopFromTemplate(TPL[tid], "ex-" + tid));
+  const LOOP_EMOJIS = ["🥱", "💻", "😤", "🚶", "🍫", "🌙", "🍩", "🔋", "📺", "😔", "🎉", "📱", "🚗", "☕", "🍪", "🧀"];
 
   let state = { v: 2, loops: [], logs: [], lastLoopId: "" };
 
@@ -587,6 +648,12 @@
   // Bring older data up to the generation-aware shape.
   function normalize() {
     state.v = 2;
+    // The TV example was swapped for a general boredom loop. Replace it if it was never touched.
+    const tvIdx = state.loops.findIndex(l => l.id === "ex-tv" && l.example && !state.logs.some(x => x.loopId === "ex-tv"));
+    if (tvIdx >= 0 && !state.loops.some(l => l.id === "ex-bored")) state.loops.splice(tvIdx, 1, loopFromTemplate(TPL.bored, "ex-bored"));
+    const emojiById = { "ex-desk": "💻", "ex-tv": "📺", "ex-stress": "😤", "ex-walk": "🚶", "ex-bored": "🥱" };
+    state.loops.forEach(l => { if (!l.emoji) l.emoji = emojiById[l.id] || "🍪"; });
+    if (state.defaultLoopId && !state.loops.some(l => l.id === state.defaultLoopId)) state.defaultLoopId = "";
     state.loops.forEach(l => {
       l.test = l.test || { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs };
       if (!K[l.test.k]) l.test.k = "pause";
@@ -609,12 +676,12 @@
   function setSync(status) {
     sync.status = status;
     const el = document.getElementById("sync-status"); if (!el) return;
-    const text = { local: "Saved on this device only", syncing: "Connecting to your account…", cloud: "Saved to your Claude account", error: "Couldn't save to your account. Kept on this device." };
+    const text = { local: "Saved on this device only", syncing: "Connecting to your account…", cloud: "Saved to your Claude account. It follows you across devices.", error: "Couldn't save to your account. Kept on this device for now." };
     el.textContent = text[status] || "";
     el.dataset.s = status;
   }
   function docsFromState() {
-    const docs = { "deck/state": { v: 2, loops: state.loops, lastLoopId: state.lastLoopId || "" } };
+    const docs = { "deck/state": { v: 2, loops: state.loops, lastLoopId: state.lastLoopId || "", defaultLoopId: state.defaultLoopId || "" } };
     const months = {};
     sync.months.forEach(m => { months[m] = []; });
     state.logs.forEach(l => { const m = monthKey(l.t); (months[m] = months[m] || []).push(l); });
@@ -656,6 +723,7 @@
         sync.written["deck/state"] = JSON.stringify(b);
         state.loops = clone(b.loops || []);
         state.lastLoopId = b.lastLoopId || "";
+        state.defaultLoopId = b.defaultLoopId || "";
         state.logs = logsFromDocs(logs.docs);
         normalize();
         safeSet(STORE, JSON.stringify(state));
@@ -671,7 +739,7 @@
         if (j === sync.written["deck/state"]) return;
         sync.written["deck/state"] = j;
         const b = s.data();
-        state.loops = clone(b.loops || []); state.lastLoopId = b.lastLoopId || "";
+        state.loops = clone(b.loops || []); state.lastLoopId = b.lastLoopId || ""; state.defaultLoopId = b.defaultLoopId || "";
         normalize(); safeSet(STORE, JSON.stringify(state)); renderAll(true);
       }, () => setSync("error"));
       db.collection("logs").onSnapshot(q => {
@@ -775,18 +843,18 @@
     const small = opts && opts.small;
     let html = '<div class="kcard' + (small ? " small-card" : "") + (opts && opts.deal ? " deal" : "") + '">';
     html += '<span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>";
-    html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.glyph + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
+    html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
     html += '<p class="action">' + esc(test.action || k.plays[0]) + "</p>";
     if (mods.length) {
       html += '<div class="row">' + mods.map(m => '<span class="mod"><span class="mg">' + esc(m.glyph) + "</span>" + esc(m.name) + "</span>").join("") + "</div>";
-      if (!small) html += '<div class="stack small" style="gap:4px">' + mods.map(m => '<p><b>' + esc(m.name) + ":</b> " + esc(m.text) + "</p>").join("") + "</div>";
     }
-    if (loop && !small) {
-      html += '<dl class="insert-at">';
-      if (loop.closure) html += "<dt>Insert at</dt><dd>" + esc(loop.closure) + "</dd>";
-      if (loop.cue || loop.auto) html += "<dt>Old rule</dt><dd>When " + esc(loop.cue || "…") + ", I " + esc(loop.auto || "…") + "</dd>";
-      if (loop.payoff) html += "<dt>It wants</dt><dd>" + esc(loop.payoff) + "</dd>";
-      html += "</dl>";
+    if (loop && !small && loop.closure) html += '<dl class="insert-at"><dt>Do it at</dt><dd>' + esc(loop.closure) + "</dd></dl>";
+    if (!small && (mods.length || (loop && (loop.cue || loop.payoff)))) {
+      html += '<details class="more"><summary>More info</summary><div class="more-body">';
+      mods.forEach(m => { html += "<p><b>" + esc(m.name) + ":</b> " + esc(m.text) + "</p>"; });
+      if (loop && (loop.cue || loop.auto)) html += '<p><b>Old habit:</b> when ' + esc(loop.cue || "…") + ", I " + esc(loop.auto || "…") + "</p>";
+      if (loop && loop.payoff) html += "<p><b>It wants:</b> " + esc(loop.payoff) + "</p>";
+      html += '<p class="muted">' + esc(k.what) + "</p></div></details>";
     }
     html += "</div>";
     return html;
@@ -798,36 +866,41 @@
   const steps = ["u-checkin", "u-card", "u-timer", "u-outcome", "u-result"];
   function showStep(id) { steps.forEach(s => { $(s).hidden = s !== id; }); window.scrollTo(0, 0); }
 
+  function pickLoop() {
+    if (loopById(state.defaultLoopId)) return state.defaultLoopId;
+    if (loopById(state.lastLoopId)) return state.lastLoopId;
+    return state.loops.length ? state.loops[0].id : "";
+  }
+
   function renderCheckin() {
-    const chips = $("loop-chips");
-    if (!state.loops.length) {
-      chips.innerHTML = '<p class="small muted">No loops yet. Add one in the Loops tab.</p>';
-    } else {
-      if (!flow.loopId || !loopById(flow.loopId)) flow.loopId = loopById(state.lastLoopId) ? state.lastLoopId : state.loops[0].id;
-      chips.innerHTML = state.loops.map(l => {
-        const n = state.logs.filter(x => x.loopId === l.id).length;
-        return '<button class="chip" data-loop="' + l.id + '" aria-pressed="' + (l.id === flow.loopId) + '">' + esc(l.name) + '<span class="ct">' + n + "</span></button>";
-      }).join("");
-    }
-    $("hunger-seg").innerHTML = HUNGER.map(h => '<button data-h="' + h.v + '" aria-pressed="' + (flow.hunger === h.v) + '">' + h.v + "<small>" + h.l + "</small></button>").join("");
-    $("hunger-hint").textContent = flow.hunger >= 4
-      ? "That sounds like real hunger. Eat a proper planned snack, plated and seated. It won't count against the loop."
-      : flow.hunger ? "Low body hunger, so this is probably the loop and not your stomach." : "Pick a number. It separates the loop from actual hunger.";
-    $("deal-btn").textContent = flow.hunger >= 4 ? "Log a planned snack" : "Deal my card";
-    $("deal-btn").disabled = !state.loops.length;
+    if (!flow.loopId || !loopById(flow.loopId)) flow.loopId = pickLoop();
+    $("loop-chips").innerHTML = state.loops.map(l => {
+      const k = K[l.test.k];
+      return '<button class="ltile" data-loop="' + l.id + '" aria-pressed="' + (l.id === flow.loopId) + '">' +
+        (l.id === state.defaultLoopId ? '<span class="star" title="Default loop">★</span>' : "") +
+        '<span class="le" aria-hidden="true">' + esc(l.emoji || "🍪") + '</span><span class="ln">' + esc(l.name) + '</span><span class="lk">' + k.emoji + " " + k.name + "</span></button>";
+    }).join("") + '<button class="ltile add" data-addloop="1"><span class="le" aria-hidden="true">＋</span><span class="ln">Add a loop</span></button>';
+    const sel = loopById(flow.loopId);
+    $("default-ctl").innerHTML = !sel ? "" : sel.id === state.defaultLoopId
+      ? '<span class="small muted">★ default</span>'
+      : '<button class="btn-quiet" data-setdefault="' + sel.id + '" style="min-height:32px;padding:2px 4px">☆ Make default</button>';
+    $("hunger-seg").innerHTML = HUNGER.map(h => '<button data-h="' + h.v + '" aria-pressed="' + (flow.hunger === h.v) + '"><span class="he" aria-hidden="true">' + h.e + "</span><small>" + h.l + "</small></button>").join("");
+    const hungry = flow.hunger >= 4;
+    $("hunger-hint").hidden = !hungry;
+    $("hunger-hint").textContent = "That's real hunger. Eat a proper snack, plated and seated. It won't count against the loop.";
+    $("deal-btn").textContent = hungry ? "🍎 Log a proper snack" : "Deal my card";
+    $("deal-btn").disabled = !sel;
     renderHomeStatus();
   }
 
   function renderHomeStatus() {
     const loop = loopById(flow.loopId);
     const box = $("home-status");
-    if (!loop) { box.hidden = true; return; }
+    if (!loop) { box.innerHTML = ""; return; }
     const c = classify(loop);
-    box.hidden = false;
-    box.innerHTML = '<div class="spread"><span class="eyebrow">' + esc(loop.name) + ' · current test</span><span class="psi ' + c.cls + '">' + c.label + "</span></div>" +
-      cardHTML(loop.test, null, { small: true }) +
-      '<div class="spread">' + dotsHTML(loop, 8) + '<span class="small muted mono">' + c.runs + " runs</span></div>" +
-      '<p class="small advice">' + esc(c.advice) + "</p>";
+    box.innerHTML = '<details class="more"><summary>How ' + esc(loop.name) + ' is going</summary><div class="more-body">' +
+      '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + "</span>" + dotsHTML(loop, 8) + "</div>" +
+      '<p class="small">' + esc(c.advice) + "</p></div></details>";
   }
 
   function dealCard(randomise) {
@@ -893,10 +966,9 @@
     stopTimer();
     const k = flow.test ? K[flow.test.k] : null;
     const list = onlyMissed ? OUTCOMES.filter(o => o.id === "missed" || o.id === "hungry") : OUTCOMES;
-    $("outcome-list").innerHTML = list.map(o => {
-      const d = o.id === "old" && k ? k.fail + " " + o.desc : o.desc;
-      return '<button class="outcome" data-out="' + o.id + '"><span class="sw ' + o.cls + '"></span><span class="ol">' + o.label + '</span><span class="od">' + esc(d) + "</span></button>";
-    }).join("");
+    $("outcome-list").innerHTML = list.map(o =>
+      '<button class="outcome" data-out="' + o.id + '" title="' + esc(o.desc) + '"><span class="oe" aria-hidden="true">' + o.emoji + '</span><span class="ol">' + o.label + '</span><span class="sw ' + o.cls + '"></span></button>'
+    ).join("");
     $("outcome-note").value = "";
     showStep("u-outcome");
   }
@@ -910,21 +982,19 @@
     save();
     const c = classify(loop);
     const o = OUT[out];
-    const heads = { new: "A different rule ran.", old: "The old rule ran. That's still data.", hun: "Real hunger, handled on purpose." };
+    const heads = { new: "Nice. A new habit ran.", old: "Logged. The old habit won this one.", hun: "Real hunger, handled on purpose." };
     $("result-body").innerHTML =
-      '<span class="eyebrow">' + esc(loop.name) + "</span>" +
-      "<h2>" + heads[o.cls] + "</h2>" +
-      '<p class="muted">' + (o.cls === "old"
-        ? "One run doesn't classify anything. The question is whether the old rule keeps reconstructing across runs."
-        : o.cls === "new" ? "One run is a state change. Enough of them in a row make a new rule." : "This run is left out of the loop's Ψ.") + "</p>" +
+      '<span class="eyebrow">' + esc(loop.emoji || "") + " " + esc(loop.name) + "</span>" +
+      "<h2>" + o.emoji + " " + heads[o.cls] + "</h2>" +
       '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + "</span>" + dotsHTML(loop, 8) + "</div>" +
-      '<p class="advice">' + esc(c.advice) + "</p>";
+      '<details class="more"><summary>More info</summary><div class="more-body"><p>' + esc(c.advice) + '</p><p class="muted">' + (o.cls === "old"
+        ? "One run doesn't decide anything. What matters is whether the old habit keeps winning across runs."
+        : o.cls === "new" ? "One run is a good moment. Enough of them in a row make a new habit." : "This run is left out of the loop's Ψ.") + "</p></div></details>";
     const acts = $("result-actions");
     if (c.cls === "zero") {
       acts.innerHTML = '<button class="btn-primary btn-block" data-mutate="' + loop.id + '">Mutate the card → gen ' + ((loop.test.gen || 1) + 1) + "</button>";
     } else if (o.cls === "old") {
-      acts.innerHTML = '<button class="btn-quiet" data-mutate="' + loop.id + '">Mutate now anyway</button>' +
-        '<p class="small muted">The method tests one version of a card over ' + WINDOW + " runs before changing it. If you change it after every miss, you never find out what works.</p>";
+      acts.innerHTML = '<button class="btn-quiet" data-mutate="' + loop.id + '">Change the card anyway</button>';
     } else acts.innerHTML = "";
     flow.test = null; flow.hunger = 0;
     showStep("u-result");
@@ -1069,11 +1139,40 @@
     renderAll();
   }
 
+  function openAddLoop() {
+    const have = new Set(state.loops.map(l => l.name.trim().toLowerCase()));
+    $("add-grid").innerHTML = TEMPLATES.filter(t => !have.has(t.name.toLowerCase())).map(t => {
+      const k = K[t.test.k];
+      return '<button class="ltile" data-tpl="' + t.tid + '"><span class="le" aria-hidden="true">' + t.emoji + '</span><span class="ln">' + esc(t.name) + '</span><span class="lk">' + k.emoji + " " + k.name + "</span></button>";
+    }).join("") + '<button class="ltile add" data-tpl="blank"><span class="le" aria-hidden="true">✏️</span><span class="ln">Write my own</span></button>';
+    $("addloop").hidden = false; document.body.style.overflow = "hidden";
+  }
+  function closeAddLoop() { $("addloop").hidden = true; document.body.style.overflow = ""; }
+  $("addloop").addEventListener("click", e => {
+    if (e.target === $("addloop") || e.target.closest("[data-aclose]")) return closeAddLoop();
+    const b = e.target.closest("[data-tpl]"); if (!b) return;
+    if (b.dataset.tpl === "blank") {
+      const loop = { id: uid("loop"), emoji: "🍪", name: "New loop", cue: "", auto: "", payoff: "", closure: "", history: [],
+        test: { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs, gen: 1 } };
+      state.loops.push(loop); openLoopId = loop.id; draftMods = null; save(); closeAddLoop(); renderAll(); setTab("loops");
+      setTimeout(() => { const el = document.getElementById("ed-name"); el && (el.select(), el.scrollIntoView({ block: "center" })); }, 30);
+      return;
+    }
+    const loop = loopFromTemplate(TPL[b.dataset.tpl]);
+    state.loops.push(loop); flow.loopId = loop.id; save(); closeAddLoop(); renderAll();
+    toast(loop.emoji + " " + loop.name + " added");
+  });
+
   function cancelFlow() { stopTimer(); flow.test = null; showStep("u-checkin"); renderCheckin(); }
 
   $("loop-chips").addEventListener("click", e => {
+    if (e.target.closest("[data-addloop]")) return openAddLoop();
     const b = e.target.closest("[data-loop]"); if (!b) return;
     flow.loopId = b.dataset.loop; renderCheckin();
+  });
+  $("default-ctl").addEventListener("click", e => {
+    const b = e.target.closest("[data-setdefault]"); if (!b) return;
+    state.defaultLoopId = b.dataset.setdefault; save(); renderAll(); toast("★ This loop is now your default");
   });
   $("hunger-seg").addEventListener("click", e => {
     const b = e.target.closest("[data-h]"); if (!b) return;
@@ -1092,7 +1191,7 @@
   $("skip-timer-btn").addEventListener("click", () => showOutcome());
   $("timer-done-btn").addEventListener("click", () => showOutcome());
   $("outcome-list").addEventListener("click", e => { const b = e.target.closest("[data-out]"); if (b) logOutcome(b.dataset.out); });
-  $("result-home-btn").addEventListener("click", () => { showStep("u-checkin"); renderCheckin(); });
+  $("result-home-btn").addEventListener("click", () => { flow.loopId = ""; showStep("u-checkin"); renderCheckin(); });
   document.querySelectorAll(".u-cancel").forEach(b => b.addEventListener("click", cancelFlow));
 
   // ---------- Loops tab ----------
@@ -1104,12 +1203,12 @@
       const c = classify(loop);
       const open = openLoopId === loop.id;
       let html = '<div class="panel" data-loopcard="' + loop.id + '">';
-      html += '<div class="loop-head"><div class="stack" style="gap:4px"><h3>' + esc(loop.name) + (loop.example ? '<span class="example-tag">example</span>' : "") + "</h3>";
+      html += '<div class="loop-head"><div class="stack" style="gap:4px"><h3>' + esc(loop.emoji || "") + " " + esc(loop.name) + (loop.id === state.defaultLoopId ? ' <span class="small" style="color:var(--accent)">★</span>' : "") + (loop.example ? '<span class="example-tag">example</span>' : "") + "</h3>";
       html += '<p class="rule-line"><b>WHEN</b>' + esc(loop.cue || "…") + " <b>THEN</b>" + esc(loop.auto || "…") + "</p></div>";
       html += '<span class="psi ' + c.cls + '">' + c.label + "</span></div>";
       html += cardHTML(loop.test, null, { small: true });
       html += '<div class="spread">' + dotsHTML(loop, 8) + '<span class="row" style="gap:0"><button class="btn-quiet" data-mutate="' + loop.id + '">Mutate</button><button class="btn-quiet" data-edit="' + loop.id + '">' + (open ? "Close" : "Edit") + "</button></span></div>";
-      html += '<p class="small advice">' + esc(c.advice) + "</p>";
+      html += '<details class="more"><summary>More info</summary><div class="more-body"><p class="small">' + esc(c.advice) + "</p></div></details>";
       if (open) html += editorHTML(loop);
       html += "</div>";
       return html;
@@ -1122,6 +1221,9 @@
     let html = '<form class="stack ed" data-form="' + loop.id + '" style="border-top:1px dashed var(--line); padding-top:12px">';
     html += '<span class="eyebrow">Declare the rule</span>';
     html += f("ed-name", "Loop name", loop.name, "e.g. Afternoon desk slump");
+    html += '<span class="f">Emoji</span><div class="emoji-row" id="ed-emoji-row">' + LOOP_EMOJIS.map(em => '<button type="button" data-emoji="' + em + '" aria-pressed="' + (em === loop.emoji) + '">' + em + "</button>").join("") + "</div>";
+    html += '<input type="hidden" id="ed-emoji" value="' + esc(loop.emoji || "🍪") + '">';
+    html += '<label class="check" for="ed-default"><input type="checkbox" id="ed-default"' + (loop.id === state.defaultLoopId ? " checked" : "") + '> ★ Default loop (the Urge screen opens on this one)</label>';
     html += f("ed-cue", "When (cue and context)", loop.cue, "e.g. 3 to 4pm, energy dips at my desk");
     html += f("ed-auto", "I automatically…", loop.auto, "e.g. walk to the kitchen and grab biscuits");
     html += f("ed-payoff", "It gives me (payoff)", loop.payoff, "e.g. a break, a sugar hit");
@@ -1147,6 +1249,8 @@
   $("loops-list").addEventListener("click", e => {
     const mb = e.target.closest("[data-mutate]");
     if (mb) { openMutate(mb.dataset.mutate); return; }
+    const em = e.target.closest("[data-emoji]");
+    if (em) { const form = em.closest("form"); form.querySelector("#ed-emoji").value = em.dataset.emoji; form.querySelectorAll("[data-emoji]").forEach(b => b.setAttribute("aria-pressed", b === em)); return; }
     const ed = e.target.closest("[data-edit]");
     if (ed) { openLoopId = openLoopId === ed.dataset.edit ? "" : ed.dataset.edit; draftMods = null; renderLoops(); if (openLoopId) setTimeout(() => { const el = document.querySelector('[data-form="' + openLoopId + '"]'); el && el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 30); return; }
     const mt = e.target.closest("[data-mod]");
@@ -1197,24 +1301,22 @@
       nextTest.gen = (loop.test.gen || 1) + 1;
     }
     loop.name = v("ed-name") || "Untitled loop";
+    loop.emoji = v("ed-emoji") || "🍪";
+    if (form.querySelector("#ed-default").checked) state.defaultLoopId = loop.id;
+    else if (state.defaultLoopId === loop.id) state.defaultLoopId = "";
     loop.cue = v("ed-cue"); loop.auto = v("ed-auto"); loop.payoff = v("ed-payoff"); loop.closure = v("ed-closure");
     loop.test = nextTest;
     delete loop.example;
     openLoopId = ""; draftMods = null; save(); renderAll(); toast("Loop saved");
   });
-  $("new-loop-btn").addEventListener("click", () => {
-    const loop = { id: uid("loop"), name: "New loop", cue: "", auto: "", payoff: "", closure: "",
-      test: { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs } };
-    state.loops.unshift(loop); openLoopId = loop.id; draftMods = null; save(); renderAll();
-    setTimeout(() => { const el = document.getElementById("ed-name"); el && (el.select(), el.scrollIntoView({ block: "center" })); }, 30);
-  });
+  $("new-loop-btn").addEventListener("click", openAddLoop);
 
   // ---------- Deck tab ----------
   function renderDeck() {
     $("deck-mine").innerHTML = state.loops.length ? state.loops.map(loop => {
       const c = classify(loop);
       const hist = (loop.history || []).slice().reverse();
-      let h = '<div class="panel"><div class="spread"><h3>' + esc(loop.name) + '</h3><span class="psi ' + c.cls + '">' + c.label + "</span></div>";
+      let h = '<div class="panel"><div class="spread"><h3>' + esc(loop.emoji || "") + " " + esc(loop.name) + '</h3><span class="psi ' + c.cls + '">' + c.label + "</span></div>";
       h += cardHTML(loop.test, null, { small: true });
       h += '<ul class="lineage"><li class="now"><b>Gen ' + (loop.test.gen || 1) + "</b> · live · " + c.runs + " run" + (c.runs === 1 ? "" : "s") + "</li>";
       hist.forEach(g => {
@@ -1231,10 +1333,10 @@
       const s = stats[k.id];
       return '<details class="kd"><summary>' +
         '<div class="kcard small-card"><span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>" +
-        '<div class="spread"><div class="corner"><span class="glyph" aria-hidden="true">' + k.glyph + '</span><div><div class="code">' + k.code + " · default " + fmtSecs(k.secs) + '</div><div class="kname">' + k.name + "</div></div></div>" +
+        '<div class="spread"><div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + " · " + fmtSecs(k.secs) + '</div><div class="kname">' + k.name + "</div></div></div>" +
         (s && s.n ? '<span class="psi ' + (s.rate >= 0.6 ? "mut" : s.rate <= 0.3 ? "zero" : "drift") + '">' + Math.round(s.rate * 100) + "% · " + s.n + "</span>" : "") + "</div>" +
-        "<p>" + esc(k.what) + '</p><p class="small muted more-hint">Tap for snack plays</p></div></summary>' +
-        '<div class="stack" style="padding:10px 4px 4px; gap:8px"><p class="small"><b>For snacking:</b> ' + esc(k.snack) + '</p><ul class="plays">' + k.plays.map(p => "<li>" + esc(p) + "</li>").join("") + '</ul><p class="small muted"><b>Counts as the old rule when:</b> ' + esc(k.fail) + "</p></div></details>";
+        '<p class="small muted more-hint">Tap for snack ideas</p></div></summary>' +
+        '<div class="stack" style="padding:10px 4px 4px; gap:8px"><p class="small">' + esc(k.what) + '</p><p class="small"><b>For snacking:</b> ' + esc(k.snack) + '</p><ul class="plays">' + k.plays.map(p => "<li>" + esc(p) + "</li>").join("") + '</ul><p class="small muted"><b>Counts as the old rule when:</b> ' + esc(k.fail) + "</p></div></details>";
     }).join("");
     $("deck-mods").innerHTML = MOD_GROUPS.map(g =>
       '<div class="stack" style="gap:6px"><span class="eyebrow">' + g.name + '</span><div class="modgrid">' +
@@ -1350,9 +1452,11 @@
     if (!(remote && openLoopId)) renderLoops();
     renderDeck(); renderLog();
     if (remote && !$("mutate").hidden) renderMutate();
+    if (!$("sync-note")) return;
+    $("sync-note").textContent = sync.status === "cloud" ? "Your loops and logs are saved to your account. A backup is still handy before big changes." : "Copy a backup now and then. Paste it back here to restore it or move it to another device.";
   }
   $("deck-mine").addEventListener("click", e => { const b = e.target.closest("[data-mutate]"); if (b) openMutate(b.dataset.mutate); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("mutate").hidden) closeMutate(); });
+  document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (!$("mutate").hidden) closeMutate(); if (!$("addloop").hidden) closeAddLoop(); });
 
   load();
   renderCheckin();
