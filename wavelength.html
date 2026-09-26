@@ -250,7 +250,6 @@
     game.targetPos = 4 + Math.random() * 92;
     game.needle = 50;
     game.clue = "";
-    game.side = null;
     game.result = null;
     game.phase = "pass-psychic";
     writeOwn = false;
@@ -287,16 +286,10 @@
     const g = game, pts = scoreFor(g.needle, g.targetPos);
     const teams = g.mode === "teams";
     const other = 1 - g.active;
-    let sidePts = 0;
-    if (teams && pts !== 4 && g.side) {
-      const actual = g.targetPos < g.needle ? "left" : "right";
-      if (actual === g.side) sidePts = 1;
-    }
     g.teams[g.active].score += pts;
-    if (teams) g.teams[other].score += sidePts;
     let again = false;
     if (teams && pts === 4 && g.teams[g.active].score < g.teams[other].score) again = true;
-    g.result = { pts, sidePts, again };
+    g.result = { pts, again };
     g.history.push({ card: g.card, pts });
     // winner?
     g.over = null;
@@ -368,7 +361,7 @@
           <circle r="${R}" fill="none" stroke="var(--screen2)" stroke-width="2"/>
         </g>
       </g>
-      ${noNeedle ? "" : `<line x1="0" y1="0" x2="${f(nx)}" y2="${f(ny)}" stroke="var(--needle)" stroke-width="3.2" stroke-linecap="round"/>`}
+      ${noNeedle ? "" : `<line id="needle" x1="0" y1="0" x2="${f(nx)}" y2="${f(ny)}" stroke="var(--needle)" stroke-width="3.2" stroke-linecap="round"/>`}
       <circle r="11" fill="var(--needle)"/>
       <circle r="4" fill="#f3e9d2"/>
     </svg>`;
@@ -384,18 +377,26 @@
       if (q.y > 0) ang = q.x < 0 ? Math.PI : 0;
       return clamp(100 * (1 - ang / Math.PI), 0, 100);
     };
-    const move = (e) => { if (!dragging) return; game.needle = toVal(e); redrawNeedle(); };
-    svg.addEventListener("pointerdown", (e) => { dragging = true; svg.setPointerCapture(e.pointerId); move(e); });
-    svg.addEventListener("pointermove", move);
-    const up = () => { if (dragging) { dragging = false; saveGame(); } };
-    svg.addEventListener("pointerup", up);
-    svg.addEventListener("pointercancel", up);
+    const move = (e) => { if (!dragging) return; e.preventDefault(); game.needle = toVal(e); redrawNeedle(); };
+    const up = () => {
+      if (!dragging) return;
+      dragging = false; saveGame();
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    svg.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); dragging = true; move(e);
+      window.addEventListener("pointermove", move, { passive: false });
+      window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", up);
+    });
   }
 
   function redrawNeedle() {
-    const wrap = $("#dialwrap"); if (!wrap) return;
-    wrap.innerHTML = dialSVG({ showTarget: false, coverOpen: false, needle: game.needle, interactive: true });
-    bindDial();
+    const line = $("#needle"); if (!line) return;
+    const [x, y] = pt(game.needle, 96);
+    line.setAttribute("x2", f(x)); line.setAttribute("y2", f(y));
   }
 
   // ---------- views ----------
@@ -461,21 +462,11 @@
       </div>`;
     }
 
-    else if (g.phase === "side") {
-      body = `<div class="stage">
-        <div class="who"><p class="label ${teamCls(other)}">${esc(g.teams[other].name)}</p><h2>Is the target left or right of their needle?</h2>
-        <p class="muted small">Get it right for 1 point. No point if they hit the bullseye.</p></div>
-        <div class="dialwrap">${dialSVG({ showTarget: false, coverOpen: false, needle: g.needle, interactive: false })}</div>
-        ${spectrumHTML(g.card)}
-        <div class="row"><button class="btn" data-act="side" data-s="left" style="min-height:64px">← Left</button><button class="btn" data-act="side" data-s="right" style="min-height:64px">Right →</button></div>
-      </div>`;
-    }
 
     else if (g.phase === "reveal") {
       const r = g.result;
       const msg = { 4: "Bullseye!", 3: "So close", 2: "On the edge", 0: "Missed it" }[r.pts];
       let sub = g.mode === "teams" ? `${esc(g.teams[a].name)} +${r.pts}` : `+${r.pts} points`;
-      if (g.mode === "teams" && g.side) sub += r.pts === 4 ? ` · ${esc(g.teams[other].name)}'s ${g.side} call doesn't count` : ` · ${esc(g.teams[other].name)} called ${g.side}: ${r.sidePts ? "+1" : "wrong"}`;
       let foot = "";
       if (g.over) foot = `<button class="btn primary block" data-act="next">See the result</button>`;
       else {
@@ -562,7 +553,7 @@
             <div class="field"><label class="label" for="n1">Team 2</label><input type="text" id="n1" maxlength="20" value="${esc(setup.names[1])}"></div>
           </div>
           <div class="stepper"><span>Play to</span><div class="ctl"><button data-act="step" data-k="target" data-d="-1" aria-label="Fewer points">−</button><span>${setup.target}</span><button data-act="step" data-k="target" data-d="1" aria-label="More points">+</button></div></div>
-          <p class="note">Take turns being Psychic. The other team guesses left or right for a bonus point. A bullseye while behind earns another turn.</p>`
+          <p class="note">Teams take turns being Psychic. A bullseye while behind earns another turn.</p>`
         : `
           <div class="stepper"><span>Rounds</span><div class="ctl"><button data-act="step" data-k="rounds" data-d="-1" aria-label="Fewer rounds">−</button><span>${setup.rounds}</span><button data-act="step" data-k="rounds" data-d="1" aria-label="More rounds">+</button></div></div>
           <p class="note">Everyone on one side. Rotate the Psychic each round and chase the highest total.</p>`}
@@ -659,10 +650,8 @@
       case "to-guess": g.phase = "guess"; saveGame(); render(); break;
       case "nudge": g.needle = clamp(g.needle + (+b.dataset.d), 0, 100); saveGame(); redrawNeedle(); break;
       case "lock":
-        if (g.mode === "teams") { g.phase = "side"; saveGame(); render(); }
-        else { g.revealed = false; resolveRound(); render(); }
+        g.revealed = false; resolveRound(); render();
         break;
-      case "side": g.side = b.dataset.s; g.revealed = false; resolveRound(); render(); break;
       case "next": nextRound(); break;
       case "rematch": startGame(); break;
       case "to-setup-end": game = null; saveGame(); view = "setup"; render(); break;
@@ -670,6 +659,7 @@
   });
 
   // keep the game if the page reloads mid-round
+  if (game && game.phase === "side") game.phase = "guess";
   if (game && game.phase && game.phase !== "over") view = "game";
   render();
   connectDb();
