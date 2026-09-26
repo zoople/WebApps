@@ -219,6 +219,21 @@
   details.more[open] > summary::before { transform: rotate(90deg); }
   details.more > .more-body { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; font-size: 0.9rem; }
 
+  .do-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: d; }
+  .do-list li { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
+  .do-list li::before { counter-increment: d; content: counter(d); width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--paper);
+    display: grid; place-items: center; font-family: var(--mono); font-size: 0.85rem; margin-top: 1px; }
+  .do-list li.mod-step::before { background: var(--accent); color: var(--accent-ink); }
+  .small-card .do-list { gap: 4px; }
+  .small-card .do-list li { font-size: 0.95rem; grid-template-columns: 22px 1fr; gap: 8px; }
+  .small-card .do-list li::before { width: 20px; height: 20px; font-size: 0.7rem; }
+  .card-when { font-size: 0.85rem; color: var(--muted); }
+  .card-when b { color: var(--ink); font-weight: 700; }
+  .add-slim { grid-column: 1 / -1; min-height: 40px; padding: 6px 12px; border: 1.5px dashed var(--line); background: transparent; color: var(--muted); font-size: 0.9rem; border-radius: 12px; }
+  .loop-grid.compact .ltile { min-height: 0; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; }
+  .loop-grid.compact .ltile .le { font-size: 1.5rem; }
+  .loop-grid.compact .ltile .ln { font-size: 0.92rem; }
+  .loop-grid.compact .ltile .lk { display: none; }
   .loop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .ltile { position: relative; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 12px 12px;
     min-height: 118px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 400; overflow: hidden; }
@@ -314,7 +329,7 @@
     <div id="u-timer" class="stack" hidden style="gap:14px">
       <div class="panel" style="align-items:center; text-align:center">
         <span id="timer-kname" class="eyebrow"></span>
-        <p id="timer-action" style="font-weight:700; font-size:1.1rem"></p>
+        <div id="timer-action" style="text-align:left; align-self:stretch"></div>
         <div class="timer">
           <svg viewBox="0 0 100 100" aria-hidden="true">
             <circle cx="50" cy="50" r="45" fill="none" stroke="var(--surface-2)" stroke-width="6"></circle>
@@ -325,7 +340,7 @@
             <div id="timer-sub" class="t-sub">stay with it</div>
           </div>
         </div>
-        <p id="timer-mods" class="small muted"></p>
+
       </div>
       <button id="timer-done-btn" class="btn-primary btn-big btn-block">Log what happened</button>
       <button class="btn-quiet u-cancel">Cancel, don't log</button>
@@ -442,7 +457,7 @@
   <div class="sheet-inner">
     <div class="spread"><h2 id="add-title">Add a loop</h2><button class="btn-quiet" data-aclose="1">Close</button></div>
     <p class="small muted">Pick the moment that sounds like you. You can change the details later.</p>
-    <div id="add-grid" class="loop-grid"></div>
+    <div id="add-grid" class="loop-grid compact"></div>
   </div>
 </div>
 <div id="mutate" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="mut-title">
@@ -462,10 +477,10 @@
       snack: "Best at the physical closure point, with your hand on the cupboard, fridge or wrapper.",
       secs: 30,
       plays: [
-        "Hands off the handle. Five slow breaths before you open anything.",
-        "Drink a full glass of water, then decide.",
-        "Put the snack on the counter, step back, and wait for the timer.",
-        "Feet flat, shoulders down, three breaths out longer than in."
+        "Take your hand off the handle.  Breathe slowly five times.",
+        "Drink a full glass of water.  Then decide.",
+        "Put the snack on the counter.  Step back until the timer ends.",
+        "Put your feet flat on the floor.  Breathe out slowly three times."
       ],
       fail: "The snack was eaten before the pause started." },
     { id: "inversion", code: "K2", glyph: "⇄", name: "Inversion",
@@ -473,10 +488,10 @@
       snack: "Works well on walk-past and boredom loops that start with movement.",
       secs: 60,
       plays: [
-        "Turn round and leave the kitchen. Walk to a different room.",
-        "Close the cupboard and put something away instead of taking something out.",
-        "Brush your teeth. It closes the eating window.",
-        "Stand up and stretch instead of reaching down for the bag."
+        "Turn around.  Walk to a different room.",
+        "Close the cupboard.  Put one thing away instead.",
+        "Brush your teeth.",
+        "Stand up.  Stretch for the whole timer."
       ],
       fail: "The usual reach happened instead of the opposite move." },
     { id: "scaling", code: "K3", glyph: "↕", name: "Scaling",
@@ -484,10 +499,10 @@
       snack: "Use it when you'll eat something either way. It turns autopilot eating into a deliberate, smaller act.",
       secs: 45,
       plays: [
-        "Take one piece and put the pack back before the first bite.",
-        "Plate it and sit down. Never eat straight from the bag.",
-        "Eat the first three bites at half speed and put it down between bites.",
-        "Picture the urge at ten times the size, then make your actual movement tiny."
+        "Take one piece.  Put the pack away before the first bite.",
+        "Put it on a plate.  Sit down to eat it.",
+        "Eat the first three bites slowly.  Put it down between bites.",
+        "Picture the craving ten times bigger.  Make your movement tiny."
       ],
       fail: "Ate the full usual amount at the usual speed." },
     { id: "index", code: "K4", glyph: "➚", name: "Index-Shift",
@@ -495,10 +510,10 @@
       snack: "Good when the payoff is the break or the texture, not the food itself.",
       secs: 60,
       plays: [
-        "Hand goes to the water bottle, tea or sparkling water instead.",
-        "Chew gum or have a mint. Same mouth action, different target.",
-        "Go to the fruit bowl, which you set up in advance.",
-        "Shift the break to a two-minute task: a text, a plant, a stretch."
+        "Reach for water or tea instead.",
+        "Chew gum or have a mint.",
+        "Go to the fruit bowl.",
+        "Do a two-minute task instead.  Send a text, water a plant or stretch."
       ],
       fail: "Attention stayed locked on the snack." },
     { id: "frame", code: "K5", glyph: "❝", name: "Frame-Exposure",
@@ -506,10 +521,10 @@
       snack: "Strong for stress and 'I deserve it' loops, where the rule hides behind a feeling.",
       secs: 20,
       plays: [
-        "Say it: \"This is the 3pm boredom loop, not hunger.\"",
-        "Rate your hunger 1 to 5 out loud before touching anything.",
-        "Name the payoff: \"I want a break, not biscuits.\"",
-        "Write the rule on a sticky note: When ___, I ___."
+        "Say out loud: \"This is the loop, not hunger.\"",
+        "Say your hunger out loud, 1 to 5.",
+        "Say what you really want: \"a break, not biscuits.\"",
+        "Write it down: when ___, I ___."
       ],
       fail: "Didn't name the rule before acting." },
     { id: "temporal", code: "K6", glyph: "◷", name: "Temporal Decoupling",
@@ -517,10 +532,10 @@
       snack: "The strongest card for cravings. Most urges fade within 10 to 15 minutes if the loop can't close.",
       secs: 600,
       plays: [
-        "Not now. If I still want it in 10 minutes, I'll have it plated.",
-        "Move it to the next planned snack time and write the time down.",
-        "Let the urge rise and fall like a wave, noticing its peak.",
-        "Finish one small task first, then decide."
+        "Say: \"Not now.\"  Wait 10 minutes.  Still want it? Plate it.",
+        "Pick your next snack time.  Write it down.",
+        "Notice the craving rise.  Watch it fall.",
+        "Finish one small task.  Then decide."
       ],
       fail: "Ate before the delay ran out." },
     { id: "rewrite", code: "K7", glyph: "↻", name: "Iterative Rewrite",
@@ -528,35 +543,38 @@
       snack: "Use it once you know the loop's payoff. Match the substitute to that payoff: crunch, sweet, warmth or a break.",
       secs: 120,
       plays: [
-        "Planned swap: apple and peanut butter, plated.",
-        "Tea ritual: kettle on, stand at the window while it brews.",
-        "Protein swap: yogurt or a boiled egg from the fridge.",
-        "Crunch swap: carrots or cucumber, prepped in advance."
+        "Have apple and peanut butter, on a plate.",
+        "Put the kettle on.  Stand at the window while it brews.",
+        "Have yogurt or a boiled egg instead.",
+        "Have carrots or cucumber for the crunch."
       ],
       fail: "Went back to the old snack instead of the substitute." }
   ];
   const K = Object.fromEntries(KOGNEMS.map(k => [k.id, k]));
+  KOGNEMS.forEach(k => { k.plays = k.plays.map(p => p.replace(/ {2}/g, " ")); });
+  // Earlier wording of the plays, mapped to the current one-instruction-per-sentence wording.
+  const OLD_PLAYS = {"Hands off the handle. Five slow breaths before you open anything.": "Take your hand off the handle. Breathe slowly five times.", "Drink a full glass of water, then decide.": "Drink a full glass of water. Then decide.", "Put the snack on the counter, step back, and wait for the timer.": "Put the snack on the counter. Step back until the timer ends.", "Feet flat, shoulders down, three breaths out longer than in.": "Put your feet flat on the floor. Breathe out slowly three times.", "Turn round and leave the kitchen. Walk to a different room.": "Turn around. Walk to a different room.", "Close the cupboard and put something away instead of taking something out.": "Close the cupboard. Put one thing away instead.", "Brush your teeth. It closes the eating window.": "Brush your teeth.", "Stand up and stretch instead of reaching down for the bag.": "Stand up. Stretch for the whole timer.", "Take one piece and put the pack back before the first bite.": "Take one piece. Put the pack away before the first bite.", "Plate it and sit down. Never eat straight from the bag.": "Put it on a plate. Sit down to eat it.", "Eat the first three bites at half speed and put it down between bites.": "Eat the first three bites slowly. Put it down between bites.", "Picture the urge at ten times the size, then make your actual movement tiny.": "Picture the craving ten times bigger. Make your movement tiny.", "Hand goes to the water bottle, tea or sparkling water instead.": "Reach for water or tea instead.", "Chew gum or have a mint. Same mouth action, different target.": "Chew gum or have a mint.", "Go to the fruit bowl, which you set up in advance.": "Go to the fruit bowl.", "Shift the break to a two-minute task: a text, a plant, a stretch.": "Do a two-minute task instead. Send a text, water a plant or stretch.", "Say it: \"This is the 3pm boredom loop, not hunger.\"": "Say out loud: \"This is the loop, not hunger.\"", "Rate your hunger 1 to 5 out loud before touching anything.": "Say your hunger out loud, 1 to 5.", "Name the payoff: \"I want a break, not biscuits.\"": "Say what you really want: \"a break, not biscuits.\"", "Write the rule on a sticky note: When ___, I ___.": "Write it down: when ___, I ___.", "Not now. If I still want it in 10 minutes, I'll have it plated.": "Say: \"Not now.\" Wait 10 minutes. Still want it? Plate it.", "Move it to the next planned snack time and write the time down.": "Pick your next snack time. Write it down.", "Let the urge rise and fall like a wave, noticing its peak.": "Notice the craving rise. Watch it fall.", "Finish one small task first, then decide.": "Finish one small task. Then decide.", "Planned swap: apple and peanut butter, plated.": "Have apple and peanut butter, on a plate.", "Tea ritual: kettle on, stand at the window while it brews.": "Put the kettle on. Stand at the window while it brews.", "Protein swap: yogurt or a boiled egg from the fridge.": "Have yogurt or a boiled egg instead.", "Crunch swap: carrots or cucumber, prepped in advance.": "Have carrots or cucumber for the crunch."};
   const K_EMOJI = { pause: "⏸️", inversion: "↩️", scaling: "📏", index: "🎯", frame: "🗣️", temporal: "⏳", rewrite: "✏️" };
   KOGNEMS.forEach(k => { k.emoji = K_EMOJI[k.id]; });
 
   const MOD_GROUPS = [
     { name: "Voice", mods: [
-      { id: "aloud", glyph: "“", name: "Out loud", text: "Say the action out loud as you do it." },
-      { id: "written", glyph: "✎", name: "Written", text: "Write one line in your notes first: the cue and what you're doing." } ] },
+      { id: "aloud", when: "after", step: "Say what you are doing out loud.", glyph: "“", name: "Out loud", text: "Say the action out loud as you do it." },
+      { id: "written", when: "before", step: "Write one line: what set this off.", glyph: "✎", name: "Written", text: "Write one line in your notes first: the cue and what you're doing." } ] },
     { name: "Body", mods: [
-      { id: "anchor", glyph: "◆", name: "Anchor gesture", text: "Start with the same gesture every time, such as a hand on your chest or a thumb press." },
-      { id: "water", glyph: "≈", name: "Water first", text: "Drink a glass of water before the card starts." } ] },
+      { id: "anchor", when: "before", step: "Hand on your chest for one breath.", glyph: "◆", name: "Anchor gesture", text: "Start with the same gesture every time, such as a hand on your chest or a thumb press." },
+      { id: "water", when: "before", step: "Drink a glass of water.", glyph: "≈", name: "Water first", text: "Drink a glass of water before the card starts." } ] },
     { name: "Place", mods: [
-      { id: "leave", glyph: "⇥", name: "Change room", text: "Run the card somewhere other than the kitchen." },
-      { id: "seated", glyph: "▭", name: "Plate & seat", text: "If you eat anything, plate it and sit at a table with no screen." } ] },
+      { id: "leave", when: "before", step: "Go to a different room.", glyph: "⇥", name: "Change room", text: "Run the card somewhere other than the kitchen." },
+      { id: "seated", when: "after", step: "If you eat anything, plate it and sit down.", glyph: "▭", name: "Plate & seat", text: "If you eat anything, plate it and sit at a table with no screen." } ] },
     { name: "Time", mods: [
-      { id: "double", glyph: "×2", name: "Double time", text: "The timer runs twice as long.", mult: 2 },
-      { id: "repeat", glyph: "+1", name: "Second round", text: "If the urge is still there when the timer ends, run the card once more." } ] },
+      { id: "double", when: "none", step: "", glyph: "×2", name: "Double time", text: "The timer runs twice as long.", mult: 2 },
+      { id: "repeat", when: "after", step: "Still want it? Run the card again.", glyph: "+1", name: "Second round", text: "If the urge is still there when the timer ends, run the card once more." } ] },
     { name: "Social", mods: [
-      { id: "witness", glyph: "◎", name: "Witness", text: "Text someone: \"Snack urge, running my card.\"" } ] },
+      { id: "witness", when: "before", step: "Text someone: \"Snack urge, running my card.\"", glyph: "◎", name: "Witness", text: "Text someone: \"Snack urge, running my card.\"" } ] },
     { name: "Setup", mods: [
-      { id: "hidden", glyph: "▢", name: "Out of sight", text: "The trigger snack is kept in an opaque box or on a high shelf." },
-      { id: "cue", glyph: "!", name: "Cue note", text: "A sticky note at the closure point, such as the cupboard door, names the card." } ] }
+      { id: "hidden", when: "setup", step: "Keep trigger snacks out of sight.", glyph: "▢", name: "Out of sight", text: "The trigger snack is kept in an opaque box or on a high shelf." },
+      { id: "cue", when: "setup", step: "Put a sticky note where the habit starts.", glyph: "!", name: "Cue note", text: "A sticky note at the closure point, such as the cupboard door, names the card." } ] }
   ];
   const MODS = {};
   MOD_GROUPS.forEach(g => g.mods.forEach(m => { MODS[m.id] = Object.assign({ group: g.name }, m); }));
@@ -652,7 +670,10 @@
     const tvIdx = state.loops.findIndex(l => l.id === "ex-tv" && l.example && !state.logs.some(x => x.loopId === "ex-tv"));
     if (tvIdx >= 0 && !state.loops.some(l => l.id === "ex-bored")) state.loops.splice(tvIdx, 1, loopFromTemplate(TPL.bored, "ex-bored"));
     const emojiById = { "ex-desk": "💻", "ex-tv": "📺", "ex-stress": "😤", "ex-walk": "🚶", "ex-bored": "🥱" };
-    state.loops.forEach(l => { if (!l.emoji) l.emoji = emojiById[l.id] || "🍪"; });
+    state.loops.forEach(l => {
+      if (!l.emoji) l.emoji = emojiById[l.id] || "🍪";
+      if (l.test && OLD_PLAYS[l.test.action]) l.test.action = OLD_PLAYS[l.test.action];
+    });
     if (state.defaultLoopId && !state.loops.some(l => l.id === state.defaultLoopId)) state.defaultLoopId = "";
     state.loops.forEach(l => {
       l.test = l.test || { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs };
@@ -837,6 +858,20 @@
   }
 
   // ---------- Card rendering ----------
+  // One instruction per line: modifiers that come first, then the action split into sentences, then follow-ups.
+  function splitLines(t) { return String(t || "").split(/(?<=[.!]["”]?)\s+(?=[A-Z"“])/).map(x => x.trim()).filter(Boolean); }
+  function stepsFor(test) {
+    const mods = (test.mods || []).map(id => MODS[id]).filter(Boolean);
+    const out = [];
+    mods.filter(m => m.when === "before").forEach(m => out.push({ text: m.step, mod: true }));
+    splitLines(test.action || K[test.k].plays[0]).forEach(t => out.push({ text: t }));
+    mods.filter(m => m.when === "after").forEach(m => out.push({ text: m.step, mod: true }));
+    return out;
+  }
+  function stepsHTML(test) {
+    return '<ol class="do-list">' + stepsFor(test).map(st => '<li' + (st.mod ? ' class="mod-step"' : "") + ">" + esc(st.text) + "</li>").join("") + "</ol>";
+  }
+
   function cardHTML(test, loop, opts) {
     const k = K[test.k];
     const mods = (test.mods || []).map(id => MODS[id]).filter(Boolean);
@@ -844,14 +879,11 @@
     let html = '<div class="kcard' + (small ? " small-card" : "") + (opts && opts.deal ? " deal" : "") + '">';
     html += '<span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>";
     html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
-    html += '<p class="action">' + esc(test.action || k.plays[0]) + "</p>";
-    if (mods.length) {
-      html += '<div class="row">' + mods.map(m => '<span class="mod"><span class="mg">' + esc(m.glyph) + "</span>" + esc(m.name) + "</span>").join("") + "</div>";
-    }
-    if (loop && !small && loop.closure) html += '<dl class="insert-at"><dt>Do it at</dt><dd>' + esc(loop.closure) + "</dd></dl>";
+    if (loop && !small && loop.closure) html += '<p class="card-when">When: <b>' + esc(loop.closure) + "</b></p>";
+    html += stepsHTML(test);
     if (!small && (mods.length || (loop && (loop.cue || loop.payoff)))) {
       html += '<details class="more"><summary>More info</summary><div class="more-body">';
-      mods.forEach(m => { html += "<p><b>" + esc(m.name) + ":</b> " + esc(m.text) + "</p>"; });
+      mods.forEach(m => { html += "<p><b>" + esc(m.name) + (m.when === "setup" ? " (set up beforehand)" : "") + ":</b> " + esc(m.when === "setup" ? m.step : m.text) + "</p>"; });
       if (loop && (loop.cue || loop.auto)) html += '<p><b>Old habit:</b> when ' + esc(loop.cue || "…") + ", I " + esc(loop.auto || "…") + "</p>";
       if (loop && loop.payoff) html += "<p><b>It wants:</b> " + esc(loop.payoff) + "</p>";
       html += '<p class="muted">' + esc(k.what) + "</p></div></details>";
@@ -879,7 +911,7 @@
       return '<button class="ltile" data-loop="' + l.id + '" aria-pressed="' + (l.id === flow.loopId) + '">' +
         (l.id === state.defaultLoopId ? '<span class="star" title="Default loop">★</span>' : "") +
         '<span class="le" aria-hidden="true">' + esc(l.emoji || "🍪") + '</span><span class="ln">' + esc(l.name) + '</span><span class="lk">' + k.emoji + " " + k.name + "</span></button>";
-    }).join("") + '<button class="ltile add" data-addloop="1"><span class="le" aria-hidden="true">＋</span><span class="ln">Add a loop</span></button>';
+    }).join("") + '<button class="add-slim" data-addloop="1">＋ Add a loop</button>';
     const sel = loopById(flow.loopId);
     $("default-ctl").innerHTML = !sel ? "" : sel.id === state.defaultLoopId
       ? '<span class="small muted">★ default</span>'
@@ -936,8 +968,7 @@
     flow.endAt = Date.now() + flow.total * 1000;
     flow.alerted = false;
     $("timer-kname").textContent = k.code + " · " + k.name;
-    $("timer-action").textContent = flow.test.action;
-    $("timer-mods").textContent = (flow.test.mods || []).map(id => MODS[id] ? MODS[id].name : "").filter(Boolean).join(" · ");
+    $("timer-action").innerHTML = stepsHTML(flow.test);
     beep(660, 0.15);
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(w => { flow.wake = w; }).catch(() => {}); } catch (e) {}
     showStep("u-timer");
@@ -1231,7 +1262,7 @@
     html += '<span class="eyebrow" style="margin-top:6px">The one change under test</span>';
     html += '<label class="f" for="ed-k">Kognem<select id="ed-k">' + KOGNEMS.map(x => '<option value="' + x.id + '"' + (x.id === t.k ? " selected" : "") + ">" + x.code + " · " + x.name + "</option>").join("") + "</select></label>";
     html += '<label class="f" for="ed-play">Snack play<select id="ed-play"><option value="">Custom (type below)</option>' + k.plays.map((p, i) => '<option value="' + i + '"' + (p === t.action ? " selected" : "") + ">" + esc(p) + "</option>").join("") + "</select></label>";
-    html += '<label class="f" for="ed-action">Exact action<input id="ed-action" value="' + esc(t.action) + '"></label>';
+    html += '<label class="f" for="ed-action">What to do (one sentence per step)<input id="ed-action" value="' + esc(t.action) + '"></label>';
     html += '<label class="f" for="ed-secs">Timer, seconds<input id="ed-secs" type="number" min="5" max="3600" value="' + esc(t.secs) + '" inputmode="numeric"></label>';
     html += '<span class="f">Modifiers (up to 2)</span><div class="modgrid" id="ed-mods">' + Object.values(MODS).map(m => {
       const on = (t.mods || []).includes(m.id);
