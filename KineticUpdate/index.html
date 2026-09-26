@@ -494,10 +494,10 @@
       snack: "Best at the physical closure point, with your hand on the cupboard, fridge or wrapper.",
       secs: 30,
       plays: [
-        "Take your hand off the handle.  Breathe slowly five times.",
-        "Drink a full glass of water.  Then decide.",
-        "Put the snack on the counter.  Step back until the timer ends.",
-        "Put your feet flat on the floor.  Breathe out slowly three times."
+        "Take your hand off the handle. Breathe slowly five times.",
+        "Go to the tap. Pour a full glass of water. Drink all of it. Then decide.",
+        "Put the snack on the counter. Step back until the timer ends.",
+        "Put your feet flat on the floor. Breathe out slowly three times."
       ],
       fail: "The snack was eaten before the pause started." },
     { id: "inversion", code: "K2", glyph: "⇄", name: "Inversion",
@@ -505,10 +505,10 @@
       snack: "Works well on walk-past and boredom loops that start with movement.",
       secs: 60,
       plays: [
-        "Turn around.  Walk to a different room.",
-        "Close the cupboard.  Put one thing away instead.",
-        "Brush your teeth.",
-        "Stand up.  Stretch for the whole timer."
+        "Turn around. Walk to a different room.",
+        "Close the cupboard. Put one thing away instead.",
+        "Go to the bathroom. Brush your teeth.",
+        "Stand up. Stretch for the whole timer."
       ],
       fail: "The usual reach happened instead of the opposite move." },
     { id: "scaling", code: "K3", glyph: "↕", name: "Scaling",
@@ -516,10 +516,10 @@
       snack: "Use it when you'll eat something either way. It turns autopilot eating into a deliberate, smaller act.",
       secs: 45,
       plays: [
-        "Take one piece.  Put the pack away before the first bite.",
-        "Put it on a plate.  Sit down to eat it.",
-        "Eat the first three bites slowly.  Put it down between bites.",
-        "Picture the craving ten times bigger.  Make your movement tiny."
+        "Take one piece. Put the pack away before the first bite.",
+        "Get a small plate. Put one portion on it. Sit down at a table to eat it.",
+        "Eat the first three bites slowly. Put it down between bites.",
+        "Picture the craving ten times bigger. Make your movement tiny."
       ],
       fail: "Ate the full usual amount at the usual speed." },
     { id: "index", code: "K4", glyph: "➚", name: "Index-Shift",
@@ -527,10 +527,10 @@
       snack: "Good when the payoff is the break or the texture, not the food itself.",
       secs: 60,
       plays: [
-        "Reach for water or tea instead.",
-        "Chew gum or have a mint.",
-        "Go to the fruit bowl.",
-        "Do a two-minute task instead.  Send a text, water a plant or stretch."
+        "Go to the tap or kettle. Make water or tea instead.",
+        "Get gum or a mint. Chew it.",
+        "Go to the fruit bowl. Pick one piece of fruit.",
+        "Do a two-minute task instead. Send a text, water a plant or stretch."
       ],
       fail: "Attention stayed locked on the snack." },
     { id: "frame", code: "K5", glyph: "❝", name: "Frame-Exposure",
@@ -541,7 +541,7 @@
         "Say out loud: \"This is the loop, not hunger.\"",
         "Say your hunger out loud, 1 to 5.",
         "Say what you really want: \"a break, not biscuits.\"",
-        "Write it down: when ___, I ___."
+        "Get a pen or open your notes. Write: when ___, I ___."
       ],
       fail: "Didn't name the rule before acting." },
     { id: "temporal", code: "K6", glyph: "◷", name: "Temporal Decoupling",
@@ -549,10 +549,10 @@
       snack: "The strongest card for cravings. Most urges fade within 10 to 15 minutes if the loop can't close.",
       secs: 600,
       plays: [
-        "Say: \"Not now.\"  Wait 10 minutes.  Still want it? Plate it.",
-        "Pick your next snack time.  Write it down.",
-        "Notice the craving rise.  Watch it fall.",
-        "Finish one small task.  Then decide."
+        "Say: \"Not now.\" Wait 10 minutes. Still want it? Plate it.",
+        "Open your notes or calendar. Write down your next snack time.",
+        "Notice the craving rise. Watch it fall.",
+        "Finish one small task. Then decide."
       ],
       fail: "Ate before the delay ran out." },
     { id: "rewrite", code: "K7", glyph: "↻", name: "Iterative Rewrite",
@@ -560,17 +560,19 @@
       snack: "Use it once you know the loop's payoff. Match the substitute to that payoff: crunch, sweet, warmth or a break.",
       secs: 120,
       plays: [
-        "Have apple and peanut butter, on a plate.",
-        "Put the kettle on.  Stand at the window while it brews.",
-        "Have yogurt or a boiled egg instead.",
-        "Have carrots or cucumber for the crunch."
+        "Go to the kitchen. Slice an apple onto a plate. Add a spoon of peanut butter.",
+        "Go to the kitchen. Put the kettle on. Stand at the window while it brews.",
+        "Go to the fridge. Take out a yogurt or a boiled egg.",
+        "Go to the fridge. Get carrots or cucumber for the crunch."
       ],
       fail: "Went back to the old snack instead of the substitute." }
   ];
   const K = Object.fromEntries(KOGNEMS.map(k => [k.id, k]));
   KOGNEMS.forEach(k => { k.plays = k.plays.map(p => p.replace(/ {2}/g, " ")); });
+  const OLD_PLAYS_2 = {"Drink a full glass of water. Then decide.": "Go to the tap. Pour a full glass of water. Drink all of it. Then decide.", "Brush your teeth.": "Go to the bathroom. Brush your teeth.", "Put it on a plate. Sit down to eat it.": "Get a small plate. Put one portion on it. Sit down at a table to eat it.", "Reach for water or tea instead.": "Go to the tap or kettle. Make water or tea instead.", "Chew gum or have a mint.": "Get gum or a mint. Chew it.", "Go to the fruit bowl.": "Go to the fruit bowl. Pick one piece of fruit.", "Write it down: when ___, I ___.": "Get a pen or open your notes. Write: when ___, I ___.", "Pick your next snack time. Write it down.": "Open your notes or calendar. Write down your next snack time.", "Have apple and peanut butter, on a plate.": "Go to the kitchen. Slice an apple onto a plate. Add a spoon of peanut butter.", "Put the kettle on. Stand at the window while it brews.": "Go to the kitchen. Put the kettle on. Stand at the window while it brews.", "Have yogurt or a boiled egg instead.": "Go to the fridge. Take out a yogurt or a boiled egg.", "Have carrots or cucumber for the crunch.": "Go to the fridge. Get carrots or cucumber for the crunch."};
   // Earlier wording of the plays, mapped to the current one-instruction-per-sentence wording.
   const OLD_PLAYS = {"Hands off the handle. Five slow breaths before you open anything.": "Take your hand off the handle. Breathe slowly five times.", "Drink a full glass of water, then decide.": "Drink a full glass of water. Then decide.", "Put the snack on the counter, step back, and wait for the timer.": "Put the snack on the counter. Step back until the timer ends.", "Feet flat, shoulders down, three breaths out longer than in.": "Put your feet flat on the floor. Breathe out slowly three times.", "Turn round and leave the kitchen. Walk to a different room.": "Turn around. Walk to a different room.", "Close the cupboard and put something away instead of taking something out.": "Close the cupboard. Put one thing away instead.", "Brush your teeth. It closes the eating window.": "Brush your teeth.", "Stand up and stretch instead of reaching down for the bag.": "Stand up. Stretch for the whole timer.", "Take one piece and put the pack back before the first bite.": "Take one piece. Put the pack away before the first bite.", "Plate it and sit down. Never eat straight from the bag.": "Put it on a plate. Sit down to eat it.", "Eat the first three bites at half speed and put it down between bites.": "Eat the first three bites slowly. Put it down between bites.", "Picture the urge at ten times the size, then make your actual movement tiny.": "Picture the craving ten times bigger. Make your movement tiny.", "Hand goes to the water bottle, tea or sparkling water instead.": "Reach for water or tea instead.", "Chew gum or have a mint. Same mouth action, different target.": "Chew gum or have a mint.", "Go to the fruit bowl, which you set up in advance.": "Go to the fruit bowl.", "Shift the break to a two-minute task: a text, a plant, a stretch.": "Do a two-minute task instead. Send a text, water a plant or stretch.", "Say it: \"This is the 3pm boredom loop, not hunger.\"": "Say out loud: \"This is the loop, not hunger.\"", "Rate your hunger 1 to 5 out loud before touching anything.": "Say your hunger out loud, 1 to 5.", "Name the payoff: \"I want a break, not biscuits.\"": "Say what you really want: \"a break, not biscuits.\"", "Write the rule on a sticky note: When ___, I ___.": "Write it down: when ___, I ___.", "Not now. If I still want it in 10 minutes, I'll have it plated.": "Say: \"Not now.\" Wait 10 minutes. Still want it? Plate it.", "Move it to the next planned snack time and write the time down.": "Pick your next snack time. Write it down.", "Let the urge rise and fall like a wave, noticing its peak.": "Notice the craving rise. Watch it fall.", "Finish one small task first, then decide.": "Finish one small task. Then decide.", "Planned swap: apple and peanut butter, plated.": "Have apple and peanut butter, on a plate.", "Tea ritual: kettle on, stand at the window while it brews.": "Put the kettle on. Stand at the window while it brews.", "Protein swap: yogurt or a boiled egg from the fridge.": "Have yogurt or a boiled egg instead.", "Crunch swap: carrots or cucumber, prepped in advance.": "Have carrots or cucumber for the crunch."};
+  Object.assign(OLD_PLAYS, OLD_PLAYS_2);
   const K_EMOJI = { pause: "⏸️", inversion: "↩️", scaling: "📏", index: "🎯", frame: "🗣️", temporal: "⏳", rewrite: "✏️" };
   KOGNEMS.forEach(k => { k.emoji = K_EMOJI[k.id]; });
 
@@ -580,7 +582,7 @@
       { id: "written", when: "before", step: "Write one line: what set this off.", glyph: "✎", name: "Written", text: "Write one line in your notes first: the cue and what you're doing." } ] },
     { name: "Body", mods: [
       { id: "anchor", when: "before", step: "Hand on your chest for one breath.", glyph: "◆", name: "Anchor gesture", text: "Start with the same gesture every time, such as a hand on your chest or a thumb press." },
-      { id: "water", when: "before", step: "Drink a glass of water.", glyph: "≈", name: "Water first", text: "Drink a glass of water before the card starts." } ] },
+      { id: "water", when: "before", step: "Get a glass of water. Drink it.", glyph: "≈", name: "Water first", text: "Drink a glass of water before the card starts." } ] },
     { name: "Place", mods: [
       { id: "leave", when: "before", step: "Go to a different room.", glyph: "⇥", name: "Change room", text: "Run the card somewhere other than the kitchen." },
       { id: "seated", when: "after", step: "If you eat anything, plate it and sit down.", glyph: "▭", name: "Plate & seat", text: "If you eat anything, plate it and sit at a table with no screen." } ] },
@@ -588,7 +590,7 @@
       { id: "double", when: "none", step: "", glyph: "×2", name: "Double time", text: "The timer runs twice as long.", mult: 2 },
       { id: "repeat", when: "after", step: "Still want it? Run the card again.", glyph: "+1", name: "Second round", text: "If the urge is still there when the timer ends, run the card once more." } ] },
     { name: "Social", mods: [
-      { id: "witness", when: "before", step: "Text someone: \"Snack urge, running my card.\"", glyph: "◎", name: "Witness", text: "Text someone: \"Snack urge, running my card.\"" } ] },
+      { id: "witness", when: "before", step: "Get your phone. Text someone: \"Snack urge, running my card.\"", glyph: "◎", name: "Witness", text: "Text someone: \"Snack urge, running my card.\"" } ] },
     { name: "Setup", mods: [
       { id: "hidden", when: "setup", step: "Keep trigger snacks out of sight.", glyph: "▢", name: "Out of sight", text: "The trigger snack is kept in an opaque box or on a high shelf." },
       { id: "cue", when: "setup", step: "Put a sticky note where the habit starts.", glyph: "!", name: "Cue note", text: "A sticky note at the closure point, such as the cupboard door, names the card." } ] }
@@ -689,7 +691,7 @@
     const emojiById = { "ex-desk": "💻", "ex-tv": "📺", "ex-stress": "😤", "ex-walk": "🚶", "ex-bored": "🥱" };
     state.loops.forEach(l => {
       if (!l.emoji) l.emoji = emojiById[l.id] || "🍪";
-      if (l.test && OLD_PLAYS[l.test.action]) l.test.action = OLD_PLAYS[l.test.action];
+      for (let n = 0; l.test && OLD_PLAYS[l.test.action] && n < 5; n++) l.test.action = OLD_PLAYS[l.test.action];
     });
     if (state.defaultLoopId && !state.loops.some(l => l.id === state.defaultLoopId)) state.defaultLoopId = "";
     state.loops.forEach(l => {
@@ -880,7 +882,7 @@
   function stepsFor(test) {
     const mods = (test.mods || []).map(id => MODS[id]).filter(Boolean);
     const out = [];
-    mods.filter(m => m.when === "before").forEach(m => out.push({ text: m.step, mod: true }));
+    mods.filter(m => m.when === "before").forEach(m => splitLines(m.step).forEach(t => out.push({ text: t, mod: true })));
     splitLines(test.action || K[test.k].plays[0]).forEach(t => out.push({ text: t }));
     mods.filter(m => m.when === "after").forEach(m => out.push({ text: m.step, mod: true }));
     return out;
@@ -896,7 +898,7 @@
     let html = '<div class="kcard' + (small ? " small-card" : "") + (opts && opts.deal ? " deal" : "") + '">';
     html += '<span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>";
     html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
-    if (loop && !small && loop.closure) html += '<p class="card-when">When: <b>' + esc(loop.closure) + "</b></p>";
+    if (loop && !small && loop.closure) html += '<p class="card-when">Triggered by: <b>' + esc(loop.closure) + "</b></p>";
     if (opts && opts.run) html += '<p class="run-hint">Tap each step when it\'s done.</p>' + runStepsHTML();
     else html += stepsHTML(test);
     if (!small && (mods.length || (loop && (loop.cue || loop.payoff)))) {
@@ -956,7 +958,7 @@
   // The step that carries the card's timer: the first one about waiting or breathing, else the first action.
   function timedIndex(steps) {
     let i = steps.findIndex(st => !st.mod && /\b(wait|minutes?|timer|breath|breathe|brews?|until)\b/i.test(st.text));
-    if (i < 0) i = steps.findIndex(st => !st.mod);
+    if (i < 0) for (let j = steps.length - 1; j >= 0; j--) { if (!steps[j].mod) { i = j; break; } }
     return i;
   }
 
