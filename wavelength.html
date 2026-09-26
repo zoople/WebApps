@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+</head>
+<body>
+<title>Pocket Wavelength</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;700&display=swap">
+<style>
+  :root{
+    color-scheme: dark;
+    --night:#16203a; --panel:#1f2c4d; --panel2:#27365c; --line:#3a4a75;
+    --cream:#f3e9d2; --muted:#a9b1cc; --ink:#16203a;
+    --b2:#f4b63f; --b3:#ee6b4d; --b4:#36b5a8;
+    --screen:#4a5fd1; --screen2:#3b4db8; --needle:#e0263f;
+    --teamA:#7fb8ff; --teamB:#ff9ec4;
+    --display:"Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
+    --body:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  html,body{background:var(--night); color:var(--cream);}
+  body{font-family:var(--body); font-size:16px; line-height:1.45; -webkit-tap-highlight-color:transparent;}
+  #app{max-width:520px; margin:0 auto; padding-inline:16px; padding-block:14px 40px; display:flex; flex-direction:column; gap:16px;}
+  h1,h2,h3{font-family:var(--display); margin:0; text-wrap:balance; line-height:1.1;}
+  h1{font-size:2.1rem; font-weight:800; letter-spacing:-0.02em;}
+  h2{font-size:1.5rem; font-weight:800;}
+  h3{font-size:1.02rem; font-weight:600;}
+  p{margin:0;}
+  .muted{color:var(--muted);}
+  .small{font-size:0.86rem;}
+  .label{font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); font-weight:700;}
+
+  button,input{font:inherit;}
+  button{cursor:pointer; border:none; color:inherit; background:none;}
+  button:focus-visible,input:focus-visible,label.check:focus-within{outline:3px solid var(--b2); outline-offset:2px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 18px; border-radius:14px; background:var(--panel2); border:1px solid var(--line); font-weight:700; color:var(--cream);}
+  .btn:active{transform:translateY(1px);}
+  .btn[disabled]{opacity:.45; cursor:not-allowed;}
+  .btn.primary{background:var(--b3); border-color:var(--b3); color:#fff; font-size:1.08rem; min-height:56px;}
+  .btn.ghost{background:transparent;}
+  .btn.block{width:100%;}
+  .row{display:flex; gap:10px; flex-wrap:wrap;}
+  .row > .btn{flex:1 1 0;}
+
+  .section{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:12px;}
+  .seg{display:grid; grid-template-columns:1fr 1fr; background:var(--night); border-radius:12px; padding:4px; gap:4px;}
+  .seg button{min-height:42px; border-radius:9px; font-weight:700; color:var(--muted);}
+  .seg button[aria-pressed="true"]{background:var(--cream); color:var(--ink);}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  input[type=text]{width:100%; min-height:46px; border-radius:12px; border:1px solid var(--line); background:var(--night); color:var(--cream); padding:0 12px; font-size:16px;}
+  input[type=text]::placeholder{color:#7780a0;}
+  .two{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px;}
+  .two > *{min-width:0;}
+  .stepper{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .stepper .ctl{display:flex; align-items:center; gap:4px; background:var(--night); border-radius:12px; padding:4px;}
+  .stepper .ctl button{width:40px; height:40px; border-radius:9px; font-size:1.3rem; font-weight:700; background:var(--panel2);}
+  .stepper .ctl span{min-width:36px; text-align:center; font-weight:700; font-variant-numeric:tabular-nums;}
+
+  .switch{display:flex; align-items:center; justify-content:space-between; gap:12px;}
+  .toggle{position:relative; width:52px; height:30px; border-radius:30px; background:var(--line); flex:none; transition:background .15s;}
+  .toggle::after{content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:var(--cream); transition:transform .15s;}
+  .toggle[aria-checked="true"]{background:var(--b4);}
+  .toggle[aria-checked="true"]::after{transform:translateX(22px);}
+
+  .cards{display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto;}
+  .ci{display:flex; align-items:center; gap:10px; background:var(--night); border-radius:12px; padding:8px 8px 8px 12px;}
+  .ci .pair{flex:1; min-width:0; display:flex; align-items:center; gap:6px; font-weight:500; overflow-wrap:anywhere;}
+  .ci .pair i{font-style:normal; color:var(--muted); flex:none;}
+  .ci.off .pair{opacity:.45; text-decoration:line-through;}
+  .ci input[type=checkbox]{width:22px; height:22px; accent-color:var(--b4); flex:none;}
+  .ci .x{width:36px; height:36px; border-radius:9px; color:var(--muted); font-size:1.2rem; flex:none;}
+  .empty{color:var(--muted); font-size:0.9rem; padding:4px 2px;}
+  .tag{display:inline-block; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--panel2); color:var(--muted); vertical-align:middle;}
+  .note{font-size:0.82rem; color:var(--muted);}
+
+  .hero{display:flex; flex-direction:column; gap:6px; padding-top:6px;}
+  .hero .kicker{color:var(--b2); font-weight:700; font-size:0.9rem;}
+  .banner{display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--screen); border-radius:16px; padding:12px 12px 12px 16px;}
+  .banner .btn{background:var(--cream); color:var(--ink); border:none; min-height:42px;}
+
+  /* game */
+  .topbar{display:flex; align-items:center; gap:8px;}
+  .scores{flex:1; display:flex; gap:8px; min-width:0;}
+  .score{flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 12px; border-radius:12px; background:var(--panel); border:2px solid transparent;}
+  .score .n{font-family:var(--display); font-weight:800; font-size:1.35rem; font-variant-numeric:tabular-nums;}
+  .score .nm{font-weight:700; font-size:.9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .score.a .nm{color:var(--teamA);} .score.b .nm{color:var(--teamB);}
+  .score.active.a{border-color:var(--teamA);} .score.active.b{border-color:var(--teamB);}
+  .menu{min-height:44px; padding:0 12px; border-radius:12px; background:var(--panel); color:var(--muted); font-weight:700; font-size:.85rem;}
+
+  .stage{display:flex; flex-direction:column; gap:14px; align-items:stretch;}
+  .who{display:flex; flex-direction:column; gap:4px;}
+  .team-a{color:var(--teamA);} .team-b{color:var(--teamB);}
+
+  .dialwrap{position:relative; width:100%; max-width:100%;}
+  svg.dial{display:block; width:100%; height:auto; touch-action:none; user-select:none; -webkit-user-select:none;}
+  svg.dial.drag{cursor:grab;}
+  .cover{transform-origin:0 0; transition:transform .9s cubic-bezier(.6,.05,.25,1);}
+  .cover.open{transform:rotate(180deg);}
+  @media (prefers-reduced-motion: reduce){ .cover{transition:none;} }
+
+  .spectrum{display:grid; grid-template-columns:1fr auto 1fr; align-items:stretch; border-radius:16px; overflow:hidden; font-family:var(--display); font-weight:800; font-size:1.2rem; line-height:1.15;}
+  .spectrum .l,.spectrum .r{padding:14px 12px; display:flex; align-items:center; overflow-wrap:anywhere;}
+  .spectrum .l{background:#e7dcc1; color:var(--ink);}
+  .spectrum .r{background:var(--b2); color:var(--ink); justify-content:flex-end; text-align:right;}
+  .spectrum .mid{background:var(--cream); color:var(--ink); display:flex; align-items:center; padding:0 6px; font-size:1rem;}
+  .clue{background:var(--panel); border:1px dashed var(--line); border-radius:14px; padding:12px 14px; text-align:center;}
+  .clue b{display:block; font-family:var(--display); font-size:1.5rem; font-weight:800; overflow-wrap:anywhere;}
+
+  .nudge{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;}
+  .nudge .btn{min-width:56px; font-size:1.3rem;}
+  .nudge .hint{text-align:center; color:var(--muted); font-size:.9rem;}
+
+  .pass{min-height:62vh; display:flex; flex-direction:column; justify-content:center; gap:22px; text-align:center;}
+  .pass .big{font-family:var(--display); font-size:2.2rem; font-weight:800; line-height:1.05;}
+  .pass .eye{width:84px; height:84px; margin:0 auto; border-radius:50%; background:var(--screen); display:grid; place-items:center;}
+
+  .result{text-align:center; display:flex; flex-direction:column; gap:6px; align-items:center;}
+  .pts{font-family:var(--display); font-weight:800; font-size:3.4rem; line-height:1;}
+  .pts.p4{color:var(--b4);} .pts.p3{color:var(--b3);} .pts.p2{color:var(--b2);} .pts.p0{color:var(--muted);}
+  .legend{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; font-size:.8rem; color:var(--muted);}
+  .legend span{display:inline-flex; align-items:center; gap:5px;}
+  .legend i{width:12px; height:12px; border-radius:3px; display:inline-block;}
+
+  .sheet{display:flex; flex-direction:column; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px;}
+  label.check{display:flex; gap:10px; align-items:center; font-size:.92rem; border-radius:8px;}
+  label.check input{width:22px; height:22px; accent-color:var(--b4);}
+  .toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); background:var(--cream); color:var(--ink); font-weight:700; padding:10px 16px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.35); max-width:calc(100% - 32px); z-index:10;}
+</style>
+
+<div id="app" aria-live="polite"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  // ---------- built-in spectrum cards ----------
+  const BUILTIN = [
+    ["Hot","Cold"],["Useless","Useful"],["Underrated","Overrated"],["Easy to spell","Hard to spell"],
+    ["Bad movie","Good movie"],["Ugly","Beautiful"],["Rough","Smooth"],["Cheap","Expensive"],
+    ["Sad song","Happy song"],["Normal pet","Weird pet"],["Villain","Hero"],["Unhealthy food","Healthy food"],
+    ["Boring hobby","Exciting hobby"],["Round","Pointy"],["Mainstream","Niche"],["Safe job","Dangerous job"],
+    ["Forgettable","Memorable"],["Lazy","Hardworking"],["Quiet","Loud"],["Tastes bad","Tastes good"],
+    ["Scary animal","Cute animal"],["Underpaid","Overpaid"],["Casual","Formal"],["Old-fashioned","Modern"],
+    ["Wet","Dry"],["Soft","Hard"],["Temporary","Permanent"],["Basic","Fancy"],["Rare","Common"],
+    ["Unethical","Ethical"],["Harmless","Deadly"],["Nerdy","Cool"],["Snack","Meal"],
+    ["Hard to find","Easy to find"],["Ordinary","Extraordinary"],["Bad habit","Good habit"],
+    ["Not a sport","Definitely a sport"],["Guilty pleasure","Proudly loved"],["Small talk","Deep conversation"],
+    ["Tiny","Huge"],["Light","Heavy"],["Short-lived","Long-lived"],["Bad superpower","Great superpower"],
+    ["Worst pizza topping","Best pizza topping"],["Terrible gift","Great gift"],["Unimportant","Important"],
+    ["Introvert thing","Extrovert thing"],["Relaxing","Stressful"],["Smells bad","Smells good"],
+    ["Sounds fake","Sounds real"],["Morning person thing","Night owl thing"],["Childish","Mature"],
+    ["Bad advice","Good advice"],["Unknown","Famous"],["Weak","Strong"],["Slow","Fast"],
+    ["Dirty","Clean"],["Hated","Loved"],["Cheap date","Expensive date"],["Low-tech","High-tech"],
+    ["Replaceable","Irreplaceable"],["Mild","Spicy"],["Bad for kids","Great for kids"],
+    ["Feels awful","Feels amazing"],["Normal thing to own","Weird thing to own"],
+    ["Would never eat","Would eat every day"],["Gentle sport","Brutal sport"],["Boring job","Dream job"],
+    ["Unreliable","Reliable"],["Trashy","Classy"],["Sidekick","Main character"],
+    ["Needs no skill","Needs loads of skill"],["Bad dog name","Great dog name"],["Bad band name","Great band name"],
+    ["Worst holiday","Best holiday"],["Useless invention","Essential invention"],["Fad","Timeless"],
+    ["Easy to pronounce","Hard to pronounce"],["Uncomfortable","Cozy"],["Predictable","Unpredictable"],
+    ["Easy to draw","Hard to draw"],["Fine at a funeral","Not fine at a funeral"],
+    ["Tame horror","Terrifying horror"],["Worst place to be stuck","Best place to be stuck"],
+    ["Overrated sandwich","Underrated sandwich"],["Needs a manual","Totally intuitive"],
+    ["Fictional","Real"],["Worst smell","Best smell"],["Easy to fake","Hard to fake"],
+    ["Peasant food","Royal food"],["Bad first date idea","Great first date idea"],
+    ["Worst chore","Best chore"],["Low risk","High risk"],["Straightforward","Complicated"]
+  ];
+
+  // ---------- small helpers ----------
+  const $ = (s, r = document) => r.querySelector(s);
+  const app = $("#app");
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const uid = (p) => p + Math.random().toString(36).slice(2, 9);
+  const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const lsDel = (k) => { try { localStorage.removeItem(k); } catch {} };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
+  }
+
+  // ---------- saved cards + settings (page db if available, else this device) ----------
+  // lib: { cards:[{id,l,r,on}], builtIn:true }
+  let lib = lsGet("wl.lib", { cards: [], builtIn: true });
+  let storeMode = "device"; // "device" | "cloud"
+  let db = null, writing = Promise.resolve();
+
+  function persistLib() {
+    lsSet("wl.lib", lib);
+    if (!db) return;
+    const body = JSON.parse(JSON.stringify(lib));
+    writing = writing.then(() => db.doc("saved/library").set(body)).catch(() => {});
+  }
+
+  async function connectDb() {
+    try {
+      if (!window.claude || typeof window.claude.use !== "function") return;
+      const d = await window.claude.use("db");
+      if (!d) return;
+      const snap = await d.doc("saved/library").get();
+      db = d; storeMode = "cloud";
+      if (snap.exists) {
+        const data = snap.data() || {};
+        lib = { cards: Array.isArray(data.cards) ? data.cards.map(c => ({ ...c })) : [], builtIn: data.builtIn !== false };
+        lsSet("wl.lib", lib);
+      } else if (lib.cards.length || lib.builtIn === false) {
+        persistLib();
+      }
+      if (view === "setup") render();
+    } catch { db = null; storeMode = "device"; }
+  }
+
+  // ---------- game state ----------
+  const blankSetup = () => ({ mode: "teams", names: ["Team 1", "Team 2"], target: 10, rounds: 7 });
+  let setup = lsGet("wl.setup", blankSetup());
+  let temp = lsGet("wl.temp", []); // this-game-only cards [{id,l,r}]
+  let game = lsGet("wl.game", null);
+  let view = "setup";
+  let writeOwn = false; // psychic "write my own" sheet open
+
+  const saveSetup = () => lsSet("wl.setup", setup);
+  const saveTemp = () => lsSet("wl.temp", temp);
+  const saveGame = () => game ? lsSet("wl.game", game) : lsDel("wl.game");
+
+  function pool() {
+    const p = [];
+    if (lib.builtIn) BUILTIN.forEach((c, i) => p.push({ id: "b" + i, l: c[0], r: c[1] }));
+    lib.cards.forEach(c => { if (c.on !== false) p.push({ id: c.id, l: c.l, r: c.r }); });
+    temp.forEach(c => p.push({ id: c.id, l: c.l, r: c.r }));
+    return p;
+  }
+
+  function drawCard(excludeId) {
+    const p = pool();
+    if (!p.length) return null;
+    let fresh = p.filter(c => !game.used.includes(c.id) && c.id !== excludeId);
+    if (!fresh.length) { game.used = []; fresh = p.filter(c => c.id !== excludeId); }
+    if (!fresh.length) fresh = p;
+    const c = fresh[Math.floor(Math.random() * fresh.length)];
+    game.used.push(c.id);
+    return { id: c.id, l: c.l, r: c.r };
+  }
+
+  function newRound() {
+    game.card = drawCard() || { id: "none", l: "Left", r: "Right" };
+    game.targetPos = 4 + Math.random() * 92;
+    game.needle = 50;
+    game.clue = "";
+    game.side = null;
+    game.result = null;
+    game.phase = "pass-psychic";
+    writeOwn = false;
+    saveGame();
+  }
+
+  function startGame() {
+    if (!pool().length) { toast("Add at least one card first"); return; }
+    const teams = setup.mode === "teams";
+    game = {
+      mode: setup.mode,
+      teams: teams ? [{ name: setup.names[0].trim() || "Team 1", score: 0 }, { name: setup.names[1].trim() || "Team 2", score: 0 }] : [{ name: "Everyone", score: 0 }],
+      target: setup.target, rounds: setup.rounds, round: 1,
+      active: Math.random() < 0.5 || !teams ? 0 : 1,
+      used: [], history: []
+    };
+    // Official catch-up: the team going second starts with 1 point
+    if (teams) game.teams[1 - game.active].score = 1;
+    newRound();
+    view = "game";
+    try { navigator.wakeLock && navigator.wakeLock.request("screen").catch(() => {}); } catch {}
+    render();
+  }
+
+  function scoreFor(needle, target) {
+    const d = Math.abs(needle - target);
+    if (d <= 2.5) return 4;
+    if (d <= 7.5) return 3;
+    if (d <= 12.5) return 2;
+    return 0;
+  }
+
+  function resolveRound() {
+    const g = game, pts = scoreFor(g.needle, g.targetPos);
+    const teams = g.mode === "teams";
+    const other = 1 - g.active;
+    let sidePts = 0;
+    if (teams && pts !== 4 && g.side) {
+      const actual = g.targetPos < g.needle ? "left" : "right";
+      if (actual === g.side) sidePts = 1;
+    }
+    g.teams[g.active].score += pts;
+    if (teams) g.teams[other].score += sidePts;
+    let again = false;
+    if (teams && pts === 4 && g.teams[g.active].score < g.teams[other].score) again = true;
+    g.result = { pts, sidePts, again };
+    g.history.push({ card: g.card, pts });
+    // winner?
+    g.over = null;
+    if (teams) {
+      const [a, b] = g.teams;
+      if (a.score >= g.target || b.score >= g.target) {
+        if (a.score !== b.score) g.over = { winner: a.score > b.score ? 0 : 1 };
+        else g.result.tie = true;
+      }
+    } else if (g.round >= g.rounds) {
+      g.over = { total: g.teams[0].score };
+    }
+    g.phase = "reveal";
+    saveGame();
+  }
+
+  function nextRound() {
+    const g = game;
+    if (g.over) { g.phase = "over"; saveGame(); render(); return; }
+    g.bonus = !!(g.mode === "teams" && g.result.again);
+    if (!g.bonus && g.mode === "teams") g.active = 1 - g.active;
+    g.round += 1;
+    newRound();
+    render();
+  }
+
+  // ---------- dial ----------
+  const R = 100;
+  const pt = (v, r = R) => { const th = Math.PI * (1 - v / 100); return [r * Math.cos(th), -r * Math.sin(th)]; };
+  const f = (n) => n.toFixed(2);
+  function wedge(a, b, r = R) {
+    a = clamp(a, 0, 100); b = clamp(b, 0, 100);
+    if (b - a <= 0) return "";
+    const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r);
+    return `M0,0 L${f(x1)},${f(y1)} A${r},${r} 0 0 1 ${f(x2)},${f(y2)} Z`;
+  }
+
+  function dialSVG({ showTarget, coverOpen, needle, interactive, animateOpen, noNeedle }) {
+    const t = game.targetPos;
+    const bands = [
+      [t - 12.5, t - 7.5, "var(--b2)", "2"], [t - 7.5, t - 2.5, "var(--b3)", "3"], [t - 2.5, t + 2.5, "var(--b4)", "4"],
+      [t + 2.5, t + 7.5, "var(--b3)", "3"], [t + 7.5, t + 12.5, "var(--b2)", "2"]
+    ];
+    const target = bands.map(([a, b, c, n]) => {
+      const d = wedge(a, b); if (!d) return "";
+      const mid = (clamp(a, 0, 100) + clamp(b, 0, 100)) / 2;
+      const [lx, ly] = pt(mid, 84);
+      const w = clamp(b, 0, 100) - clamp(a, 0, 100);
+      return `<path d="${d}" fill="${c}"/>` + (w > 2.6 ? `<text x="${f(lx)}" y="${f(ly)}" text-anchor="middle" dominant-baseline="central" font-family="Bricolage Grotesque, sans-serif" font-weight="800" font-size="9" fill="#16203a">${n}</text>` : "");
+    }).join("");
+    const ticks = Array.from({ length: 21 }, (_, i) => {
+      const [x1, y1] = pt(i * 5, 101), [x2, y2] = pt(i * 5, i % 5 ? 104 : 107);
+      return `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="#a9b1cc" stroke-width="${i % 5 ? .6 : 1.1}"/>`;
+    }).join("");
+    const [nx, ny] = pt(needle, 96);
+    const coverCls = "cover" + (coverOpen && !animateOpen ? " open" : "");
+    return `
+    <svg class="dial${interactive ? " drag" : ""}" id="dial" viewBox="-112 -112 224 124" role="img" aria-label="Dial. Needle at ${Math.round(needle)} of 100${showTarget || coverOpen ? ", target centred at " + Math.round(t) : ""}">
+      <defs>
+        <clipPath id="upper"><rect x="-112" y="-112" width="224" height="112"/></clipPath>
+      </defs>
+      ${ticks}
+      <g clip-path="url(#upper)">
+        <circle r="${R}" fill="#f3e9d2"/>
+        ${showTarget || coverOpen ? target : ""}
+        <g class="${coverCls}" id="cover">
+          <path d="${wedge(0, 100, R + .5)}" fill="var(--screen)"/>
+          <path d="${wedge(0, 100, 62)}" fill="var(--screen2)"/>
+          <circle r="${R}" fill="none" stroke="var(--screen2)" stroke-width="2"/>
+        </g>
+      </g>
+      ${noNeedle ? "" : `<line x1="0" y1="0" x2="${f(nx)}" y2="${f(ny)}" stroke="var(--needle)" stroke-width="3.2" stroke-linecap="round"/>`}
+      <circle r="11" fill="var(--needle)"/>
+      <circle r="4" fill="#f3e9d2"/>
+    </svg>`;
+  }
+
+  function bindDial() {
+    const svg = $("#dial"); if (!svg) return;
+    let dragging = false;
+    const toVal = (e) => {
+      const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+      const q = p.matrixTransform(svg.getScreenCTM().inverse());
+      let ang = Math.atan2(-q.y, q.x); // 0 right, PI left
+      if (q.y > 0) ang = q.x < 0 ? Math.PI : 0;
+      return clamp(100 * (1 - ang / Math.PI), 0, 100);
+    };
+    const move = (e) => { if (!dragging) return; game.needle = toVal(e); redrawNeedle(); };
+    svg.addEventListener("pointerdown", (e) => { dragging = true; svg.setPointerCapture(e.pointerId); move(e); });
+    svg.addEventListener("pointermove", move);
+    const up = () => { if (dragging) { dragging = false; saveGame(); } };
+    svg.addEventListener("pointerup", up);
+    svg.addEventListener("pointercancel", up);
+  }
+
+  function redrawNeedle() {
+    const wrap = $("#dialwrap"); if (!wrap) return;
+    wrap.innerHTML = dialSVG({ showTarget: false, coverOpen: false, needle: game.needle, interactive: true });
+    bindDial();
+  }
+
+  // ---------- views ----------
+  function spectrumHTML(c) {
+    return `<div class="spectrum" aria-label="Spectrum from ${esc(c.l)} to ${esc(c.r)}">
+      <div class="l">${esc(c.l)}</div><div class="mid" aria-hidden="true">⟷</div><div class="r">${esc(c.r)}</div></div>`;
+  }
+
+  function topbar() {
+    const g = game;
+    const chips = g.teams.map((t, i) => `<div class="score ${i ? "b" : "a"}${g.mode === "teams" && g.active === i ? " active" : ""}"><span class="nm">${esc(t.name)}</span><span class="n">${t.score}</span></div>`).join("");
+    const extra = g.mode === "coop" ? `<div class="score"><span class="nm">Round</span><span class="n">${Math.min(g.round, g.rounds)}/${g.rounds}</span></div>` : "";
+    return `<div class="topbar"><div class="scores">${chips}${extra}</div><button class="menu" data-act="menu">Menu</button></div>`;
+  }
+
+  const teamCls = (i) => game.mode === "teams" ? (i ? "team-b" : "team-a") : "";
+  const teamName = (i) => game.mode === "teams" ? game.teams[i].name : "your group";
+
+  function renderGame() {
+    const g = game;
+    let body = "";
+    const a = g.active, other = 1 - a;
+
+    if (g.phase === "pass-psychic") {
+      body = `<div class="pass">
+        <div class="eye" aria-hidden="true">${eyeIcon()}</div>
+        <p class="label">Round ${g.round}${g.bonus ? " · bonus turn" : ""}</p>
+        <p class="big"><span class="${teamCls(a)}">${esc(g.mode === "teams" ? g.teams[a].name : "Pick a Psychic")}</span>${g.mode === "teams" ? ", pick a Psychic" : ""}</p>
+        <p class="muted">Hand the phone to the Psychic. Everyone else looks away.</p>
+        <button class="btn primary block" data-act="to-psychic">I'm the Psychic, show me</button>
+      </div>`;
+    }
+
+    else if (g.phase === "psychic") {
+      body = `<div class="stage">
+        <div class="who"><p class="label">Psychic only</p><h2>Give a clue that lands on the <span style="color:var(--b4)">4</span></h2></div>
+        <div class="dialwrap">${dialSVG({ showTarget: true, coverOpen: true, needle: 50, interactive: false, noNeedle: true })}</div>
+        ${g.card ? spectrumHTML(g.card) : ""}
+        ${writeOwn ? writeOwnSheet() : `<div class="row"><button class="btn" data-act="reroll">New card</button><button class="btn" data-act="write-own">Write my own</button></div>`}
+        <div class="field"><label class="label" for="clue">Your clue (optional, shown to guessers)</label>
+          <input type="text" id="clue" maxlength="80" placeholder="Say it out loud, or type it here" value="${esc(g.clue)}"></div>
+        <button class="btn primary block" data-act="hide">Hide the target</button>
+      </div>`;
+    }
+
+    else if (g.phase === "pass-guess") {
+      body = `<div class="pass">
+        <div class="eye" aria-hidden="true">${eyeIcon(true)}</div>
+        <p class="big">Target hidden</p>
+        <p class="muted">Hand the phone to ${esc(teamName(a))}. The Psychic stays quiet from here.</p>
+        <button class="btn primary block" data-act="to-guess">Start guessing</button>
+      </div>`;
+    }
+
+    else if (g.phase === "guess") {
+      body = `<div class="stage">
+        <div class="who"><p class="label ${teamCls(a)}">${esc(g.mode === "teams" ? g.teams[a].name : "Everyone")} · guessing</p><h2>Drag the needle to the clue</h2></div>
+        ${g.clue ? `<div class="clue"><span class="label">Clue</span><b>${esc(g.clue)}</b></div>` : ""}
+        <div class="dialwrap" id="dialwrap">${dialSVG({ showTarget: false, coverOpen: false, needle: g.needle, interactive: true })}</div>
+        ${spectrumHTML(g.card)}
+        <div class="nudge"><button class="btn" data-act="nudge" data-d="-1" aria-label="Nudge left">‹</button><span class="hint">Drag the dial or nudge</span><button class="btn" data-act="nudge" data-d="1" aria-label="Nudge right">›</button></div>
+        <button class="btn primary block" data-act="lock">Lock in guess</button>
+      </div>`;
+    }
+
+    else if (g.phase === "side") {
+      body = `<div class="stage">
+        <div class="who"><p class="label ${teamCls(other)}">${esc(g.teams[other].name)}</p><h2>Is the target left or right of their needle?</h2>
+        <p class="muted small">Get it right for 1 point. No point if they hit the bullseye.</p></div>
+        <div class="dialwrap">${dialSVG({ showTarget: false, coverOpen: false, needle: g.needle, interactive: false })}</div>
+        ${spectrumHTML(g.card)}
+        <div class="row"><button class="btn" data-act="side" data-s="left" style="min-height:64px">← Left</button><button class="btn" data-act="side" data-s="right" style="min-height:64px">Right →</button></div>
+      </div>`;
+    }
+
+    else if (g.phase === "reveal") {
+      const r = g.result;
+      const msg = { 4: "Bullseye!", 3: "So close", 2: "On the edge", 0: "Missed it" }[r.pts];
+      let sub = g.mode === "teams" ? `${esc(g.teams[a].name)} +${r.pts}` : `+${r.pts} points`;
+      if (g.mode === "teams" && g.side) sub += r.pts === 4 ? ` · ${esc(g.teams[other].name)}'s ${g.side} call doesn't count` : ` · ${esc(g.teams[other].name)} called ${g.side}: ${r.sidePts ? "+1" : "wrong"}`;
+      let foot = "";
+      if (g.over) foot = `<button class="btn primary block" data-act="next">See the result</button>`;
+      else {
+        if (r.tie) foot += `<p class="muted small" style="text-align:center">Tied past ${g.target}. Keep playing until someone pulls ahead.</p>`;
+        if (r.again) foot += `<p class="small" style="text-align:center;color:var(--b4)">Bullseye while behind: ${esc(g.teams[a].name)} goes again.</p>`;
+        foot += `<button class="btn primary block" data-act="next">Next round</button>`;
+      }
+      body = `<div class="stage">
+        <div class="dialwrap">${dialSVG({ showTarget: true, coverOpen: true, needle: g.needle, interactive: false, animateOpen: !g.revealed })}</div>
+        ${spectrumHTML(g.card)}
+        ${g.clue ? `<p class="muted" style="text-align:center">Clue: <b style="color:var(--cream)">${esc(g.clue)}</b></p>` : ""}
+        <div class="result"><div class="pts p${r.pts}">${r.pts ? "+" + r.pts : "0"}</div><h2>${msg}</h2><p class="muted">${sub}</p></div>
+        <div class="legend"><span><i style="background:var(--b4)"></i>4</span><span><i style="background:var(--b3)"></i>3</span><span><i style="background:var(--b2)"></i>2</span></div>
+        ${foot}
+      </div>`;
+    }
+
+    else if (g.phase === "over") {
+      let head, sub;
+      if (g.mode === "teams") {
+        const w = g.teams[g.over.winner];
+        head = `<span class="${teamCls(g.over.winner)}">${esc(w.name)}</span> win`;
+        sub = `${g.teams[0].score} to ${g.teams[1].score} after ${g.round} rounds`;
+      } else {
+        const t = g.over.total, max = g.rounds * 4, p = t / max;
+        head = `${t} points`;
+        sub = p >= .75 ? "Telepathic. You share one brain." : p >= .55 ? "Seriously in sync." : p >= .35 ? "Decent vibes. Room to grow." : "Were you even in the same room?";
+      }
+      body = `<div class="pass"><p class="label">Game over</p><p class="big">${head}</p><p class="muted">${sub}</p>
+        <div class="row"><button class="btn primary" data-act="rematch">Play again</button><button class="btn" data-act="to-setup-end">Change setup</button></div></div>`;
+    }
+
+    app.innerHTML = topbar() + body;
+    if (g.phase === "guess") bindDial();
+    if (g.phase === "reveal" && !g.revealed) {
+      g.revealed = true; saveGame();
+      requestAnimationFrame(() => requestAnimationFrame(() => { const c = $("#cover"); if (c) c.classList.add("open"); }));
+    }
+    const clue = $("#clue");
+    if (clue) clue.addEventListener("input", () => { g.clue = clue.value; saveGame(); });
+  }
+
+  function writeOwnSheet() {
+    return `<div class="sheet">
+      <h3>Write your own card</h3>
+      <div class="two"><input type="text" id="own-l" maxlength="40" placeholder="Left end" aria-label="Left end"><input type="text" id="own-r" maxlength="40" placeholder="Right end" aria-label="Right end"></div>
+      <label class="check"><input type="checkbox" id="own-save"> Also save to my cards for future games</label>
+      <div class="row"><button class="btn ghost" data-act="own-cancel">Cancel</button><button class="btn" data-act="own-use" style="background:var(--cream);color:var(--ink)">Use this card</button></div>
+    </div>`;
+  }
+
+  function eyeIcon(closed) {
+    return closed
+      ? `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#f3e9d2" stroke-width="2" stroke-linecap="round"><path d="M3 10c2.5 3 5.5 4.5 9 4.5s6.5-1.5 9-4.5"/><path d="M6 13.5 4.5 16M12 14.5V17.5M18 13.5l1.5 2.5"/></svg>`
+      : `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#f3e9d2" stroke-width="2"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  }
+
+  function renderSetup() {
+    const teams = setup.mode === "teams";
+    const n = pool().length;
+    const savedList = lib.cards.length
+      ? lib.cards.map(c => `<div class="ci${c.on === false ? " off" : ""}"><input type="checkbox" data-act="saved-toggle" data-id="${c.id}" ${c.on === false ? "" : "checked"} aria-label="Use ${esc(c.l)} to ${esc(c.r)}"><span class="pair">${esc(c.l)} <i>⟷</i> ${esc(c.r)}</span><button class="x" data-act="saved-del" data-id="${c.id}" aria-label="Delete">×</button></div>`).join("")
+      : `<p class="empty">None yet. Cards you save stay here for every game.</p>`;
+    const tempList = temp.length
+      ? temp.map(c => `<div class="ci"><span class="pair">${esc(c.l)} <i>⟷</i> ${esc(c.r)}</span><button class="x" data-act="temp-keep" data-id="${c.id}" aria-label="Save for future games" title="Save for future games">☆</button><button class="x" data-act="temp-del" data-id="${c.id}" aria-label="Remove">×</button></div>`).join("")
+      : `<p class="empty">Cards just for tonight. They aren't kept for future games unless you tap ☆.</p>`;
+
+    app.innerHTML = `
+      <header class="hero">
+        <p class="kicker">Pass-the-phone party game</p>
+        <h1>Pocket Wavelength</h1>
+        <p class="muted">One Psychic sees the hidden target on the dial and gives a clue. Their team turns the needle to where they think it is.</p>
+      </header>
+      ${game && game.phase !== "over" ? `<div class="banner"><div><b>Game in progress</b><p class="small" style="opacity:.85">${game.teams.map(t => esc(t.name) + " " + t.score).join(" · ")}</p></div><button class="btn" data-act="resume">Resume</button></div>` : ""}
+
+      <section class="section" aria-label="Players">
+        <div class="seg" role="group" aria-label="Mode">
+          <button data-act="mode" data-m="teams" aria-pressed="${teams}">Two teams</button>
+          <button data-act="mode" data-m="coop" aria-pressed="${!teams}">Co-op</button>
+        </div>
+        ${teams ? `
+          <div class="two">
+            <div class="field"><label class="label" for="n0">Team 1</label><input type="text" id="n0" maxlength="20" value="${esc(setup.names[0])}"></div>
+            <div class="field"><label class="label" for="n1">Team 2</label><input type="text" id="n1" maxlength="20" value="${esc(setup.names[1])}"></div>
+          </div>
+          <div class="stepper"><span>Play to</span><div class="ctl"><button data-act="step" data-k="target" data-d="-1" aria-label="Fewer points">−</button><span>${setup.target}</span><button data-act="step" data-k="target" data-d="1" aria-label="More points">+</button></div></div>
+          <p class="note">Take turns being Psychic. The other team guesses left or right for a bonus point. A bullseye while behind earns another turn.</p>`
+        : `
+          <div class="stepper"><span>Rounds</span><div class="ctl"><button data-act="step" data-k="rounds" data-d="-1" aria-label="Fewer rounds">−</button><span>${setup.rounds}</span><button data-act="step" data-k="rounds" data-d="1" aria-label="More rounds">+</button></div></div>
+          <p class="note">Everyone on one side. Rotate the Psychic each round and chase the highest total.</p>`}
+      </section>
+
+      <section class="section" aria-label="Cards">
+        <div class="switch"><div><h3>Built-in cards</h3><p class="note">${BUILTIN.length} spectrums like Hot ⟷ Cold</p></div>
+          <button class="toggle" role="switch" aria-checked="${lib.builtIn}" aria-label="Use built-in cards" data-act="builtin"></button></div>
+      </section>
+
+      <section class="section" aria-label="Add a card">
+        <h3>Add your own card</h3>
+        <div class="two"><input type="text" id="add-l" maxlength="40" placeholder="Left end, e.g. Worst" aria-label="Left end"><input type="text" id="add-r" maxlength="40" placeholder="Right end, e.g. Best" aria-label="Right end"></div>
+        <div class="row"><button class="btn" data-act="add-temp">This game only</button><button class="btn" data-act="add-save" style="background:var(--cream);color:var(--ink)">Save for later</button></div>
+      </section>
+
+      <section class="section" aria-label="This game only">
+        <div class="switch"><h3>This game only <span class="tag">${temp.length}</span></h3>${temp.length ? `<button class="btn ghost" style="min-height:36px;padding:0 10px" data-act="temp-clear">Clear all</button>` : ""}</div>
+        <div class="cards">${tempList}</div>
+      </section>
+
+      <section class="section" aria-label="My saved cards">
+        <h3>My saved cards <span class="tag">${lib.cards.length}</span></h3>
+        <div class="cards">${savedList}</div>
+        <p class="note">${storeMode === "cloud" ? "Saved to this page, so they follow you to any device." : "Saved on this device."} Untick a card to leave it out without deleting it.</p>
+      </section>
+
+      <button class="btn primary block" data-act="start" ${n ? "" : "disabled"}>${game && game.phase !== "over" ? "Start a new game" : "Start game"} · ${n} card${n === 1 ? "" : "s"}</button>
+    `;
+    ["n0", "n1"].forEach((id, i) => { const el = $("#" + id); if (el) el.addEventListener("input", () => { setup.names[i] = el.value; saveSetup(); }); });
+    ["add-l", "add-r"].forEach(id => $("#" + id).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addCard(false); } }));
+  }
+
+  function readPair(lId, rId) {
+    const l = $("#" + lId).value.trim(), r = $("#" + rId).value.trim();
+    if (!l || !r) { toast("Fill in both ends of the card"); ($("#" + (l ? rId : lId))).focus(); return null; }
+    return { l, r };
+  }
+
+  function addCard(save) {
+    const p = readPair("add-l", "add-r"); if (!p) return;
+    if (save) { lib.cards.unshift({ id: uid("s"), l: p.l, r: p.r, on: true }); persistLib(); toast("Saved to your cards"); }
+    else { temp.unshift({ id: uid("t"), l: p.l, r: p.r }); saveTemp(); toast("Added for this game"); }
+    render();
+    $("#add-l").focus();
+  }
+
+  function render() {
+    if (view === "game" && game) renderGame(); else renderSetup();
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- events ----------
+  app.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const act = b.dataset.act, g = game;
+    switch (act) {
+      case "mode": setup.mode = b.dataset.m; saveSetup(); render(); break;
+      case "step": {
+        const k = b.dataset.k, d = +b.dataset.d;
+        setup[k] = k === "target" ? clamp(setup[k] + d, 3, 30) : clamp(setup[k] + d, 1, 30);
+        saveSetup(); render(); break;
+      }
+      case "builtin": lib.builtIn = !lib.builtIn; persistLib(); render(); break;
+      case "add-temp": addCard(false); break;
+      case "add-save": addCard(true); break;
+      case "saved-toggle": { const c = lib.cards.find(x => x.id === b.dataset.id); if (c) { c.on = b.checked; persistLib(); render(); } break; }
+      case "saved-del": lib.cards = lib.cards.filter(x => x.id !== b.dataset.id); persistLib(); render(); toast("Card deleted"); break;
+      case "temp-clear": temp = []; saveTemp(); render(); break;
+      case "temp-del": temp = temp.filter(x => x.id !== b.dataset.id); saveTemp(); render(); break;
+      case "temp-keep": {
+        const c = temp.find(x => x.id === b.dataset.id); if (!c) break;
+        temp = temp.filter(x => x !== c); saveTemp();
+        lib.cards.unshift({ id: uid("s"), l: c.l, r: c.r, on: true }); persistLib(); render(); toast("Moved to your saved cards"); break;
+      }
+      case "start":
+        if (game && game.phase !== "over" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Tap again to end the current game"; break; }
+        startGame(); break;
+      case "resume": view = "game"; render(); break;
+      case "menu": view = "setup"; render(); break;
+
+      case "to-psychic": g.phase = "psychic"; saveGame(); render(); break;
+      case "reroll": { const c = drawCard(g.card && g.card.id); if (c) g.card = c; saveGame(); render(); break; }
+      case "write-own": writeOwn = true; render(); setTimeout(() => $("#own-l") && $("#own-l").focus(), 30); break;
+      case "own-cancel": writeOwn = false; render(); break;
+      case "own-use": {
+        const p = readPair("own-l", "own-r"); if (!p) break;
+        const card = { id: uid("t"), l: p.l, r: p.r };
+        if ($("#own-save").checked) { card.id = uid("s"); lib.cards.unshift({ ...card, on: true }); persistLib(); }
+        else { temp.unshift(card); saveTemp(); }
+        g.used.push(card.id); g.card = card; writeOwn = false; saveGame(); render(); break;
+      }
+      case "hide": g.phase = "pass-guess"; saveGame(); render(); break;
+      case "to-guess": g.phase = "guess"; saveGame(); render(); break;
+      case "nudge": g.needle = clamp(g.needle + (+b.dataset.d), 0, 100); saveGame(); redrawNeedle(); break;
+      case "lock":
+        if (g.mode === "teams") { g.phase = "side"; saveGame(); render(); }
+        else { g.revealed = false; resolveRound(); render(); }
+        break;
+      case "side": g.side = b.dataset.s; g.revealed = false; resolveRound(); render(); break;
+      case "next": nextRound(); break;
+      case "rematch": startGame(); break;
+      case "to-setup-end": game = null; saveGame(); view = "setup"; render(); break;
+    }
+  });
+
+  // keep the game if the page reloads mid-round
+  if (game && game.phase && game.phase !== "over") view = "game";
+  render();
+  connectDb();
+})();
+</script>
+</body>
+</html>
