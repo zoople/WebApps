@@ -901,7 +901,7 @@
     html += '<span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>";
     if (test.hunger) html += '<div class="corner"><span class="glyph" aria-hidden="true">🍎</span><div><div class="code">REAL HUNGER · ' + fmtSecs(effSecs(test)) + '</div><div class="kname">Proper snack</div></div></div>';
     else html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
-    if (loop && !small && loop.closure && !test.hunger) html += '<p class="card-when">Triggered by: <b>' + esc(loop.closure) + "</b></p>";
+    if (loop && !small && loop.closure && !test.hunger && !(opts && opts.run)) html += '<p class="card-when">Triggered by: <b>' + esc(loop.closure) + "</b></p>";
     if (opts && opts.run) html += '<p class="run-hint">' + (flow.hunger ? HUNGER[flow.hunger - 1].e + " Hunger " + flow.hunger + ". " : "") + 'Tap each step when it\'s done.</p>' + runStepsHTML();
     else html += stepsHTML(test);
     if (!small && !test.hunger && (mods.length || (loop && (loop.cue || loop.payoff)))) {
@@ -962,8 +962,8 @@
 
   // The step that carries the card's timer: the first one about waiting or breathing, else the first action.
   function timedIndex(steps) {
-    let i = steps.findIndex(st => !st.mod && /\b(wait|minutes?|timer|breath|breathe|brews?|until|task|craving)\b/i.test(st.text));
-    if (i < 0) for (let j = steps.length - 1; j >= 0; j--) { if (!steps[j].mod) { i = j; break; } }
+    let i = steps.findIndex(st => !st.mod && !st.trig && /\b(wait|minutes?|timer|breath|breathe|brews?|until|task|craving)\b/i.test(st.text));
+    if (i < 0) for (let j = steps.length - 1; j >= 0; j--) { if (!steps[j].mod && !steps[j].trig) { i = j; break; } }
     return i;
   }
 
@@ -983,6 +983,8 @@
       if (flow.hunger === 3 && !/\b(eat it|eat them|portion)\b/i.test(flow.test.action)) flow.test.extra = ["Still hungry? Go to the kitchen.", "Get a plate and put a planned snack on it.", "Sit down to eat it."];
     }
     flow.steps = stepsFor(flow.test);
+    // The loop's trigger is the first thing to confirm: catch the moment, then run the card.
+    if (loop.closure && !flow.test.hunger) flow.steps.unshift({ text: "Stop at the moment: " + loop.closure.replace(/[.\s]+$/, "") + ".", trig: true });
     flow.timedIdx = timedIndex(flow.steps);
     flow.cur = 0; flow.endAt = 0; flow.alerted = false;
     renderRun();
@@ -1331,7 +1333,7 @@
     html += f("ed-cue", "When (cue and context)", loop.cue, "e.g. 3 to 4pm, energy dips at my desk");
     html += f("ed-auto", "I automatically…", loop.auto, "e.g. walk to the kitchen and grab biscuits");
     html += f("ed-payoff", "It gives me (payoff)", loop.payoff, "e.g. a break, a sugar hit");
-    html += f("ed-closure", "Closure point: the last moment before it completes", loop.closure, "e.g. hand on the cupboard door");
+    html += f("ed-closure", "Step 1, the moment you stop (the last moment before the habit completes)", loop.closure, "e.g. hand on the cupboard door");
     html += '<span class="eyebrow" style="margin-top:6px">The one change under test</span>';
     html += '<label class="f" for="ed-k">Kognem<select id="ed-k">' + KOGNEMS.map(x => '<option value="' + x.id + '"' + (x.id === t.k ? " selected" : "") + ">" + x.code + " · " + x.name + "</option>").join("") + "</select></label>";
     html += '<label class="f" for="ed-play">Snack play<select id="ed-play"><option value="">Custom (type below)</option>' + k.plays.map((p, i) => '<option value="' + i + '"' + (p === t.action ? " selected" : "") + ">" + esc(p) + "</option>").join("") + "</select></label>";
