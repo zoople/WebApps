@@ -245,9 +245,17 @@
     return { id: c.id, l: c.l, r: c.r };
   }
 
+  // A fresh target every time, kept well away from the previous one so it never feels repeated
+  function rollTarget() {
+    const prev = typeof game.targetPos === "number" ? game.targetPos : null;
+    let t, tries = 0;
+    do { t = 4 + Math.random() * 92; } while (prev !== null && Math.abs(t - prev) < 20 && ++tries < 50);
+    game.targetPos = t;
+  }
+
   function newRound() {
     game.card = drawCard() || { id: "none", l: "Left", r: "Right" };
-    game.targetPos = 4 + Math.random() * 92;
+    rollTarget();
     game.needle = 50;
     game.clue = "";
     game.result = null;
@@ -636,7 +644,7 @@
       case "menu": view = "setup"; render(); break;
 
       case "to-psychic": g.phase = "psychic"; saveGame(); render(); break;
-      case "reroll": { const c = drawCard(g.card && g.card.id); if (c) g.card = c; saveGame(); render(); break; }
+      case "reroll": { const c = drawCard(g.card && g.card.id); if (c) g.card = c; rollTarget(); saveGame(); render(); break; }
       case "write-own": writeOwn = true; render(); setTimeout(() => $("#own-l") && $("#own-l").focus(), 30); break;
       case "own-cancel": writeOwn = false; render(); break;
       case "own-use": {
@@ -644,7 +652,7 @@
         const card = { id: uid("t"), l: p.l, r: p.r };
         if ($("#own-save").checked) { card.id = uid("s"); lib.cards.unshift({ ...card, on: true }); persistLib(); }
         else { temp.unshift(card); saveTemp(); }
-        g.used.push(card.id); g.card = card; writeOwn = false; saveGame(); render(); break;
+        g.used.push(card.id); g.card = card; rollTarget(); writeOwn = false; saveGame(); render(); break;
       }
       case "hide": g.phase = "pass-guess"; saveGame(); render(); break;
       case "to-guess": g.phase = "guess"; saveGame(); render(); break;
