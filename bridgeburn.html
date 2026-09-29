@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bridgeburn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@600;800;900&display=swap">
+<style>
+/* Layout: one portrait column. Scoreboard strip on top, the arena canvas fills the middle, the card tray and elixir bar sit under the thumb. */
+:root{
+  --bg:#12171f;
+  --panel:#1c2430;
+  --panel-2:#263141;
+  --line:#344256;
+  --ink:#f4efe4;
+  --muted:#93a1b3;
+  --blue:#3f86e0;
+  --red:#e0503f;
+  --elixir:#b552dc;
+  --elixir-deep:#6b2a8a;
+  --gold:#f2c14e;
+  --display:'Bungee', Impact, 'Arial Black', sans-serif;
+  --body:'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#app{position:relative;height:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;
+  padding-inline:12px;padding-block:8px;gap:8px}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* Scoreboard */
+.hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.side{display:flex;flex-direction:column;gap:3px}
+.side.you{align-items:flex-end}
+.side .who{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.crowns{display:flex;gap:4px}
+.crown{width:20px;height:15px;background:var(--line);
+  clip-path:polygon(0 100%,0 18%,24% 55%,50% 0,76% 55%,100% 18%,100% 100%);transition:background .3s}
+.rival .crown.on{background:var(--red)}
+.you .crown.on{background:var(--blue)}
+.clock{text-align:center;min-width:92px}
+.clock .time{font-family:var(--display);font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.clock .label{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.clock.hot .label{color:var(--elixir)}
+.clock.ot .label{color:var(--gold)}
+.tools{display:flex;gap:6px;justify-content:flex-end}
+.icon-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+  display:grid;place-items:center;cursor:pointer;padding:0}
+.icon-btn svg{width:14px;height:14px;fill:var(--ink)}
+.you-row{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+
+/* Arena */
+#field{flex:1;min-height:0;display:grid;place-items:center}
+#arena{display:block;border-radius:12px;box-shadow:0 0 0 3px #0b0f14,0 10px 30px rgba(0,0,0,.45);touch-action:none;cursor:crosshair}
+
+/* Tray */
+.tray{display:grid;grid-template-columns:54px repeat(4,1fr);gap:6px;align-items:end}
+.next{display:flex;flex-direction:column;align-items:center;gap:3px}
+.next .lbl{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.next .mini{width:54px;aspect-ratio:3/4;border-radius:8px;background:var(--panel);border:1px solid var(--line);
+  display:grid;place-items:center;overflow:hidden}
+.next canvas{width:44px;height:44px}
+.card{position:relative;aspect-ratio:3/4;max-height:120px;border-radius:12px;border:2px solid var(--line);
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));cursor:grab;padding:0;touch-action:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  transition:transform .12s ease,border-color .12s ease,filter .2s}
+.card canvas{width:64%;aspect-ratio:1;height:auto}
+.card .nm{font-size:11px;font-weight:800;line-height:1.1;text-align:center;padding-inline:3px}
+.card .cost{position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#e7a3ff,var(--elixir) 45%,var(--elixir-deep));
+  display:grid;place-items:center;font-family:var(--display);font-size:13px;color:#fff;
+  box-shadow:0 0 0 2px var(--bg)}
+.card.sel{transform:translateY(-8px);border-color:var(--gold)}
+.card.poor{filter:grayscale(.85) brightness(.7)}
+.card .fill{position:absolute;left:0;right:0;bottom:0;background:rgba(181,82,220,.22);border-radius:0 0 10px 10px;pointer-events:none}
+
+.elixir{display:flex;align-items:center;gap:8px}
+.elixir .drop{width:30px;height:30px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:radial-gradient(circle at 35% 30%,#e7a3ff,var(--elixir) 45%,var(--elixir-deep));
+  display:grid;place-items:center;font-family:var(--display);font-size:15px;color:#fff;flex:none}
+.elixir .bar{position:relative;flex:1;height:16px;border-radius:8px;background:#0b0f14;overflow:hidden;border:1px solid var(--line)}
+.elixir .bar i{position:absolute;inset:0 auto 0 0;width:50%;background:linear-gradient(180deg,#d98cf5,var(--elixir));transition:width .1s linear}
+.elixir .bar b{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),#0b0f14 calc(10% - 2px) 10%)}
+
+/* Overlays */
+.overlay{position:absolute;inset:0;display:grid;place-items:center;padding:16px;
+  background:rgba(10,13,18,.82);backdrop-filter:blur(3px);z-index:5}
+.panel{width:min(420px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.panel h1{font-family:var(--display);font-size:clamp(34px,10vw,48px);line-height:.95;margin:0;letter-spacing:.01em;text-wrap:balance}
+.panel h1 .b{color:var(--blue)} .panel h1 .r{color:var(--red)}
+.panel h2{font-family:var(--display);font-size:40px;margin:0;line-height:1}
+.panel p{margin:0;line-height:1.5;color:var(--muted)}
+.panel ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;line-height:1.45;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:90px;border:0;border-radius:10px;padding:12px 10px;cursor:pointer;font-weight:900;
+  letter-spacing:.06em;text-transform:uppercase;font-size:13px;background:var(--panel-2);border:1px solid var(--line)}
+.btn.go{background:var(--gold);color:#23190a;border-color:transparent}
+.btn .sub{display:block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:none;opacity:.75;margin-top:2px}
+.lbl-sm{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.score{font-family:var(--display);font-size:28px;display:flex;gap:14px;align-items:center}
+.score .b{color:var(--blue)} .score .r{color:var(--red)}
+.roster{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.roster div{background:var(--panel-2);border-radius:8px;padding:6px 4px;text-align:center;font-size:11px;font-weight:800}
+.roster canvas{width:36px;height:36px;display:block;margin:0 auto 2px}
+.roster small{display:block;color:var(--muted);font-weight:700;font-size:10px}
+.record{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hud">
+    <div class="side rival"><span class="who">Rival</span><div class="crowns" id="crowns1"><span class="crown"></span><span class="crown"></span><span class="crown"></span></div></div>
+    <div class="clock" id="clock"><div class="time" id="time">3:00</div><div class="label" id="clockLabel">Time left</div></div>
+    <div class="side you">
+      <div class="you-row">
+        <div class="tools">
+          <button class="icon-btn" id="muteBtn" aria-label="Mute sound"><svg viewBox="0 0 16 16" id="muteIcon"><path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="#f4efe4" stroke-width="1.5"/></svg></button>
+          <button class="icon-btn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 16 16"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button>
+        </div>
+      </div>
+      <span class="who">You</span><div class="crowns" id="crowns0"><span class="crown"></span><span class="crown"></span><span class="crown"></span></div>
+    </div>
+  </div>
+
+  <div id="field"><canvas id="arena" aria-label="Arena"></canvas></div>
+
+  <div class="tray">
+    <div class="next"><span class="lbl">Next</span><div class="mini"><canvas id="nextIcon" width="88" height="88"></canvas></div></div>
+    <button class="card" id="card0"><span class="cost">3</span><canvas width="128" height="128"></canvas><span class="nm">—</span><span class="fill"></span></button>
+    <button class="card" id="card1"><span class="cost">3</span><canvas width="128" height="128"></canvas><span class="nm">—</span><span class="fill"></span></button>
+    <button class="card" id="card2"><span class="cost">3</span><canvas width="128" height="128"></canvas><span class="nm">—</span><span class="fill"></span></button>
+    <button class="card" id="card3"><span class="cost">3</span><canvas width="128" height="128"></canvas><span class="nm">—</span><span class="fill"></span></button>
+  </div>
+  <div class="elixir"><div class="drop" id="elixirNum">5</div><div class="bar"><i id="elixirFill"></i><b></b></div></div>
+
+  <div class="overlay" id="startScreen">
+    <div class="panel">
+      <div class="lbl-sm">Lane duel · vs computer</div>
+      <h1><span class="b">Bridge</span><span class="r">burn</span></h1>
+      <p>Three minutes, two bridges, six towers. Push your troops across the river and knock down the Rival's towers before they take yours.</p>
+      <ul>
+        <li>Drag a card onto your half of the arena, or tap a card and then tap where it should land. Keys 1–4 pick cards.</li>
+        <li>Cards cost elixir, which refills over time. The last minute runs at double speed.</li>
+        <li>A side tower is worth one crown. The king tower is worth three and ends the match.</li>
+        <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
+      </ul>
+      <div class="lbl-sm">Your deck</div>
+      <div class="roster" id="roster"></div>
+      <div class="lbl-sm">Choose a rival</div>
+      <div class="row">
+        <button class="btn" data-diff="easy">Easy<span class="sub">Slow to react</span></button>
+        <button class="btn go" data-diff="normal">Normal<span class="sub">Fair fight</span></button>
+        <button class="btn" data-diff="hard">Hard<span class="sub">Extra elixir</span></button>
+      </div>
+      <p class="record" id="record"></p>
+    </div>
+  </div>
+
+  <div class="overlay" id="pauseScreen" hidden>
+    <div class="panel">
+      <h2>Paused</h2>
+      <div class="row"><button class="btn go" id="resumeBtn">Resume</button><button class="btn" id="quitBtn">Quit match</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="endScreen" hidden>
+    <div class="panel">
+      <div class="lbl-sm" id="endSub">Match over</div>
+      <h2 id="endTitle">Victory</h2>
+      <div class="score"><span class="b" id="endYou">0</span><span>–</span><span class="r" id="endRival">0</span></div>
+      <p id="endNote"></p>
+      <div class="row"><button class="btn go" id="againBtn">Play again</button><button class="btn" id="menuBtn">Change rival</button></div>
+      <p class="record" id="record2"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const W = 18, H = 32, RIVER_T = 15, RIVER_B = 17, BRIDGES = [3.5, 14.5];
+const TEAM = [
+  { main:'#3f86e0', dark:'#173f7c', light:'#a8cbf6' },
+  { main:'#e0503f', dark:'#7e1d16', light:'#f6b0a6' }
+];
+
+// ---------- Cards ----------
+const CARDS = {
+  squire:  { name:'Squire', cost:3, type:'unit', count:1, hp:1450, dmg:165, hs:1.2, range:0.8, speed:1.0, sight:5.5, r:0.5, air:false, hitsAir:false, targets:'any', blurb:'Tough melee' },
+  longbows:{ name:'Longbows', cost:3, type:'unit', count:2, hp:320, dmg:95, hs:0.9, range:5, speed:1.05, sight:5.5, r:0.4, air:false, hitsAir:true, targets:'any', proj:'arrow', blurb:'Ranged pair' },
+  brute:   { name:'Brute', cost:5, type:'unit', count:1, hp:3800, dmg:230, hs:1.5, range:0.9, speed:0.7, sight:7, r:0.8, air:false, hitsAir:false, targets:'buildings', blurb:'Hits towers only' },
+  imps:    { name:'Imps', cost:2, type:'unit', count:3, hp:210, dmg:105, hs:1.1, range:0.6, speed:1.6, sight:5.5, r:0.33, air:false, hitsAir:false, targets:'any', blurb:'Fast swarm' },
+  drake:   { name:'Drake', cost:4, type:'unit', count:1, hp:1000, dmg:130, hs:1.6, range:3.5, speed:1.3, sight:5.5, r:0.55, air:true, hitsAir:true, targets:'any', splash:1.3, proj:'fire', blurb:'Flying splash' },
+  turret:  { name:'Bolt Turret', cost:3, type:'building', hp:900, dmg:125, hs:0.9, range:5.5, r:0.8, air:false, hitsAir:false, targets:'any', life:30, proj:'bolt', blurb:'Ground defense' },
+  fireball:{ name:'Fireball', cost:4, type:'spell', dmg:560, radius:2.5, towerMult:0.35, knock:0.9, blurb:'Area damage' },
+  frost:   { name:'Frost Snap', cost:2, type:'spell', dmg:170, radius:2.5, towerMult:0.4, stun:1.5, blurb:'Freezes 1.5s' }
+};
+const DECK = Object.keys(CARDS);
+const DIFF = {
+  easy:   { mult:0.85, delay:1.4, attackAt:9.6 },
+  normal: { mult:1.0,  delay:0.8, attackAt:8.5 },
+  hard:   { mult:1.18, delay:0.4, attackAt:7.4 }
+};
+
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+const edgeDist = (a,b) => dist(a,b) - a.r - b.r;
+const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.random()*(i+1)|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const nearestBridge = x => Math.abs(x-BRIDGES[0]) < Math.abs(x-BRIDGES[1]) ? BRIDGES[0] : BRIDGES[1];
+
+function newDeck(){ const k = shuffle([...DECK]); return { hand:k.slice(0,4), queue:k.slice(4) }; }
+function cycle(d,i){ const c = d.hand[i]; d.hand[i] = d.queue.shift(); d.queue.push(c); return c; }
+
+// ---------- Sound ----------
+let AC = null, muted = false, lastHitSfx = 0;
+try { muted = localStorage.getItem('bridgeburn-muted') === '1'; } catch(e) {}
+function initAudio(){ if (!AC) { try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) {} } if (AC && AC.state==='suspended') AC.resume(); }
+function tone(f1,f2,dur,type='square',vol=0.06,delay=0){
+  if (muted || !AC) return;
+  const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f1,t); o.frequency.exponentialRampToValueAtTime(Math.max(20,f2), t+dur);
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t+dur+0.02);
+}
+const sfx = {
+  deploy(){ tone(260,620,0.12,'triangle',0.08); },
+  hit(){ const n=performance.now(); if (n-lastHitSfx<90) return; lastHitSfx=n; tone(180,90,0.06,'square',0.025); },
+  boom(){ tone(140,40,0.45,'sawtooth',0.09); },
+  frost(){ tone(1400,700,0.25,'sine',0.05); },
+  crown(){ [523,659,784].forEach((f,i)=>tone(f,f,0.16,'triangle',0.07,i*0.1)); },
+  lost(){ [392,330,262].forEach((f,i)=>tone(f,f,0.18,'triangle',0.07,i*0.12)); },
+  nope(){ tone(160,120,0.1,'square',0.04); }
+};
+
+// ---------- State ----------
+let G = null, nextId = 1, diffKey = 'normal';
+let S = 20, DPR = 1, cssW = 0, cssH = 0;
+const cvs = $('#arena'), ctx = cvs.getContext('2d');
+const bg = document.createElement('canvas');
+
+function makeTower(team, king, x, y){
+  return { id:nextId++, team, kind:'tower', king, x, y, r:king?1.6:1.25,
+    hp:king?4000:2500, maxHp:king?4000:2500, dmg:king?95:85, hs:king?1.0:0.8, range:king?7:7.5,
+    hitsAir:true, targets:'any', air:false, cd:0, active:!king, proj:'arrow', stun:0, deploy:0, retarget:0, flash:0, angle:0 };
+}
+function makeEnt(key, team, x, y){
+  const c = CARDS[key];
+  return { id:nextId++, key, team, kind:c.type==='building'?'building':'unit', x, y, r:c.r,
+    hp:c.hp, maxHp:c.hp, dmg:c.dmg, hs:c.hs, range:c.range, speed:c.speed||0, sight:c.sight||c.range,
+    air:!!c.air, hitsAir:c.hitsAir, targets:c.targets, splash:c.splash||0, proj:c.proj||null, life:c.life||0,
+    cd:0, stun:0, deploy:1, retarget:0, target:null, flash:0, swing:0, walk:Math.random()*6,
+    angle: team===0 ? -Math.PI/2 : Math.PI/2 };
+}
+
+function newGame(){
+  G = { t:0, clock:180, ot:false, over:false, endT:0, result:null, elixir:[5,5], crowns:[0,0],
+    ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(), newDeck()],
+    aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, stats:{ played:[0,0] } };
+  G.ents.push(makeTower(1,true,9,3), makeTower(1,false,3.5,6.5), makeTower(1,false,14.5,6.5));
+  G.ents.push(makeTower(0,true,9,29), makeTower(0,false,3.5,25.5), makeTower(0,false,14.5,25.5));
+  renderHand(); lastHud = {};
+}
+
+const alive = e => e.hp > 0;
+const towersOf = team => G.ents.filter(e => e.kind==='tower' && e.team===team && alive(e));
+const kingOf = team => G.ents.find(e => e.kind==='tower' && e.king && e.team===team);
+function princessAlive(team, lane){ return towersOf(team).some(t => !t.king && (t.x<9?0:1)===lane); }
+const isDouble = () => G.ot || G.clock <= 60;
+
+// ---------- Placement ----------
+function canPlace(team, key, x, y){
+  const c = CARDS[key];
+  if (x < 0 || x > W || y < 0 || y > H) return false;
+  if (c.type === 'spell') return true;
+  if (x < 0.5 || x > W-0.5 || y < 0.5 || y > H-0.5) return false;
+  const lane = x < 9 ? 0 : 1;
+  if (team === 0){
+    const pocket = !princessAlive(1, lane);
+    if (!(y >= RIVER_B + 0.5 || (pocket && y >= 10))) return false;
+  } else {
+    const pocket = !princessAlive(0, lane);
+    if (!(y <= RIVER_T - 0.5 || (pocket && y <= 22))) return false;
+  }
+  if (y > RIVER_T - 0.3 && y < RIVER_B + 0.3) return false;
+  for (const t of G.ents){
+    if (t.kind !== 'unit' && alive(t) && Math.abs(t.x-x) < t.r+0.35 && Math.abs(t.y-y) < t.r+0.35) return false;
+  }
+  return true;
+}
+const snap = v => Math.floor(v) + 0.5;
+function findSpot(team, key, x, y){
+  x = clamp(x, 0.5, W-0.5); y = clamp(y, 0.5, H-0.5);
+  for (let rad=0; rad<6; rad++){
+    for (let dx=-rad; dx<=rad; dx++) for (let dy=-rad; dy<=rad; dy++){
+      if (Math.max(Math.abs(dx),Math.abs(dy)) !== rad) continue;
+      const px = snap(x+dx), py = snap(y+dy);
+      if (canPlace(team,key,px,py)) return [px,py];
+    }
+  }
+  return null;
+}
+
+function deploy(team, handIdx, x, y){
+  const d = G.deck[team], key = d.hand[handIdx], c = CARDS[key];
+  if (G.elixir[team] < c.cost) return false;
+  G.elixir[team] -= c.cost;
+  cycle(d, handIdx);
+  G.stats.played[team]++;
+  if (c.type === 'spell'){
+    const k = kingOf(team);
+    const sx = k ? k.x : 9, sy = k ? k.y : (team===0?29:3);
+    const flight = key==='fireball' ? Math.max(0.4, Math.hypot(x-sx,y-sy)/14) : 0.12;
+    G.spells.push({ key, team, x, y, sx, sy, t:0, dur:flight });
+  } else if (c.type === 'building'){
+    G.ents.push(makeEnt(key, team, x, y));
+  } else {
+    const offs = c.count===3 ? [[0,-0.45],[-0.5,0.35],[0.5,0.35]] : c.count===2 ? [[-0.55,0],[0.55,0]] : [[0,0]];
+    for (const [ox,oy] of offs) G.ents.push(makeEnt(key, team, x+ox, y+(team===0?oy:-oy)));
+  }
+  G.fx.push({ kind:'ring', x, y, r:c.radius||1, t:0, dur:0.45, color:TEAM[team].light });
+  if (team === 0) sfx.deploy();
+  return true;
+}
+
+// ---------- Combat ----------
+function valid(e, t){
+  return t && alive(t) && t.team !== e.team && (e.hitsAir || !t.air) && (e.targets !== 'buildings' || t.kind !== 'unit');
+}
+function defaultTarget(e){
+  const towers = towersOf(1-e.team);
+  const lane = e.x < 9 ? 0 : 1;
+  return towers.find(t => !t.king && (t.x<9?0:1)===lane) || towers.find(t => t.king) || towers[0] || null;
+}
+function acquire(e){
+  const sight = e.kind==='unit' ? e.sight : e.range;
+  let best = null, bd = Infinity;
+  for (const o of G.ents){
+    if (!valid(e,o)) continue;
+    const d = edgeDist(e,o);
+    if (d <= sight && d < bd){ bd = d; best = o; }
+  }
+  if (!best && e.kind==='unit') best = defaultTarget(e);
+  return best;
+}
+function damage(o, amt){
+  if (!alive(o)) return;
+  o.hp -= amt; o.flash = 0.12;
+  if (o.kind==='tower'){ if (o.king && !o.active) o.active = true; if (o.team===0 || o.team===1) sfx.hit(); }
+}
+function aoe(team, x, y, r, dmg, o={}){
+  for (const e of G.ents){
+    if (e.team===team || !alive(e)) continue;
+    if (e.air && o.hitsAir===false) continue;
+    if (Math.hypot(e.x-x, e.y-y) - e.r*0.6 > r) continue;
+    damage(e, dmg * (e.kind==='tower' ? (o.towerMult ?? 1) : 1));
+    if (o.stun){ e.stun = Math.max(e.stun, o.stun); e.cd = Math.max(e.cd, e.hs*0.5); }
+    if (o.knock && e.kind==='unit' && e.hp>0){
+      const d = Math.hypot(e.x-x, e.y-y) || 1;
+      e.x += (e.x-x)/d * o.knock * 0.8; e.y += (e.y-y)/d * o.knock * 0.8; constrain(e);
+    }
+  }
+}
+function attack(e, t){
+  e.swing = 0.2;
+  if (e.proj){
+    const h0 = e.kind==='tower' ? 1.3 : e.air ? 0.8 : 0.35;
+    const h1 = t.air ? 0.8 : t.kind==='tower' ? 0.9 : 0.3;
+    G.projs.push({ x:e.x, y:e.y, target:t, tx:t.x, ty:t.y, dmg:e.dmg, team:e.team, splash:e.splash,
+      hitsAir:e.hitsAir, kind:e.proj, speed:e.proj==='fire'?8:e.proj==='bolt'?13:15, h0, h1, d0:Math.max(0.1,dist(e,t)) });
+  } else if (e.splash){
+    aoe(e.team, t.x, t.y, e.splash, e.dmg, { hitsAir:e.hitsAir });
+  } else {
+    damage(t, e.dmg);
+    G.fx.push({ kind:'spark', x:(e.x+t.x)/2, y:(e.y+t.y)/2, t:0, dur:0.18 });
+  }
+}
+
+function moveToward(e, tx, ty, dt){
+  let gx = tx, gy = ty;
+  if (!e.air){
+    const mySide = e.y >= 16, tSide = ty >= 16;
+    if (mySide !== tSide){
+      const bx = nearestBridge(e.x);
+      const inBand = e.y > RIVER_T - 0.2 && e.y < RIVER_B + 0.2;
+      if (Math.abs(e.x - bx) > 0.35 && !inBand){ gx = bx; gy = mySide ? RIVER_B + 0.35 : RIVER_T - 0.35; }
+      else { gx = bx; gy = mySide ? RIVER_T - 0.8 : RIVER_B + 0.8; }
+    }
+  }
+  const dx = gx - e.x, dy = gy - e.y, d = Math.hypot(dx,dy);
+  if (d < 0.001) return;
+  const step = Math.min(e.speed*dt, d);
+  e.x += dx/d*step; e.y += dy/d*step;
+  e.angle = Math.atan2(dy,dx);
+  e.walk += dt*e.speed*9;
+}
+function constrain(e){
+  e.x = clamp(e.x, 0.4, W-0.4); e.y = clamp(e.y, 0.4, H-0.4);
+  if (!e.air && e.y > RIVER_T && e.y < RIVER_B){
+    const bx = nearestBridge(e.x);
+    if (Math.abs(e.x-bx) > 0.85){
+      if (e.y - RIVER_T < 0.45) e.y = RIVER_T;
+      else if (RIVER_B - e.y < 0.45) e.y = RIVER_B;
+      else e.x = bx + Math.sign(e.x-bx)*0.85;
+    }
+  }
+}
+
+function updateEnt(e, dt){
+  if (!alive(e)) return;
+  e.flash = Math.max(0, e.flash-dt);
+  e.swing = Math.max(0, (e.swing||0)-dt);
+  if (e.life){ e.hp -= e.maxHp/e.life*dt; if (e.hp <= 0){ e.hp = 0; return; } }
+  if (e.deploy > 0){ e.deploy -= dt; return; }
+  if (e.stun > 0){ e.stun -= dt; return; }
+  if (e.kind==='tower' && !e.active) return;
+  const isUnit = e.kind === 'unit';
+  e.retarget -= dt;
+  if (!valid(e, e.target) || e.retarget <= 0){
+    e.retarget = 0.25;
+    const locked = valid(e, e.target) && e.attacking && edgeDist(e, e.target) <= e.range + 0.2;
+    if (!locked) e.target = acquire(e);
+  }
+  const t = e.target;
+  if (t && edgeDist(e, t) <= e.range){
+    e.attacking = true;
+    e.angle = Math.atan2(t.y-e.y, t.x-e.x);
+    e.cd -= dt;
+    if (e.cd <= 0){ attack(e, t); e.cd = e.hs; }
+  } else {
+    e.attacking = false;
+    e.cd = Math.max(e.cd - dt, isUnit ? e.hs*0.3 : 0);
+    if (isUnit && t) moveToward(e, t.x, t.y, dt);
+  }
+}
+
+function collide(){
+  const a = G.ents;
+  for (let i=0;i<a.length;i++){
+    const p = a[i]; if (!alive(p)) continue;
+    for (let j=i+1;j<a.length;j++){
+      const q = a[j]; if (!alive(q) || p.air !== q.air) continue;
+      const pf = p.kind !== 'unit', qf = q.kind !== 'unit';
+      if (pf && qf) continue;
+      let dx = q.x-p.x, dy = q.y-p.y, d = Math.hypot(dx,dy);
+      const min = p.r + q.r;
+      if (d >= min) continue;
+      if (d < 1e-4){ dx = Math.random()-0.5; dy = Math.random()-0.5; d = Math.hypot(dx,dy); }
+      const ov = (min-d)*0.5, nx = dx/d, ny = dy/d;
+      let wp, wq;
+      if (pf){ wp=0; wq=1; } else if (qf){ wp=1; wq=0; }
+      else { const mp=p.r*p.r, mq=q.r*q.r; wp=mq/(mp+mq); wq=mp/(mp+mq); }
+      p.x -= nx*ov*wp*2*0.5; p.y -= ny*ov*wp*2*0.5;
+      q.x += nx*ov*wq*2*0.5; q.y += ny*ov*wq*2*0.5;
+    }
+  }
+  for (const e of a) if (e.kind==='unit' && alive(e)) constrain(e);
+}
+
+function onTowerDown(t){
+  const other = 1 - t.team;
+  G.ruins.push({ x:t.x, y:t.y, r:t.r, team:t.team });
+  G.fx.push({ kind:'blast', x:t.x, y:t.y, r:t.r*2, t:0, dur:0.7 });
+  if (other === 0) sfx.crown(); else sfx.lost();
+  if (t.king){
+    G.crowns[other] = 3;
+    G.texts.push({ x:9, y:16, txt:other===0?'King tower down!':'Your king fell', t:0, dur:2, color:TEAM[other].light, size:1 });
+    endGame(other); return;
+  }
+  G.crowns[other]++;
+  const k = kingOf(t.team); if (k) k.active = true;
+  G.texts.push({ x:t.x, y:t.y, txt:'+1 crown', t:0, dur:1.6, color:TEAM[other].light, size:0.8 });
+  if (G.ot) endGame(other);
+}
+function endGame(winner){
+  if (G.over) return;
+  G.over = true; G.endT = 0;
+  G.result = winner===0 ? 'win' : winner===1 ? 'lose' : 'draw';
+  G.sel = -1;
+  saveRecord(G.result);
+  setTimeout(showEnd, 1600);
+}
+function tiebreak(){
+  const low = team => Math.min(...towersOf(team).map(t => t.hp), Infinity);
+  const a = low(0), b = low(1);
+  if (Math.abs(a-b) < 1) endGame(-1); else endGame(a > b ? 0 : 1);
+}
+
+// ---------- Rival AI ----------
+function aiPlace(key, x, y){
+  const d = G.deck[1], i = d.hand.indexOf(key);
+  if (i < 0 || G.elixir[1] < CARDS[key].cost) return false;
+  if (CARDS[key].type === 'spell') return deploy(1, i, x, y);
+  const spot = findSpot(1, key, x, y);
+  return spot ? deploy(1, i, spot[0], spot[1]) : false;
+}
+function aiThink(){
+  const D = DIFF[diffKey];
+  const hand = G.deck[1].hand;
+  const can = k => hand.includes(k) && CARDS[k].cost <= G.elixir[1];
+  const foes = G.ents.filter(e => e.team===0 && alive(e) && e.kind==='unit');
+
+  // Spells first: good value clusters, or a tower finish.
+  if (can('fireball')){
+    for (const t of towersOf(0)) if (t.hp <= CARDS.fireball.dmg*CARDS.fireball.towerMult){ aiPlace('fireball', t.x, t.y); return; }
+    let best=null, bv=0;
+    for (const u of foes){
+      let v=0; for (const o of foes) if (Math.hypot(o.x-u.x,o.y-u.y) <= 2.2) v += Math.min(o.hp, 560);
+      if (v > bv){ bv=v; best=u; }
+    }
+    if (best && bv >= 950){ aiPlace('fireball', best.x, best.y-0.6); return; }
+  }
+  if (can('frost')){
+    for (const u of foes){
+      const n = foes.filter(o => o.maxHp <= 450 && Math.hypot(o.x-u.x,o.y-u.y) <= 2.3).length;
+      if (n >= 3){ aiPlace('frost', u.x, u.y-0.4); return; }
+    }
+  }
+
+  // Defend against anything pushing into our half.
+  const threats = foes.filter(e => e.y < 20.5).sort((a,b) => a.y-b.y);
+  if (threats.length){
+    const hpSum = threats.reduce((s,t) => s+t.hp, 0);
+    if (hpSum > 350 || threats[0].y < 12){
+      const th = threats[0];
+      const air = threats.some(t => t.air), big = threats.some(t => t.maxHp >= 2000);
+      const prefs = air ? ['longbows','drake'] : big ? ['imps','squire','turret','longbows','drake'] : ['squire','imps','longbows','drake','turret'];
+      for (const k of prefs){
+        if (!can(k)) continue;
+        const c = CARDS[k];
+        let x = th.x, y;
+        if (k === 'turret'){ x = clamp(th.x, 5.5, 12.5); y = 10; }
+        else if (c.range > 2){ x = th.x + (th.x < 9 ? 1.5 : -1.5); y = th.y - 4.5; }
+        else y = th.y - 1.5;
+        if (aiPlace(k, x, clamp(y, 1.5, 14.5))) return;
+      }
+      return; // save up rather than start an attack while under pressure
+    }
+  }
+
+  // Back up our own tank.
+  const tank = G.ents.find(e => e.team===1 && e.key==='brute' && alive(e));
+  if (tank && tank.y < 20){
+    for (const k of ['longbows','drake','squire','imps']){
+      if (can(k) && G.elixir[1] >= CARDS[k].cost + (diffKey==='easy' ? 2 : 0)){
+        if (aiPlace(k, tank.x, clamp(tank.y-2, 1.5, 14.5))) return;
+      }
+    }
+  }
+
+  // Start a push once elixir builds up.
+  if (G.elixir[1] >= D.attackAt){
+    const mine = towersOf(0).filter(t => !t.king);
+    let lane;
+    if (mine.length === 1) lane = Math.random() < 0.7 ? (mine[0].x<9?1:0) : (mine[0].x<9?0:1);
+    else if (mine.length === 2) lane = mine[0].hp < mine[1].hp ? (mine[0].x<9?0:1) : (mine[1].x<9?0:1);
+    else lane = Math.random() < 0.5 ? 0 : 1;
+    const bx = BRIDGES[lane];
+    if (can('brute')){ aiPlace('brute', bx, 9.5); return; }
+    const opts = ['squire','longbows','drake','imps'].filter(can);
+    if (opts.length){ const k = opts[Math.random()*opts.length|0]; aiPlace(k, bx, CARDS[k].range > 2 ? 11.5 : 13.5); return; }
+    if (G.elixir[1] >= 9.8 && can('turret')) aiPlace('turret', 9, 10);
+  }
+}
+
+// ---------- Main step ----------
+function step(dt){
+  updateFx(dt);
+  if (G.over){ G.endT += dt; for (const p of G.projs) p.done = true; return; }
+  G.t += dt;
+  G.clock -= dt;
+  if (!G.dblShown && isDouble()){
+    G.dblShown = true;
+    G.texts.push({ x:9, y:16, txt:'Double elixir', t:0, dur:2, color:'#e7a3ff', size:1 });
+  }
+  if (G.clock <= 0){
+    if (!G.ot){
+      if (G.crowns[0] !== G.crowns[1]) { endGame(G.crowns[0] > G.crowns[1] ? 0 : 1); return; }
+      G.ot = true; G.clock = 60;
+      G.texts.push({ x:9, y:16, txt:'Overtime: next crown wins', t:0, dur:2.4, color:'#f2c14e', size:0.85 });
+    } else { G.clock = 0; tiebreak(); return; }
+  }
+  const rate = (isDouble() ? 2 : 1) / 2.8;
+  G.elixir[0] = Math.min(10, G.elixir[0] + rate*dt);
+  G.elixir[1] = Math.min(10, G.elixir[1] + rate*dt*DIFF[diffKey].mult);
+
+  G.aiT -= dt;
+  if (G.aiT <= 0){ aiThink(); G.aiT = DIFF[diffKey].delay * (0.7 + Math.random()*0.6); }
+
+  for (const e of G.ents) updateEnt(e, dt);
+  collide();
+
+  for (const p of G.projs){
+    if (p.target && alive(p.target)){ p.tx = p.target.x; p.ty = p.target.y; }
+    const dx = p.tx-p.x, dy = p.ty-p.y, d = Math.hypot(dx,dy), s = p.speed*dt;
+    p.ang = Math.atan2(dy,dx);
+    if (d <= s + 0.05){
+      p.done = true;
+      if (p.splash){ aoe(p.team, p.tx, p.ty, p.splash, p.dmg, { hitsAir:p.hitsAir }); G.fx.push({ kind:'burst', x:p.tx, y:p.ty, r:p.splash, t:0, dur:0.35, color:'#ff9a3c' }); }
+      else if (p.target && alive(p.target)) damage(p.target, p.dmg);
+    } else { p.x += dx/d*s; p.y += dy/d*s; }
+    p.prog = clamp(1 - d/p.d0, 0, 1);
+  }
+  G.projs = G.projs.filter(p => !p.done);
+
+  for (const sp of G.spells){
+    sp.t += dt;
+    if (sp.t >= sp.dur){
+      sp.done = true;
+      const c = CARDS[sp.key];
+      if (sp.key === 'fireball'){
+        aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult, knock:c.knock });
+        G.fx.push({ kind:'burst', x:sp.x, y:sp.y, r:c.radius, t:0, dur:0.55, color:'#ff7a2a' });
+        sfx.boom();
+      } else {
+        aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult, stun:c.stun });
+        G.fx.push({ kind:'frost', x:sp.x, y:sp.y, r:c.radius, t:0, dur:0.8 });
+        sfx.frost();
+      }
+    }
+  }
+  G.spells = G.spells.filter(s => !s.done);
+
+  for (const e of G.ents){
+    if (e.hp <= 0 && !e.dead){
+      e.dead = true;
+      if (e.kind === 'tower') onTowerDown(e);
+      else G.fx.push({ kind:'puff', x:e.x, y:e.y, r:e.r, t:0, dur:0.4, air:e.air });
+    }
+  }
+  G.ents = G.ents.filter(e => !e.dead);
+}
+function updateFx(dt){
+  for (const f of G.fx) f.t += dt;
+  G.fx = G.fx.filter(f => f.t < f.dur);
+  for (const t of G.texts) t.t += dt;
+  G.texts = G.texts.filter(t => t.t < t.dur);
+}
+
+// ---------- Drawing ----------
+function circle(c, x, y, r, fill, stroke, lw){
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI*2);
+  if (fill){ c.fillStyle = fill; c.fill(); }
+  if (stroke){ c.strokeStyle = stroke; c.lineWidth = lw || r*0.16; c.stroke(); }
+}
+function rr(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+
+// Original figures, drawn from primitives. (x,y) is the figure's centre, S is pixels per tile.
+function drawFigure(c, key, team, x, y, S, o = {}){
+  const T = TEAM[team], k = CARDS[key];
+  const r = (k.r || 0.5) * S;
+  const ang = o.angle ?? (team===0 ? -Math.PI/2 : Math.PI/2);
+  const t = o.t || 0, swing = o.swing || 0;
+  c.save(); c.translate(x, y);
+  switch (key){
+    case 'squire': {
+      c.save(); c.rotate(ang);
+      const reach = swing > 0 ? 0.35 : 0;
+      c.strokeStyle = '#6b4a2a'; c.lineWidth = r*0.22; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r*0.35, r*0.62); c.lineTo(r*0.7, r*0.62); c.stroke();
+      c.strokeStyle = '#eef1f5'; c.lineWidth = r*0.2;
+      c.beginPath(); c.moveTo(r*0.7, r*0.62); c.lineTo(r*(1.55+reach), r*(0.62-reach*0.8)); c.stroke();
+      // shield
+      c.fillStyle = T.light; c.strokeStyle = T.dark; c.lineWidth = r*0.1;
+      rr(c, r*0.25, -r*1.0, r*0.55, r*0.7, r*0.15); c.fill(); c.stroke();
+      c.restore();
+      circle(c, 0, 0, r, T.main, T.dark);
+      circle(c, 0, -r*0.08, r*0.6, '#c9ced6', '#5f6875', r*0.1);
+      c.fillStyle = '#20252d'; c.fillRect(-r*0.34, -r*0.16, r*0.68, r*0.13);
+      c.fillStyle = T.main; c.beginPath(); c.moveTo(-r*0.12,-r*0.62); c.lineTo(r*0.12,-r*0.62); c.lineTo(0,-r*1.05); c.fill();
+      break;
+    }
+    case 'longbows': {
+      circle(c, 0, 0, r, T.main, T.dark);
+      circle(c, 0, -r*0.05, r*0.62, '#4e7d3a', '#2e4f22', r*0.1);
+      circle(c, 0, r*0.05, r*0.34, '#f0c9a0');
+      c.save(); c.rotate(ang);
+      c.strokeStyle = '#8a5a2b'; c.lineWidth = r*0.18; c.lineCap = 'round';
+      c.beginPath(); c.arc(r*0.55, 0, r*0.85, -1.15, 1.15); c.stroke();
+      c.strokeStyle = '#e9e1cf'; c.lineWidth = r*0.06;
+      const pull = swing > 0 ? 0 : r*0.25;
+      c.beginPath(); c.moveTo(r*0.55+Math.cos(-1.15)*r*0.85, Math.sin(-1.15)*r*0.85); c.lineTo(r*0.55-pull+r*0.2, 0); c.lineTo(r*0.55+Math.cos(1.15)*r*0.85, Math.sin(1.15)*r*0.85); c.stroke();
+      c.restore();
+      break;
+    }
+    case 'brute': {
+      c.save(); c.rotate(ang);
+      const punch = swing > 0 ? r*0.3 : 0;
+      circle(c, r*0.75 + punch, -r*0.72, r*0.34, '#c98b5b', '#7a4e2c', r*0.08);
+      circle(c, r*0.75, r*0.72, r*0.34, '#c98b5b', '#7a4e2c', r*0.08);
+      c.restore();
+      circle(c, 0, 0, r, '#c98b5b', '#7a4e2c', r*0.08);
+      c.strokeStyle = T.main; c.lineWidth = r*0.22;
+      c.beginPath(); c.arc(0, 0, r*0.86, 0, Math.PI*2); c.stroke();
+      circle(c, 0, 0, r*0.42, '#b27447');
+      c.fillStyle = '#3a2414'; c.fillRect(-r*0.3, -r*0.18, r*0.6, r*0.1);
+      break;
+    }
+    case 'imps': {
+      c.fillStyle = '#efe4c8';
+      c.beginPath(); c.moveTo(-r*0.75,-r*0.35); c.lineTo(-r*0.95,-r*1.15); c.lineTo(-r*0.3,-r*0.72); c.fill();
+      c.beginPath(); c.moveTo(r*0.75,-r*0.35); c.lineTo(r*0.95,-r*1.15); c.lineTo(r*0.3,-r*0.72); c.fill();
+      circle(c, 0, 0, r, '#8a5bb5', T.main, r*0.28);
+      circle(c, -r*0.32, -r*0.1, r*0.18, '#ffe45c');
+      circle(c, r*0.32, -r*0.1, r*0.18, '#ffe45c');
+      break;
+    }
+    case 'drake': {
+      c.save(); c.rotate(ang);
+      const flap = 0.65 + 0.35*Math.sin(t*14);
+      c.fillStyle = T.dark;
+      c.beginPath(); c.moveTo(r*0.1, -r*0.4); c.lineTo(-r*0.5, -r*(0.9+1.1*flap)); c.lineTo(-r*0.7, -r*0.3); c.fill();
+      c.beginPath(); c.moveTo(r*0.1, r*0.4); c.lineTo(-r*0.5, r*(0.9+1.1*flap)); c.lineTo(-r*0.7, r*0.3); c.fill();
+      c.fillStyle = '#d9772f';
+      c.beginPath(); c.moveTo(-r*0.7, -r*0.25); c.lineTo(-r*1.6, 0); c.lineTo(-r*0.7, r*0.25); c.fill();
+      circle(c, r*0.85, 0, r*0.42, '#f09a45', '#9c4d17', r*0.08);
+      circle(c, r*1.02, -r*0.15, r*0.08, '#1b1b1b');
+      c.restore();
+      circle(c, 0, 0, r*0.8, '#f09a45', T.main, r*0.22);
+      break;
+    }
+    case 'turret': {
+      c.fillStyle = '#7d766b'; c.strokeStyle = '#4a453f'; c.lineWidth = r*0.1;
+      rr(c, -r, -r, r*2, r*2, r*0.25); c.fill(); c.stroke();
+      c.fillStyle = T.main; rr(c, -r*0.8, -r*0.8, r*1.6, r*1.6, r*0.2); c.fill();
+      c.save(); c.rotate(ang);
+      c.fillStyle = '#39352f'; rr(c, 0, -r*0.2, r*1.25 - (swing>0? r*0.2:0), r*0.4, r*0.1); c.fill();
+      c.restore();
+      circle(c, 0, 0, r*0.48, '#5b554c', '#2d2a26', r*0.1);
+      circle(c, 0, 0, r*0.18, '#ffd66b');
+      break;
+    }
+    case 'fireball': {
+      const R = S*0.55;
+      const g = c.createRadialGradient(-R*0.3, -R*0.3, R*0.1, 0, 0, R);
+      g.addColorStop(0, '#fff3b0'); g.addColorStop(0.45, '#ff9a2e'); g.addColorStop(1, '#c2320f');
+      c.fillStyle = '#ff6a1a'; c.globalAlpha = 0.5;
+      c.beginPath(); c.moveTo(-R*0.6, -R*0.6); c.lineTo(-R*1.5, -R*1.3); c.lineTo(-R*0.2, -R*0.9); c.fill();
+      c.globalAlpha = 1; circle(c, 0, 0, R, g);
+      break;
+    }
+    case 'frost': {
+      const R = S*0.55;
+      circle(c, 0, 0, R, 'rgba(160,220,255,.25)', '#9fdcff', R*0.08);
+      c.strokeStyle = '#e8f7ff'; c.lineWidth = R*0.14; c.lineCap = 'round';
+      for (let i=0;i<3;i++){
+        c.save(); c.rotate(i*Math.PI/3);
+        c.beginPath(); c.moveTo(-R*0.8,0); c.lineTo(R*0.8,0);
+        c.moveTo(R*0.5,0); c.lineTo(R*0.72,-R*0.2); c.moveTo(R*0.5,0); c.lineTo(R*0.72,R*0.2);
+        c.moveTo(-R*0.5,0); c.lineTo(-R*0.72,-R*0.2); c.moveTo(-R*0.5,0); c.lineTo(-R*0.72,R*0.2);
+        c.stroke(); c.restore();
+      }
+      break;
+    }
+  }
+  c.restore();
+}
+function drawCardIcon(cv, key, team = 0){
+  const c = cv.getContext('2d'), w = cv.width, h = cv.height, k = CARDS[key];
+  c.clearRect(0,0,w,h);
+  const n = k.count || 1;
+  const baseR = k.type==='spell' ? 0.55 : (k.r || 0.5);
+  const S = (w*0.26) / baseR * (n>1 ? 0.72 : 1);
+  if (n === 1) drawFigure(c, key, team, w/2, h/2 + (key==='drake'?w*0.05:0), S, { t:0.2 });
+  else if (n === 2){ drawFigure(c, key, team, w*0.33, h*0.55, S); drawFigure(c, key, team, w*0.67, h*0.45, S); }
+  else { drawFigure(c, key, team, w*0.5, h*0.33, S); drawFigure(c, key, team, w*0.3, h*0.66, S); drawFigure(c, key, team, w*0.7, h*0.66, S); }
+}
+
+function paintBg(){
+  bg.width = cvs.width; bg.height = cvs.height;
+  const b = bg.getContext('2d');
+  b.setTransform(DPR,0,0,DPR,0,0);
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const enemyHalf = y < 16;
+    b.fillStyle = (x+y)%2 ? (enemyHalf ? '#71a852' : '#6fa951') : (enemyHalf ? '#7ab45a' : '#78b659');
+    b.fillRect(x*S, y*S, S+1, S+1);
+  }
+  b.fillStyle = 'rgba(226,203,150,.55)';
+  for (const bx of BRIDGES){ rr(b, (bx-0.85)*S, 6.5*S, 1.7*S, 19*S, S*0.4); b.fill(); }
+  rr(b, 3.5*S, 5.9*S, 11*S, 1.2*S, S*0.4); b.fill();
+  rr(b, 3.5*S, 24.9*S, 11*S, 1.2*S, S*0.4); b.fill();
+  // river
+  b.fillStyle = '#3e6b2c'; b.fillRect(0, (RIVER_T-0.15)*S, W*S, (2.3)*S);
+  const rg = b.createLinearGradient(0, RIVER_T*S, 0, RIVER_B*S);
+  rg.addColorStop(0,'#2c7fbd'); rg.addColorStop(0.5,'#3b97d6'); rg.addColorStop(1,'#2c7fbd');
+  b.fillStyle = rg; b.fillRect(0, RIVER_T*S, W*S, 2*S);
+  // bridges
+  for (const bx of BRIDGES){
+    b.fillStyle = '#9c6c3c'; b.fillRect((bx-1)*S, (RIVER_T-0.35)*S, 2*S, 2.7*S);
+    b.strokeStyle = '#6f4724'; b.lineWidth = Math.max(1, S*0.05);
+    for (let yy=RIVER_T-0.35; yy<RIVER_B+0.35; yy+=0.34){ b.beginPath(); b.moveTo((bx-1)*S, yy*S); b.lineTo((bx+1)*S, yy*S); b.stroke(); }
+    b.fillStyle = '#5a3a1d'; b.fillRect((bx-1.08)*S, (RIVER_T-0.45)*S, 0.16*S, 2.9*S); b.fillRect((bx+0.92)*S, (RIVER_T-0.45)*S, 0.16*S, 2.9*S);
+  }
+  // edge vignette
+  const v = b.createLinearGradient(0,0,W*S,0);
+  v.addColorStop(0,'rgba(0,0,0,.18)'); v.addColorStop(0.08,'rgba(0,0,0,0)'); v.addColorStop(0.92,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.18)');
+  b.fillStyle = v; b.fillRect(0,0,W*S,H*S);
+}
+
+function hpBar(x, y, w, frac, team, h){
+  ctx.fillStyle = 'rgba(10,12,16,.75)'; rr(ctx, x-w/2-1, y-1, w+2, h+2, 2); ctx.fill();
+  ctx.fillStyle = TEAM[team].main; ctx.fillRect(x-w/2, y, w*clamp(frac,0,1), h);
+}
+function drawTower(e){
+  const x = e.x*S, y = e.y*S, r = e.r*S, T = TEAM[e.team];
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; rr(ctx, x-r+S*0.12, y-r+S*0.25, r*2, r*2, r*0.25); ctx.fill();
+  ctx.fillStyle = '#b3aa9a'; ctx.strokeStyle = '#6e675c'; ctx.lineWidth = S*0.08;
+  rr(ctx, x-r, y-r, r*2, r*2, r*0.25); ctx.fill(); ctx.stroke();
+  // stone courses
+  ctx.strokeStyle = 'rgba(90,82,70,.45)'; ctx.lineWidth = S*0.04;
+  for (let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(x-r, y-r+i*r/2); ctx.lineTo(x+r, y-r+i*r/2); ctx.stroke(); }
+  ctx.fillStyle = e.flash > 0 ? '#ffffff' : T.main;
+  rr(ctx, x-r*0.72, y-r*0.72, r*1.44, r*1.44, r*0.2); ctx.fill();
+  ctx.fillStyle = T.dark; rr(ctx, x-r*0.5, y-r*0.5, r, r, r*0.14); ctx.fill();
+  if (e.king){
+    ctx.fillStyle = '#f2c14e';
+    const cw = r*0.8, ch = r*0.55, cy = y - ch*0.4;
+    ctx.beginPath(); ctx.moveTo(x-cw/2, cy+ch/2); ctx.lineTo(x-cw/2, cy-ch/3); ctx.lineTo(x-cw/4, cy); ctx.lineTo(x, cy-ch/2); ctx.lineTo(x+cw/4, cy); ctx.lineTo(x+cw/2, cy-ch/3); ctx.lineTo(x+cw/2, cy+ch/2); ctx.closePath(); ctx.fill();
+    if (!e.active){ ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `${Math.round(S*0.5)}px Bungee, Impact, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('z', x + r*0.95, y - r*0.9); ctx.fillText('z', x + r*1.25, y - r*1.25); }
+  } else {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(e.angle);
+    ctx.fillStyle = '#3b352c'; rr(ctx, 0, -S*0.12, r*0.8, S*0.24, S*0.06); ctx.fill();
+    ctx.restore();
+    circle(ctx, x, y, r*0.22, '#f2c14e');
+  }
+  const bw = r*2, by = e.team===1 ? y + r + S*0.2 : y - r - S*0.55;
+  hpBar(x, by, bw, e.hp/e.maxHp, e.team, S*0.3);
+  ctx.fillStyle = '#fff'; ctx.font = `${Math.max(9, Math.round(S*0.42))}px Nunito, system-ui, sans-serif`; ctx.textAlign = 'center';
+  ctx.font = `900 ${Math.max(9, Math.round(S*0.42))}px Nunito, system-ui, sans-serif`;
+  ctx.fillText(Math.ceil(e.hp), x, e.team===1 ? by + S*0.72 : by - S*0.12);
+}
+function drawUnit(e){
+  const lift = e.air ? 0.8*S : 0;
+  const bob = e.kind==='unit' && !e.attacking && e.deploy <= 0 ? Math.sin(e.walk)*S*0.04 : 0;
+  const x = e.x*S, y = e.y*S;
+  ctx.fillStyle = 'rgba(0,0,0,.25)';
+  ctx.beginPath(); ctx.ellipse(x, y + e.r*S*0.35, e.r*S*(e.air?0.7:0.95), e.r*S*(e.air?0.35:0.5), 0, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = e.deploy > 0 ? 0.45 + 0.3*Math.sin(e.deploy*20) : 1;
+  drawFigure(ctx, e.key, e.team, x, y - lift + bob, S, { angle:e.angle, t:G.t + e.id, swing:e.swing });
+  if (e.flash > 0){ ctx.globalAlpha = 0.5; circle(ctx, x, y-lift, e.r*S, '#fff'); }
+  if (e.stun > 0){ ctx.globalAlpha = 0.45; circle(ctx, x, y-lift, e.r*S*1.05, '#a8e3ff'); }
+  ctx.globalAlpha = 1;
+  if (e.hp < e.maxHp || e.kind==='building'){
+    const w = Math.max(e.r*2, 0.9)*S;
+    hpBar(x, y - lift - e.r*S - S*0.35, w, e.hp/e.maxHp, e.team, S*0.14);
+  }
+}
+function drawProj(p){
+  const h = (p.h0 + (p.h1-p.h0)*(p.prog||0)) * S;
+  const x = p.x*S, y = p.y*S - h;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(p.ang || 0);
+  if (p.kind === 'fire'){ circle(ctx, 0, 0, S*0.22, '#ffb347'); circle(ctx, -S*0.12, 0, S*0.14, 'rgba(255,90,30,.7)'); }
+  else if (p.kind === 'bolt'){ ctx.fillStyle = '#2d2a26'; circle(ctx, 0, 0, S*0.16, '#2d2a26'); }
+  else { ctx.strokeStyle = '#f7ecd2'; ctx.lineWidth = Math.max(1.5, S*0.07); ctx.beginPath(); ctx.moveTo(-S*0.35, 0); ctx.lineTo(S*0.2, 0); ctx.stroke(); ctx.fillStyle = TEAM[p.team].light; ctx.fillRect(-S*0.38, -S*0.06, S*0.1, S*0.12); }
+  ctx.restore();
+}
+function drawFx(f){
+  const k = f.t/f.dur, x = f.x*S, y = f.y*S;
+  ctx.save();
+  if (f.kind === 'ring'){ ctx.globalAlpha = 1-k; ctx.strokeStyle = f.color; ctx.lineWidth = S*0.12; ctx.beginPath(); ctx.arc(x, y, (0.4+k)*f.r*S, 0, Math.PI*2); ctx.stroke(); }
+  else if (f.kind === 'burst'){ ctx.globalAlpha = (1-k)*0.8; circle(ctx, x, y, f.r*S*(0.5+0.5*k), f.color); ctx.globalAlpha = (1-k); circle(ctx, x, y, f.r*S*0.4*(1-k), '#fff3b0'); }
+  else if (f.kind === 'frost'){ ctx.globalAlpha = (1-k)*0.55; circle(ctx, x, y, f.r*S, '#bfeaff', '#ffffff', S*0.1); }
+  else if (f.kind === 'blast'){ ctx.globalAlpha = 1-k; circle(ctx, x, y, f.r*S*(0.4+0.8*k), '#ffcf6b'); circle(ctx, x, y, f.r*S*(0.3+0.5*k), '#6b5b4b'); }
+  else if (f.kind === 'puff'){ ctx.globalAlpha = (1-k)*0.7; circle(ctx, x, y - (f.air?0.8*S:0), f.r*S*(1+k), '#e9e4da'); }
+  else if (f.kind === 'spark'){ ctx.globalAlpha = 1-k; circle(ctx, x, y, S*0.18*(1+k), '#fff6c9'); }
+  ctx.restore();
+}
+
+function draw(){
+  if (!cssW) return;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.drawImage(bg, 0, 0, cssW, cssH);
+  // river shimmer
+  ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = Math.max(1, S*0.05);
+  const tt = G ? G.t : performance.now()/1000;
+  for (let i=0;i<9;i++){
+    const xx = ((i*2.3 + tt*0.6) % (W+2)) - 1, yy = RIVER_T + 0.4 + (i%3)*0.6;
+    if (Math.abs(xx-BRIDGES[0])<1.3 || Math.abs(xx-BRIDGES[1])<1.3) continue;
+    ctx.beginPath(); ctx.moveTo(xx*S, yy*S); ctx.lineTo((xx+0.8)*S, yy*S); ctx.stroke();
+  }
+  if (!G) return;
+
+  // placement zones while a troop card is selected
+  const selKey = G.sel >= 0 ? G.deck[0].hand[G.sel] : null;
+  if (selKey && CARDS[selKey].type !== 'spell'){
+    ctx.fillStyle = 'rgba(200,40,40,.2)';
+    const pl = !princessAlive(1,0), pr = !princessAlive(1,1);
+    ctx.fillRect(0, 0, 9*S, (pl?10:RIVER_B+0.5)*S);
+    ctx.fillRect(9*S, 0, 9*S, (pr?10:RIVER_B+0.5)*S);
+    if (pl) ctx.fillRect(0, RIVER_T*S, 9*S, 2.5*S);
+    if (pr) ctx.fillRect(9*S, RIVER_T*S, 9*S, 2.5*S);
+  }
+
+  for (const r of G.ruins){
+    circle(ctx, r.x*S, r.y*S, r.r*S*0.95, '#5e574c');
+    circle(ctx, r.x*S - r.r*S*0.3, r.y*S, r.r*S*0.35, '#756d60');
+    circle(ctx, r.x*S + r.r*S*0.35, r.y*S + r.r*S*0.2, r.r*S*0.3, '#6a6256');
+  }
+  const ground = G.ents.filter(e => !e.air).sort((a,b) => a.y-b.y);
+  for (const e of ground) e.kind==='tower' ? drawTower(e) : drawUnit(e);
+  for (const p of G.projs) drawProj(p);
+  for (const e of G.ents) if (e.air) drawUnit(e);
+  for (const sp of G.spells){
+    if (sp.key !== 'fireball') continue;
+    const k = sp.t/sp.dur, x = sp.sx + (sp.x-sp.sx)*k, y = sp.sy + (sp.y-sp.sy)*k;
+    const arc = Math.sin(k*Math.PI) * 2.5;
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x*S, y*S, S*0.5, S*0.25, 0, 0, Math.PI*2); ctx.fill();
+    drawFigure(ctx, 'fireball', sp.team, x*S, (y-arc)*S, S*1.1);
+  }
+  for (const f of G.fx) drawFx(f);
+
+  // ghost
+  if (selKey && G.ghost && !G.over){
+    const c = CARDS[selKey];
+    const gx = c.type==='spell' ? G.ghost.x : snap(G.ghost.x), gy = c.type==='spell' ? G.ghost.y : snap(G.ghost.y);
+    const ok = canPlace(0, selKey, gx, gy);
+    ctx.save();
+    if (c.type === 'spell'){
+      circle(ctx, gx*S, gy*S, c.radius*S, ok ? 'rgba(255,255,255,.18)' : 'rgba(220,50,50,.25)', 'rgba(255,255,255,.8)', S*0.06);
+    } else {
+      if (c.range > 2 || c.type==='building'){ ctx.setLineDash([S*0.25, S*0.2]); circle(ctx, gx*S, gy*S, (c.range + c.r)*S, null, 'rgba(255,255,255,.45)', S*0.05); ctx.setLineDash([]); }
+      ctx.globalAlpha = 0.6;
+      drawFigure(ctx, selKey, 0, gx*S, gy*S - (c.air?0.8*S:0), S);
+      ctx.globalAlpha = 1;
+      circle(ctx, gx*S, gy*S, S*0.55, ok ? 'rgba(255,255,255,.12)' : 'rgba(220,50,50,.35)', ok ? 'rgba(255,255,255,.7)' : '#ff6a5a', S*0.05);
+    }
+    ctx.restore();
+  }
+
+  for (const t of G.texts){
+    const k = t.t/t.dur;
+    ctx.save();
+    ctx.globalAlpha = k > 0.75 ? (1-k)/0.25 : 1;
+    ctx.font = `${Math.round(S*t.size)}px Bungee, Impact, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const y = (t.y - k*0.8)*S;
+    ctx.lineWidth = S*0.18; ctx.strokeStyle = 'rgba(10,12,16,.85)'; ctx.strokeText(t.txt, t.x*S, y);
+    ctx.fillStyle = t.color; ctx.fillText(t.txt, t.x*S, y);
+    ctx.restore();
+  }
+}
+
+// ---------- HUD ----------
+const cardEls = [0,1,2,3].map(i => $('#card'+i));
+let lastHud = {};
+function renderHand(){
+  if (!G) return;
+  const d = G.deck[0];
+  cardEls.forEach((el, i) => {
+    const key = d.hand[i], c = CARDS[key];
+    el.querySelector('.cost').textContent = c.cost;
+    el.querySelector('.nm').textContent = c.name;
+    el.setAttribute('aria-label', `${c.name}, ${c.cost} elixir`);
+    drawCardIcon(el.querySelector('canvas'), key);
+  });
+  drawCardIcon($('#nextIcon'), d.queue[0]);
+}
+function fmt(s){ s = Math.max(0, Math.ceil(s)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+function updateHud(){
+  if (!G) return;
+  const time = fmt(G.clock);
+  if (lastHud.time !== time){ $('#time').textContent = time; lastHud.time = time; }
+  const lbl = G.ot ? 'Overtime' : G.clock <= 60 ? '2× elixir' : 'Time left';
+  if (lastHud.lbl !== lbl){ $('#clockLabel').textContent = lbl; $('#clock').className = 'clock' + (G.ot ? ' ot' : G.clock<=60 ? ' hot' : ''); lastHud.lbl = lbl; }
+  for (const team of [0,1]){
+    const key = 'c'+team;
+    if (lastHud[key] !== G.crowns[team]){
+      lastHud[key] = G.crowns[team];
+      $('#crowns'+team).querySelectorAll('.crown').forEach((c,i) => c.classList.toggle('on', i < G.crowns[team]));
+    }
+  }
+  const el = G.elixir[0];
+  $('#elixirFill').style.width = (el*10) + '%';
+  const n = Math.floor(el);
+  if (lastHud.el !== n){ $('#elixirNum').textContent = n; lastHud.el = n; }
+  const d = G.deck[0];
+  cardEls.forEach((c, i) => {
+    const cost = CARDS[d.hand[i]].cost;
+    c.classList.toggle('poor', el < cost);
+    c.classList.toggle('sel', G.sel === i);
+    c.querySelector('.fill').style.height = el >= cost ? '0%' : (el/cost*100).toFixed(1) + '%';
+  });
+}
+
+// ---------- Input ----------
+let drag = null;
+function toTile(cx, cy){
+  const r = cvs.getBoundingClientRect();
+  return { x:(cx-r.left)/r.width*W, y:(cy-r.top)/r.height*H, inside: cx>=r.left && cx<=r.right && cy>=r.top && cy<=r.bottom };
+}
+function select(i){ if (!G || G.over) return; G.sel = (G.sel === i && !drag) ? -1 : i; }
+function tryDeploy(x, y){
+  if (!G || G.over || G.paused || G.sel < 0) return;
+  const key = G.deck[0].hand[G.sel], c = CARDS[key];
+  const px = c.type==='spell' ? x : snap(x), py = c.type==='spell' ? y : snap(y);
+  if (!canPlace(0, key, px, py)){ G.texts.push({ x:clamp(px,3,15), y:py, txt:'Not here', t:0, dur:0.8, color:'#ff9a8f', size:0.6 }); sfx.nope(); return; }
+  if (G.elixir[0] < c.cost){ G.texts.push({ x:clamp(px,3,15), y:py, txt:'Need elixir', t:0, dur:0.8, color:'#e7a3ff', size:0.6 }); sfx.nope(); return; }
+  if (deploy(0, G.sel, px, py)){ G.sel = -1; G.ghost = null; renderHand(); }
+}
+cardEls.forEach((el, i) => {
+  el.addEventListener('pointerdown', ev => {
+    if (!G || G.over || G.paused) return;
+    ev.preventDefault(); initAudio();
+    const was = G.sel;
+    G.sel = i; drag = { i, onArena:false, toggle: was === i };
+  });
+  el.addEventListener('click', ev => ev.preventDefault());
+  el.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); if (G && !G.over) G.sel = G.sel === i ? -1 : i; } });
+});
+window.addEventListener('pointermove', ev => {
+  if (!G) return;
+  const p = toTile(ev.clientX, ev.clientY);
+  G.ghost = p.inside ? p : null;
+  if (drag && p.inside) drag.onArena = true;
+});
+window.addEventListener('pointerup', ev => {
+  if (!G) return;
+  const p = toTile(ev.clientX, ev.clientY);
+  if (drag){
+    const d = drag; drag = null;
+    if (p.inside) { tryDeploy(p.x, p.y); return; }
+    if (d.toggle && !d.onArena) G.sel = -1;
+    if (ev.pointerType !== 'mouse') G.ghost = null;
+    return;
+  }
+  if (p.inside && ev.target === cvs){ initAudio(); tryDeploy(p.x, p.y); if (ev.pointerType !== 'mouse') G.ghost = null; }
+});
+cvs.addEventListener('pointerleave', () => { if (G && !drag) G.ghost = null; });
+window.addEventListener('keydown', ev => {
+  if (!G || G.over) return;
+  if (ev.key >= '1' && ev.key <= '4'){ const i = +ev.key - 1; G.sel = G.sel === i ? -1 : i; }
+  else if (ev.key === 'Escape'){ if (G.sel >= 0) G.sel = -1; else setPaused(!G.paused); }
+  else if (ev.key === 'p' || ev.key === 'P') setPaused(!G.paused);
+});
+
+function setPaused(p){ if (!G || G.over) return; G.paused = p; $('#pauseScreen').hidden = !p; if (p) G.sel = -1; }
+$('#pauseBtn').addEventListener('click', () => setPaused(true));
+$('#resumeBtn').addEventListener('click', () => setPaused(false));
+$('#quitBtn').addEventListener('click', () => { $('#pauseScreen').hidden = true; G = null; showStart(); });
+function paintMute(){
+  $('#muteIcon').innerHTML = muted
+    ? '<path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11 6l4 4M15 6l-4 4" stroke="#f4efe4" stroke-width="1.5"/>'
+    : '<path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="#f4efe4" stroke-width="1.5"/>';
+  $('#muteBtn').setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+}
+$('#muteBtn').addEventListener('click', () => { muted = !muted; try { localStorage.setItem('bridgeburn-muted', muted?'1':'0'); } catch(e) {} initAudio(); paintMute(); });
+paintMute();
+
+// ---------- Screens & record ----------
+function getRecord(){ try { return JSON.parse(localStorage.getItem('bridgeburn-record')) || { w:0, l:0, d:0 }; } catch(e) { return { w:0, l:0, d:0 }; } }
+function saveRecord(res){ const r = getRecord(); if (res==='win') r.w++; else if (res==='lose') r.l++; else r.d++; try { localStorage.setItem('bridgeburn-record', JSON.stringify(r)); } catch(e) {} }
+function recordText(){ const r = getRecord(); return (r.w + r.l + r.d) ? `Your record: ${r.w} won · ${r.l} lost · ${r.d} drawn` : ''; }
+function showStart(){ $('#record').textContent = recordText(); $('#startScreen').hidden = false; $('#endScreen').hidden = true; }
+function showEnd(){
+  if (!G) return;
+  const res = G.result;
+  $('#endTitle').textContent = res==='win' ? 'Victory' : res==='lose' ? 'Defeat' : 'Draw';
+  $('#endTitle').style.color = res==='win' ? 'var(--blue)' : res==='lose' ? 'var(--red)' : 'var(--gold)';
+  $('#endSub').textContent = `${diffKey[0].toUpperCase()+diffKey.slice(1)} rival`;
+  $('#endYou').textContent = G.crowns[0];
+  $('#endRival').textContent = G.crowns[1];
+  const mins = Math.floor(G.t/60), secs = Math.round(G.t%60);
+  $('#endNote').textContent = `${mins}m ${secs}s of play. You played ${G.stats.played[0]} cards; the Rival played ${G.stats.played[1]}.`;
+  $('#record2').textContent = recordText();
+  $('#endScreen').hidden = false;
+}
+function start(d){
+  diffKey = d; initAudio();
+  $('#startScreen').hidden = true; $('#endScreen').hidden = true; $('#pauseScreen').hidden = true;
+  newGame();
+}
+document.querySelectorAll('[data-diff]').forEach(b => b.addEventListener('click', () => start(b.dataset.diff)));
+$('#againBtn').addEventListener('click', () => start(diffKey));
+$('#menuBtn').addEventListener('click', () => { G = null; showStart(); });
+
+// deck roster on the start screen
+const roster = $('#roster');
+for (const key of DECK){
+  const c = CARDS[key], div = document.createElement('div'), cv = document.createElement('canvas');
+  cv.width = 72; cv.height = 72; drawCardIcon(cv, key);
+  div.append(cv, document.createTextNode(c.name));
+  const sm = document.createElement('small'); sm.textContent = `${c.cost} · ${c.blurb}`; div.append(sm);
+  roster.append(div);
+}
+
+// ---------- Sizing & loop ----------
+function resize(){
+  const f = $('#field').getBoundingClientRect();
+  let w = f.width, h = w * H / W;
+  if (h > f.height){ h = f.height; w = h * W / H; }
+  w = Math.floor(w); h = Math.floor(w * H / W);
+  if (w < 10) return;
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  cssW = w; cssH = h; S = w / W;
+  cvs.style.width = w + 'px'; cvs.style.height = h + 'px';
+  cvs.width = Math.round(w*DPR); cvs.height = Math.round(h*DPR);
+  paintBg();
+}
+new ResizeObserver(resize).observe($('#field'));
+window.addEventListener('resize', resize);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (G) renderHand(); });
+
+let last = performance.now(), acc = 0;
+const DT = 1/60;
+function frame(now){
+  const el = Math.min(0.1, (now-last)/1000); last = now;
+  if (G && !G.paused && !G.demo){
+    acc += el;
+    let n = 0;
+    while (acc >= DT && n < 6){ step(DT); acc -= DT; n++; }
+  } else acc = 0;
+  draw(); updateHud();
+  requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden && G && !G.over) setPaused(true); });
+
+// Show a live arena behind the start screen.
+newGame(); G.demo = true;
+showStart();
+requestAnimationFrame(frame);
+window.__bb = { get G(){ return G; }, step, findSpot, deploy };
+})();
+</script>
+</body>
+</html>
