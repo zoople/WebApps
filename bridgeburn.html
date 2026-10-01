@@ -112,6 +112,30 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .roster canvas{width:36px;height:36px;display:block;margin:0 auto 2px}
 .roster small{display:block;color:var(--muted);font-weight:700;font-size:10px}
 .record{font-variant-numeric:tabular-nums}
+.deck-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.link-btn{background:none;border:0;padding:0;color:var(--gold);font-weight:900;font-size:12px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.panel.wide{width:min(560px,100%)}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.slot{position:relative;aspect-ratio:3/4;border-radius:10px;border:2px dashed var(--line);background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:2px;cursor:pointer;font-size:11px;font-weight:800;text-align:center;line-height:1.1}
+.slot.filled{border-style:solid;background:linear-gradient(180deg,var(--panel-2),var(--panel))}
+.slot canvas{width:58%;aspect-ratio:1;height:auto}
+.slot .cost,.tile .cost{position:absolute;top:-6px;left:-6px;width:20px;height:20px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#e7a3ff,var(--elixir) 45%,var(--elixir-deep));display:grid;place-items:center;
+  font-family:var(--display);font-size:11px;color:#fff;box-shadow:0 0 0 2px var(--panel)}
+.deck-meta{display:flex;gap:14px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.deck-meta b{color:var(--ink)}
+.collection{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.tile{position:relative;display:grid;grid-template-columns:40px 1fr;gap:6px;align-items:center;text-align:left;
+  padding:8px 8px 8px 6px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);cursor:pointer}
+.tile canvas{width:40px;height:40px}
+.tile .t-name{font-weight:900;font-size:12px;line-height:1.15}
+.tile .t-blurb{font-size:11px;color:var(--muted);line-height:1.25}
+.tile .t-stats{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+.tile.in{border-color:var(--gold);background:#2f3426}
+.tile.in::after{content:'\2713';position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--gold);color:#23190a;display:grid;place-items:center;font-size:12px;font-weight:900;box-shadow:0 0 0 2px var(--panel)}
+.tile:disabled{opacity:.45;cursor:not-allowed}
+.hint{font-size:13px;min-height:1.4em}
 @media (prefers-reduced-motion:reduce){.card{transition:none}}
 </style>
 </head>
@@ -153,7 +177,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <li>A side tower is worth one crown. The king tower is worth three and ends the match.</li>
         <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
       </ul>
-      <div class="lbl-sm">Your deck</div>
+      <div class="deck-head"><span class="lbl-sm">Your deck · <span id="avgStart">3.5</span> avg elixir</span><button class="link-btn" id="editDeckBtn">Edit deck</button></div>
       <div class="roster" id="roster"></div>
       <div class="lbl-sm">Choose a rival</div>
       <div class="row">
@@ -162,6 +186,19 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <button class="btn" data-diff="hard">Hard<span class="sub">Extra elixir</span></button>
       </div>
       <p class="record" id="record"></p>
+    </div>
+  </div>
+
+  <div class="overlay" id="deckScreen" hidden>
+    <div class="panel wide">
+      <div class="lbl-sm">Deck builder</div>
+      <h2>Your deck</h2>
+      <div class="slots" id="deckSlots"></div>
+      <div class="deck-meta"><span><b id="deckCount">8</b>/8 cards</span><span>Average elixir <b id="deckAvg">3.5</b></span><span>Hits air <b id="deckAir">2</b></span></div>
+      <div class="lbl-sm">All cards · tap to add, tap a deck slot to remove</div>
+      <div class="collection" id="collection"></div>
+      <p class="hint" id="deckHint"></p>
+      <div class="row"><button class="btn" id="deckRandom">Random</button><button class="btn" id="deckCancel">Cancel</button><button class="btn go" id="deckSave">Save deck</button></div>
     </div>
   </div>
 
@@ -202,10 +239,39 @@ const CARDS = {
   imps:    { name:'Imps', cost:2, type:'unit', count:3, hp:210, dmg:105, hs:1.1, range:0.6, speed:1.6, sight:5.5, r:0.33, air:false, hitsAir:false, targets:'any', blurb:'Fast swarm' },
   drake:   { name:'Drake', cost:4, type:'unit', count:1, hp:1000, dmg:130, hs:1.6, range:3.5, speed:1.3, sight:5.5, r:0.55, air:true, hitsAir:true, targets:'any', splash:1.3, proj:'fire', blurb:'Flying splash' },
   turret:  { name:'Bolt Turret', cost:3, type:'building', hp:900, dmg:125, hs:0.9, range:5.5, r:0.8, air:false, hitsAir:false, targets:'any', life:30, proj:'bolt', blurb:'Ground defense' },
-  fireball:{ name:'Fireball', cost:4, type:'spell', dmg:560, radius:2.5, towerMult:0.35, knock:0.9, blurb:'Area damage' },
-  frost:   { name:'Frost Snap', cost:2, type:'spell', dmg:170, radius:2.5, towerMult:0.4, stun:1.5, blurb:'Freezes 1.5s' }
+  fireball:{ name:'Fireball', cost:4, type:'spell', spell:'lob', dmg:560, radius:2.5, towerMult:0.35, knock:0.9, blurb:'Area damage' },
+  frost:   { name:'Frost Snap', cost:2, type:'spell', spell:'flash', dmg:170, radius:2.5, towerMult:0.4, stun:1.5, blurb:'Freezes 1.5s' },
+  charger: { name:'Charger', cost:4, type:'unit', count:1, hp:1500, dmg:260, hs:1.6, range:0.8, speed:1.9, sight:9, r:0.55, air:false, jumps:true, hitsAir:false, targets:'buildings', blurb:'Leaps the river' },
+  pyromancer:{ name:'Pyromancer', cost:5, type:'unit', count:1, hp:620, dmg:230, hs:1.4, range:5, speed:1.0, sight:5.5, r:0.45, air:false, hitsAir:true, targets:'any', splash:1.5, proj:'fire', blurb:'Ranged splash' },
+  colossus:{ name:'Stone Colossus', cost:7, type:'unit', count:1, hp:4800, dmg:270, hs:2.5, range:0.9, speed:0.55, sight:7, r:1.0, air:false, hitsAir:false, targets:'buildings', deathSpawn:{ key:'pebbling', count:2 }, blurb:'Splits on death' },
+  pebbling:{ name:'Pebbling', cost:0, hidden:true, type:'unit', count:1, hp:950, dmg:75, hs:1.2, range:0.8, speed:0.75, sight:7, r:0.5, air:false, hitsAir:false, targets:'buildings' },
+  rattlers:{ name:'Rattlers', cost:3, type:'unit', count:10, hp:80, dmg:70, hs:1.0, range:0.5, speed:1.6, sight:5.5, r:0.28, air:false, hitsAir:false, targets:'any', blurb:'Ten bone fighters' },
+  gloomwings:{ name:'Gloomwings', cost:2, type:'unit', count:5, hp:70, dmg:70, hs:1.2, range:0.5, speed:2.0, sight:5.5, r:0.3, air:true, hitsAir:true, targets:'any', blurb:'Flying swarm' },
+  impden:  { name:'Imp Den', cost:4, type:'building', hp:700, dmg:0, hs:1, range:0, r:0.9, air:false, hitsAir:false, targets:'none', life:35, spawn:{ key:'imps', every:4.5 }, blurb:'Spawns imps' },
+  volley:  { name:'Volley', cost:3, type:'spell', spell:'rain', dmg:220, radius:4, towerMult:0.4, blurb:'Wide arrow rain' },
+  sapper:  { name:'Sapper', cost:3, type:'unit', count:1, hp:330, dmg:180, hs:1.8, range:4.5, speed:1.0, sight:5.5, r:0.4, air:false, hitsAir:false, targets:'any', splash:1.5, proj:'bomb', blurb:'Lobs bombs' },
+  zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:620, hs:3.0, range:0.4, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', deathDmg:{ dmg:300, r:2 }, blurb:'Bombs towers' },
+  crossbow:{ name:'Crossbowman', cost:4, type:'unit', count:1, hp:650, dmg:180, hs:1.1, range:6, speed:1.0, sight:6.5, r:0.45, air:false, hitsAir:true, targets:'any', proj:'bolt', blurb:'Long range' },
+  meteor:  { name:'Meteor', cost:6, type:'spell', spell:'lob', dmg:1050, radius:2, towerMult:0.35, knock:1.2, slow:true, blurb:'Huge, slow hit' }
 };
-const DECK = Object.keys(CARDS);
+const POOL = Object.keys(CARDS).filter(k => !CARDS[k].hidden);
+const STARTER = ['squire','longbows','brute','imps','drake','turret','fireball','frost'];
+const isWin = k => CARDS[k].targets === 'buildings';
+const isSpell = k => CARDS[k].type === 'spell';
+const antiAir = k => !isSpell(k) && CARDS[k].hitsAir;
+function rivalDeck(){
+  for (let tries=0; tries<400; tries++){
+    const d = shuffle([...POOL]).slice(0,8);
+    const spells = d.filter(isSpell).length, avg = d.reduce((s,k)=>s+CARDS[k].cost,0)/8;
+    if (d.some(isWin) && d.filter(antiAir).length >= 2 && spells >= 1 && spells <= 2 && avg >= 3 && avg <= 4.3) return d;
+  }
+  return [...STARTER];
+}
+function loadDeck(){
+  try { const d = JSON.parse(localStorage.getItem('bridgeburn-deck')); if (Array.isArray(d) && d.length===8 && new Set(d).size===8 && d.every(k => POOL.includes(k))) return d; } catch(e) {}
+  return [...STARTER];
+}
+let playerDeck = loadDeck();
 const DIFF = {
   easy:   { mult:0.85, delay:1.4, attackAt:9.6 },
   normal: { mult:1.0,  delay:0.8, attackAt:8.5 },
@@ -218,7 +284,7 @@ const edgeDist = (a,b) => dist(a,b) - a.r - b.r;
 const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.random()*(i+1)|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
 const nearestBridge = x => Math.abs(x-BRIDGES[0]) < Math.abs(x-BRIDGES[1]) ? BRIDGES[0] : BRIDGES[1];
 
-function newDeck(){ const k = shuffle([...DECK]); return { hand:k.slice(0,4), queue:k.slice(4) }; }
+function newDeck(keys){ const k = shuffle([...keys]); return { hand:k.slice(0,4), queue:k.slice(4) }; }
 function cycle(d,i){ const c = d.hand[i]; d.hand[i] = d.queue.shift(); d.queue.push(c); return c; }
 
 // ---------- Sound ----------
@@ -256,6 +322,7 @@ function makeTower(team, king, x, y){
 function makeEnt(key, team, x, y){
   const c = CARDS[key];
   return { id:nextId++, key, team, kind:c.type==='building'?'building':'unit', x, y, r:c.r,
+    jumps:!!c.jumps, spawn:c.spawn||null, spawnT:c.spawn?1.5:0, avoid:null,
     hp:c.hp, maxHp:c.hp, dmg:c.dmg, hs:c.hs, range:c.range, speed:c.speed||0, sight:c.sight||c.range,
     air:!!c.air, hitsAir:c.hitsAir, targets:c.targets, splash:c.splash||0, proj:c.proj||null, life:c.life||0,
     cd:0, stun:0, deploy:1, retarget:0, target:null, flash:0, swing:0, walk:Math.random()*6,
@@ -264,7 +331,7 @@ function makeEnt(key, team, x, y){
 
 function newGame(){
   G = { t:0, clock:180, ot:false, over:false, endT:0, result:null, elixir:[5,5], crowns:[0,0],
-    ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(), newDeck()],
+    ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(playerDeck), newDeck(rivalDeck())], pending:[],
     aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, stats:{ played:[0,0] } };
   G.ents.push(makeTower(1,true,9,3), makeTower(1,false,3.5,6.5), makeTower(1,false,14.5,6.5));
   G.ents.push(makeTower(0,true,9,29), makeTower(0,false,3.5,25.5), makeTower(0,false,14.5,25.5));
@@ -310,6 +377,14 @@ function findSpot(team, key, x, y){
   return null;
 }
 
+function groupOffsets(n){
+  if (n === 1) return [[0,0]];
+  if (n === 2) return [[-0.55,0],[0.55,0]];
+  if (n === 3) return [[0,-0.45],[-0.5,0.35],[0.5,0.35]];
+  const out = [];
+  for (let i=0;i<n;i++){ const a = i/n*Math.PI*2, rad = n > 6 ? (i%2 ? 0.5 : 1.0) : 0.7; out.push([Math.cos(a)*rad, Math.sin(a)*rad]); }
+  return out;
+}
 function deploy(team, handIdx, x, y){
   const d = G.deck[team], key = d.hand[handIdx], c = CARDS[key];
   if (G.elixir[team] < c.cost) return false;
@@ -319,12 +394,13 @@ function deploy(team, handIdx, x, y){
   if (c.type === 'spell'){
     const k = kingOf(team);
     const sx = k ? k.x : 9, sy = k ? k.y : (team===0?29:3);
-    const flight = key==='fireball' ? Math.max(0.4, Math.hypot(x-sx,y-sy)/14) : 0.12;
+    const d = Math.hypot(x-sx, y-sy);
+    const flight = c.spell==='lob' ? Math.max(0.4, d/(c.slow ? 8 : 14)) : c.spell==='rain' ? 0.6 : 0.12;
     G.spells.push({ key, team, x, y, sx, sy, t:0, dur:flight });
   } else if (c.type === 'building'){
     G.ents.push(makeEnt(key, team, x, y));
   } else {
-    const offs = c.count===3 ? [[0,-0.45],[-0.5,0.35],[0.5,0.35]] : c.count===2 ? [[-0.55,0],[0.55,0]] : [[0,0]];
+    const offs = groupOffsets(c.count || 1);
     for (const [ox,oy] of offs) G.ents.push(makeEnt(key, team, x+ox, y+(team===0?oy:-oy)));
   }
   G.fx.push({ kind:'ring', x, y, r:c.radius||1, t:0, dur:0.45, color:TEAM[team].light });
@@ -376,7 +452,7 @@ function attack(e, t){
     const h0 = e.kind==='tower' ? 1.3 : e.air ? 0.8 : 0.35;
     const h1 = t.air ? 0.8 : t.kind==='tower' ? 0.9 : 0.3;
     G.projs.push({ x:e.x, y:e.y, target:t, tx:t.x, ty:t.y, dmg:e.dmg, team:e.team, splash:e.splash,
-      hitsAir:e.hitsAir, kind:e.proj, speed:e.proj==='fire'?8:e.proj==='bolt'?13:15, h0, h1, d0:Math.max(0.1,dist(e,t)) });
+      hitsAir:e.hitsAir, kind:e.proj, speed:e.proj==='fire'?8:e.proj==='bomb'?7:e.proj==='bolt'?13:15, h0, h1, d0:Math.max(0.1,dist(e,t)) });
   } else if (e.splash){
     aoe(e.team, t.x, t.y, e.splash, e.dmg, { hitsAir:e.hitsAir });
   } else {
@@ -385,27 +461,62 @@ function attack(e, t){
   }
 }
 
-function moveToward(e, tx, ty, dt){
-  let gx = tx, gy = ty;
-  if (!e.air){
-    const mySide = e.y >= 16, tSide = ty >= 16;
-    if (mySide !== tSide){
-      const bx = nearestBridge(e.x);
-      const inBand = e.y > RIVER_T - 0.2 && e.y < RIVER_B + 0.2;
-      if (Math.abs(e.x - bx) > 0.35 && !inBand){ gx = bx; gy = mySide ? RIVER_B + 0.35 : RIVER_T - 0.35; }
-      else { gx = bx; gy = mySide ? RIVER_T - 0.8 : RIVER_B + 0.8; }
-    }
+// Ground units cross only on the bridges. The crossing is decided by which bank the unit is
+// on (top / bottom / on the river), so a unit halfway across keeps heading for the far bank
+// instead of turning toward its target and grinding against the bridge rail.
+function waypoint(e, tx, ty){
+  if (e.air || e.jumps) return [tx, ty];
+  const tTop = ty < 16;
+  const zone = e.y < RIVER_T ? 'top' : e.y > RIVER_B ? 'bot' : 'river';
+  const bx = nearestBridge(e.x);
+  if (zone === 'river') return [bx, tTop ? RIVER_T - 0.9 : RIVER_B + 0.9];
+  if ((zone === 'top') === tTop) return [tx, ty];
+  if (Math.abs(e.x - bx) > 0.45) return [bx, zone === 'top' ? RIVER_T - 0.5 : RIVER_B + 0.5];
+  return [bx, zone === 'top' ? RIVER_B + 0.9 : RIVER_T - 0.9];
+}
+// Steer around towers and buildings that sit between a unit and where it is going, instead of
+// pushing straight into them. The chosen side sticks until the obstacle is passed.
+function steer(e, ux, uy, gd, target){
+  if (e.air) return [ux, uy];
+  let best = null, bestAlong = Infinity;
+  for (const o of G.ents){
+    if (o === target || o.kind === 'unit' || !alive(o)) continue;
+    const rx = o.x - e.x, ry = o.y - e.y;
+    const along = rx*ux + ry*uy;
+    if (along <= 0 || along > gd + o.r) continue;
+    const lat = -rx*uy + ry*ux;
+    const clear = o.r + e.r + 0.2;
+    if (Math.abs(lat) < clear && Math.hypot(rx, ry) < clear + 1.2 && along < bestAlong){ best = o; bestAlong = along; }
   }
+  if (!best){ e.avoid = null; return [ux, uy]; }
+  const rx = best.x - e.x, ry = best.y - e.y, rl = Math.hypot(rx, ry) || 1;
+  if (!e.avoid || e.avoid.id !== best.id){
+    const lat = -rx*uy + ry*ux;
+    // Go round on the side away from the obstacle's centre; break ties toward the arena middle.
+    const side = Math.abs(lat) > 0.05 ? (lat > 0 ? -1 : 1) : ((e.x < 9) === (uy < 0) ? 1 : -1);
+    e.avoid = { id:best.id, side };
+  }
+  // Tangent to the obstacle, on the chosen side.
+  let tx = -ry/rl, ty = rx/rl;
+  const leftDot = tx*(-uy) + ty*ux;
+  if (Math.sign(leftDot) !== e.avoid.side) { tx = -tx; ty = -ty; }
+  const vx = tx*0.85 + ux*0.15, vy = ty*0.85 + uy*0.15, vl = Math.hypot(vx, vy) || 1;
+  return [vx/vl, vy/vl];
+}
+function moveToward(e, tx, ty, dt, target){
+  const [gx, gy] = waypoint(e, tx, ty);
   const dx = gx - e.x, dy = gy - e.y, d = Math.hypot(dx,dy);
   if (d < 0.001) return;
+  const [ux, uy] = steer(e, dx/d, dy/d, d, target);
   const step = Math.min(e.speed*dt, d);
-  e.x += dx/d*step; e.y += dy/d*step;
-  e.angle = Math.atan2(dy,dx);
+  e.x += ux*step; e.y += uy*step;
+  e.angle = Math.atan2(uy, ux);
   e.walk += dt*e.speed*9;
+  e.moving = true;
 }
 function constrain(e){
   e.x = clamp(e.x, 0.4, W-0.4); e.y = clamp(e.y, 0.4, H-0.4);
-  if (!e.air && e.y > RIVER_T && e.y < RIVER_B){
+  if (!e.air && !e.jumps && e.y > RIVER_T && e.y < RIVER_B){
     const bx = nearestBridge(e.x);
     if (Math.abs(e.x-bx) > 0.85){
       if (e.y - RIVER_T < 0.45) e.y = RIVER_T;
@@ -423,6 +534,15 @@ function updateEnt(e, dt){
   if (e.deploy > 0){ e.deploy -= dt; return; }
   if (e.stun > 0){ e.stun -= dt; return; }
   if (e.kind==='tower' && !e.active) return;
+  if (e.spawn){
+    e.spawnT -= dt;
+    if (e.spawnT <= 0){
+      e.spawnT = e.spawn.every;
+      const u = makeEnt(e.spawn.key, e.team, e.x, e.y + (e.team===0 ? -1.2 : 1.2));
+      u.deploy = 0.3; G.pending.push(u);
+    }
+  }
+  if (!e.dmg) return;
   const isUnit = e.kind === 'unit';
   e.retarget -= dt;
   if (!valid(e, e.target) || e.retarget <= 0){
@@ -439,11 +559,11 @@ function updateEnt(e, dt){
   } else {
     e.attacking = false;
     e.cd = Math.max(e.cd - dt, isUnit ? e.hs*0.3 : 0);
-    if (isUnit && t) moveToward(e, t.x, t.y, dt);
+    if (isUnit && t) moveToward(e, t.x, t.y, dt, t);
   }
 }
 
-function collide(){
+function collide(dt){
   const a = G.ents;
   for (let i=0;i<a.length;i++){
     const p = a[i]; if (!alive(p)) continue;
@@ -463,7 +583,24 @@ function collide(){
       q.x += nx*ov*wq*2*0.5; q.y += ny*ov*wq*2*0.5;
     }
   }
-  for (const e of a) if (e.kind==='unit' && alive(e)) constrain(e);
+  for (const e of a){
+    if (e.kind !== 'unit' || !alive(e)) continue;
+    constrain(e);
+    // Stuck check uses where the unit ended up after collisions, compared with last tick.
+    if (e.moving && e.lastX !== undefined){
+      const moved = Math.hypot(e.x - e.lastX, e.y - e.lastY);
+      e.stuckT = moved < e.speed*dt*0.2 ? (e.stuckT || 0) + dt : Math.max(0, (e.stuckT || 0) - dt*2);
+    } else e.stuckT = 0;
+    e.moving = false;
+    // A unit pinned in place for over a second (crowd on a bridge, wedged on a tower corner)
+    // gets a small sideways shove so it can slip past.
+    if (e.stuckT > 1 && !e.attacking){
+      const s = (e.id % 2 ? 1 : -1) * 0.25;
+      e.x += Math.cos(e.angle + Math.PI/2) * s; e.y += Math.sin(e.angle + Math.PI/2) * s;
+      e.stuckT = 0; e.avoid = null; constrain(e);
+    }
+    e.lastX = e.x; e.lastY = e.y;
+  }
 }
 
 function onTowerDown(t){
@@ -503,57 +640,69 @@ function aiPlace(key, x, y){
   const spot = findSpot(1, key, x, y);
   return spot ? deploy(1, i, spot[0], spot[1]) : false;
 }
+const dps = k => CARDS[k].dmg / CARDS[k].hs * (CARDS[k].count || 1);
 function aiThink(){
   const D = DIFF[diffKey];
   const hand = G.deck[1].hand;
   const can = k => hand.includes(k) && CARDS[k].cost <= G.elixir[1];
   const foes = G.ents.filter(e => e.team===0 && alive(e) && e.kind==='unit');
 
-  // Spells first: good value clusters, or a tower finish.
-  if (can('fireball')){
-    for (const t of towersOf(0)) if (t.hp <= CARDS.fireball.dmg*CARDS.fireball.towerMult){ aiPlace('fireball', t.x, t.y); return; }
-    let best=null, bv=0;
+  // Spells: finish a tower, hit a valuable cluster, or clear a swarm.
+  for (const k of hand.filter(k => isSpell(k) && can(k))){
+    const c = CARDS[k];
+    for (const t of towersOf(0)) if (t.hp <= c.dmg*c.towerMult){ aiPlace(k, t.x, t.y); return; }
+    let best = null, bv = 0, bn = 0;
     for (const u of foes){
-      let v=0; for (const o of foes) if (Math.hypot(o.x-u.x,o.y-u.y) <= 2.2) v += Math.min(o.hp, 560);
-      if (v > bv){ bv=v; best=u; }
+      let v = 0, n = 0;
+      for (const o of foes) if (Math.hypot(o.x-u.x, o.y-u.y) <= c.radius*0.9){ v += Math.min(o.hp, c.dmg); if (o.hp <= c.dmg) n++; }
+      if (v > bv){ bv = v; best = u; bn = n; }
     }
-    if (best && bv >= 950){ aiPlace('fireball', best.x, best.y-0.6); return; }
-  }
-  if (can('frost')){
-    for (const u of foes){
-      const n = foes.filter(o => o.maxHp <= 450 && Math.hypot(o.x-u.x,o.y-u.y) <= 2.3).length;
-      if (n >= 3){ aiPlace('frost', u.x, u.y-0.4); return; }
-    }
+    if (!best) continue;
+    const lead = c.spell === 'lob' ? -0.6 : -0.3;
+    if (c.dmg >= 400 ? bv >= c.cost*240 : (bn >= 3 || (c.stun && bv >= 600))){ aiPlace(k, best.x, best.y + lead); return; }
   }
 
-  // Defend against anything pushing into our half.
+  // Defend against anything pushing into our half: score each troop in hand against the threat.
   const threats = foes.filter(e => e.y < 20.5).sort((a,b) => a.y-b.y);
   if (threats.length){
     const hpSum = threats.reduce((s,t) => s+t.hp, 0);
     if (hpSum > 350 || threats[0].y < 12){
       const th = threats[0];
-      const air = threats.some(t => t.air), big = threats.some(t => t.maxHp >= 2000);
-      const prefs = air ? ['longbows','drake'] : big ? ['imps','squire','turret','longbows','drake'] : ['squire','imps','longbows','drake','turret'];
-      for (const k of prefs){
-        if (!can(k)) continue;
+      const air = threats.some(t => t.air);
+      const big = threats.some(t => t.maxHp >= 2000);
+      const swarm = threats.filter(t => t.maxHp <= 350).length >= 3;
+      let pick = null, ps = 0;
+      for (const k of hand){
+        if (!can(k) || isSpell(k)) continue;
         const c = CARDS[k];
+        let sc = 1;
+        if (isWin(k)) sc -= 6;
+        if (c.targets === 'none') sc -= 1;
+        if (air) sc += antiAir(k) ? 5 : -8;
+        if (big) sc += ((c.count||1) >= 3 ? 4 : 0) + (dps(k) >= 140 ? 3 : 0) + (c.type==='building' ? 3 : 0);
+        if (swarm) sc += c.splash ? 5 : (c.count||1) >= 3 ? 1 : -2;
+        sc += Math.random();
+        if (sc > ps){ ps = sc; pick = k; }
+      }
+      if (pick){
+        const c = CARDS[pick];
         let x = th.x, y;
-        if (k === 'turret'){ x = clamp(th.x, 5.5, 12.5); y = 10; }
+        if (c.type === 'building'){ x = clamp(th.x, 5.5, 12.5); y = 10; }
         else if (c.range > 2){ x = th.x + (th.x < 9 ? 1.5 : -1.5); y = th.y - 4.5; }
         else y = th.y - 1.5;
-        if (aiPlace(k, x, clamp(y, 1.5, 14.5))) return;
+        if (aiPlace(pick, x, clamp(y, 1.5, 14.5))) return;
       }
       return; // save up rather than start an attack while under pressure
     }
   }
 
-  // Back up our own tank.
-  const tank = G.ents.find(e => e.team===1 && e.key==='brute' && alive(e));
+  // Back up our own win condition with support troops.
+  const tank = G.ents.find(e => e.team===1 && e.kind==='unit' && isWin(e.key) && alive(e) && e.maxHp >= 1200);
   if (tank && tank.y < 20){
-    for (const k of ['longbows','drake','squire','imps']){
-      if (can(k) && G.elixir[1] >= CARDS[k].cost + (diffKey==='easy' ? 2 : 0)){
-        if (aiPlace(k, tank.x, clamp(tank.y-2, 1.5, 14.5))) return;
-      }
+    const support = hand.filter(k => can(k) && !isSpell(k) && !isWin(k) && CARDS[k].type==='unit' && G.elixir[1] >= CARDS[k].cost + (diffKey==='easy' ? 2 : 0));
+    if (support.length){
+      const k = support[Math.random()*support.length|0];
+      if (aiPlace(k, tank.x, clamp(tank.y-2, 1.5, 14.5))) return;
     }
   }
 
@@ -565,10 +714,17 @@ function aiThink(){
     else if (mine.length === 2) lane = mine[0].hp < mine[1].hp ? (mine[0].x<9?0:1) : (mine[1].x<9?0:1);
     else lane = Math.random() < 0.5 ? 0 : 1;
     const bx = BRIDGES[lane];
-    if (can('brute')){ aiPlace('brute', bx, 9.5); return; }
-    const opts = ['squire','longbows','drake','imps'].filter(can);
+    const wins = hand.filter(k => can(k) && isWin(k));
+    if (wins.length){
+      const k = wins[0], c = CARDS[k];
+      // Slow tanks start at the back to build a push; fast ones go straight to the bridge.
+      if (aiPlace(k, bx, c.speed < 0.8 ? 3.5 : 13.5)) return;
+    }
+    const den = hand.find(k => can(k) && CARDS[k].spawn);
+    if (den && Math.random() < 0.5 && aiPlace(den, 9, 10)) return;
+    const opts = hand.filter(k => can(k) && CARDS[k].type==='unit');
     if (opts.length){ const k = opts[Math.random()*opts.length|0]; aiPlace(k, bx, CARDS[k].range > 2 ? 11.5 : 13.5); return; }
-    if (G.elixir[1] >= 9.8 && can('turret')) aiPlace('turret', 9, 10);
+    if (G.elixir[1] >= 9.8){ const b = hand.find(k => can(k) && CARDS[k].type==='building'); if (b) aiPlace(b, 9, 10); }
   }
 }
 
@@ -597,7 +753,7 @@ function step(dt){
   if (G.aiT <= 0){ aiThink(); G.aiT = DIFF[diffKey].delay * (0.7 + Math.random()*0.6); }
 
   for (const e of G.ents) updateEnt(e, dt);
-  collide();
+  collide(dt);
 
   for (const p of G.projs){
     if (p.target && alive(p.target)){ p.tx = p.target.x; p.ty = p.target.y; }
@@ -617,10 +773,14 @@ function step(dt){
     if (sp.t >= sp.dur){
       sp.done = true;
       const c = CARDS[sp.key];
-      if (sp.key === 'fireball'){
+      if (c.spell === 'lob'){
         aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult, knock:c.knock });
-        G.fx.push({ kind:'burst', x:sp.x, y:sp.y, r:c.radius, t:0, dur:0.55, color:'#ff7a2a' });
+        G.fx.push({ kind:'burst', x:sp.x, y:sp.y, r:c.radius, t:0, dur:c.slow ? 0.8 : 0.55, color:c.slow ? '#d9452a' : '#ff7a2a' });
         sfx.boom();
+      } else if (c.spell === 'rain'){
+        aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult });
+        G.fx.push({ kind:'ring', x:sp.x, y:sp.y, r:c.radius, t:0, dur:0.35, color:'#f7ecd2' });
+        sfx.hit();
       } else {
         aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult, stun:c.stun });
         G.fx.push({ kind:'frost', x:sp.x, y:sp.y, r:c.radius, t:0, dur:0.8 });
@@ -633,11 +793,20 @@ function step(dt){
   for (const e of G.ents){
     if (e.hp <= 0 && !e.dead){
       e.dead = true;
-      if (e.kind === 'tower') onTowerDown(e);
-      else G.fx.push({ kind:'puff', x:e.x, y:e.y, r:e.r, t:0, dur:0.4, air:e.air });
+      if (e.kind === 'tower') { onTowerDown(e); continue; }
+      G.fx.push({ kind:'puff', x:e.x, y:e.y, r:e.r, t:0, dur:0.4, air:e.air });
+      const c = CARDS[e.key];
+      if (c.deathSpawn){
+        groupOffsets(c.deathSpawn.count).forEach(([ox,oy]) => { const u = makeEnt(c.deathSpawn.key, e.team, e.x+ox*1.2, e.y+oy*1.2); u.deploy = 0.4; G.pending.push(u); });
+      }
+      if (c.deathDmg){
+        aoe(e.team, e.x, e.y, c.deathDmg.r, c.deathDmg.dmg, { hitsAir:false, towerMult:1 });
+        G.fx.push({ kind:'burst', x:e.x, y:e.y, r:c.deathDmg.r, t:0, dur:0.5, color:'#ff9a3c' });
+      }
     }
   }
   G.ents = G.ents.filter(e => !e.dead);
+  if (G.pending.length){ G.ents.push(...G.pending); G.pending = []; }
 }
 function updateFx(dt){
   for (const f of G.fx) f.t += dt;
@@ -739,6 +908,122 @@ function drawFigure(c, key, team, x, y, S, o = {}){
       circle(c, 0, 0, r*0.18, '#ffd66b');
       break;
     }
+    case 'charger': {
+      c.save(); c.rotate(ang);
+      const lunge = swing > 0 ? r*0.3 : 0;
+      c.fillStyle = '#7a5236'; c.strokeStyle = '#3f2a1a'; c.lineWidth = r*0.08;
+      c.beginPath(); c.ellipse(lunge*0.5, 0, r*1.25, r*0.8, 0, 0, Math.PI*2); c.fill(); c.stroke();
+      c.strokeStyle = '#efe4c8'; c.lineWidth = r*0.16; c.lineCap = 'round';
+      c.beginPath(); c.arc(r*1.15+lunge, -r*0.45, r*0.35, Math.PI*0.9, Math.PI*1.9); c.stroke();
+      c.beginPath(); c.arc(r*1.15+lunge, r*0.45, r*0.35, Math.PI*0.1, Math.PI*-0.9, true); c.stroke();
+      circle(c, r*1.05+lunge, 0, r*0.36, '#5e3e28');
+      c.restore();
+      circle(c, -r*0.15, 0, r*0.5, T.main, T.dark, r*0.1);
+      circle(c, -r*0.15, -r*0.05, r*0.28, '#c9ced6', '#5f6875', r*0.06);
+      break;
+    }
+    case 'pyromancer': {
+      circle(c, 0, 0, r, T.main, T.dark);
+      c.save(); c.rotate(ang);
+      const glow = swing > 0 ? 1.3 : 1;
+      circle(c, r*1.0, 0, r*0.32*glow, '#ffb347', '#d2501c', r*0.08);
+      c.restore();
+      circle(c, 0, 0, r*0.62, '#3a2d4a');
+      c.fillStyle = '#5a4475';
+      c.beginPath(); c.moveTo(-r*0.45, r*0.15); c.lineTo(0, -r*1.15); c.lineTo(r*0.45, r*0.15); c.closePath(); c.fill();
+      circle(c, 0, -r*0.4, r*0.08, '#ffd66b');
+      break;
+    }
+    case 'colossus': case 'pebbling': {
+      c.save(); c.rotate(ang);
+      const punch = swing > 0 ? r*0.25 : 0;
+      circle(c, r*0.8+punch, -r*0.6, r*0.32, '#8d8a80', '#4d4b45', r*0.07);
+      circle(c, r*0.8, r*0.6, r*0.32, '#8d8a80', '#4d4b45', r*0.07);
+      c.restore();
+      circle(c, 0, 0, r, '#9b978c', '#4d4b45', r*0.08);
+      c.strokeStyle = '#5f5c55'; c.lineWidth = r*0.06;
+      c.beginPath(); c.moveTo(-r*0.6,-r*0.3); c.lineTo(-r*0.2,-r*0.05); c.lineTo(-r*0.35,r*0.4); c.moveTo(r*0.3,-r*0.6); c.lineTo(r*0.5,-r*0.2); c.stroke();
+      c.strokeStyle = T.main; c.lineWidth = r*0.14; c.beginPath(); c.arc(0,0,r*0.88,0,Math.PI*2); c.stroke();
+      circle(c, -r*0.25, -r*0.1, r*0.1, T.light); circle(c, r*0.25, -r*0.1, r*0.1, T.light);
+      break;
+    }
+    case 'rattlers': {
+      circle(c, 0, 0, r, '#ece6d4', T.main, r*0.3);
+      circle(c, -r*0.3, -r*0.1, r*0.17, '#1d1b18'); circle(c, r*0.3, -r*0.1, r*0.17, '#1d1b18');
+      break;
+    }
+    case 'gloomwings': {
+      const flap = 0.6 + 0.4*Math.sin(t*20);
+      c.fillStyle = '#2f2640';
+      c.beginPath(); c.moveTo(-r*0.4, 0); c.lineTo(-r*(1.2+0.6*flap), -r*0.7*flap); c.lineTo(-r*1.1, r*0.35); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(r*0.4, 0); c.lineTo(r*(1.2+0.6*flap), -r*0.7*flap); c.lineTo(r*1.1, r*0.35); c.closePath(); c.fill();
+      circle(c, 0, 0, r*0.75, '#4a3c63', T.main, r*0.25);
+      circle(c, -r*0.22, -r*0.1, r*0.12, '#ff5c7a'); circle(c, r*0.22, -r*0.1, r*0.12, '#ff5c7a');
+      break;
+    }
+    case 'impden': {
+      c.fillStyle = '#6d4b2e'; c.strokeStyle = '#3a2716'; c.lineWidth = r*0.08;
+      rr(c, -r, -r*0.6, r*2, r*1.6, r*0.2); c.fill(); c.stroke();
+      c.fillStyle = T.main; c.strokeStyle = T.dark;
+      c.beginPath(); c.moveTo(-r*1.15, -r*0.45); c.lineTo(0, -r*1.25); c.lineTo(r*1.15, -r*0.45); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#1d1410'; c.beginPath(); c.arc(0, r*1.0, r*0.42, Math.PI, 0); c.fill();
+      circle(c, -r*0.15, r*0.75, r*0.07, '#ffe45c'); circle(c, r*0.15, r*0.75, r*0.07, '#ffe45c');
+      break;
+    }
+    case 'sapper': {
+      circle(c, 0, 0, r, T.main, T.dark);
+      circle(c, 0, 0, r*0.6, '#d9b48a');
+      c.fillStyle = '#2b2b2b'; c.fillRect(-r*0.6, -r*0.22, r*1.2, r*0.16);
+      circle(c, -r*0.25, -r*0.14, r*0.17, '#7fe0ff', '#2b2b2b', r*0.05); circle(c, r*0.25, -r*0.14, r*0.17, '#7fe0ff', '#2b2b2b', r*0.05);
+      c.save(); c.rotate(ang);
+      circle(c, r*0.95, r*0.45, r*0.3, '#222');
+      c.strokeStyle = '#c8a46a'; c.lineWidth = r*0.06; c.beginPath(); c.moveTo(r*1.1, r*0.25); c.lineTo(r*1.25, r*0.08); c.stroke();
+      circle(c, r*1.27, r*0.05, r*0.08, '#ffcf3a');
+      c.restore();
+      break;
+    }
+    case 'zeppelin': {
+      c.fillStyle = '#5a3a1d'; c.fillRect(-r*0.3, r*0.55, r*0.6, r*0.35);
+      c.strokeStyle = '#3a2716'; c.lineWidth = r*0.05;
+      c.beginPath(); c.moveTo(-r*0.3, r*0.55); c.lineTo(-r*0.5, r*0.2); c.moveTo(r*0.3, r*0.55); c.lineTo(r*0.5, r*0.2); c.stroke();
+      c.fillStyle = T.main; c.strokeStyle = T.dark; c.lineWidth = r*0.1;
+      c.beginPath(); c.ellipse(0, -r*0.15, r*1.1, r*0.8, 0, 0, Math.PI*2); c.fill(); c.stroke();
+      c.strokeStyle = T.light; c.lineWidth = r*0.1;
+      c.beginPath(); c.ellipse(0, -r*0.15, r*0.45, r*0.8, 0, 0, Math.PI*2); c.stroke();
+      circle(c, 0, r*0.72, r*0.16, '#222');
+      break;
+    }
+    case 'crossbow': {
+      c.save(); c.rotate(ang);
+      c.strokeStyle = '#6b4a2a'; c.lineWidth = r*0.16; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r*0.2, r*0.3); c.lineTo(r*1.3, r*0.3); c.stroke();
+      c.strokeStyle = '#3b352c'; c.lineWidth = r*0.13;
+      c.beginPath(); c.moveTo(r*1.1, -r*0.25); c.quadraticCurveTo(r*1.35, r*0.3, r*1.1, r*0.85); c.stroke();
+      c.restore();
+      circle(c, 0, 0, r, T.main, T.dark);
+      circle(c, 0, -r*0.05, r*0.6, '#9aa1ab', '#4e555f', r*0.1);
+      c.fillStyle = '#4e555f'; c.fillRect(-r*0.7, -r*0.12, r*1.4, r*0.14);
+      break;
+    }
+    case 'volley': {
+      const R = S*0.55;
+      c.strokeStyle = '#f7ecd2'; c.lineWidth = R*0.12; c.lineCap = 'round';
+      for (const [ox,oy] of [[-0.5,-0.2],[0,0.15],[0.5,-0.25]]){
+        c.beginPath(); c.moveTo((ox-0.35)*R, (oy-0.7)*R); c.lineTo((ox+0.15)*R, (oy+0.5)*R); c.stroke();
+        c.fillStyle = '#c9d2dc'; c.beginPath(); c.moveTo((ox+0.25)*R, (oy+0.72)*R); c.lineTo((ox+0.02)*R, (oy+0.38)*R); c.lineTo((ox+0.3)*R, (oy+0.42)*R); c.fill();
+      }
+      break;
+    }
+    case 'meteor': {
+      const R = S*0.6;
+      c.fillStyle = 'rgba(255,110,40,.55)';
+      c.beginPath(); c.moveTo(-R*0.5, -R*0.7); c.lineTo(-R*1.5, -R*1.5); c.lineTo(-R*0.1, -R*0.95); c.fill();
+      const g = c.createRadialGradient(-R*0.3, -R*0.3, R*0.1, 0, 0, R);
+      g.addColorStop(0, '#ffcf8a'); g.addColorStop(0.35, '#a8452a'); g.addColorStop(1, '#3d1c14');
+      circle(c, 0, 0, R, g);
+      circle(c, R*0.3, R*0.2, R*0.18, 'rgba(0,0,0,.25)'); circle(c, -R*0.25, R*0.35, R*0.12, 'rgba(0,0,0,.25)');
+      break;
+    }
     case 'fireball': {
       const R = S*0.55;
       const g = c.createRadialGradient(-R*0.3, -R*0.3, R*0.1, 0, 0, R);
@@ -772,7 +1057,7 @@ function drawCardIcon(cv, key, team = 0){
   const S = (w*0.26) / baseR * (n>1 ? 0.72 : 1);
   if (n === 1) drawFigure(c, key, team, w/2, h/2 + (key==='drake'?w*0.05:0), S, { t:0.2 });
   else if (n === 2){ drawFigure(c, key, team, w*0.33, h*0.55, S); drawFigure(c, key, team, w*0.67, h*0.45, S); }
-  else { drawFigure(c, key, team, w*0.5, h*0.33, S); drawFigure(c, key, team, w*0.3, h*0.66, S); drawFigure(c, key, team, w*0.7, h*0.66, S); }
+  else { drawFigure(c, key, team, w*0.5, h*0.33, S); if (n > 3) drawFigure(c, key, team, w*0.5, h*0.66, S*0.9); drawFigure(c, key, team, w*0.3, h*0.66, S); drawFigure(c, key, team, w*0.7, h*0.66, S); }
 }
 
 function paintBg(){
@@ -839,7 +1124,8 @@ function drawTower(e){
   ctx.fillText(Math.ceil(e.hp), x, e.team===1 ? by + S*0.72 : by - S*0.12);
 }
 function drawUnit(e){
-  const lift = e.air ? 0.8*S : 0;
+  const hop = e.jumps && e.y > RIVER_T - 0.3 && e.y < RIVER_B + 0.3 ? Math.sin(clamp((RIVER_B + 0.3 - e.y)/(RIVER_B - RIVER_T + 0.6), 0, 1)*Math.PI)*1.2*S : 0;
+  const lift = e.air ? 0.8*S : hop;
   const bob = e.kind==='unit' && !e.attacking && e.deploy <= 0 ? Math.sin(e.walk)*S*0.04 : 0;
   const x = e.x*S, y = e.y*S;
   ctx.fillStyle = 'rgba(0,0,0,.25)';
@@ -855,10 +1141,12 @@ function drawUnit(e){
   }
 }
 function drawProj(p){
-  const h = (p.h0 + (p.h1-p.h0)*(p.prog||0)) * S;
+  const k = p.prog || 0;
+  const h = (p.h0 + (p.h1-p.h0)*k + (p.kind==='bomb' ? Math.sin(k*Math.PI)*1.5 : 0)) * S;
   const x = p.x*S, y = p.y*S - h;
   ctx.save(); ctx.translate(x, y); ctx.rotate(p.ang || 0);
   if (p.kind === 'fire'){ circle(ctx, 0, 0, S*0.22, '#ffb347'); circle(ctx, -S*0.12, 0, S*0.14, 'rgba(255,90,30,.7)'); }
+  else if (p.kind === 'bomb'){ circle(ctx, 0, 0, S*0.2, '#222'); circle(ctx, S*0.12, -S*0.12, S*0.06, '#ffcf3a'); }
   else if (p.kind === 'bolt'){ ctx.fillStyle = '#2d2a26'; circle(ctx, 0, 0, S*0.16, '#2d2a26'); }
   else { ctx.strokeStyle = '#f7ecd2'; ctx.lineWidth = Math.max(1.5, S*0.07); ctx.beginPath(); ctx.moveTo(-S*0.35, 0); ctx.lineTo(S*0.2, 0); ctx.stroke(); ctx.fillStyle = TEAM[p.team].light; ctx.fillRect(-S*0.38, -S*0.06, S*0.1, S*0.12); }
   ctx.restore();
@@ -910,11 +1198,22 @@ function draw(){
   for (const p of G.projs) drawProj(p);
   for (const e of G.ents) if (e.air) drawUnit(e);
   for (const sp of G.spells){
-    if (sp.key !== 'fireball') continue;
+    const sc = CARDS[sp.key];
+    if (sc.spell === 'rain'){
+      ctx.save(); ctx.strokeStyle = 'rgba(247,236,210,.85)'; ctx.lineWidth = Math.max(1.5, S*0.07);
+      const k = sp.t/sp.dur;
+      for (let i=0;i<16;i++){
+        const a = i*2.39, rad = sc.radius*Math.sqrt((i+0.5)/16);
+        const ax = sp.x + Math.cos(a)*rad, ay = sp.y + Math.sin(a)*rad - (1-k)*3;
+        ctx.beginPath(); ctx.moveTo(ax*S, (ay-0.5)*S); ctx.lineTo(ax*S, ay*S); ctx.stroke();
+      }
+      ctx.restore(); continue;
+    }
+    if (sc.spell !== 'lob') continue;
     const k = sp.t/sp.dur, x = sp.sx + (sp.x-sp.sx)*k, y = sp.sy + (sp.y-sp.sy)*k;
     const arc = Math.sin(k*Math.PI) * 2.5;
     ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x*S, y*S, S*0.5, S*0.25, 0, 0, Math.PI*2); ctx.fill();
-    drawFigure(ctx, 'fireball', sp.team, x*S, (y-arc)*S, S*1.1);
+    drawFigure(ctx, sp.key, sp.team, x*S, (y-arc)*S, S*(sc.slow ? 1.5 : 1.1));
   }
   for (const f of G.fx) drawFx(f);
 
@@ -1082,15 +1381,92 @@ document.querySelectorAll('[data-diff]').forEach(b => b.addEventListener('click'
 $('#againBtn').addEventListener('click', () => start(diffKey));
 $('#menuBtn').addEventListener('click', () => { G = null; showStart(); });
 
-// deck roster on the start screen
-const roster = $('#roster');
-for (const key of DECK){
-  const c = CARDS[key], div = document.createElement('div'), cv = document.createElement('canvas');
-  cv.width = 72; cv.height = 72; drawCardIcon(cv, key);
-  div.append(cv, document.createTextNode(c.name));
-  const sm = document.createElement('small'); sm.textContent = `${c.cost} · ${c.blurb}`; div.append(sm);
-  roster.append(div);
+// ---------- Deck: start-screen roster and builder ----------
+const avgCost = d => (d.reduce((s,k) => s + CARDS[k].cost, 0) / Math.max(1, d.length)).toFixed(1);
+function iconCanvas(key, px){ const cv = document.createElement('canvas'); cv.width = cv.height = px; drawCardIcon(cv, key); return cv; }
+function renderRoster(){
+  const roster = $('#roster'); roster.textContent = '';
+  for (const key of playerDeck){
+    const c = CARDS[key], div = document.createElement('div');
+    div.append(iconCanvas(key, 72), document.createTextNode(c.name));
+    const sm = document.createElement('small'); sm.textContent = `${c.cost} · ${c.blurb}`; div.append(sm);
+    roster.append(div);
+  }
+  $('#avgStart').textContent = avgCost(playerDeck);
 }
+function statLine(c){
+  if (c.type === 'spell') return `${c.dmg} dmg · radius ${c.radius}`;
+  const bits = [`${c.hp} HP`];
+  if (c.dmg) bits.push(`${c.dmg} dmg`);
+  if (c.count > 1) bits.push(`×${c.count}`);
+  if (c.life) bits.push(`${c.life}s`);
+  return bits.join(' · ');
+}
+let draft = [];
+function renderBuilder(){
+  const slots = $('#deckSlots'); slots.textContent = '';
+  for (let i=0;i<8;i++){
+    const key = draft[i], b = document.createElement('button');
+    b.className = 'slot' + (key ? ' filled' : '');
+    if (key){
+      const c = CARDS[key];
+      const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
+      b.append(cost, iconCanvas(key, 96), document.createTextNode(c.name));
+      b.setAttribute('aria-label', `Remove ${c.name}`);
+      b.addEventListener('click', () => { draft.splice(i, 1); renderBuilder(); });
+    } else { b.textContent = 'Empty'; b.disabled = true; b.style.color = 'var(--muted)'; }
+    slots.append(b);
+  }
+  const col = $('#collection'); col.textContent = '';
+  const sorted = [...POOL].sort((a,b) => CARDS[a].cost - CARDS[b].cost || CARDS[a].name.localeCompare(CARDS[b].name));
+  for (const key of sorted){
+    const c = CARDS[key], inDeck = draft.includes(key);
+    const t = document.createElement('button');
+    t.className = 'tile' + (inDeck ? ' in' : '');
+    t.disabled = !inDeck && draft.length >= 8;
+    const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
+    const info = document.createElement('div');
+    const tags = [c.air ? 'Flies' : '', c.jumps ? 'Jumps river' : '', c.type==='building' ? 'Building' : '', c.type==='spell' ? 'Spell' : '', c.hitsAir && c.type!=='spell' ? 'Hits air' : '', c.targets==='buildings' ? 'Towers only' : ''].filter(Boolean).join(' · ');
+    info.innerHTML = `<div class="t-name"></div><div class="t-blurb"></div><div class="t-stats"></div>`;
+    info.querySelector('.t-name').textContent = c.name;
+    info.querySelector('.t-blurb').textContent = tags || c.blurb;
+    info.querySelector('.t-stats').textContent = statLine(c);
+    t.title = c.blurb;
+    t.append(cost, iconCanvas(key, 80), info);
+    t.setAttribute('aria-pressed', inDeck ? 'true' : 'false');
+    t.addEventListener('click', () => {
+      if (inDeck) draft = draft.filter(k => k !== key);
+      else if (draft.length < 8) draft.push(key);
+      renderBuilder();
+    });
+    col.append(t);
+  }
+  $('#deckCount').textContent = draft.length;
+  $('#deckAvg').textContent = avgCost(draft);
+  $('#deckAir').textContent = draft.filter(antiAir).length + (draft.some(isSpell) ? ' + spells' : '');
+  const hint = $('#deckHint');
+  if (draft.length < 8) hint.textContent = `Add ${8 - draft.length} more card${draft.length === 7 ? '' : 's'} to save.`;
+  else if (!draft.some(antiAir)) hint.textContent = 'Nothing in this deck can hit flying troops except spells. You can still save it.';
+  else if (!draft.some(isWin)) hint.textContent = 'No tower-only attacker. You will need troops to push through on their own.';
+  else hint.textContent = 'Deck ready.';
+  $('#deckSave').disabled = draft.length !== 8;
+  $('#deckSave').style.opacity = draft.length === 8 ? 1 : 0.5;
+}
+function openBuilder(){ draft = [...playerDeck]; $('#startScreen').hidden = true; $('#deckScreen').hidden = false; renderBuilder(); }
+function closeBuilder(){ $('#deckScreen').hidden = true; renderRoster(); showStart(); }
+$('#editDeckBtn').addEventListener('click', openBuilder);
+$('#deckCancel').addEventListener('click', closeBuilder);
+$('#deckSave').addEventListener('click', () => {
+  if (draft.length !== 8) return;
+  playerDeck = [...draft];
+  try { localStorage.setItem('bridgeburn-deck', JSON.stringify(playerDeck)); } catch(e) {}
+  closeBuilder();
+});
+$('#deckRandom').addEventListener('click', () => {
+  // Random but playable: same constraints the Rival uses.
+  draft = rivalDeck(); renderBuilder();
+});
+renderRoster();
 
 // ---------- Sizing & loop ----------
 function resize(){
@@ -1127,7 +1503,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && G &
 newGame(); G.demo = true;
 showStart();
 requestAnimationFrame(frame);
-window.__bb = { get G(){ return G; }, step, findSpot, deploy };
+window.__bb = { get G(){ return G; }, step, findSpot, deploy, rivalDeck, newDeck, start };
 })();
 </script>
 </body>
