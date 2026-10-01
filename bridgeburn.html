@@ -173,7 +173,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <p>Three minutes, two bridges, six towers. Push your troops across the river and knock down the Rival's towers before they take yours.</p>
       <ul>
         <li>Drag a card onto your half of the arena, or tap a card and then tap where it should land. Keys 1–4 pick cards.</li>
-        <li>Cards cost elixir, which refills over time. The last minute runs at double speed.</li>
+        <li>Cards cost elixir, which refills over time. The last minute runs at double speed. If crowns are level at 3:00, sudden death starts at 3× and climbs every minute (4×, 5×…) until someone takes a tower.</li>
         <li>A side tower is worth one crown. The king tower is worth three and ends the match.</li>
         <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
       </ul>
@@ -252,6 +252,8 @@ const CARDS = {
   sapper:  { name:'Sapper', cost:3, type:'unit', count:1, hp:330, dmg:180, hs:1.8, range:4.5, speed:1.0, sight:5.5, r:0.4, air:false, hitsAir:false, targets:'any', splash:1.5, proj:'bomb', blurb:'Lobs bombs' },
   zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:620, hs:3.0, range:0.4, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', deathDmg:{ dmg:300, r:2 }, blurb:'Bombs towers' },
   crossbow:{ name:'Crossbowman', cost:4, type:'unit', count:1, hp:650, dmg:180, hs:1.1, range:6, speed:1.0, sight:6.5, r:0.45, air:false, hitsAir:true, targets:'any', proj:'bolt', blurb:'Long range' },
+  potato:  { name:'Potato', cost:3, type:'plant', grow:20, sprouts:'spudsquire', r:0.45, blurb:'Plant anywhere. Sprouts in 20s' },
+  spudsquire:{ name:'Potato Squire', cost:0, hidden:true, type:'unit', count:1, hp:1250, dmg:155, hs:1.2, range:0.8, speed:1.0, sight:5.5, r:0.5, air:false, hitsAir:false, targets:'any' },
   meteor:  { name:'Meteor', cost:6, type:'spell', spell:'lob', dmg:1050, radius:2, towerMult:0.35, knock:1.2, slow:true, blurb:'Huge, slow hit' }
 };
 const POOL = Object.keys(CARDS).filter(k => !CARDS[k].hidden);
@@ -274,8 +276,8 @@ function loadDeck(){
 let playerDeck = loadDeck();
 const DIFF = {
   easy:   { mult:0.85, delay:1.4, attackAt:9.6 },
-  normal: { mult:1.0,  delay:0.8, attackAt:8.5 },
-  hard:   { mult:1.18, delay:0.4, attackAt:7.4 }
+  normal: { mult:1.0,  delay:0.7, attackAt:8.0 },
+  hard:   { mult:1.15, delay:0.35, attackAt:7.0 }
 };
 
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
@@ -332,7 +334,7 @@ function makeEnt(key, team, x, y){
 function newGame(){
   G = { t:0, clock:180, ot:false, over:false, endT:0, result:null, elixir:[5,5], crowns:[0,0],
     ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(playerDeck), newDeck(rivalDeck())], pending:[],
-    aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, stats:{ played:[0,0] } };
+    aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, otLevel:0, lastLane:[0,0], stats:{ played:[0,0] } };
   G.ents.push(makeTower(1,true,9,3), makeTower(1,false,3.5,6.5), makeTower(1,false,14.5,6.5));
   G.ents.push(makeTower(0,true,9,29), makeTower(0,false,3.5,25.5), makeTower(0,false,14.5,25.5));
   renderHand(); lastHud = {};
@@ -342,13 +344,21 @@ const alive = e => e.hp > 0;
 const towersOf = team => G.ents.filter(e => e.kind==='tower' && e.team===team && alive(e));
 const kingOf = team => G.ents.find(e => e.kind==='tower' && e.king && e.team===team);
 function princessAlive(team, lane){ return towersOf(team).some(t => !t.king && (t.x<9?0:1)===lane); }
-const isDouble = () => G.ot || G.clock <= 60;
+// Elixir speed: 1× for the first two minutes, 2× in the last minute, then sudden death that
+// climbs one step every minute (3×, 4×, 5×…) until somebody takes a tower.
+const elixirMult = () => G.ot ? G.otLevel : G.clock <= 60 ? 2 : 1;
 
 // ---------- Placement ----------
 function canPlace(team, key, x, y){
   const c = CARDS[key];
   if (x < 0 || x > W || y < 0 || y > H) return false;
   if (c.type === 'spell') return true;
+  if (c.type === 'plant'){
+    // A potato can go anywhere on dry land that is not on top of a tower.
+    if (x < 0.5 || x > W-0.5 || y < 0.5 || y > H-0.5) return false;
+    if (y > RIVER_T - 0.3 && y < RIVER_B + 0.3) return false;
+    return !G.ents.some(t => t.kind === 'tower' && alive(t) && Math.abs(t.x-x) < t.r+0.35 && Math.abs(t.y-y) < t.r+0.35);
+  }
   if (x < 0.5 || x > W-0.5 || y < 0.5 || y > H-0.5) return false;
   const lane = x < 9 ? 0 : 1;
   if (team === 0){
@@ -360,7 +370,7 @@ function canPlace(team, key, x, y){
   }
   if (y > RIVER_T - 0.3 && y < RIVER_B + 0.3) return false;
   for (const t of G.ents){
-    if (t.kind !== 'unit' && alive(t) && Math.abs(t.x-x) < t.r+0.35 && Math.abs(t.y-y) < t.r+0.35) return false;
+    if (t.kind !== 'unit' && t.kind !== 'plant' && alive(t) && Math.abs(t.x-x) < t.r+0.35 && Math.abs(t.y-y) < t.r+0.35) return false;
   }
   return true;
 }
@@ -391,12 +401,16 @@ function deploy(team, handIdx, x, y){
   G.elixir[team] -= c.cost;
   cycle(d, handIdx);
   G.stats.played[team]++;
+  G.lastLane[team] = x < 9 ? 0 : 1;
   if (c.type === 'spell'){
     const k = kingOf(team);
     const sx = k ? k.x : 9, sy = k ? k.y : (team===0?29:3);
     const d = Math.hypot(x-sx, y-sy);
     const flight = c.spell==='lob' ? Math.max(0.4, d/(c.slow ? 8 : 14)) : c.spell==='rain' ? 0.6 : 0.12;
     G.spells.push({ key, team, x, y, sx, sy, t:0, dur:flight });
+  } else if (c.type === 'plant'){
+    G.ents.push({ id:nextId++, key, team, kind:'plant', x, y, r:c.r, hp:1, maxHp:1, growT:0, grow:c.grow,
+      air:false, deploy:0, stun:0, flash:0, cd:0, dmg:0, angle:0 });
   } else if (c.type === 'building'){
     G.ents.push(makeEnt(key, team, x, y));
   } else {
@@ -410,7 +424,7 @@ function deploy(team, handIdx, x, y){
 
 // ---------- Combat ----------
 function valid(e, t){
-  return t && alive(t) && t.team !== e.team && (e.hitsAir || !t.air) && (e.targets !== 'buildings' || t.kind !== 'unit');
+  return t && alive(t) && t.kind !== 'plant' && t.team !== e.team && (e.hitsAir || !t.air) && (e.targets !== 'buildings' || t.kind !== 'unit');
 }
 function defaultTarget(e){
   const towers = towersOf(1-e.team);
@@ -435,7 +449,7 @@ function damage(o, amt){
 }
 function aoe(team, x, y, r, dmg, o={}){
   for (const e of G.ents){
-    if (e.team===team || !alive(e)) continue;
+    if (e.team===team || !alive(e) || e.kind === 'plant') continue;
     if (e.air && o.hitsAir===false) continue;
     if (Math.hypot(e.x-x, e.y-y) - e.r*0.6 > r) continue;
     damage(e, dmg * (e.kind==='tower' ? (o.towerMult ?? 1) : 1));
@@ -480,7 +494,7 @@ function steer(e, ux, uy, gd, target){
   if (e.air) return [ux, uy];
   let best = null, bestAlong = Infinity;
   for (const o of G.ents){
-    if (o === target || o.kind === 'unit' || !alive(o)) continue;
+    if (o === target || o.kind === 'unit' || o.kind === 'plant' || !alive(o)) continue;
     const rx = o.x - e.x, ry = o.y - e.y;
     const along = rx*ux + ry*uy;
     if (along <= 0 || along > gd + o.r) continue;
@@ -528,6 +542,16 @@ function constrain(e){
 
 function updateEnt(e, dt){
   if (!alive(e)) return;
+  if (e.kind === 'plant'){
+    e.growT += dt;
+    if (e.growT >= e.grow){
+      const u = makeEnt(CARDS[e.key].sprouts, e.team, e.x, e.y);
+      u.deploy = 0.5; G.pending.push(u);
+      G.fx.push({ kind:'dirt', x:e.x, y:e.y, r:1.1, t:0, dur:0.6 });
+      e.hp = 0; e.sprouted = true;
+    }
+    return;
+  }
   e.flash = Math.max(0, e.flash-dt);
   e.swing = Math.max(0, (e.swing||0)-dt);
   if (e.life){ e.hp -= e.maxHp/e.life*dt; if (e.hp <= 0){ e.hp = 0; return; } }
@@ -566,9 +590,9 @@ function updateEnt(e, dt){
 function collide(dt){
   const a = G.ents;
   for (let i=0;i<a.length;i++){
-    const p = a[i]; if (!alive(p)) continue;
+    const p = a[i]; if (!alive(p) || p.kind === 'plant') continue;
     for (let j=i+1;j<a.length;j++){
-      const q = a[j]; if (!alive(q) || p.air !== q.air) continue;
+      const q = a[j]; if (!alive(q) || q.kind === 'plant' || p.air !== q.air) continue;
       const pf = p.kind !== 'unit', qf = q.kind !== 'unit';
       if (pf && qf) continue;
       let dx = q.x-p.x, dy = q.y-p.y, d = Math.hypot(dx,dy);
@@ -626,11 +650,6 @@ function endGame(winner){
   saveRecord(G.result);
   setTimeout(showEnd, 1600);
 }
-function tiebreak(){
-  const low = team => Math.min(...towersOf(team).map(t => t.hp), Infinity);
-  const a = low(0), b = low(1);
-  if (Math.abs(a-b) < 1) endGame(-1); else endGame(a > b ? 0 : 1);
-}
 
 // ---------- Rival AI ----------
 function aiPlace(key, x, y){
@@ -641,90 +660,165 @@ function aiPlace(key, x, y){
   return spot ? deploy(1, i, spot[0], spot[1]) : false;
 }
 const dps = k => CARDS[k].dmg / CARDS[k].hs * (CARDS[k].count || 1);
+// What the Rival knows about its own deck, worked out once per match.
+function deckProfile(deck){
+  const units = deck.filter(k => CARDS[k].type === 'unit');
+  return {
+    wins: deck.filter(isWin),
+    tanks: deck.filter(k => isWin(k) && CARDS[k].hp >= 2500),
+    fast: deck.filter(k => isWin(k) && (CARDS[k].speed >= 1.5 || CARDS[k].air)),
+    support: units.filter(k => !isWin(k) && (CARDS[k].range > 2 || CARDS[k].splash)),
+    swarms: units.filter(k => (CARDS[k].count || 1) >= 3),
+    potato: deck.includes('potato')
+  };
+}
+// The Rival "counts elixir" like a good player. Hard reads it exactly, Normal is a bit off.
+function readPlayerElixir(){
+  const e = G.elixir[0];
+  return diffKey === 'hard' ? e : diffKey === 'normal' ? e + (G.aiNoise || 0) : 5;
+}
 function aiThink(){
-  const D = DIFF[diffKey];
+  const D = DIFF[diffKey], mult = elixirMult();
   const hand = G.deck[1].hand;
-  const can = k => hand.includes(k) && CARDS[k].cost <= G.elixir[1];
+  const el = G.elixir[1];
+  const can = k => hand.includes(k) && CARDS[k].cost <= el;
+  const prof = G.aiProfile || (G.aiProfile = deckProfile([...G.deck[1].hand, ...G.deck[1].queue]));
+  if (Math.random() < 0.05) G.aiNoise = (Math.random()*2 - 1) * 1.5;
   const foes = G.ents.filter(e => e.team===0 && alive(e) && e.kind==='unit');
+  const mine = G.ents.filter(e => e.team===1 && alive(e) && e.kind==='unit');
+  const playerTowers = towersOf(0);
+  // With faster elixir it can afford to commit sooner, and should, or it wastes elixir.
+  const attackAt = Math.max(4.5, D.attackAt - (mult - 1) * 1.2);
 
-  // Spells: finish a tower, hit a valuable cluster, or clear a swarm.
+  // 1) Spells: finish a tower, hit a valuable cluster, or clear a swarm.
   for (const k of hand.filter(k => isSpell(k) && can(k))){
     const c = CARDS[k];
-    for (const t of towersOf(0)) if (t.hp <= c.dmg*c.towerMult){ aiPlace(k, t.x, t.y); return; }
+    for (const t of playerTowers) if (t.hp <= c.dmg*c.towerMult){ aiPlace(k, t.x, t.y); return; }
     let best = null, bv = 0, bn = 0;
     for (const u of foes){
       let v = 0, n = 0;
       for (const o of foes) if (Math.hypot(o.x-u.x, o.y-u.y) <= c.radius*0.9){ v += Math.min(o.hp, c.dmg); if (o.hp <= c.dmg) n++; }
+      // A cluster sitting on a tower is worth more: the spell chips the tower too.
+      if (playerTowers.some(t => Math.hypot(t.x-u.x, t.y-u.y) <= c.radius + t.r)) v += c.dmg*c.towerMult;
       if (v > bv){ bv = v; best = u; bn = n; }
     }
     if (!best) continue;
-    const lead = c.spell === 'lob' ? -0.6 : -0.3;
-    if (c.dmg >= 400 ? bv >= c.cost*240 : (bn >= 3 || (c.stun && bv >= 600))){ aiPlace(k, best.x, best.y + lead); return; }
+    const lead = c.spell === 'lob' ? (c.slow ? -1.2 : -0.6) : -0.3;
+    const need = c.dmg >= 400 ? c.cost * 240 / Math.sqrt(mult) : 0;
+    if (c.dmg >= 400 ? bv >= need : (bn >= 3 || (c.stun && bv >= 600))){ aiPlace(k, best.x, best.y + lead); return; }
   }
 
-  // Defend against anything pushing into our half: score each troop in hand against the threat.
-  const threats = foes.filter(e => e.y < 20.5).sort((a,b) => a.y-b.y);
+  // 2) Defend. A planted potato that is about to sprout on our side counts as a threat too:
+  //    the Rival remembers where you planted it.
+  const threats = foes.filter(e => e.y < 20.5);
+  for (const p of G.ents) if (p.kind === 'plant' && p.team === 0 && p.y < 16 && p.grow - p.growT < 3)
+    threats.push({ x:p.x, y:p.y, hp:1250, maxHp:1250, air:false, targets:'any', key:'spudsquire' });
+  threats.sort((a,b) => a.y-b.y);
   if (threats.length){
     const hpSum = threats.reduce((s,t) => s+t.hp, 0);
-    if (hpSum > 350 || threats[0].y < 12){
+    // Our own troops already near the threat count against it.
+    const help = mine.filter(m => threats.some(t => Math.hypot(t.x-m.x, t.y-m.y) < 4)).reduce((s,m) => s + m.hp, 0);
+    if (hpSum - help*0.6 > 350 || threats[0].y < 11){
       const th = threats[0];
       const air = threats.some(t => t.air);
       const big = threats.some(t => t.maxHp >= 2000);
+      const towersOnly = threats.some(t => t.targets === 'buildings' && !t.air);
       const swarm = threats.filter(t => t.maxHp <= 350).length >= 3;
       let pick = null, ps = 0;
       for (const k of hand){
-        if (!can(k) || isSpell(k)) continue;
+        if (!can(k) || isSpell(k) || CARDS[k].type === 'plant') continue;
         const c = CARDS[k];
-        let sc = 1;
+        let sc = 2 - c.cost*0.3; // prefer the cheapest card that does the job
         if (isWin(k)) sc -= 6;
         if (c.targets === 'none') sc -= 1;
         if (air) sc += antiAir(k) ? 5 : -8;
         if (big) sc += ((c.count||1) >= 3 ? 4 : 0) + (dps(k) >= 140 ? 3 : 0) + (c.type==='building' ? 3 : 0);
+        if (towersOnly && c.type === 'building') sc += 4;
         if (swarm) sc += c.splash ? 5 : (c.count||1) >= 3 ? 1 : -2;
-        sc += Math.random();
+        sc += Math.random()*0.8;
         if (sc > ps){ ps = sc; pick = k; }
       }
       if (pick){
         const c = CARDS[pick];
         let x = th.x, y;
-        if (c.type === 'building'){ x = clamp(th.x, 5.5, 12.5); y = 10; }
-        else if (c.range > 2){ x = th.x + (th.x < 9 ? 1.5 : -1.5); y = th.y - 4.5; }
+        // Buildings go in the middle to drag tower-only attackers away from our towers.
+        if (c.type === 'building'){ x = towersOnly ? 9 : clamp(th.x, 5.5, 12.5); y = towersOnly ? 9 : 10; }
+        // Ranged troops stand behind our tower line so the tower soaks hits.
+        else if (c.range > 2){ x = th.x + (th.x < 9 ? 1.5 : -1.5); y = Math.min(th.y - 4.5, 8); }
+        // Swarms surround; melee meets it just in front.
+        else if ((c.count||1) >= 3) y = th.y - 0.8;
         else y = th.y - 1.5;
         if (aiPlace(pick, x, clamp(y, 1.5, 14.5))) return;
       }
-      return; // save up rather than start an attack while under pressure
+      if (el < 9.5) return; // save up rather than start an attack while under pressure
     }
   }
 
-  // Back up our own win condition with support troops.
-  const tank = G.ents.find(e => e.team===1 && e.kind==='unit' && isWin(e.key) && alive(e) && e.maxHp >= 1200);
-  if (tank && tank.y < 20){
-    const support = hand.filter(k => can(k) && !isSpell(k) && !isWin(k) && CARDS[k].type==='unit' && G.elixir[1] >= CARDS[k].cost + (diffKey==='easy' ? 2 : 0));
-    if (support.length){
-      const k = support[Math.random()*support.length|0];
-      if (aiPlace(k, tank.x, clamp(tank.y-2, 1.5, 14.5))) return;
+  // 3) Support our push. Ranged and splash go behind the tank; swarms wait until the tank is
+  //    at the tower so they are not wiped on the way.
+  const lead = mine.filter(m => isWin(m.key)).sort((a,b) => b.y - a.y)[0];
+  if (lead && lead.y < 22){
+    const nearTower = playerTowers.some(t => Math.hypot(t.x-lead.x, t.y-lead.y) < t.r + 3);
+    const backed = mine.filter(m => m !== lead && Math.hypot(m.x-lead.x, m.y-lead.y) < 4).length;
+    for (const k of hand){
+      if (!can(k) || isSpell(k) || isWin(k) || CARDS[k].type !== 'unit') continue;
+      const c = CARDS[k], swarmy = (c.count||1) >= 3;
+      if (swarmy && !nearTower) continue;
+      if (!swarmy && backed >= 2 && mult < 3) continue;
+      if (el < c.cost + (diffKey === 'easy' ? 2 : 0)) continue;
+      const y = swarmy ? lead.y + 0.5 : lead.y - (c.range > 2 ? 2.5 : 1.5);
+      if (aiPlace(k, lead.x, clamp(y, 1.5, 14.5))) return;
     }
   }
 
-  // Start a push once elixir builds up.
-  if (G.elixir[1] >= D.attackAt){
-    const mine = towersOf(0).filter(t => !t.king);
+  // 4) Counter-push: survivors of a defence heading out get a win condition to escort.
+  const survivors = mine.filter(m => !isWin(m.key) && m.y > 9 && m.y < 17 && m.hp > 300);
+  if (diffKey !== 'easy' && survivors.length && !lead){
+    const lane = survivors[0].x < 9 ? 0 : 1;
+    const k = prof.wins.find(can);
+    if (k && aiPlace(k, BRIDGES[lane], CARDS[k].speed < 0.8 ? 11 : 13.5)) return;
+  }
+
+  // 5) Punish: when the player has just spent big, a fast attacker goes in on the other lane.
+  if (diffKey !== 'easy' && readPlayerElixir() <= 2.5){
+    const k = prof.fast.find(can);
+    if (k){ const lane = 1 - G.lastLane[0]; if (aiPlace(k, BRIDGES[lane], 13.5)) return; }
+  }
+
+  // 6) Potatoes: plant one in front of the player's weakest tower when things are quiet.
+  if (prof.potato && can('potato') && !threats.length && el >= CARDS.potato.cost + 2){
+    const t = playerTowers.filter(t => !t.king).sort((a,b) => a.hp-b.hp)[0] || playerTowers[0];
+    if (t && aiPlace('potato', t.x + (t.x < 9 ? 0.5 : -0.5), t.y - t.r - 1)) return;
+  }
+
+  // 7) Build a push once elixir is up. Slow tanks start at the back so support can join them.
+  if (el >= attackAt){
+    const pt = playerTowers.filter(t => !t.king);
     let lane;
-    if (mine.length === 1) lane = Math.random() < 0.7 ? (mine[0].x<9?1:0) : (mine[0].x<9?0:1);
-    else if (mine.length === 2) lane = mine[0].hp < mine[1].hp ? (mine[0].x<9?0:1) : (mine[1].x<9?0:1);
+    if (pt.length === 1) lane = Math.random() < 0.7 ? (pt[0].x<9?1:0) : (pt[0].x<9?0:1);
+    else if (pt.length === 2) lane = pt[0].hp < pt[1].hp ? (pt[0].x<9?0:1) : (pt[1].x<9?0:1);
     else lane = Math.random() < 0.5 ? 0 : 1;
+    // At 3× and up, pressure both lanes so the player cannot stack one side.
+    if (mult >= 3 && lead) lane = lead.x < 9 ? 1 : 0;
     const bx = BRIDGES[lane];
-    const wins = hand.filter(k => can(k) && isWin(k));
+    const wins = hand.filter(k => can(k) && isWin(k)).sort((a,b) => CARDS[b].hp - CARDS[a].hp);
     if (wins.length){
       const k = wins[0], c = CARDS[k];
-      // Slow tanks start at the back to build a push; fast ones go straight to the bridge.
       if (aiPlace(k, bx, c.speed < 0.8 ? 3.5 : 13.5)) return;
     }
     const den = hand.find(k => can(k) && CARDS[k].spawn);
     if (den && Math.random() < 0.5 && aiPlace(den, 9, 10)) return;
-    const opts = hand.filter(k => can(k) && CARDS[k].type==='unit');
-    if (opts.length){ const k = opts[Math.random()*opts.length|0]; aiPlace(k, bx, CARDS[k].range > 2 ? 11.5 : 13.5); return; }
-    if (G.elixir[1] >= 9.8){ const b = hand.find(k => can(k) && CARDS[k].type==='building'); if (b) aiPlace(b, 9, 10); }
+    // No win condition in hand: cycle a cheap card at the back to dig for one.
+    const opts = hand.filter(k => can(k) && CARDS[k].type === 'unit').sort((a,b) => CARDS[a].cost - CARDS[b].cost);
+    if (opts.length){
+      const k = opts[0];
+      if (aiPlace(k, bx, el >= 9.5 ? (CARDS[k].range > 2 ? 11.5 : 13.5) : 4)) return;
+    }
+    if (el >= 9.5){
+      const b = hand.find(k => can(k) && CARDS[k].type === 'building');
+      if (b && aiPlace(b, 9, 10)) return;
+      if (can('potato')) aiPlace('potato', bx, 9);
+    }
   }
 }
 
@@ -734,23 +828,27 @@ function step(dt){
   if (G.over){ G.endT += dt; for (const p of G.projs) p.done = true; return; }
   G.t += dt;
   G.clock -= dt;
-  if (!G.dblShown && isDouble()){
+  if (!G.dblShown && elixirMult() >= 2){
     G.dblShown = true;
     G.texts.push({ x:9, y:16, txt:'Double elixir', t:0, dur:2, color:'#e7a3ff', size:1 });
   }
   if (G.clock <= 0){
     if (!G.ot){
       if (G.crowns[0] !== G.crowns[1]) { endGame(G.crowns[0] > G.crowns[1] ? 0 : 1); return; }
-      G.ot = true; G.clock = 60;
-      G.texts.push({ x:9, y:16, txt:'Overtime: next crown wins', t:0, dur:2.4, color:'#f2c14e', size:0.85 });
-    } else { G.clock = 0; tiebreak(); return; }
+      G.ot = true; G.otLevel = 3; G.clock = 60;
+      G.texts.push({ x:9, y:16, txt:'Sudden death 3×', t:0, dur:2.4, color:'#f2c14e', size:0.95 });
+    } else {
+      G.otLevel++; G.clock = 60;
+      G.texts.push({ x:9, y:16, txt:`${G.otLevel}× elixir`, t:0, dur:2, color:'#f2c14e', size:1 });
+      sfx.crown();
+    }
   }
-  const rate = (isDouble() ? 2 : 1) / 2.8;
+  const rate = elixirMult() / 2.8;
   G.elixir[0] = Math.min(10, G.elixir[0] + rate*dt);
   G.elixir[1] = Math.min(10, G.elixir[1] + rate*dt*DIFF[diffKey].mult);
 
   G.aiT -= dt;
-  if (G.aiT <= 0){ aiThink(); G.aiT = DIFF[diffKey].delay * (0.7 + Math.random()*0.6); }
+  if (G.aiT <= 0){ aiThink(); G.aiT = DIFF[diffKey].delay / Math.min(2.5, Math.sqrt(elixirMult())) * (0.7 + Math.random()*0.6); }
 
   for (const e of G.ents) updateEnt(e, dt);
   collide(dt);
@@ -794,6 +892,7 @@ function step(dt){
     if (e.hp <= 0 && !e.dead){
       e.dead = true;
       if (e.kind === 'tower') { onTowerDown(e); continue; }
+      if (e.sprouted) continue;
       G.fx.push({ kind:'puff', x:e.x, y:e.y, r:e.r, t:0, dur:0.4, air:e.air });
       const c = CARDS[e.key];
       if (c.deathSpawn){
@@ -1005,6 +1104,35 @@ function drawFigure(c, key, team, x, y, S, o = {}){
       c.fillStyle = '#4e555f'; c.fillRect(-r*0.7, -r*0.12, r*1.4, r*0.14);
       break;
     }
+    case 'potato': case 'spudsquire': {
+      if (key === 'potato'){
+        // card icon: a potato with a sprout
+        c.fillStyle = '#b98a55'; c.strokeStyle = '#7a5530'; c.lineWidth = r*0.1;
+        c.beginPath(); c.ellipse(0, r*0.25, r*1.15, r*0.8, -0.25, 0, Math.PI*2); c.fill(); c.stroke();
+        for (const [ox,oy] of [[-0.5,0.2],[0.3,0.55],[0.55,0.05],[-0.1,0.6]]) circle(c, ox*r, oy*r, r*0.08, '#7a5530');
+        c.strokeStyle = '#4f8f3a'; c.lineWidth = r*0.14; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(0, -r*0.5); c.lineTo(0, -r*1.0); c.stroke();
+        c.fillStyle = '#6cbf4a';
+        c.beginPath(); c.ellipse(-r*0.28, -r*1.05, r*0.3, r*0.14, -0.5, 0, Math.PI*2); c.fill();
+        c.beginPath(); c.ellipse(r*0.28, -r*1.12, r*0.3, r*0.14, 0.5, 0, Math.PI*2); c.fill();
+        break;
+      }
+      c.save(); c.rotate(ang);
+      const reach = swing > 0 ? 0.35 : 0;
+      c.strokeStyle = '#eef1f5'; c.lineWidth = r*0.2; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r*0.6, r*0.62); c.lineTo(r*(1.5+reach), r*(0.62-reach*0.8)); c.stroke();
+      c.restore();
+      c.fillStyle = '#b98a55'; c.strokeStyle = T.main; c.lineWidth = r*0.24;
+      c.beginPath(); c.ellipse(0, 0, r*1.05, r*0.88, 0.3, 0, Math.PI*2); c.fill(); c.stroke();
+      circle(c, -r*0.35, r*0.3, r*0.08, '#7a5530'); circle(c, r*0.4, r*0.35, r*0.07, '#7a5530');
+      c.fillStyle = '#c9ced6'; c.strokeStyle = '#5f6875'; c.lineWidth = r*0.08;
+      c.beginPath(); c.arc(0, -r*0.15, r*0.55, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+      circle(c, -r*0.22, r*0.05, r*0.08, '#2a1d12'); circle(c, r*0.22, r*0.05, r*0.08, '#2a1d12');
+      c.strokeStyle = '#4f8f3a'; c.lineWidth = r*0.1;
+      c.beginPath(); c.moveTo(0, -r*0.7); c.lineTo(0, -r*1.05); c.stroke();
+      c.fillStyle = '#6cbf4a'; c.beginPath(); c.ellipse(r*0.18, -r*1.08, r*0.22, r*0.1, 0.5, 0, Math.PI*2); c.fill();
+      break;
+    }
     case 'volley': {
       const R = S*0.55;
       c.strokeStyle = '#f7ecd2'; c.lineWidth = R*0.12; c.lineCap = 'round';
@@ -1140,6 +1268,31 @@ function drawUnit(e){
     hpBar(x, y - lift - e.r*S - S*0.35, w, e.hp/e.maxHp, e.team, S*0.14);
   }
 }
+// A planted potato shows how far along it is only through how it looks: a dirt mound, a shoot,
+// a leafy plant, then a shake in the last two seconds. No countdown number, by design.
+function drawPlant(e){
+  const x = e.x*S, y = e.y*S, k = e.growT / e.grow, T = TEAM[e.team];
+  ctx.save();
+  const shake = e.grow - e.growT < 2 ? Math.sin(G.t*40) * S*0.06 : 0;
+  ctx.translate(x + shake, y);
+  ctx.fillStyle = '#6b4a2e'; ctx.beginPath(); ctx.ellipse(0, S*0.15, S*0.62, S*0.34, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#80583a'; ctx.beginPath(); ctx.ellipse(0, S*0.08, S*0.5, S*0.24, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = T.main; ctx.lineWidth = S*0.07; ctx.setLineDash([S*0.12, S*0.1]);
+  ctx.beginPath(); ctx.ellipse(0, S*0.15, S*0.72, S*0.42, 0, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+  if (k > 0.2){
+    const h = S*(0.25 + Math.min(1, (k-0.2)/0.5)*0.5);
+    ctx.strokeStyle = '#4f8f3a'; ctx.lineWidth = S*0.08; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -h); ctx.stroke();
+    ctx.fillStyle = '#6cbf4a';
+    const leaves = k > 0.7 ? 3 : k > 0.45 ? 2 : 1;
+    for (let i=0;i<leaves;i++){
+      const ly = -h*(0.45 + i*0.25), side = i%2 ? 1 : -1;
+      ctx.beginPath(); ctx.ellipse(side*S*0.2, ly, S*0.22, S*0.1, side*0.5, 0, Math.PI*2); ctx.fill();
+    }
+    if (k > 0.85){ circle(ctx, 0, -h - S*0.08, S*0.11, '#f3f0e6'); circle(ctx, 0, -h - S*0.08, S*0.05, '#f2c14e'); }
+  }
+  ctx.restore();
+}
 function drawProj(p){
   const k = p.prog || 0;
   const h = (p.h0 + (p.h1-p.h0)*k + (p.kind==='bomb' ? Math.sin(k*Math.PI)*1.5 : 0)) * S;
@@ -1159,6 +1312,7 @@ function drawFx(f){
   else if (f.kind === 'frost'){ ctx.globalAlpha = (1-k)*0.55; circle(ctx, x, y, f.r*S, '#bfeaff', '#ffffff', S*0.1); }
   else if (f.kind === 'blast'){ ctx.globalAlpha = 1-k; circle(ctx, x, y, f.r*S*(0.4+0.8*k), '#ffcf6b'); circle(ctx, x, y, f.r*S*(0.3+0.5*k), '#6b5b4b'); }
   else if (f.kind === 'puff'){ ctx.globalAlpha = (1-k)*0.7; circle(ctx, x, y - (f.air?0.8*S:0), f.r*S*(1+k), '#e9e4da'); }
+  else if (f.kind === 'dirt'){ ctx.globalAlpha = 1-k; for (let i=0;i<8;i++){ const a = i*0.785; circle(ctx, x + Math.cos(a)*f.r*S*k, y + Math.sin(a)*f.r*S*k*0.6, S*0.12, '#80583a'); } }
   else if (f.kind === 'spark'){ ctx.globalAlpha = 1-k; circle(ctx, x, y, S*0.18*(1+k), '#fff6c9'); }
   ctx.restore();
 }
@@ -1179,7 +1333,7 @@ function draw(){
 
   // placement zones while a troop card is selected
   const selKey = G.sel >= 0 ? G.deck[0].hand[G.sel] : null;
-  if (selKey && CARDS[selKey].type !== 'spell'){
+  if (selKey && CARDS[selKey].type !== 'spell' && CARDS[selKey].type !== 'plant'){
     ctx.fillStyle = 'rgba(200,40,40,.2)';
     const pl = !princessAlive(1,0), pr = !princessAlive(1,1);
     ctx.fillRect(0, 0, 9*S, (pl?10:RIVER_B+0.5)*S);
@@ -1193,7 +1347,8 @@ function draw(){
     circle(ctx, r.x*S - r.r*S*0.3, r.y*S, r.r*S*0.35, '#756d60');
     circle(ctx, r.x*S + r.r*S*0.35, r.y*S + r.r*S*0.2, r.r*S*0.3, '#6a6256');
   }
-  const ground = G.ents.filter(e => !e.air).sort((a,b) => a.y-b.y);
+  for (const e of G.ents) if (e.kind === 'plant') drawPlant(e);
+  const ground = G.ents.filter(e => !e.air && e.kind !== 'plant').sort((a,b) => a.y-b.y);
   for (const e of ground) e.kind==='tower' ? drawTower(e) : drawUnit(e);
   for (const p of G.projs) drawProj(p);
   for (const e of G.ents) if (e.air) drawUnit(e);
@@ -1268,7 +1423,7 @@ function updateHud(){
   if (!G) return;
   const time = fmt(G.clock);
   if (lastHud.time !== time){ $('#time').textContent = time; lastHud.time = time; }
-  const lbl = G.ot ? 'Overtime' : G.clock <= 60 ? '2× elixir' : 'Time left';
+  const lbl = G.ot ? `Sudden death ${G.otLevel}×` : G.clock <= 60 ? '2× elixir' : 'Time left';
   if (lastHud.lbl !== lbl){ $('#clockLabel').textContent = lbl; $('#clock').className = 'clock' + (G.ot ? ' ot' : G.clock<=60 ? ' hot' : ''); lastHud.lbl = lbl; }
   for (const team of [0,1]){
     const key = 'c'+team;
@@ -1396,6 +1551,7 @@ function renderRoster(){
 }
 function statLine(c){
   if (c.type === 'spell') return `${c.dmg} dmg · radius ${c.radius}`;
+  if (c.type === 'plant'){ const u = CARDS[c.sprouts]; return `${c.grow}s · then ${u.hp} HP, ${u.dmg} dmg`; }
   const bits = [`${c.hp} HP`];
   if (c.dmg) bits.push(`${c.dmg} dmg`);
   if (c.count > 1) bits.push(`×${c.count}`);
@@ -1426,7 +1582,7 @@ function renderBuilder(){
     t.disabled = !inDeck && draft.length >= 8;
     const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
     const info = document.createElement('div');
-    const tags = [c.air ? 'Flies' : '', c.jumps ? 'Jumps river' : '', c.type==='building' ? 'Building' : '', c.type==='spell' ? 'Spell' : '', c.hitsAir && c.type!=='spell' ? 'Hits air' : '', c.targets==='buildings' ? 'Towers only' : ''].filter(Boolean).join(' · ');
+    const tags = [c.air ? 'Flies' : '', c.jumps ? 'Jumps river' : '', c.type==='building' ? 'Building' : '', c.type==='plant' ? 'Invincible · plant anywhere' : '', c.type==='spell' ? 'Spell' : '', c.hitsAir && c.type!=='spell' ? 'Hits air' : '', c.targets==='buildings' ? 'Towers only' : ''].filter(Boolean).join(' · ');
     info.innerHTML = `<div class="t-name"></div><div class="t-blurb"></div><div class="t-stats"></div>`;
     info.querySelector('.t-name').textContent = c.name;
     info.querySelector('.t-blurb').textContent = tags || c.blurb;
