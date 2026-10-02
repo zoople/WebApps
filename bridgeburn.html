@@ -94,6 +94,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   background:rgba(10,13,18,.82);backdrop-filter:blur(3px);z-index:5}
 .panel{width:min(420px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);
   border-radius:16px;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.panel > *{flex-shrink:0}
 .panel h1{font-family:var(--display);font-size:clamp(34px,10vw,48px);line-height:.95;margin:0;letter-spacing:.01em;text-wrap:balance}
 .panel h1 .b{color:var(--blue)} .panel h1 .r{color:var(--red)}
 .panel h2{font-family:var(--display);font-size:40px;margin:0;line-height:1}
@@ -136,6 +137,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .tile.in::after{content:'\2713';position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--gold);color:#23190a;display:grid;place-items:center;font-size:12px;font-weight:900;box-shadow:0 0 0 2px var(--panel)}
 .tile:disabled{opacity:.45;cursor:not-allowed}
 .hint{font-size:13px;min-height:1.4em}
+.toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;cursor:pointer}
+.toggle input{width:18px;height:18px;accent-color:var(--gold);margin:0}
+.roster.off{opacity:.35}
 @media (prefers-reduced-motion:reduce){.card{transition:none}}
 </style>
 </head>
@@ -178,7 +182,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
       </ul>
       <div class="deck-head"><span class="lbl-sm">Your deck · <span id="avgStart">3.5</span> avg elixir</span><button class="link-btn" id="editDeckBtn">Edit deck</button></div>
+      <label class="toggle"><input type="checkbox" id="randomToggle"><span>Deal me a random deck each match</span></label>
       <div class="roster" id="roster"></div>
+      <p class="hint" id="randomNote" hidden>Each match deals you a new, playable deck. Your saved deck comes back when you switch this off.</p>
       <div class="lbl-sm">Choose a rival</div>
       <div class="row">
         <button class="btn" data-diff="easy">Easy<span class="sub">Slow to react</span></button>
@@ -250,22 +256,28 @@ const CARDS = {
   impden:  { name:'Imp Den', cost:4, type:'building', hp:700, dmg:0, hs:1, range:0, r:0.9, air:false, hitsAir:false, targets:'none', life:35, spawn:{ key:'imps', every:4.5 }, blurb:'Spawns imps' },
   volley:  { name:'Volley', cost:3, type:'spell', spell:'rain', dmg:220, radius:4, towerMult:0.4, blurb:'Wide arrow rain' },
   sapper:  { name:'Sapper', cost:3, type:'unit', count:1, hp:330, dmg:180, hs:1.8, range:4.5, speed:1.0, sight:5.5, r:0.4, air:false, hitsAir:false, targets:'any', splash:1.5, proj:'bomb', blurb:'Lobs bombs' },
-  zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:620, hs:3.0, range:0.4, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', deathDmg:{ dmg:300, r:2 }, blurb:'Bombs towers' },
+  zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:620, hs:3.0, range:0.4, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', deathDmg:{ dmg:350, r:2.2 }, blurb:'Bombs towers, drops a bomb when destroyed' },
   crossbow:{ name:'Crossbowman', cost:4, type:'unit', count:1, hp:650, dmg:180, hs:1.1, range:6, speed:1.0, sight:6.5, r:0.45, air:false, hitsAir:true, targets:'any', proj:'bolt', blurb:'Long range' },
   potato:  { name:'Potato', cost:3, type:'plant', grow:20, sprouts:'spudsquire', r:0.45, blurb:'Plant anywhere. Sprouts in 20s' },
   spudsquire:{ name:'Potato Squire', cost:0, hidden:true, type:'unit', count:1, hp:1250, dmg:155, hs:1.2, range:0.8, speed:1.0, sight:5.5, r:0.5, air:false, hitsAir:false, targets:'any' },
+  blight:  { name:'Blight Cloud', cost:4, type:'spell', spell:'zone', dmg:600, dur:8, radius:3, towerMult:0.35, slow:0.25, blurb:'Lingering poison' },
+  elixirdrop:{ name:'Elixir Drop', cost:1, type:'spell', spell:'elixir', gain:2, blurb:'Costs 1, gives 2' },
+  alarm:   { name:'Alarm', cost:1, type:'spell', spell:'alarm', selfDmg:150, blurb:'Wakes your king' },
   meteor:  { name:'Meteor', cost:6, type:'spell', spell:'lob', dmg:1050, radius:2, towerMult:0.35, knock:1.2, slow:true, blurb:'Huge, slow hit' }
 };
 const POOL = Object.keys(CARDS).filter(k => !CARDS[k].hidden);
 const STARTER = ['squire','longbows','brute','imps','drake','turret','fireball','frost'];
 const isWin = k => CARDS[k].targets === 'buildings';
 const isSpell = k => CARDS[k].type === 'spell';
+const dmgSpell = k => isSpell(k) && CARDS[k].dmg > 0;
+// Spells with no target area: they can be played by tapping anywhere on the arena.
+const isUtility = k => CARDS[k].spell === 'elixir' || CARDS[k].spell === 'alarm';
 const antiAir = k => !isSpell(k) && CARDS[k].hitsAir;
 function rivalDeck(){
   for (let tries=0; tries<400; tries++){
     const d = shuffle([...POOL]).slice(0,8);
     const spells = d.filter(isSpell).length, avg = d.reduce((s,k)=>s+CARDS[k].cost,0)/8;
-    if (d.some(isWin) && d.filter(antiAir).length >= 2 && spells >= 1 && spells <= 2 && avg >= 3 && avg <= 4.3) return d;
+    if (d.some(isWin) && d.filter(antiAir).length >= 2 && d.some(dmgSpell) && spells <= 3 && d.filter(isUtility).length <= 1 && avg >= 2.8 && avg <= 4.3) return d;
   }
   return [...STARTER];
 }
@@ -274,6 +286,8 @@ function loadDeck(){
   return [...STARTER];
 }
 let playerDeck = loadDeck();
+let randomDeck = false;
+try { randomDeck = localStorage.getItem('bridgeburn-randomdeck') === '1'; } catch(e) {}
 const DIFF = {
   easy:   { mult:0.85, delay:1.4, attackAt:9.6 },
   normal: { mult:1.0,  delay:0.7, attackAt:8.0 },
@@ -333,7 +347,7 @@ function makeEnt(key, team, x, y){
 
 function newGame(){
   G = { t:0, clock:180, ot:false, over:false, endT:0, result:null, elixir:[5,5], crowns:[0,0],
-    ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(playerDeck), newDeck(rivalDeck())], pending:[],
+    ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(randomDeck ? rivalDeck() : playerDeck), newDeck(rivalDeck())], pending:[], zones:[],
     aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, otLevel:0, lastLane:[0,0], stats:{ played:[0,0] } };
   G.ents.push(makeTower(1,true,9,3), makeTower(1,false,3.5,6.5), makeTower(1,false,14.5,6.5));
   G.ents.push(makeTower(0,true,9,29), makeTower(0,false,3.5,25.5), makeTower(0,false,14.5,25.5));
@@ -406,7 +420,7 @@ function deploy(team, handIdx, x, y){
     const k = kingOf(team);
     const sx = k ? k.x : 9, sy = k ? k.y : (team===0?29:3);
     const d = Math.hypot(x-sx, y-sy);
-    const flight = c.spell==='lob' ? Math.max(0.4, d/(c.slow ? 8 : 14)) : c.spell==='rain' ? 0.6 : 0.12;
+    const flight = c.spell==='lob' ? Math.max(0.4, d/(c.slow ? 8 : 14)) : c.spell==='rain' ? 0.6 : c.spell==='alarm' ? 0.5 : 0.12;
     G.spells.push({ key, team, x, y, sx, sy, t:0, dur:flight });
   } else if (c.type === 'plant'){
     G.ents.push({ id:nextId++, key, team, kind:'plant', x, y, r:c.r, hp:1, maxHp:1, growT:0, grow:c.grow,
@@ -522,7 +536,7 @@ function moveToward(e, tx, ty, dt, target){
   const dx = gx - e.x, dy = gy - e.y, d = Math.hypot(dx,dy);
   if (d < 0.001) return;
   const [ux, uy] = steer(e, dx/d, dy/d, d, target);
-  const step = Math.min(e.speed*dt, d);
+  const step = Math.min(e.speed*(e.slowT > 0 ? 0.75 : 1)*dt, d);
   e.x += ux*step; e.y += uy*step;
   e.angle = Math.atan2(uy, ux);
   e.walk += dt*e.speed*9;
@@ -554,6 +568,7 @@ function updateEnt(e, dt){
   }
   e.flash = Math.max(0, e.flash-dt);
   e.swing = Math.max(0, (e.swing||0)-dt);
+  if (e.slowT > 0) e.slowT -= dt;
   if (e.life){ e.hp -= e.maxHp/e.life*dt; if (e.hp <= 0){ e.hp = 0; return; } }
   if (e.deploy > 0){ e.deploy -= dt; return; }
   if (e.stun > 0){ e.stun -= dt; return; }
@@ -691,7 +706,7 @@ function aiThink(){
   const attackAt = Math.max(4.5, D.attackAt - (mult - 1) * 1.2);
 
   // 1) Spells: finish a tower, hit a valuable cluster, or clear a swarm.
-  for (const k of hand.filter(k => isSpell(k) && can(k))){
+  for (const k of hand.filter(k => dmgSpell(k) && can(k))){
     const c = CARDS[k];
     for (const t of playerTowers) if (t.hp <= c.dmg*c.towerMult){ aiPlace(k, t.x, t.y); return; }
     let best = null, bv = 0, bn = 0;
@@ -707,6 +722,15 @@ function aiThink(){
     const need = c.dmg >= 400 ? c.cost * 240 / Math.sqrt(mult) : 0;
     if (c.dmg >= 400 ? bv >= need : (bn >= 3 || (c.stun && bv >= 600))){ aiPlace(k, best.x, best.y + lead); return; }
   }
+
+  // Alarm: wake our king when a real push is landing on a side tower.
+  const myKing = kingOf(1);
+  if (can('alarm') && myKing && !myKing.active){
+    const pressure = foes.filter(f => f.y < 12).reduce((s,f) => s + f.hp, 0);
+    if (pressure >= 1500 || (mult >= 2 && pressure >= 900)){ aiPlace('alarm', myKing.x, myKing.y); return; }
+  }
+  // Elixir Drop: a free +1 whenever it would not overflow the bar.
+  if (can('elixirdrop') && el <= 10 - CARDS.elixirdrop.gain + CARDS.elixirdrop.cost - 0.2){ aiPlace('elixirdrop', 9, 5); return; }
 
   // 2) Defend. A planted potato that is about to sprout on our side counts as a threat too:
   //    the Rival remembers where you planted it.
@@ -868,6 +892,16 @@ function step(dt){
 
   for (const sp of G.spells){
     sp.t += dt;
+    if (sp.drop){
+      // a bomb falling from a destroyed Zeppelin
+      if (sp.t >= sp.dur){
+        sp.done = true;
+        aoe(sp.team, sp.x, sp.y, sp.r, sp.dmg, { hitsAir:false, towerMult:1 });
+        G.fx.push({ kind:'burst', x:sp.x, y:sp.y, r:sp.r, t:0, dur:0.7, color:'#ff7a2a' });
+        sfx.boom();
+      }
+      continue;
+    }
     if (sp.t >= sp.dur){
       sp.done = true;
       const c = CARDS[sp.key];
@@ -875,6 +909,20 @@ function step(dt){
         aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult, knock:c.knock });
         G.fx.push({ kind:'burst', x:sp.x, y:sp.y, r:c.radius, t:0, dur:c.slow ? 0.8 : 0.55, color:c.slow ? '#d9452a' : '#ff7a2a' });
         sfx.boom();
+      } else if (c.spell === 'zone'){
+        G.zones.push({ team:sp.team, x:sp.x, y:sp.y, r:c.radius, t:0, dur:c.dur, dps:c.dmg/c.dur, towerMult:c.towerMult, slow:c.slow });
+      } else if (c.spell === 'elixir'){
+        G.elixir[sp.team] = Math.min(10, G.elixir[sp.team] + c.gain);
+        G.fx.push({ kind:'ring', x:sp.x, y:sp.y, r:1.2, t:0, dur:0.6, color:'#e7a3ff' });
+        if (sp.team === 0){ G.texts.push({ x:clamp(sp.x,3,15), y:sp.y, txt:`+${c.gain} elixir`, t:0, dur:1, color:'#e7a3ff', size:0.7 }); tone(500,900,0.15,'triangle',0.07); }
+      } else if (c.spell === 'alarm'){
+        const k = kingOf(sp.team);
+        if (k && alive(k)){
+          damage(k, c.selfDmg); k.active = true;
+          G.fx.push({ kind:'ring', x:k.x, y:k.y, r:2.2, t:0, dur:0.7, color:'#f2c14e' });
+          G.texts.push({ x:k.x, y:k.y + (sp.team===0 ? -2.4 : 2.4), txt:'King awake!', t:0, dur:1.2, color:'#f2c14e', size:0.6 });
+          [880,660,880,660].forEach((f,i) => tone(f,f,0.08,'square',0.05,i*0.09));
+        }
       } else if (c.spell === 'rain'){
         aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult });
         G.fx.push({ kind:'ring', x:sp.x, y:sp.y, r:c.radius, t:0, dur:0.35, color:'#f7ecd2' });
@@ -888,6 +936,18 @@ function step(dt){
   }
   G.spells = G.spells.filter(s => !s.done);
 
+  for (const z of G.zones){
+    z.t += dt;
+    for (const e of G.ents){
+      if (e.team === z.team || !alive(e) || e.kind === 'plant') continue;
+      if (Math.hypot(e.x-z.x, e.y-z.y) - e.r*0.6 > z.r) continue;
+      e.hp -= z.dps * dt * (e.kind === 'tower' ? z.towerMult : 1);
+      if (e.kind === 'tower' && e.king && !e.active) e.active = true;
+      if (e.kind === 'unit') e.slowT = 0.15;
+    }
+  }
+  G.zones = G.zones.filter(z => z.t < z.dur);
+
   for (const e of G.ents){
     if (e.hp <= 0 && !e.dead){
       e.dead = true;
@@ -899,8 +959,7 @@ function step(dt){
         groupOffsets(c.deathSpawn.count).forEach(([ox,oy]) => { const u = makeEnt(c.deathSpawn.key, e.team, e.x+ox*1.2, e.y+oy*1.2); u.deploy = 0.4; G.pending.push(u); });
       }
       if (c.deathDmg){
-        aoe(e.team, e.x, e.y, c.deathDmg.r, c.deathDmg.dmg, { hitsAir:false, towerMult:1 });
-        G.fx.push({ kind:'burst', x:e.x, y:e.y, r:c.deathDmg.r, t:0, dur:0.5, color:'#ff9a3c' });
+        G.spells.push({ drop:true, team:e.team, x:e.x, y:e.y, r:c.deathDmg.r, dmg:c.deathDmg.dmg, t:0, dur:0.55 });
       }
     }
   }
@@ -1142,6 +1201,48 @@ function drawFigure(c, key, team, x, y, S, o = {}){
       }
       break;
     }
+    case 'blight': {
+      const R = S*0.55;
+      c.fillStyle = 'rgba(120,200,70,.85)';
+      for (const [ox,oy,rr2] of [[-0.45,0.1,0.45],[0.1,-0.2,0.55],[0.5,0.15,0.42],[0,0.3,0.45]]){ c.beginPath(); c.arc(ox*R, oy*R, rr2*R, 0, Math.PI*2); c.fill(); }
+      c.fillStyle = '#3f7a28';
+      for (const [ox,oy] of [[-0.3,0.05],[0.25,-0.1],[0.1,0.35]]) { c.beginPath(); c.arc(ox*R, oy*R, R*0.09, 0, Math.PI*2); c.fill(); }
+      c.strokeStyle = '#d9f5b8'; c.lineWidth = R*0.08;
+      c.beginPath(); c.arc(-R*0.55, -R*0.6, R*0.13, 0, Math.PI*2); c.stroke();
+      c.beginPath(); c.arc(R*0.55, -R*0.75, R*0.09, 0, Math.PI*2); c.stroke();
+      break;
+    }
+    case 'elixirdrop': {
+      const R = S*0.55;
+      const g = c.createRadialGradient(-R*0.25, -R*0.1, R*0.1, 0, R*0.1, R);
+      g.addColorStop(0, '#f3c9ff'); g.addColorStop(0.5, '#b552dc'); g.addColorStop(1, '#6b2a8a');
+      c.fillStyle = g; c.strokeStyle = '#4a1d61'; c.lineWidth = R*0.07;
+      c.beginPath(); c.moveTo(0, -R*1.0);
+      c.bezierCurveTo(R*0.2, -R*0.55, R*0.75, -R*0.1, R*0.75, R*0.3);
+      c.arc(0, R*0.3, R*0.75, 0, Math.PI);
+      c.bezierCurveTo(-R*0.75, -R*0.1, -R*0.2, -R*0.55, 0, -R*1.0);
+      c.fill(); c.stroke();
+      c.fillStyle = '#fff'; c.font = `900 ${Math.round(R*0.7)}px Nunito, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('+2', 0, R*0.32);
+      break;
+    }
+    case 'alarm': {
+      const R = S*0.55, ring = Math.sin(t*30)*0.15;
+      c.save(); c.rotate(ring);
+      c.fillStyle = '#f2c14e'; c.strokeStyle = '#8a6a1c'; c.lineWidth = R*0.08;
+      c.beginPath(); c.moveTo(-R*0.7, R*0.45);
+      c.quadraticCurveTo(-R*0.6, -R*0.75, 0, -R*0.8);
+      c.quadraticCurveTo(R*0.6, -R*0.75, R*0.7, R*0.45);
+      c.closePath(); c.fill(); c.stroke();
+      c.fillRect(-R*0.8, R*0.4, R*1.6, R*0.16);
+      circle(c, 0, R*0.68, R*0.16, '#8a6a1c');
+      circle(c, 0, -R*0.88, R*0.1, '#8a6a1c');
+      c.restore();
+      c.strokeStyle = '#f7ecd2'; c.lineWidth = R*0.08; c.lineCap = 'round';
+      c.beginPath(); c.arc(0, 0, R*1.05, -0.5, 0.3); c.stroke();
+      c.beginPath(); c.arc(0, 0, R*1.05, Math.PI-0.3, Math.PI+0.5); c.stroke();
+      break;
+    }
     case 'meteor': {
       const R = S*0.6;
       c.fillStyle = 'rgba(255,110,40,.55)';
@@ -1347,12 +1448,30 @@ function draw(){
     circle(ctx, r.x*S - r.r*S*0.3, r.y*S, r.r*S*0.35, '#756d60');
     circle(ctx, r.x*S + r.r*S*0.35, r.y*S + r.r*S*0.2, r.r*S*0.3, '#6a6256');
   }
+  for (const z of G.zones){
+    const fade = Math.min(1, z.t/0.3, (z.dur - z.t)/0.6);
+    ctx.save(); ctx.globalAlpha = 0.35*fade;
+    circle(ctx, z.x*S, z.y*S, z.r*S, z.team === 0 ? '#7cc84e' : '#a6c43c', '#d9f5b8', S*0.06);
+    ctx.globalAlpha = 0.6*fade;
+    for (let i=0;i<10;i++){
+      const a = i*2.4 + z.t*0.4, rad = z.r*Math.sqrt((i+0.5)/10)*0.9;
+      const by = ((z.t*0.8 + i*0.37) % 1);
+      circle(ctx, (z.x + Math.cos(a)*rad)*S, (z.y + Math.sin(a)*rad - by*0.5)*S, S*0.12*(1-by), null, '#e4ffcc', S*0.04);
+    }
+    ctx.restore();
+  }
   for (const e of G.ents) if (e.kind === 'plant') drawPlant(e);
   const ground = G.ents.filter(e => !e.air && e.kind !== 'plant').sort((a,b) => a.y-b.y);
   for (const e of ground) e.kind==='tower' ? drawTower(e) : drawUnit(e);
   for (const p of G.projs) drawProj(p);
   for (const e of G.ents) if (e.air) drawUnit(e);
   for (const sp of G.spells){
+    if (sp.drop){
+      const k = sp.t/sp.dur, h = (1-k)*0.8*S;
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(sp.x*S, sp.y*S, S*0.3*(0.5+k), S*0.15*(0.5+k), 0, 0, Math.PI*2); ctx.fill();
+      circle(ctx, sp.x*S, sp.y*S - h, S*0.28, '#222'); circle(ctx, sp.x*S + S*0.15, sp.y*S - h - S*0.2, S*0.08, '#ffcf3a');
+      continue;
+    }
     const sc = CARDS[sp.key];
     if (sc.spell === 'rain'){
       ctx.save(); ctx.strokeStyle = 'rgba(247,236,210,.85)'; ctx.lineWidth = Math.max(1.5, S*0.07);
@@ -1378,7 +1497,9 @@ function draw(){
     const gx = c.type==='spell' ? G.ghost.x : snap(G.ghost.x), gy = c.type==='spell' ? G.ghost.y : snap(G.ghost.y);
     const ok = canPlace(0, selKey, gx, gy);
     ctx.save();
-    if (c.type === 'spell'){
+    if (isUtility(selKey)){
+      ctx.globalAlpha = 0.75; drawFigure(ctx, selKey, 0, gx*S, gy*S, S*1.2, { t:G.t });
+    } else if (c.type === 'spell'){
       circle(ctx, gx*S, gy*S, c.radius*S, ok ? 'rgba(255,255,255,.18)' : 'rgba(220,50,50,.25)', 'rgba(255,255,255,.8)', S*0.06);
     } else {
       if (c.range > 2 || c.type==='building'){ ctx.setLineDash([S*0.25, S*0.2]); circle(ctx, gx*S, gy*S, (c.range + c.r)*S, null, 'rgba(255,255,255,.45)', S*0.05); ctx.setLineDash([]); }
@@ -1541,6 +1662,9 @@ const avgCost = d => (d.reduce((s,k) => s + CARDS[k].cost, 0) / Math.max(1, d.le
 function iconCanvas(key, px){ const cv = document.createElement('canvas'); cv.width = cv.height = px; drawCardIcon(cv, key); return cv; }
 function renderRoster(){
   const roster = $('#roster'); roster.textContent = '';
+  $('#randomToggle').checked = randomDeck;
+  roster.classList.toggle('off', randomDeck);
+  $('#randomNote').hidden = !randomDeck;
   for (const key of playerDeck){
     const c = CARDS[key], div = document.createElement('div');
     div.append(iconCanvas(key, 72), document.createTextNode(c.name));
@@ -1550,6 +1674,9 @@ function renderRoster(){
   $('#avgStart').textContent = avgCost(playerDeck);
 }
 function statLine(c){
+  if (c.spell === 'elixir') return `Net +${c.gain - c.cost} elixir`;
+  if (c.spell === 'alarm') return `${c.selfDmg} damage to your king`;
+  if (c.spell === 'zone') return `${c.dmg} dmg over ${c.dur}s · radius ${c.radius}`;
   if (c.type === 'spell') return `${c.dmg} dmg · radius ${c.radius}`;
   if (c.type === 'plant'){ const u = CARDS[c.sprouts]; return `${c.grow}s · then ${u.hp} HP, ${u.dmg} dmg`; }
   const bits = [`${c.hp} HP`];
@@ -1582,7 +1709,7 @@ function renderBuilder(){
     t.disabled = !inDeck && draft.length >= 8;
     const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
     const info = document.createElement('div');
-    const tags = [c.air ? 'Flies' : '', c.jumps ? 'Jumps river' : '', c.type==='building' ? 'Building' : '', c.type==='plant' ? 'Invincible · plant anywhere' : '', c.type==='spell' ? 'Spell' : '', c.hitsAir && c.type!=='spell' ? 'Hits air' : '', c.targets==='buildings' ? 'Towers only' : ''].filter(Boolean).join(' · ');
+    const tags = [c.air ? 'Flies' : '', c.jumps ? 'Jumps river' : '', c.type==='building' ? 'Building' : '', c.type==='plant' ? 'Invincible · plant anywhere' : '', c.type==='spell' ? (c.spell==='zone' ? 'Spell · slows' : isUtility(key) ? 'Tap anywhere' : 'Spell') : '', c.hitsAir && c.type!=='spell' ? 'Hits air' : '', c.targets==='buildings' ? 'Towers only' : ''].filter(Boolean).join(' · ');
     info.innerHTML = `<div class="t-name"></div><div class="t-blurb"></div><div class="t-stats"></div>`;
     info.querySelector('.t-name').textContent = c.name;
     info.querySelector('.t-blurb').textContent = tags || c.blurb;
@@ -1611,6 +1738,11 @@ function renderBuilder(){
 function openBuilder(){ draft = [...playerDeck]; $('#startScreen').hidden = true; $('#deckScreen').hidden = false; renderBuilder(); }
 function closeBuilder(){ $('#deckScreen').hidden = true; renderRoster(); showStart(); }
 $('#editDeckBtn').addEventListener('click', openBuilder);
+$('#randomToggle').addEventListener('change', ev => {
+  randomDeck = ev.target.checked;
+  try { localStorage.setItem('bridgeburn-randomdeck', randomDeck ? '1' : '0'); } catch(e) {}
+  renderRoster();
+});
 $('#deckCancel').addEventListener('click', closeBuilder);
 $('#deckSave').addEventListener('click', () => {
   if (draft.length !== 8) return;
