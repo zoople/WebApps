@@ -256,7 +256,7 @@ const CARDS = {
   impden:  { name:'Imp Den', cost:4, type:'building', hp:700, dmg:0, hs:1, range:0, r:0.9, air:false, hitsAir:false, targets:'none', life:35, spawn:{ key:'imps', every:4.5 }, blurb:'Spawns imps' },
   volley:  { name:'Volley', cost:3, type:'spell', spell:'rain', dmg:220, radius:4, towerMult:0.4, blurb:'Wide arrow rain' },
   sapper:  { name:'Sapper', cost:3, type:'unit', count:1, hp:330, dmg:180, hs:1.8, range:4.5, speed:1.0, sight:5.5, r:0.4, air:false, hitsAir:false, targets:'any', splash:1.5, proj:'bomb', blurb:'Lobs bombs' },
-  zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1500, dmg:620, hs:2.5, range:-0.6, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', bomber:true, deathDmg:{ dmg:350, r:2.2 }, blurb:'Bombs towers, drops a bomb when destroyed' },
+  zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:540, hs:3.0, range:-0.6, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', bomber:true, deathDmg:{ dmg:180, r:2.2 }, blurb:'Bombs towers, drops a bomb when destroyed' },
   crossbow:{ name:'Crossbowman', cost:4, type:'unit', count:1, hp:650, dmg:180, hs:1.1, range:6, speed:1.0, sight:6.5, r:0.45, air:false, hitsAir:true, targets:'any', proj:'bolt', blurb:'Long range' },
   potato:  { name:'Potato', cost:3, type:'plant', grow:20, sprouts:'spudsquire', r:0.45, blurb:'Plant anywhere. Sprouts in 20s' },
   spudsquire:{ name:'Potato Squire', cost:0, hidden:true, type:'unit', count:1, hp:1250, dmg:155, hs:1.2, range:0.8, speed:1.0, sight:5.5, r:0.5, air:false, hitsAir:false, targets:'any' },
@@ -602,7 +602,7 @@ function updateEnt(e, dt){
     if (e.cd <= 0){ attack(e, t); e.cd = e.hs; }
   } else {
     e.attacking = false;
-    e.cd = Math.max(e.cd - dt, isUnit ? e.hs*0.3 : 0);
+    e.cd = Math.max(e.cd - dt, isUnit && !(e.key && CARDS[e.key].bomber) ? e.hs*0.3 : 0);
     if (isUnit && t) moveToward(e, t.x, t.y, dt, t);
   }
 }
