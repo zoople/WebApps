@@ -256,7 +256,7 @@ const CARDS = {
   impden:  { name:'Imp Den', cost:4, type:'building', hp:700, dmg:0, hs:1, range:0, r:0.9, air:false, hitsAir:false, targets:'none', life:35, spawn:{ key:'imps', every:4.5 }, blurb:'Spawns imps' },
   volley:  { name:'Volley', cost:3, type:'spell', spell:'rain', dmg:220, radius:4, towerMult:0.4, blurb:'Wide arrow rain' },
   sapper:  { name:'Sapper', cost:3, type:'unit', count:1, hp:330, dmg:180, hs:1.8, range:4.5, speed:1.0, sight:5.5, r:0.4, air:false, hitsAir:false, targets:'any', splash:1.5, proj:'bomb', blurb:'Lobs bombs' },
-  zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:540, hs:3.0, range:-0.6, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', bomber:true, deathDmg:{ dmg:180, r:2.2 }, blurb:'Bombs towers, drops a bomb when destroyed' },
+  zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:540, hs:3.0, range:-0.6, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', bomber:true, deathDmg:{ dmg:180, r:2.2, fuse:3 }, blurb:'Bombs towers; leaves a 3s bomb when destroyed' },
   crossbow:{ name:'Crossbowman', cost:4, type:'unit', count:1, hp:650, dmg:180, hs:1.1, range:6, speed:1.0, sight:6.5, r:0.45, air:false, hitsAir:true, targets:'any', proj:'bolt', blurb:'Long range' },
   potato:  { name:'Potato', cost:3, type:'plant', grow:20, sprouts:'spudsquire', r:0.45, blurb:'Plant anywhere. Sprouts in 20s' },
   spudsquire:{ name:'Potato Squire', cost:0, hidden:true, type:'unit', count:1, hp:1250, dmg:155, hs:1.2, range:0.8, speed:1.0, sight:5.5, r:0.5, air:false, hitsAir:false, targets:'any' },
@@ -898,7 +898,13 @@ function step(dt){
   for (const sp of G.spells){
     sp.t += dt;
     if (sp.drop){
-      // a bomb falling from a destroyed Zeppelin
+      // A falling bomb. Attack bombs go off on impact; the death bomb lands and
+      // then ticks on the ground for its fuse before exploding, so troops can step out.
+      if (sp.t >= sp.dur && sp.fuse > 0 && sp.fuseT < sp.fuse){
+        if (!sp.landed){ sp.landed = true; tone(300,200,0.08,'square',0.04); }
+        sp.fuseT += dt;
+        continue;
+      }
       if (sp.t >= sp.dur){
         sp.done = true;
         if (sp.target){
@@ -971,7 +977,7 @@ function step(dt){
         groupOffsets(c.deathSpawn.count).forEach(([ox,oy]) => { const u = makeEnt(c.deathSpawn.key, e.team, e.x+ox*1.2, e.y+oy*1.2); u.deploy = 0.4; G.pending.push(u); });
       }
       if (c.deathDmg){
-        G.spells.push({ drop:true, team:e.team, x:e.x, y:e.y, r:c.deathDmg.r, dmg:c.deathDmg.dmg, t:0, dur:0.55 });
+        G.spells.push({ drop:true, team:e.team, x:e.x, y:e.y, r:c.deathDmg.r, dmg:c.deathDmg.dmg, t:0, dur:0.55, fuse:c.deathDmg.fuse || 0, fuseT:0 });
       }
     }
   }
@@ -1478,6 +1484,22 @@ function draw(){
   for (const p of G.projs) drawProj(p);
   for (const e of G.ents) if (e.air) drawUnit(e);
   for (const sp of G.spells){
+    if (sp.drop && sp.landed){
+      // ticking death bomb: blast radius pulses faster as the fuse runs down
+      const left = sp.fuse - sp.fuseT, rate = left < 1 ? 14 : 6, pulse = 0.5 + 0.5*Math.sin(sp.fuseT*rate);
+      ctx.save();
+      ctx.globalAlpha = 0.12 + 0.18*pulse;
+      circle(ctx, sp.x*S, sp.y*S, sp.r*S, '#ff5a3c');
+      ctx.globalAlpha = 0.7; ctx.setLineDash([S*0.25, S*0.18]);
+      circle(ctx, sp.x*S, sp.y*S, sp.r*S, null, '#ffb199', S*0.06); ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#ffcf3a'; ctx.lineWidth = S*0.1;
+      ctx.beginPath(); ctx.arc(sp.x*S, sp.y*S, S*0.45, -Math.PI/2, -Math.PI/2 + Math.PI*2*(left/sp.fuse)); ctx.stroke();
+      circle(ctx, sp.x*S, sp.y*S, S*0.3, '#222');
+      circle(ctx, sp.x*S + S*0.16, sp.y*S - S*0.22, S*(0.06 + 0.05*pulse), '#ffcf3a');
+      ctx.restore();
+      continue;
+    }
     if (sp.drop){
       const k = sp.t/sp.dur, h = (1-k)*(sp.small ? 0.6 : 0.8)*S;
       ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(sp.x*S, sp.y*S, S*0.3*(0.5+k), S*0.15*(0.5+k), 0, 0, Math.PI*2); ctx.fill();
