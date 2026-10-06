@@ -55,6 +55,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   display:grid;place-items:center;cursor:pointer;padding:0}
 .icon-btn svg{width:14px;height:14px;fill:var(--ink)}
 .you-row{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;max-width:min(360px,calc(100% - 32px));padding:10px 14px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:800;line-height:1.35;text-align:center}
 
 /* Arena */
 #field{flex:1;min-height:0;display:grid;place-items:center}
@@ -109,7 +110,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .score{font-family:var(--display);font-size:28px;display:flex;gap:14px;align-items:center}
 .score .b{color:var(--blue)} .score .r{color:var(--red)}
 .roster{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.roster div{background:var(--panel-2);border-radius:8px;padding:6px 4px;text-align:center;font-size:11px;font-weight:800}
+.roster div{position:relative;background:var(--panel-2);border-radius:8px;padding:8px 3px 5px;text-align:center;font-size:10px;font-weight:800;line-height:1.1;min-width:0;overflow-wrap:anywhere}
 .roster canvas{width:36px;height:36px;display:block;margin:0 auto 2px}
 .roster small{display:block;color:var(--muted);font-weight:700;font-size:10px}
 .record{font-variant-numeric:tabular-nums}
@@ -121,7 +122,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:2px;cursor:pointer;font-size:11px;font-weight:800;text-align:center;line-height:1.1}
 .slot.filled{border-style:solid;background:linear-gradient(180deg,var(--panel-2),var(--panel))}
 .slot canvas{width:58%;aspect-ratio:1;height:auto}
-.slot .cost,.tile .cost{position:absolute;top:-6px;left:-6px;width:20px;height:20px;border-radius:50%;
+.roster .cost,.slot .cost,.tile .cost{position:absolute;top:-6px;left:-6px;width:20px;height:20px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%,#e7a3ff,var(--elixir) 45%,var(--elixir-deep));display:grid;place-items:center;
   font-family:var(--display);font-size:11px;color:#fff;box-shadow:0 0 0 2px var(--panel)}
 .deck-meta{display:flex;gap:14px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -139,7 +140,20 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .hint{font-size:13px;min-height:1.4em}
 .toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;cursor:pointer}
 .toggle input{width:18px;height:18px;accent-color:var(--gold);margin:0}
-.roster.off{opacity:.35}
+.panel.start{gap:12px}
+.logo{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.panel .logo h1{font-size:clamp(30px,9vw,44px)}
+.panel h2.sm{font-size:30px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:3px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
+.seg button{border:0;border-radius:9px;padding:9px 6px;background:transparent;color:var(--muted);font-weight:900;font-size:12px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--ink);box-shadow:0 0 0 1px var(--gold)}
+.btn.big{flex:none;width:100%;padding:15px 10px;font-family:var(--display);font-size:17px;letter-spacing:.06em}
+.panel p.record{font-size:12px;text-align:center}
+.panel p.record:empty{display:none}
+.toggle.clone{font-size:13px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.foot .toggle{font-size:12px;gap:6px}
+.foot .toggle input{width:15px;height:15px}
 @media (prefers-reduced-motion:reduce){.card{transition:none}}
 </style>
 </head>
@@ -151,6 +165,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
     <div class="side you">
       <div class="you-row">
         <div class="tools">
+          <button class="icon-btn fs-toggle" id="fsBtn" aria-label="Full screen"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="#f4efe4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <button class="icon-btn" id="muteBtn" aria-label="Mute sound"><svg viewBox="0 0 16 16" id="muteIcon"><path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="#f4efe4" stroke-width="1.5"/></svg></button>
           <button class="icon-btn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 16 16"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button>
         </div>
@@ -171,27 +186,53 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   <div class="elixir"><div class="drop" id="elixirNum">5</div><div class="bar"><i id="elixirFill"></i><b></b></div></div>
 
   <div class="overlay" id="startScreen">
+    <div class="panel start">
+      <div class="logo">
+        <svg viewBox="0 0 64 48" width="64" height="48" role="img" aria-label="A burning bridge">
+          <rect x="0" y="36" width="64" height="12" rx="3" fill="#2c7fbd"/>
+          <path d="M4 42h10M26 44h12M48 42h12" stroke="#a8d4f0" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <rect x="6" y="29" width="52" height="11" fill="#b3aa9a"/>
+          <path d="M20 40Q20 31 32 31Q44 31 44 40Z" fill="#2c7fbd"/>
+          <rect x="3" y="26" width="58" height="4" rx="1.5" fill="#9c6c3c"/>
+          <path d="M32 2C36 9 43 12 41 19C40 23 36 26 32 26C28 26 24 23 23 19C22 14 28 12 32 2Z" fill="#e0503f"/>
+          <path d="M32 12C34.500 16 38 17 36.500 21C35.500 23.500 33.500 25 32 25C30.500 25 28.500 23.500 27.500 21C26.500 18 30 16 32 12Z" fill="#f2c14e"/>
+        </svg>
+        <h1><span class="b">Bridge</span><span class="r">burn</span></h1>
+        <div class="lbl-sm">Three minutes · two bridges · six towers</div>
+      </div>
+      <div class="deck-head"><span class="lbl-sm"><span id="deckName">Your deck</span> · <span id="avgStart">3.5</span> avg elixir</span><button class="link-btn" id="editDeckBtn">Edit deck</button></div>
+      <div class="roster" id="roster"></div>
+      <div class="seg" id="modeSeg" role="group" aria-label="Deck">
+        <button id="modeMine" aria-pressed="true">My deck</button>
+        <button id="modeRandom" aria-pressed="false">Random</button>
+      </div>
+      <div class="seg" id="diffSeg" role="group" aria-label="Rival">
+        <button data-diff="easy" aria-pressed="false">Easy</button>
+        <button data-diff="normal" aria-pressed="true">Normal</button>
+        <button data-diff="hard" aria-pressed="false">Hard</button>
+      </div>
+      <label class="toggle clone"><input type="checkbox" id="cloneToggle"><span>Clone match: the rival plays your exact deck</span></label>
+      <button class="btn go big" id="startBtn">Start match</button>
+      <p class="record" id="record"></p>
+      <div class="foot">
+        <button class="link-btn" id="helpBtn">How to play</button>
+        <label class="toggle"><input type="checkbox" id="musicToggle"><span>Music</span></label>
+        <button class="link-btn fs-toggle" id="fsStartBtn">Full screen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="helpScreen" hidden>
     <div class="panel">
-      <div class="lbl-sm">Lane duel · vs computer</div>
-      <h1><span class="b">Bridge</span><span class="r">burn</span></h1>
-      <p>Three minutes, two bridges, six towers. Push your troops across the river and knock down the Rival's towers before they take yours.</p>
+      <div class="lbl-sm">How to play</div>
       <ul>
         <li>Drag a card onto your half of the arena, or tap a card and then tap where it should land. Keys 1–4 pick cards.</li>
         <li>Cards cost elixir, which refills over time. The last minute runs at double speed. If crowns are level at 3:00, sudden death starts at 3× and climbs every minute (4×, 5×…) until someone takes a tower.</li>
         <li>A side tower is worth one crown. The king tower is worth three and ends the match.</li>
         <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
+        <li>The rival's difficulty changes how fast it reacts and how much elixir it gets: Easy is slow, Normal is fair, Hard gets extra.</li>
       </ul>
-      <div class="deck-head"><span class="lbl-sm">Your deck · <span id="avgStart">3.5</span> avg elixir</span><button class="link-btn" id="editDeckBtn">Edit deck</button></div>
-      <label class="toggle"><input type="checkbox" id="randomToggle"><span>Deal me a random deck each match</span></label>
-      <div class="roster" id="roster"></div>
-      <p class="hint" id="randomNote" hidden>Each match deals you a new, playable deck. Your saved deck comes back when you switch this off.</p>
-      <div class="lbl-sm">Choose a rival</div>
-      <div class="row">
-        <button class="btn" data-diff="easy">Easy<span class="sub">Slow to react</span></button>
-        <button class="btn go" data-diff="normal">Normal<span class="sub">Fair fight</span></button>
-        <button class="btn" data-diff="hard">Hard<span class="sub">Extra elixir</span></button>
-      </div>
-      <p class="record" id="record"></p>
+      <button class="btn go" id="helpClose">Got it</button>
     </div>
   </div>
 
@@ -211,6 +252,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   <div class="overlay" id="pauseScreen" hidden>
     <div class="panel">
       <h2>Paused</h2>
+      <label class="toggle"><input type="checkbox" id="musicToggle2"><span>Background music</span></label>
       <div class="row"><button class="btn go" id="resumeBtn">Resume</button><button class="btn" id="quitBtn">Quit match</button></div>
     </div>
   </div>
@@ -226,6 +268,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 (() => {
@@ -289,6 +333,10 @@ function loadDeck(){
 let playerDeck = loadDeck();
 let randomDeck = false;
 try { randomDeck = localStorage.getItem('bridgeburn-randomdeck') === '1'; } catch(e) {}
+let rolled = null;
+let cloneMatch = false;
+try { cloneMatch = localStorage.getItem('bridgeburn-clone') === '1'; } catch(e) {}
+const startDeck = () => randomDeck ? (rolled || (rolled = rivalDeck())) : playerDeck;
 const DIFF = {
   // react: how long a troop must have been on the field before the Rival will spell it.
   // spellCd: rest between the Rival's damage spells.
@@ -309,7 +357,7 @@ function cycle(d,i){ const c = d.hand[i]; d.hand[i] = d.queue.shift(); d.queue.p
 // ---------- Sound ----------
 let AC = null, muted = false, lastHitSfx = 0;
 try { muted = localStorage.getItem('bridgeburn-muted') === '1'; } catch(e) {}
-function initAudio(){ if (!AC) { try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) {} } if (AC && AC.state==='suspended') AC.resume(); }
+function initAudio(){ if (!AC) { try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) {} } if (AC && AC.state==='suspended') AC.resume(); musicSync(); }
 function tone(f1,f2,dur,type='square',vol=0.06,delay=0){
   if (muted || !AC) return;
   const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
@@ -326,6 +374,146 @@ const sfx = {
   lost(){ [392,330,262].forEach((f,i)=>tone(f,f,0.18,'triangle',0.07,i*0.12)); },
   nope(){ tone(160,120,0.1,'square',0.04); }
 };
+
+// ---------- Music ----------
+// An original loop in D minor. Four kinds of eight-bar section (march, lift, bridge, return) are
+// played in a fixed order of 48 bars, about 100 seconds, so the tune keeps changing before it repeats.
+const BPM = 112, EIGHTH = 60/BPM/2, BAR = EIGHTH*8;
+const mtof = m => 440 * Math.pow(2, (m-69)/12);
+const CH = {
+  Dm:{ root:50, pad:[53,57,62] }, Bb:{ root:46, pad:[53,58,62] }, F:{ root:53, pad:[53,57,60] },
+  C:{ root:48, pad:[55,60,64] },  Gm:{ root:55, pad:[55,58,62] }, A:{ root:45, pad:[57,61,64] }
+};
+// Melody notes are [start in eighths, MIDI note, length in eighths].
+const SEC = {
+  A:{ ch:['Dm','Bb','F','C','Dm','Bb','F','A'], mel:[
+    [[0,74,3],[3,72,1],[4,69,2],[6,70,1],[7,69,1]],
+    [[0,70,3],[3,69,1],[4,65,2],[6,67,1],[7,65,1]],
+    [[0,72,3],[3,69,1],[4,65,2],[6,69,1],[7,72,1]],
+    [[0,76,4],[4,74,2],[6,72,2]],
+    [[0,74,3],[3,77,1],[4,76,2],[6,74,1],[7,72,1]],
+    [[0,74,3],[3,72,1],[4,70,2],[6,69,1],[7,70,1]],
+    [[0,72,2],[2,70,2],[4,69,2],[6,67,2]],
+    [[0,69,2],[2,73,2],[4,76,2],[6,74,2]] ] },
+  B:{ ch:['Gm','Dm','Bb','A','Gm','Dm','Bb','C'], mel:[
+    [[0,70,2],[2,74,2],[4,77,3],[7,74,1]],
+    [[0,77,4],[4,76,2],[6,74,2]],
+    [[0,74,2],[2,70,2],[4,74,2],[6,77,2]],
+    [[0,76,4],[4,73,2],[6,76,2]],
+    [[0,79,3],[3,77,1],[4,74,4]],
+    [[0,77,3],[3,76,1],[4,74,2],[6,72,2]],
+    [[0,70,2],[2,72,2],[4,74,2],[6,70,2]],
+    [[0,72,2],[2,76,2],[4,79,4]] ] },
+  C:{ ch:['Dm','Dm','Bb','Bb','Gm','Gm','A','A'], mel:[
+    [[0,69,8]], [[0,72,4],[4,70,4]], [[0,74,8]], [[0,72,4],[4,70,4]],
+    [[0,70,8]], [[0,74,4],[4,72,4]], [[0,73,4],[4,76,4]], [[0,74,2],[2,73,2],[4,69,4]] ] }
+};
+// [section, intensity 0-3]
+const ORDER = [['A',1],['B',2],['A',3],['C',0],['B',3],['A',3]];
+let MU = null, nbuf = null, musicOn = true;
+try { musicOn = localStorage.getItem('bridgeburn-music') !== '0'; } catch(e) {}
+
+function mNote(type, f, t, dur, vol, o = {}){
+  const osc = AC.createOscillator(), g = AC.createGain();
+  osc.type = type; osc.frequency.value = f; if (o.det) osc.detune.value = o.det;
+  let node = osc;
+  if (o.lp){ const fl = AC.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = o.lp; osc.connect(fl); node = fl; }
+  node.connect(g);
+  const atk = o.atk ?? 0.01, rel = o.rel ?? 0.08;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + atk);
+  g.gain.setValueAtTime(vol, t + Math.max(atk, dur));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
+  g.connect(MU.out);
+  if (o.send){ const sg = AC.createGain(); sg.gain.value = o.send; g.connect(sg); sg.connect(MU.fx); }
+  const end = t + dur + rel + 0.05;
+  if (o.vib){
+    const lfo = AC.createOscillator(), lg = AC.createGain();
+    lfo.frequency.value = 5.2; lg.gain.value = o.vib; lfo.connect(lg); lg.connect(osc.detune);
+    lfo.start(t); lfo.stop(end);
+  }
+  osc.start(t); osc.stop(end);
+}
+function noiseHit(t, dur, vol, ftype, freq, q){
+  if (!nbuf){ const n = AC.sampleRate | 0; nbuf = AC.createBuffer(1, n, AC.sampleRate); const d = nbuf.getChannelData(0); for (let i=0;i<n;i++) d[i] = Math.random()*2 - 1; }
+  const src = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain();
+  src.buffer = nbuf; fl.type = ftype; fl.frequency.value = freq; fl.Q.value = q || 0.7;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fl); fl.connect(g); g.connect(MU.out);
+  src.start(t, Math.random()*0.4); src.stop(t + dur + 0.02);
+}
+function kick(t, v){
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(135, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.16);
+  g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+  o.connect(g); g.connect(MU.out); o.start(t); o.stop(t + 0.26);
+}
+function snare(t, v){ noiseHit(t, 0.14, v, 'bandpass', 1900, 0.8); mNote('triangle', 190, t, 0.05, v*0.8, { atk:0.002, rel:0.06 }); }
+function scheduleBar(bar, t0){
+  const [name, inten] = ORDER[Math.floor(bar/8) % ORDER.length], sec = SEC[name], b = bar % 8, E = EIGHTH;
+  const ch = CH[sec.ch[b]];
+  // Pad: held across repeated chords.
+  if (b === 0 || sec.ch[b] !== sec.ch[b-1]){
+    let n = 1; while (b+n < 8 && sec.ch[b+n] === sec.ch[b]) n++;
+    for (const m of ch.pad) for (const d of [-7, 7])
+      mNote('sawtooth', mtof(m), t0, n*BAR - 0.1, inten === 0 ? 0.012 : 0.009, { atk:0.45, rel:0.5, lp:1100, det:d });
+  }
+  // Bass
+  const bassAt = inten === 0 ? [0] : inten === 1 ? [0,4,6] : [0,2,4,6];
+  for (const i of bassAt) mNote('triangle', mtof(ch.root + (inten === 3 && i === 6 ? 12 : 0)), t0 + i*E, inten === 0 ? E*7 : E*1.6, 0.11, { atk:0.01, rel:0.07 });
+  // Drums
+  if (inten === 0){ if (b % 2 === 0) kick(t0, 0.08); }
+  else {
+    kick(t0, 0.2); kick(t0 + 4*E, 0.17);
+    if (inten >= 2){ snare(t0 + 2*E, 0.06); snare(t0 + 6*E, 0.06); for (let i=0;i<8;i++) noiseHit(t0 + i*E, 0.04, i%2 ? 0.012 : 0.02, 'highpass', 7000); }
+    else snare(t0 + 6*E, 0.035);
+    if (inten === 3) snare(t0 + 3.5*E, 0.025);
+    if (b === 7) [[4,0.04],[5,0.045],[6,0.05],[6.5,0.055],[7,0.06],[7.5,0.07]].forEach(([i,v]) => snare(t0 + i*E, v));
+  }
+  // Melody
+  for (const [pos, note, len] of sec.mel[b]){
+    const t = t0 + pos*E, dur = len*E*0.95;
+    if (inten === 0) mNote('triangle', mtof(note), t, dur, 0.07, { atk:0.04, rel:0.2, send:0.4, vib:8 });
+    else {
+      mNote('sawtooth', mtof(note), t, dur, 0.04, { atk:0.03, rel:0.12, lp:2000, send:0.35, vib:10 });
+      if (inten === 3) mNote('square', mtof(note - 12), t, dur, 0.018, { atk:0.03, rel:0.12, lp:1200 });
+    }
+  }
+  // Arpeggio shimmer in the bridge and the biggest sections
+  if (inten === 0 || inten === 3){
+    const pat = [0,1,2,1,0,1,2,1];
+    for (let i=0;i<8;i++) mNote('triangle', mtof(ch.pad[pat[i]] + 12), t0 + i*E, E*0.9, 0.022, { atk:0.005, rel:0.12, send:0.3 });
+  }
+}
+function musicStart(){
+  if (MU || !AC) return;
+  const now = AC.currentTime;
+  const out = AC.createGain(), fx = AC.createGain(), dl = AC.createDelay(1), fb = AC.createGain(), fl = AC.createBiquadFilter();
+  dl.delayTime.value = 0.27; fb.gain.value = 0.3; fl.type = 'lowpass'; fl.frequency.value = 1800;
+  fx.connect(dl); dl.connect(out); dl.connect(fl); fl.connect(fb); fb.connect(dl);
+  out.gain.setValueAtTime(0.0001, now); out.gain.linearRampToValueAtTime(0.4, now + 1.5);
+  out.connect(AC.destination);
+  MU = { out, fx, bar:0, next:now + 0.15, timer:0 };
+  const pump = () => { while (MU && MU.next < AC.currentTime + 0.6){ scheduleBar(MU.bar, MU.next); MU.next += BAR; MU.bar++; } };
+  MU.timer = setInterval(pump, 120); pump();
+}
+function musicStop(){
+  if (!MU) return;
+  const m = MU; MU = null; clearInterval(m.timer);
+  const t = AC.currentTime;
+  m.out.gain.cancelScheduledValues(t); m.out.gain.setValueAtTime(Math.max(0.0001, m.out.gain.value), t); m.out.gain.linearRampToValueAtTime(0, t + 0.4);
+  setTimeout(() => { try { m.out.disconnect(); } catch(e) {} }, 800);
+}
+function musicSync(){ if (!AC) return; (musicOn && !muted) ? musicStart() : musicStop(); }
+const musicBoxes = [$('#musicToggle'), $('#musicToggle2')];
+musicBoxes.forEach(b => b.addEventListener('change', ev => {
+  musicOn = ev.target.checked;
+  try { localStorage.setItem('bridgeburn-music', musicOn ? '1' : '0'); } catch(e) {}
+  musicBoxes.forEach(x => { x.checked = musicOn; });
+  initAudio(); musicSync();
+}));
+musicBoxes.forEach(b => { b.checked = musicOn; });
+document.addEventListener('visibilitychange', () => { if (!AC) return; if (document.hidden) AC.suspend(); else AC.resume(); });
 
 // ---------- State ----------
 let G = null, nextId = 1, diffKey = 'normal';
@@ -350,7 +538,7 @@ function makeEnt(key, team, x, y){
 
 function newGame(){
   G = { t:0, clock:180, ot:false, over:false, endT:0, result:null, elixir:[5,5], crowns:[0,0],
-    ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(randomDeck ? rivalDeck() : playerDeck), newDeck(rivalDeck())], pending:[], zones:[],
+    ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(startDeck()), newDeck(cloneMatch ? startDeck() : rivalDeck())], pending:[], zones:[],
     aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, otLevel:0, lastLane:[0,0], aiSpellAt:-99, stats:{ played:[0,0] } };
   G.ents.push(makeTower(1,true,9,3), makeTower(1,false,3.5,6.5), makeTower(1,false,14.5,6.5));
   G.ents.push(makeTower(0,true,9,29), makeTower(0,false,3.5,25.5), makeTower(0,false,14.5,25.5));
@@ -1656,12 +1844,15 @@ function toTile(cx, cy){
 }
 function select(i){ if (!G || G.over) return; G.sel = (G.sel === i && !drag) ? -1 : i; }
 function tryDeploy(x, y){
-  if (!G || G.over || G.paused || G.sel < 0) return;
+  if (!G || G.over || G.paused || G.sel < 0) return false;
   const key = G.deck[0].hand[G.sel], c = CARDS[key];
   const px = c.type==='spell' ? x : snap(x), py = c.type==='spell' ? y : snap(y);
-  if (!canPlace(0, key, px, py)){ G.texts.push({ x:clamp(px,3,15), y:py, txt:'Not here', t:0, dur:0.8, color:'#ff9a8f', size:0.6 }); sfx.nope(); return; }
-  if (G.elixir[0] < c.cost){ G.texts.push({ x:clamp(px,3,15), y:py, txt:'Need elixir', t:0, dur:0.8, color:'#e7a3ff', size:0.6 }); sfx.nope(); return; }
-  if (deploy(0, G.sel, px, py)){ G.sel = -1; G.ghost = null; renderHand(); }
+  if (!canPlace(0, key, px, py)){ G.texts.push({ x:clamp(px,3,15), y:py, txt:'Not here', t:0, dur:0.8, color:'#ff9a8f', size:0.6 }); sfx.nope(); return false; }
+  if (G.elixir[0] < c.cost){ G.texts.push({ x:clamp(px,3,15), y:py, txt:'Need elixir', t:0, dur:0.8, color:'#e7a3ff', size:0.6 }); sfx.nope(); return false; }
+  // Always put the card back down once it has been played, even if something in deploy goes wrong.
+  let ok = false;
+  try { ok = deploy(0, G.sel, px, py); } finally { G.sel = -1; G.ghost = null; renderHand(); }
+  return ok;
 }
 cardEls.forEach((el, i) => {
   el.addEventListener('pointerdown', ev => {
@@ -1684,13 +1875,14 @@ window.addEventListener('pointerup', ev => {
   const p = toTile(ev.clientX, ev.clientY);
   if (drag){
     const d = drag; drag = null;
-    if (p.inside) { tryDeploy(p.x, p.y); return; }
+    if (p.inside) { const ok = tryDeploy(p.x, p.y); if (!ok && d.onArena && G) G.sel = -1; return; }
     if (d.toggle && !d.onArena) G.sel = -1;
     if (ev.pointerType !== 'mouse') G.ghost = null;
     return;
   }
   if (p.inside && ev.target === cvs){ initAudio(); tryDeploy(p.x, p.y); if (ev.pointerType !== 'mouse') G.ghost = null; }
 });
+window.addEventListener('pointercancel', () => { if (drag && drag.onArena && G) G.sel = -1; drag = null; if (G) G.ghost = null; });
 cvs.addEventListener('pointerleave', () => { if (G && !drag) G.ghost = null; });
 window.addEventListener('keydown', ev => {
   if (!G || G.over) return;
@@ -1709,20 +1901,20 @@ function paintMute(){
     : '<path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="#f4efe4" stroke-width="1.5"/>';
   $('#muteBtn').setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
 }
-$('#muteBtn').addEventListener('click', () => { muted = !muted; try { localStorage.setItem('bridgeburn-muted', muted?'1':'0'); } catch(e) {} initAudio(); paintMute(); });
+$('#muteBtn').addEventListener('click', () => { muted = !muted; try { localStorage.setItem('bridgeburn-muted', muted?'1':'0'); } catch(e) {} initAudio(); paintMute(); musicSync(); });
 paintMute();
 
 // ---------- Screens & record ----------
 function getRecord(){ try { return JSON.parse(localStorage.getItem('bridgeburn-record')) || { w:0, l:0, d:0 }; } catch(e) { return { w:0, l:0, d:0 }; } }
 function saveRecord(res){ const r = getRecord(); if (res==='win') r.w++; else if (res==='lose') r.l++; else r.d++; try { localStorage.setItem('bridgeburn-record', JSON.stringify(r)); } catch(e) {} }
 function recordText(){ const r = getRecord(); return (r.w + r.l + r.d) ? `Your record: ${r.w} won · ${r.l} lost · ${r.d} drawn` : ''; }
-function showStart(){ $('#record').textContent = recordText(); $('#startScreen').hidden = false; $('#endScreen').hidden = true; }
+function showStart(){ paintDiff(); $('#record').textContent = recordText(); $('#startScreen').hidden = false; $('#endScreen').hidden = true; }
 function showEnd(){
   if (!G) return;
   const res = G.result;
   $('#endTitle').textContent = res==='win' ? 'Victory' : res==='lose' ? 'Defeat' : 'Draw';
   $('#endTitle').style.color = res==='win' ? 'var(--blue)' : res==='lose' ? 'var(--red)' : 'var(--gold)';
-  $('#endSub').textContent = `${diffKey[0].toUpperCase()+diffKey.slice(1)} rival`;
+  $('#endSub').textContent = `${diffKey[0].toUpperCase()+diffKey.slice(1)} rival` + (cloneMatch ? ' · clone match' : '');
   $('#endYou').textContent = G.crowns[0];
   $('#endRival').textContent = G.crowns[1];
   const mins = Math.floor(G.t/60), secs = Math.round(G.t%60);
@@ -1735,8 +1927,22 @@ function start(d){
   $('#startScreen').hidden = true; $('#endScreen').hidden = true; $('#pauseScreen').hidden = true;
   newGame();
 }
-document.querySelectorAll('[data-diff]').forEach(b => b.addEventListener('click', () => start(b.dataset.diff)));
-$('#againBtn').addEventListener('click', () => start(diffKey));
+try { const d = localStorage.getItem('bridgeburn-diff'); if (DIFF[d]) diffKey = d; } catch(e) {}
+function paintDiff(){ document.querySelectorAll('[data-diff]').forEach(b => b.setAttribute('aria-pressed', b.dataset.diff === diffKey ? 'true' : 'false')); }
+document.querySelectorAll('[data-diff]').forEach(b => b.addEventListener('click', () => {
+  diffKey = b.dataset.diff;
+  try { localStorage.setItem('bridgeburn-diff', diffKey); } catch(e) {}
+  paintDiff();
+}));
+$('#cloneToggle').checked = cloneMatch;
+$('#cloneToggle').addEventListener('change', ev => {
+  cloneMatch = ev.target.checked;
+  try { localStorage.setItem('bridgeburn-clone', cloneMatch ? '1' : '0'); } catch(e) {}
+});
+$('#startBtn').addEventListener('click', () => start(diffKey));
+$('#helpBtn').addEventListener('click', () => { $('#startScreen').hidden = true; $('#helpScreen').hidden = false; });
+$('#helpClose').addEventListener('click', () => { $('#helpScreen').hidden = true; $('#startScreen').hidden = false; });
+$('#againBtn').addEventListener('click', () => { if (randomDeck) rolled = rivalDeck(); start(diffKey); });
 $('#menuBtn').addEventListener('click', () => { G = null; showStart(); });
 
 // ---------- Deck: start-screen roster and builder ----------
@@ -1744,16 +1950,19 @@ const avgCost = d => (d.reduce((s,k) => s + CARDS[k].cost, 0) / Math.max(1, d.le
 function iconCanvas(key, px){ const cv = document.createElement('canvas'); cv.width = cv.height = px; drawCardIcon(cv, key); return cv; }
 function renderRoster(){
   const roster = $('#roster'); roster.textContent = '';
-  $('#randomToggle').checked = randomDeck;
-  roster.classList.toggle('off', randomDeck);
-  $('#randomNote').hidden = !randomDeck;
-  for (const key of playerDeck){
+  const deck = startDeck();
+  $('#modeMine').setAttribute('aria-pressed', randomDeck ? 'false' : 'true');
+  $('#modeRandom').setAttribute('aria-pressed', randomDeck ? 'true' : 'false');
+  $('#modeRandom').textContent = randomDeck ? 'Random ↻' : 'Random';
+  $('#deckName').textContent = randomDeck ? 'Random deck' : 'Your deck';
+  for (const key of deck){
     const c = CARDS[key], div = document.createElement('div');
-    div.append(iconCanvas(key, 72), document.createTextNode(c.name));
-    const sm = document.createElement('small'); sm.textContent = `${c.cost} · ${c.blurb}`; div.append(sm);
+    const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
+    div.title = c.blurb || c.name;
+    div.append(cost, iconCanvas(key, 72), document.createTextNode(c.name));
     roster.append(div);
   }
-  $('#avgStart').textContent = avgCost(playerDeck);
+  $('#avgStart').textContent = avgCost(deck);
 }
 function statLine(c){
   if (c.spell === 'elixir') return `Net +${c.gain - c.cost} elixir`;
@@ -1820,15 +2029,13 @@ function renderBuilder(){
 function openBuilder(){ draft = [...playerDeck]; $('#startScreen').hidden = true; $('#deckScreen').hidden = false; renderBuilder(); }
 function closeBuilder(){ $('#deckScreen').hidden = true; renderRoster(); showStart(); }
 $('#editDeckBtn').addEventListener('click', openBuilder);
-$('#randomToggle').addEventListener('change', ev => {
-  randomDeck = ev.target.checked;
-  try { localStorage.setItem('bridgeburn-randomdeck', randomDeck ? '1' : '0'); } catch(e) {}
-  renderRoster();
-});
+function saveMode(){ try { localStorage.setItem('bridgeburn-randomdeck', randomDeck ? '1' : '0'); } catch(e) {} }
+$('#modeMine').addEventListener('click', () => { randomDeck = false; saveMode(); renderRoster(); });
+$('#modeRandom').addEventListener('click', () => { randomDeck = true; rolled = rivalDeck(); saveMode(); renderRoster(); });
 $('#deckCancel').addEventListener('click', closeBuilder);
 $('#deckSave').addEventListener('click', () => {
   if (draft.length !== 8) return;
-  playerDeck = [...draft];
+  playerDeck = [...draft]; randomDeck = false; saveMode();
   try { localStorage.setItem('bridgeburn-deck', JSON.stringify(playerDeck)); } catch(e) {}
   closeBuilder();
 });
@@ -1837,6 +2044,53 @@ $('#deckRandom').addEventListener('click', () => {
   draft = rivalDeck(); renderBuilder();
 });
 renderRoster();
+
+// ---------- Full screen ----------
+const fsRoot = document.documentElement;
+const fsReq = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;
+const fsExit = document.exitFullscreen || document.webkitExitFullscreen;
+const fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+const FS_ENTER = 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4', FS_EXIT = 'M6 2v4H2M10 2v4h4M14 10h-4v4M2 10h4v4';
+const fsBtns = document.querySelectorAll('.fs-toggle');
+let toastT = 0;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3200); }
+function paintFs(){
+  const on = fsOn();
+  fsBtns.forEach(b => {
+    b.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
+    const path = b.querySelector('path');
+    if (path) path.setAttribute('d', on ? FS_EXIT : FS_ENTER); else b.textContent = on ? 'Exit full screen' : 'Full screen';
+  });
+}
+function fsFail(){ toast('Full screen is blocked here. Open the link in Chrome instead of the Claude app and try again.'); }
+let autoFs = true;
+try { autoFs = localStorage.getItem('bridgeburn-autofs') !== '0'; } catch(e) {}
+function toggleFs(){
+  try { localStorage.setItem('bridgeburn-autofs', fsOn() ? '0' : '1'); } catch(e) {}
+  try {
+    const p = fsOn() ? fsExit.call(document) : fsReq.call(fsRoot);
+    if (p && p.catch) p.catch(fsFail);
+  } catch(e) { fsFail(); }
+}
+if (!fsReq) fsBtns.forEach(b => { b.hidden = true; });
+else {
+  fsBtns.forEach(b => b.addEventListener('click', toggleFs));
+  document.addEventListener('fullscreenchange', paintFs);
+  document.addEventListener('webkitfullscreenchange', paintFs);
+  // Browsers only allow full screen after a tap, so the first tap anywhere starts it. Leaving full
+  // screen with the button turns this off for next time.
+  if (autoFs){
+    let tried = false;
+    const first = ev => {
+      if (tried) return;
+      if (ev.target && ev.target.closest && ev.target.closest('.fs-toggle')) { tried = true; return; }
+      tried = true;
+      if (fsOn()) return;
+      try { const p = fsReq.call(fsRoot); if (p && p.catch) p.catch(() => {}); } catch(e) {}
+    };
+    ['click', 'pointerup', 'keydown'].forEach(n => document.addEventListener(n, first, true));
+  }
+}
 
 // ---------- Sizing & loop ----------
 function resize(){
