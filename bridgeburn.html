@@ -62,18 +62,18 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 #arena{display:block;border-radius:12px;box-shadow:0 0 0 3px #0b0f14,0 10px 30px rgba(0,0,0,.45);touch-action:none;cursor:crosshair}
 
 /* Tray */
-.tray{display:grid;grid-template-columns:54px repeat(4,1fr);gap:6px;align-items:end}
+.tray{display:grid;grid-template-columns:54px repeat(4,minmax(0,1fr));gap:6px;align-items:end}
 .next{display:flex;flex-direction:column;align-items:center;gap:3px}
 .next .lbl{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .next .mini{width:54px;aspect-ratio:3/4;border-radius:8px;background:var(--panel);border:1px solid var(--line);
   display:grid;place-items:center;overflow:hidden}
 .next canvas{width:44px;height:44px}
-.card{position:relative;aspect-ratio:3/4;max-height:120px;border-radius:12px;border:2px solid var(--line);
+.card{position:relative;width:100%;max-width:90px;justify-self:center;aspect-ratio:3/4;min-width:0;min-height:0;overflow:visible;contain:size;border-radius:12px;border:2px solid var(--line);
   background:linear-gradient(180deg,var(--panel-2),var(--panel));cursor:grab;padding:0;touch-action:none;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   transition:transform .12s ease,border-color .12s ease,filter .2s}
-.card canvas{width:64%;aspect-ratio:1;height:auto}
-.card .nm{font-size:11px;font-weight:800;line-height:1.1;text-align:center;padding-inline:3px}
+.card canvas{width:60%;aspect-ratio:1;height:auto;flex:none}
+.card .nm{width:100%;font-size:clamp(9px,2.6vw,11px);font-weight:800;line-height:1.1;height:2.2em;text-align:center;padding-inline:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:normal;word-break:normal}
 .card .cost{position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%,#e7a3ff,var(--elixir) 45%,var(--elixir-deep));
   display:grid;place-items:center;font-family:var(--display);font-size:13px;color:#fff;
@@ -554,7 +554,7 @@ function princessAlive(team, lane){ return towersOf(team).some(t => !t.king && (
 const elixirMult = () => G.ot ? G.otLevel : G.clock <= 60 ? 2 : 1;
 
 // ---------- Placement ----------
-const POTATO_TOWER_GAP = 3.5, POTATO_GAP = 3.5;
+const POTATO_TOWER_GAP = 2.3, POTATO_GAP = 2.3;
 function canPlace(team, key, x, y){
   const c = CARDS[key];
   if (x < 0 || x > W || y < 0 || y > H) return false;
@@ -1803,7 +1803,11 @@ function renderHand(){
   cardEls.forEach((el, i) => {
     const key = d.hand[i], c = CARDS[key];
     el.querySelector('.cost').textContent = c.cost;
-    el.querySelector('.nm').textContent = c.name;
+    const nm = el.querySelector('.nm');
+    nm.textContent = c.name; nm.style.fontSize = '';
+    // Shrink a long name until its longest word fits the card, rather than splitting the word.
+    let fs = parseFloat(getComputedStyle(nm).fontSize);
+    while (nm.scrollWidth > nm.clientWidth + 0.5 && fs > 7){ fs -= 0.5; nm.style.fontSize = fs + 'px'; }
     el.setAttribute('aria-label', `${c.name}, ${c.cost} elixir`);
     drawCardIcon(el.querySelector('canvas'), key);
   });
@@ -1859,7 +1863,7 @@ cardEls.forEach((el, i) => {
     if (!G || G.over || G.paused) return;
     ev.preventDefault(); initAudio();
     const was = G.sel;
-    G.sel = i; drag = { i, onArena:false, toggle: was === i };
+    G.sel = i; drag = { i, onArena:false, toggle: was === i, x0:ev.clientX, y0:ev.clientY, moved:false };
   });
   el.addEventListener('click', ev => ev.preventDefault());
   el.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); if (G && !G.over) G.sel = G.sel === i ? -1 : i; } });
@@ -1869,6 +1873,7 @@ window.addEventListener('pointermove', ev => {
   const p = toTile(ev.clientX, ev.clientY);
   G.ghost = p.inside ? p : null;
   if (drag && p.inside) drag.onArena = true;
+  if (drag && Math.hypot(ev.clientX - drag.x0, ev.clientY - drag.y0) > 12) drag.moved = true;
 });
 window.addEventListener('pointerup', ev => {
   if (!G) return;
@@ -1876,11 +1881,15 @@ window.addEventListener('pointerup', ev => {
   if (drag){
     const d = drag; drag = null;
     if (p.inside) { const ok = tryDeploy(p.x, p.y); if (!ok && d.onArena && G) G.sel = -1; return; }
-    if (d.toggle && !d.onArena) G.sel = -1;
+    // A tap on a card selects it (tap the arena next to place it). Tapping it again, or dragging
+    // it anywhere other than the arena, puts it back down.
+    if ((d.toggle && !d.onArena) || d.moved) G.sel = -1;
     if (ev.pointerType !== 'mouse') G.ghost = null;
     return;
   }
-  if (p.inside && ev.target === cvs){ initAudio(); tryDeploy(p.x, p.y); if (ev.pointerType !== 'mouse') G.ghost = null; }
+  if (p.inside && ev.target === cvs){ initAudio(); tryDeploy(p.x, p.y); if (ev.pointerType !== 'mouse') G.ghost = null; return; }
+  // Tapping anywhere that is not the arena or a card puts the selected card back down.
+  if (G.sel >= 0 && !(ev.target.closest && ev.target.closest('.card'))) G.sel = -1;
 });
 window.addEventListener('pointercancel', () => { if (drag && drag.onArena && G) G.sel = -1; drag = null; if (G) G.ghost = null; });
 cvs.addEventListener('pointerleave', () => { if (G && !drag) G.ghost = null; });
@@ -2106,6 +2115,7 @@ function resize(){
   paintBg();
 }
 new ResizeObserver(resize).observe($('#field'));
+new ResizeObserver(() => renderHand()).observe($('.tray'));
 window.addEventListener('resize', resize);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (G) renderHand(); });
 
@@ -2128,7 +2138,7 @@ newGame(); G.demo = true;
 showStart();
 requestAnimationFrame(frame);
 window.__bbCanPlace = canPlace;
-window.__bb = { get G(){ return G; }, step, findSpot, deploy, rivalDeck, newDeck, start };
+window.__bb = { get G(){ return G; }, step, findSpot, deploy, rivalDeck, newDeck, start, renderHand };
 })();
 </script>
 </body>
