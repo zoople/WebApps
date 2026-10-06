@@ -244,6 +244,7 @@ const CARDS = {
   brute:   { name:'Brute', cost:5, type:'unit', count:1, hp:3800, dmg:230, hs:1.5, range:0.9, speed:0.7, sight:7, r:0.8, air:false, hitsAir:false, targets:'buildings', blurb:'Hits towers only' },
   imps:    { name:'Imps', cost:2, type:'unit', count:3, hp:210, dmg:105, hs:1.1, range:0.6, speed:1.6, sight:5.5, r:0.33, air:false, hitsAir:false, targets:'any', blurb:'Fast swarm' },
   drake:   { name:'Drake', cost:4, type:'unit', count:1, hp:1000, dmg:130, hs:1.6, range:3.5, speed:1.3, sight:5.5, r:0.55, air:true, hitsAir:true, targets:'any', splash:1.3, proj:'fire', blurb:'Flying splash' },
+  spire:   { name:'Sky Spire', cost:4, type:'building', hp:1000, dmg:130, hs:1.0, range:6.5, r:0.75, air:false, hitsAir:true, targets:'any', life:35, proj:'arrow', blurb:'Hits air and ground' },
   turret:  { name:'Bolt Turret', cost:3, type:'building', hp:900, dmg:125, hs:0.9, range:5.5, r:0.8, air:false, hitsAir:false, targets:'any', life:30, proj:'bolt', blurb:'Ground defense' },
   fireball:{ name:'Fireball', cost:4, type:'spell', spell:'lob', dmg:560, radius:2.5, towerMult:0.35, knock:0.9, blurb:'Area damage' },
   frost:   { name:'Frost Snap', cost:2, type:'spell', spell:'flash', dmg:170, radius:2.5, towerMult:0.4, stun:1.5, blurb:'Freezes 1.5s' },
@@ -258,7 +259,7 @@ const CARDS = {
   sapper:  { name:'Sapper', cost:3, type:'unit', count:1, hp:330, dmg:180, hs:1.8, range:4.5, speed:1.0, sight:5.5, r:0.4, air:false, hitsAir:false, targets:'any', splash:1.5, proj:'bomb', blurb:'Lobs bombs' },
   zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:540, hs:3.0, range:-0.6, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', bomber:true, deathDmg:{ dmg:180, r:2.2, fuse:3 }, blurb:'Bombs towers; leaves a 3s bomb when destroyed' },
   crossbow:{ name:'Crossbowman', cost:4, type:'unit', count:1, hp:650, dmg:180, hs:1.1, range:6, speed:1.0, sight:6.5, r:0.45, air:false, hitsAir:true, targets:'any', proj:'bolt', blurb:'Long range' },
-  potato:  { name:'Potato', cost:3, type:'plant', grow:20, sprouts:'spudsquire', r:0.45, blurb:'Plant anywhere. Sprouts in 20s' },
+  potato:  { name:'Potato', cost:3, type:'plant', grow:20, sprouts:'spudsquire', r:0.45, blurb:'Plant away from towers. Sprouts in 20s' },
   spudsquire:{ name:'Potato Squire', cost:0, hidden:true, type:'unit', count:1, hp:1250, dmg:155, hs:1.2, range:0.8, speed:1.0, sight:5.5, r:0.5, air:false, hitsAir:false, targets:'any' },
   blight:  { name:'Blight Cloud', cost:4, type:'spell', spell:'zone', dmg:600, dur:8, radius:3, towerMult:0.35, slow:0.25, blurb:'Lingering poison' },
   elixirdrop:{ name:'Elixir Drop', cost:1, type:'spell', spell:'elixir', gain:2, blurb:'Costs 1, gives 2' },
@@ -289,9 +290,11 @@ let playerDeck = loadDeck();
 let randomDeck = false;
 try { randomDeck = localStorage.getItem('bridgeburn-randomdeck') === '1'; } catch(e) {}
 const DIFF = {
-  easy:   { mult:0.85, delay:1.4, attackAt:9.6 },
-  normal: { mult:1.0,  delay:0.7, attackAt:8.0 },
-  hard:   { mult:1.15, delay:0.35, attackAt:7.0 }
+  // react: how long a troop must have been on the field before the Rival will spell it.
+  // spellCd: rest between the Rival's damage spells.
+  easy:   { mult:0.85, delay:1.4, attackAt:9.6, react:3.2, spellCd:7 },
+  normal: { mult:1.0,  delay:0.7, attackAt:8.0, react:2.5, spellCd:5 },
+  hard:   { mult:1.15, delay:0.35, attackAt:7.0, react:1.9, spellCd:3.5 }
 };
 
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
@@ -341,14 +344,14 @@ function makeEnt(key, team, x, y){
     jumps:!!c.jumps, spawn:c.spawn||null, spawnT:c.spawn?1.5:0, avoid:null,
     hp:c.hp, maxHp:c.hp, dmg:c.dmg, hs:c.hs, range:c.range, speed:c.speed||0, sight:c.sight||c.range,
     air:!!c.air, hitsAir:c.hitsAir, targets:c.targets, splash:c.splash||0, proj:c.proj||null, life:c.life||0,
-    cd:0, stun:0, deploy:1, retarget:0, target:null, flash:0, swing:0, walk:Math.random()*6,
+    cd:0, stun:0, deploy:1, retarget:0, target:null, flash:0, swing:0, walk:Math.random()*6, born:G ? G.t : 0,
     angle: team===0 ? -Math.PI/2 : Math.PI/2 };
 }
 
 function newGame(){
   G = { t:0, clock:180, ot:false, over:false, endT:0, result:null, elixir:[5,5], crowns:[0,0],
     ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(randomDeck ? rivalDeck() : playerDeck), newDeck(rivalDeck())], pending:[], zones:[],
-    aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, otLevel:0, lastLane:[0,0], stats:{ played:[0,0] } };
+    aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, otLevel:0, lastLane:[0,0], aiSpellAt:-99, stats:{ played:[0,0] } };
   G.ents.push(makeTower(1,true,9,3), makeTower(1,false,3.5,6.5), makeTower(1,false,14.5,6.5));
   G.ents.push(makeTower(0,true,9,29), makeTower(0,false,3.5,25.5), makeTower(0,false,14.5,25.5));
   renderHand(); lastHud = {};
@@ -363,15 +366,17 @@ function princessAlive(team, lane){ return towersOf(team).some(t => !t.king && (
 const elixirMult = () => G.ot ? G.otLevel : G.clock <= 60 ? 2 : 1;
 
 // ---------- Placement ----------
+const POTATO_TOWER_GAP = 3.5, POTATO_GAP = 3.5;
 function canPlace(team, key, x, y){
   const c = CARDS[key];
   if (x < 0 || x > W || y < 0 || y > H) return false;
   if (c.type === 'spell') return true;
   if (c.type === 'plant'){
-    // A potato can go anywhere on dry land that is not on top of a tower.
+    // A potato can go on dry land on either side, but not close to any tower or another potato.
     if (x < 0.5 || x > W-0.5 || y < 0.5 || y > H-0.5) return false;
     if (y > RIVER_T - 0.3 && y < RIVER_B + 0.3) return false;
-    return !G.ents.some(t => t.kind === 'tower' && alive(t) && Math.abs(t.x-x) < t.r+0.35 && Math.abs(t.y-y) < t.r+0.35);
+    if (G.ents.some(t => t.kind === 'tower' && alive(t) && Math.hypot(t.x-x, t.y-y) < t.r + POTATO_TOWER_GAP)) return false;
+    return !G.ents.some(p => p.kind === 'plant' && Math.hypot(p.x-x, p.y-y) < POTATO_GAP);
   }
   if (x < 0.5 || x > W-0.5 || y < 0.5 || y > H-0.5) return false;
   const lane = x < 9 ? 0 : 1;
@@ -710,22 +715,37 @@ function aiThink(){
   // With faster elixir it can afford to commit sooner, and should, or it wastes elixir.
   const attackAt = Math.max(4.5, D.attackAt - (mult - 1) * 1.2);
 
-  // 1) Spells: finish a tower, hit a valuable cluster, or clear a swarm.
+  // 1) Spells: finish a tower, hit a valuable cluster, clear a swarm, or chip a tower.
+  // The Rival only spells troops it has had time to see (they must have been on the field
+  // for a moment), and it rests between spells, so it is not instant.
+  const seen = foes.filter(f => G.t - (f.born || 0) >= D.react);
+  const spellReady = G.t - G.aiSpellAt >= D.spellCd;
+  const castSpell = (k, x, y) => { if (aiPlace(k, x, y)){ G.aiSpellAt = G.t; return true; } return false; };
+  const quiet = foes.reduce((s,f) => s + f.hp, 0) < 300;
   for (const k of hand.filter(k => dmgSpell(k) && can(k))){
     const c = CARDS[k];
-    for (const t of playerTowers) if (t.hp <= c.dmg*c.towerMult){ aiPlace(k, t.x, t.y); return; }
+    for (const t of playerTowers) if (t.hp <= c.dmg*c.towerMult){ castSpell(k, t.x, t.y); return; }
+    if (!spellReady) continue;
     let best = null, bv = 0, bn = 0;
-    for (const u of foes){
+    for (const u of seen){
       let v = 0, n = 0;
-      for (const o of foes) if (Math.hypot(o.x-u.x, o.y-u.y) <= c.radius*0.9){ v += Math.min(o.hp, c.dmg); if (o.hp <= c.dmg) n++; }
+      for (const o of seen) if (Math.hypot(o.x-u.x, o.y-u.y) <= c.radius*0.9){ v += Math.min(o.hp, c.dmg); if (o.hp <= c.dmg) n++; }
       // A cluster sitting on a tower is worth more: the spell chips the tower too.
       if (playerTowers.some(t => Math.hypot(t.x-u.x, t.y-u.y) <= c.radius + t.r)) v += c.dmg*c.towerMult;
       if (v > bv){ bv = v; best = u; bn = n; }
     }
-    if (!best) continue;
     const lead = c.spell === 'lob' ? (c.slow ? -1.2 : -0.6) : -0.3;
     const need = c.dmg >= 400 ? c.cost * 240 / Math.sqrt(mult) : 0;
-    if (c.dmg >= 400 ? bv >= need : (bn >= 3 || (c.stun && bv >= 600))){ aiPlace(k, best.x, best.y + lead); return; }
+    if (best && (c.dmg >= 400 ? bv >= need : (bn >= 3 || (c.stun && bv >= 600)))){ if (castSpell(k, best.x, best.y + lead)) return; }
+    // Chip a tower: with spare elixir and nothing to defend, a damage spell goes on your
+    // weakest side tower (the king only once a side tower is down, so it is not woken early).
+    const spare = mult >= 2 ? c.cost + 2 : Math.max(8, c.cost + 4);
+    const towerHit = c.dmg * c.towerMult;
+    if (quiet && el >= spare && !c.stun && (towerHit >= 150 || el >= 9.5)){
+      const sides = playerTowers.filter(t => !t.king);
+      const t = (sides.length ? sides : playerTowers).sort((a,b) => a.hp - b.hp)[0];
+      if (t && castSpell(k, t.x, t.y)) return;
+    }
   }
 
   // Alarm: wake our king when a real push is landing on a side tower.
@@ -817,7 +837,7 @@ function aiThink(){
   // 6) Potatoes: plant one in front of the player's weakest tower when things are quiet.
   if (prof.potato && can('potato') && !threats.length && el >= CARDS.potato.cost + 2){
     const t = playerTowers.filter(t => !t.king).sort((a,b) => a.hp-b.hp)[0] || playerTowers[0];
-    if (t && aiPlace('potato', t.x + (t.x < 9 ? 0.5 : -0.5), t.y - t.r - 1)) return;
+    if (t && aiPlace('potato', t.x + (t.x < 9 ? 0.5 : -0.5), t.y - t.r - POTATO_TOWER_GAP - 0.5)) return;
   }
 
   // 7) Build a push once elixir is up. Slow tanks start at the back so support can join them.
@@ -1054,9 +1074,11 @@ function drawFigure(c, key, team, x, y, S, o = {}){
       c.fillStyle = '#efe4c8';
       c.beginPath(); c.moveTo(-r*0.75,-r*0.35); c.lineTo(-r*0.95,-r*1.15); c.lineTo(-r*0.3,-r*0.72); c.fill();
       c.beginPath(); c.moveTo(r*0.75,-r*0.35); c.lineTo(r*0.95,-r*1.15); c.lineTo(r*0.3,-r*0.72); c.fill();
-      circle(c, 0, 0, r, '#8a5bb5', T.main, r*0.28);
-      circle(c, -r*0.32, -r*0.1, r*0.18, '#ffe45c');
-      circle(c, r*0.32, -r*0.1, r*0.18, '#ffe45c');
+      circle(c, 0, 0, r, '#5cb847', T.main, r*0.28);
+      circle(c, -r*0.32, -r*0.1, r*0.18, '#fff6c9');
+      circle(c, r*0.32, -r*0.1, r*0.18, '#fff6c9');
+      circle(c, -r*0.32, -r*0.08, r*0.08, '#1d1b18');
+      circle(c, r*0.32, -r*0.08, r*0.08, '#1d1b18');
       break;
     }
     case 'drake': {
@@ -1071,6 +1093,21 @@ function drawFigure(c, key, team, x, y, S, o = {}){
       circle(c, r*1.02, -r*0.15, r*0.08, '#1b1b1b');
       c.restore();
       circle(c, 0, 0, r*0.8, '#f09a45', T.main, r*0.22);
+      break;
+    }
+    case 'spire': {
+      // a tall stone spire seen from above: stepped base, team-coloured top, ballista on a swivel
+      c.fillStyle = '#8f887c'; c.strokeStyle = '#4a453f'; c.lineWidth = r*0.1;
+      c.beginPath(); for (let i=0;i<6;i++){ const a = i*Math.PI/3 + Math.PI/6; c[i?'lineTo':'moveTo'](Math.cos(a)*r*1.05, Math.sin(a)*r*1.05); } c.closePath(); c.fill(); c.stroke();
+      circle(c, 0, 0, r*0.72, '#b3aa9a', '#6e675c', r*0.08);
+      circle(c, 0, 0, r*0.5, T.main, T.dark, r*0.08);
+      c.save(); c.rotate(ang);
+      c.strokeStyle = '#3b352c'; c.lineWidth = r*0.14; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r*0.2, 0); c.lineTo(r*0.95, 0); c.stroke();
+      c.strokeStyle = '#6b4a2a'; c.lineWidth = r*0.12;
+      c.beginPath(); c.arc(r*0.35, 0, r*0.55, -1.1, 1.1); c.stroke();
+      c.restore();
+      circle(c, 0, 0, r*0.16, '#f2c14e');
       break;
     }
     case 'turret': {
@@ -1525,6 +1562,17 @@ function draw(){
   }
   for (const f of G.fx) drawFx(f);
 
+  // potato no-plant zones
+  if (selKey && CARDS[selKey].type === 'plant' && !G.over){
+    ctx.save(); ctx.fillStyle = 'rgba(200,40,40,.16)'; ctx.strokeStyle = 'rgba(255,120,100,.5)'; ctx.lineWidth = S*0.05; ctx.setLineDash([S*0.2, S*0.15]);
+    for (const t of G.ents){
+      const rad = t.kind === 'tower' && alive(t) ? t.r + POTATO_TOWER_GAP : t.kind === 'plant' ? POTATO_GAP : 0;
+      if (!rad) continue;
+      ctx.beginPath(); ctx.arc(t.x*S, t.y*S, rad*S, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillRect(0, (RIVER_T-0.3)*S, W*S, 2.6*S);
+    ctx.restore();
+  }
   // ghost
   if (selKey && G.ghost && !G.over){
     const c = CARDS[selKey];
@@ -1743,7 +1791,7 @@ function renderBuilder(){
     t.disabled = !inDeck && draft.length >= 8;
     const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
     const info = document.createElement('div');
-    const tags = [c.air ? 'Flies' : '', c.jumps ? 'Jumps river' : '', c.type==='building' ? 'Building' : '', c.type==='plant' ? 'Invincible · plant anywhere' : '', c.type==='spell' ? (c.spell==='zone' ? 'Spell · slows' : isUtility(key) ? 'Tap anywhere' : 'Spell') : '', c.hitsAir && c.type!=='spell' ? 'Hits air' : '', c.targets==='buildings' ? 'Towers only' : ''].filter(Boolean).join(' · ');
+    const tags = [c.air ? 'Flies' : '', c.jumps ? 'Jumps river' : '', c.type==='building' ? 'Building' : '', c.type==='plant' ? 'Invincible · not near towers' : '', c.type==='spell' ? (c.spell==='zone' ? 'Spell · slows' : isUtility(key) ? 'Tap anywhere' : 'Spell') : '', c.hitsAir && c.type!=='spell' ? 'Hits air' : '', c.targets==='buildings' ? 'Towers only' : ''].filter(Boolean).join(' · ');
     info.innerHTML = `<div class="t-name"></div><div class="t-blurb"></div><div class="t-stats"></div>`;
     info.querySelector('.t-name').textContent = c.name;
     info.querySelector('.t-blurb').textContent = tags || c.blurb;
@@ -1825,6 +1873,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && G &
 newGame(); G.demo = true;
 showStart();
 requestAnimationFrame(frame);
+window.__bbCanPlace = canPlace;
 window.__bb = { get G(){ return G; }, step, findSpot, deploy, rivalDeck, newDeck, start };
 })();
 </script>
