@@ -12,32 +12,29 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    // Paste your config from Firebase Console > Project settings > Your apps
+    // Realtime Database connection for the habit-tracker project
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      projectId: "habit-tracker-86ef8",
+      databaseURL: "https://habit-tracker-86ef8-default-rtdb.europe-west1.firebasedatabase.app"
     };
 
-    const db = getFirestore(initializeApp(firebaseConfig));
+    const db = getDatabase(initializeApp(firebaseConfig));
     const output = document.getElementById("output");
 
     document.getElementById("load").addEventListener("click", async () => {
       output.textContent = "Loading...";
       try {
-        const snapshot = await getDocs(collection(db, "walks"));
-        if (snapshot.empty) {
+        const snapshot = await get(ref(db, "walks"));
+        if (!snapshot.exists()) {
           output.textContent = "No walks found.";
           return;
         }
-        output.textContent = snapshot.docs
-          .map(d => d.id + ": " + JSON.stringify(d.data(), null, 2))
-          .join("\n\n");
+        // Each child is date: number of walks, e.g. "2026-10-07: 3"
+        const lines = [];
+        snapshot.forEach(child => lines.push(child.key + ": " + JSON.stringify(child.val())));
+        output.textContent = lines.join("\n");
       } catch (err) {
         output.textContent = "Error: " + err.message;
       }
