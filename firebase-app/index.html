@@ -33,7 +33,10 @@
         }
         // Each child is date: number of walks, e.g. "2026-10-07: 3"
         const lines = [];
-        snapshot.forEach(child => lines.push(child.key + ": " + JSON.stringify(child.val())));
+        // Braces matter: Firebase stops looping if the callback returns a truthy value
+        snapshot.forEach(child => {
+          lines.push(child.key + ": " + JSON.stringify(child.val()));
+        });
         output.textContent = lines.join("\n");
       } catch (err) {
         output.textContent = "Error: " + err.message;
