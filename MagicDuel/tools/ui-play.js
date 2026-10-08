@@ -30,7 +30,7 @@ const svg = (name) => `<svg xmlns="http://www.w3.org/2000/svg" width="146" heigh
       if (st.dialog) {
         // generic dialog handling
         if (st.dialog === 'Keep or mulligan?') { await page.click('.modal:last-child footer .btn.primary'); continue; }
-        if (st.dialog === 'End turn?') { await page.click('.modal:last-child footer .btn.primary'); continue; }
+        if (st.dialog === 'End turn?' || st.dialog === 'Target yourself?') { await page.click('.modal:last-child footer .btn.primary'); continue; }
         if (/Choose X/.test(st.dialog)) { await page.click('.modal:last-child footer .btn.primary'); continue; }
         if (/Scry/.test(st.dialog)) { await page.click('.modal:last-child footer .btn.primary'); continue; }
         if (/choose one|—/.test(st.dialog) || /Charming/.test(st.dialog)) { await page.click('.modal:last-child .abtn'); continue; }
@@ -68,7 +68,7 @@ const svg = (name) => `<svg xmlns="http://www.w3.org/2000/svg" width="146" heigh
         await page.click('#btnMain'); continue;
       }
       if (st.mode === 'target') {
-        const t = await page.evaluate(() => { const U = MTG.UI; const t = [...U.legalSet][0]; if (!t) return null; if (t.isPlayer) return { sel: `#${t.idx === 0 ? 'myBar' : 'oppBar'} .life` }; if (t.kind === 'spell') return { sel: '.sitem.legal' }; return { sel: `.card[data-id="${t.id}"]` }; });
+        const t = await page.evaluate(() => { const U = MTG.UI; const t = (U.advice && U.advice.pick) || [...U.legalSet].find((x) => x.isPlayer ? x.idx !== 0 : x.kind === 'spell' || x.controller !== 0) || [...U.legalSet][0]; if (!t) return null; if (t.isPlayer) return { sel: `#${t.idx === 0 ? 'myBar' : 'oppBar'} .life` }; if (t.kind === 'spell') return { sel: '.sitem.legal' }; return { sel: `.card[data-id="${t.id}"]` }; });
         if (!t) { await page.click('#btnMain'); continue; }
         if (gi === 0 && shots < 6 && steps % 3 === 0) await page.screenshot({ path: `${out}/09-target-${shots++}.png` });
         await page.click(t.sel).catch(() => page.evaluate(() => MTG.UI.pickTarget([...MTG.UI.legalSet][0])));
