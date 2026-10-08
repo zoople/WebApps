@@ -1,9 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0b0e14">
 <title>Magic Duel</title>
 <style>
 :root{
@@ -223,9 +217,9 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
   #coachLine{display:none}
 }
 
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text)}
 </style>
-</head>
-<body>
+
 <div id="app">
   <section id="screen-menu" class="screen active"></section>
   <section id="screen-decks" class="screen"></section>
@@ -250,6 +244,8 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 </div>
 <div id="modal-root"></div>
 <div id="toast" class="hidden"></div>
+
+<script>window.MTG_NO_IMAGES = true;</script>
 <script>
 'use strict';
 /* Magic Duel rules engine.
@@ -1149,8 +1145,7 @@ MTG.Game = Game;
 MTG.sleep = sleep;
 })();
 
-</script>
-<script>
+;
 'use strict';
 /* Card database. Each entry is a plain object describing the real card's rules:
  *   cost, types, subtypes, power/toughness, kw (keywords), text (rules text for the UI),
@@ -1389,8 +1384,7 @@ MTG.cardNames = () => Object.keys(cards);
   C['Valorous Stance'].fx = { kind: 'modal' };
 })();
 
-</script>
-<script>
+;
 'use strict';
 /* Decks: Jumpstart-style theme packs (20 cards; pick two to make a 40-card deck) and ready-made starter decks.
  * Decks are plain data — lists of [cardName, quantity] — so a deck builder can create/save more later.
@@ -1473,8 +1467,7 @@ const Decks = {
 MTG.Decks = Decks;
 })();
 
-</script>
-<script>
+;
 'use strict';
 /* Brain: evaluation + planning shared by the computer opponent AND the strategy Coach.
  * Every planning function returns its decision together with a human-readable reason,
@@ -2429,8 +2422,7 @@ class AIController {
 MTG.AIController = AIController;
 })();
 
-</script>
-<script>
+;
 'use strict';
 /* Coach: explains the best play and WHY, using the same Brain the AI plays with.
  * Every advise*() returns { title, headline, items: [{text, why}], highlight: [cardIds], lesson: principleKey, alternatives: [string] }.
@@ -2674,8 +2666,7 @@ Coach.gameReview = function (g, pi) {
 };
 })();
 
-</script>
-<script>
+;
 'use strict';
 /* Card artwork is fetched by card name from Scryfall (https://scryfall.com/docs/api/images) so the app stays tiny.
  * Requests are throttled (Scryfall asks for <10/sec) and cached by the browser/WebView.
@@ -2733,8 +2724,7 @@ const Images = (MTG.Images = {
 });
 })();
 
-</script>
-<script>
+;
 'use strict';
 /* Game UI + the human player's controller. */
 (function () {
@@ -3354,8 +3344,7 @@ UI.init = function () {
 MTG.UI = UI;
 })();
 
-</script>
-<script>
+;
 'use strict';
 /* App shell: menu, deck selection, settings, strategy guide, game lifecycle. */
 (function () {
@@ -3581,5 +3570,3 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 
 </script>
-</body>
-</html>

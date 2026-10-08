@@ -122,6 +122,12 @@ const App = (MTG.App = {
     };
     body.append(row('hints', 'Coach hints', 'Show advice and highlight the recommended play on the board'));
     body.append(row('images', 'Card artwork', 'Download card images from Scryfall by name (needs internet). Off = text cards'));
+    const art = el('div', 'toggle', '<div>Card art<small id="artStatus">Not downloaded yet. Art loads as cards appear.</small></div>');
+    const dl = el('button', 'btn small', 'Download all'); dl.onclick = () => {
+      dl.disabled = true; const st = $('#artStatus'); st.textContent = 'Downloading…';
+      Images.downloadAll((d, t, f) => { st.textContent = `Downloading ${d}/${t}` + (f ? ` (${f} failed)` : ''); }).then((r) => { dl.disabled = false; st.textContent = r.failed ? `${r.total - r.failed}/${r.total} cards downloaded. ${Images.lastError || 'Some art could not be fetched; those cards show as text.'}` : `All ${r.total} cards downloaded and cached.`; });
+    };
+    art.append(dl); body.append(art);
     body.append(row('confirmEnd', 'Confirm wasteful turn end', 'Ask before ending the turn with castable cards and spare mana'));
     body.append(row('stopEnd', 'Stop at opponent\'s end step', 'Pause when you hold a castable instant at the end of their turn'));
     body.append(row('holdPriority', 'Hold priority after casting', 'Get priority back with your spell on the stack (to chain spells). Off = it resolves automatically'));

@@ -12,7 +12,7 @@ const COLOR_HEX = { W: '#f4edcf', U: '#2f80d8', B: '#6a5a78', R: '#d9553f', G: '
 /* ---------- settings ---------- */
 const Settings = {
   hints: true, images: true, speed: 'normal', confirmEnd: true, stopEnd: true, holdPriority: false,
-  load() { try { Object.assign(Settings, JSON.parse(localStorage.getItem('magicduel.settings') || '{}')); } catch (e) { /* ignore */ } Images.enabled = Settings.images; },
+  load() { try { Object.assign(Settings, JSON.parse(localStorage.getItem('magicduel.settings') || '{}')); } catch (e) { /* ignore */ } if (globalThis.MTG_NO_IMAGES) Settings.images = false; Images.enabled = Settings.images; },
   save() { try { localStorage.setItem('magicduel.settings', JSON.stringify({ hints: Settings.hints, images: Settings.images, speed: Settings.speed, confirmEnd: Settings.confirmEnd, stopEnd: Settings.stopEnd, holdPriority: Settings.holdPriority })); } catch (e) { /* ignore */ } Images.enabled = Settings.images; },
   pace() { return { slow: 1.7, normal: 1, fast: 0.35 }[Settings.speed] || 1; },
 };

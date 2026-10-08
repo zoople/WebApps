@@ -3,6 +3,7 @@
   --gold:#e3b95a; --gold2:#a8802f; --good:#46c47c; --bad:#e8584f; --info:#5aa7f0;
   --W:#f4edcf; --U:#2f80d8; --B:#6a5a78; --R:#d9553f; --G:#3fa564; --C:#a9a9b3;
   --cw:clamp(50px,17vw,74px); --hw:clamp(60px,19vw,86px);
+  color-scheme:dark;
   --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
 }
 @media (prefers-color-scheme: light){ :root{ } }

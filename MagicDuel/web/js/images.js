@@ -17,22 +17,34 @@ const Images = (MTG.Images = {
     Images.ok.set(key, p);
     return p;
   },
+  stats: { ok: 0, fail: 0 }, lastError: '',
   pump() {
     while (Images.active < Images.MAX && Images.queue.length) {
       const job = Images.queue.shift(); Images.active++;
-      const img = new Image();
-      const mode = job.tries === 0 ? 'exact' : 'fuzzy';
-      const url = Images.url(job.name, job.version, mode);
-      const done = (ok) => {
+      const finish = (url) => {
         Images.active--;
-        if (ok) { Images.succeeded++; Images.failedCount = 0; job.resolve(url); }
-        else if (job.tries === 0) { job.tries++; Images.queue.unshift(job); }
-        else { Images.failedCount++; Images.failed.add(job.name + '|' + job.version); job.resolve(null); if (Images.failedCount >= 8 && !Images.succeeded) Images.offline = true; }
+        if (url) { Images.succeeded++; Images.stats.ok++; Images.failedCount = 0; job.resolve(url); }
+        else if (job.tries < 2) { job.tries++; Images.queue.unshift(job); }
+        else { Images.failedCount++; Images.stats.fail++; Images.failed.add(job.name + '|' + job.version); job.resolve(null); if (Images.failedCount >= 8 && !Images.succeeded) Images.offline = true; }
         Images.pump();
       };
-      img.onload = () => done(true); img.onerror = () => done(false);
-      img.src = url;
+      const tryImg = (url) => { const img = new Image(); img.onload = () => finish(url); img.onerror = () => { Images.lastError = 'Image request failed (' + url.slice(0, 60) + '…)'; finish(null); }; img.src = url; };
+      if (job.tries === 0) tryImg(Images.url(job.name, job.version, 'exact'));
+      else if (job.tries === 1 && typeof fetch === 'function') {
+        // Second route: ask the JSON API for the direct CDN image address, then load that.
+        fetch('https://api.scryfall.com/cards/named?exact=' + encodeURIComponent(job.name), { headers: { Accept: 'application/json' } })
+          .then((r) => { if (!r.ok) throw new Error('Scryfall answered ' + r.status); return r.json(); })
+          .then((j) => { const u = (j.image_uris || (j.card_faces && j.card_faces[0].image_uris) || {})[job.version]; if (!u) throw new Error('no image in reply'); tryImg(u); })
+          .catch((e) => { Images.lastError = 'Scryfall lookup failed: ' + (e && e.message ? e.message : e); finish(null); });
+      } else tryImg(Images.url(job.name, job.version, 'fuzzy'));
     }
+  },
+  // Fetch every card's art now so it is cached for offline play. cb(done, total, failed)
+  downloadAll(cb) {
+    Images.reset(); Images.enabled = true;
+    const names = Object.keys(MTG.cards).filter((n) => !MTG.cards[n].basic);
+    let done = 0, bad = 0;
+    return Promise.all(names.map((n) => Images.load(n, 'small').then((u) => { done++; if (!u) bad++; if (cb) cb(done, names.length, bad); }))).then(() => ({ total: names.length, failed: bad }));
   },
   reset() { for (const k of Images.failed) Images.ok.delete(k); Images.failed.clear(); Images.offline = false; Images.failedCount = 0; },
   preload(names, version) { for (const n of new Set(names)) { const d = MTG.cards[n]; if (d && !d.basic) Images.load(n, version || 'small'); } },
