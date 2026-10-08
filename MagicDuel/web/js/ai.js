@@ -595,8 +595,14 @@ Brain.blockPlan = function (g, p, attackers, blockers) {
     let bestPair = null;
     for (let i = 0; i < opts.length; i++) for (let j = i + 1; j < opts.length; j++) {
       const b1 = opts[i], b2 = opts[j];
-      const dmg = g.power(b1) + g.power(b2) + (g.has(b1, 'deathtouch') || g.has(b2, 'deathtouch') ? 99 : 0);
-      if (dmg < g.toughness(a) - a.damage) continue;
+      let blockers2 = [b1, b2];
+      if (fsOf(g, a) && !blockers2.some((x) => fsOf(g, x))) {
+        // a first-striker kills as many blockers as it can before they deal damage
+        let left = g.power(a);
+        blockers2 = blockers2.slice().sort((x, y) => Math.max(1, g.toughness(x) - x.damage) - Math.max(1, g.toughness(y) - y.damage)).filter((x) => { const need = g.has(a, 'deathtouch') ? 1 : Math.max(1, g.toughness(x) - x.damage); if (left >= need) { left -= need; return false; } return true; });
+      }
+      const dmg = blockers2.reduce((t, x) => t + g.power(x), 0) + (blockers2.some((x) => g.has(x, 'deathtouch')) ? 99 : 0);
+      if (!blockers2.length || dmg < g.toughness(a) - a.damage) continue;
       // attacker can kill at most one blocker?
       const l1 = Math.max(1, g.toughness(b1) - b1.damage), l2 = Math.max(1, g.toughness(b2) - b2.damage);
       const killsBoth = g.has(a, 'deathtouch') || g.power(a) >= l1 + l2;

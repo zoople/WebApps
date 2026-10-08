@@ -262,3 +262,38 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 #stackBox{max-width:100%}
 .sitem{max-width:78%;white-space:nowrap}
 .sitem span{overflow:hidden;text-overflow:ellipsis;max-width:46vw;display:inline-block;vertical-align:bottom}
+
+/* ===== layout fixes round 2 ===== */
+:root{--cw:clamp(46px,min(17vw,9.6vh),74px);--hw:clamp(56px,min(19vw,12vh),86px)}
+.card.tapped{transform:rotate(7deg);margin:0 3px;filter:brightness(.62) saturate(.8)}
+.card.tapped::after{content:"TAPPED";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-12deg);font-size:8px;font-weight:900;letter-spacing:1px;color:#fff;background:rgba(0,0,0,.7);padding:1px 4px;border-radius:3px;z-index:3;pointer-events:none}
+.card.attacking.tapped{transform:rotate(7deg) translateY(-8px)}
+.face .fcost{align-self:flex-start;background:rgba(0,0,0,.38);border-radius:9px;padding:0 3px;margin-top:1px}
+.face.W .fcost,.face.LW .fcost{background:rgba(0,0,0,.45)}
+.me{filter:drop-shadow(0 0 1px rgba(0,0,0,.9))}
+.face[data-len="l"] .fname{font-size:1em}
+.face[data-len="xl"] .fname{font-size:.9em;letter-spacing:-.2px}
+#coachLine{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;max-height:none;font-size:11.5px}
+#hand{justify-content:flex-start}
+#handWrap{scroll-snap-type:x proximity}
+.kwlist{margin-top:8px;font-size:12px;color:#c4cde2;display:flex;flex-direction:column;gap:3px}
+@media (max-height:700px){.pbar{min-height:32px;padding:3px 10px}#midBar{padding:2px 8px}.perms{min-height:calc(var(--cw)*1.4)}.lands .land{min-width:26px;height:26px;font-size:15px}.life{font-size:18px}}
+
+/* ===== layout fixes round 3 ===== */
+.field{overflow:hidden}
+.perms{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;align-content:flex-start;padding:6px 2px 2px;-webkit-overflow-scrolling:touch}
+.lands{flex:0 0 auto;padding-top:2px;border-top:1px solid rgba(255,255,255,.07)}
+.face .fart{overflow:hidden}
+#hand .card .fart{font-size:1.9em;min-height:18px}
+#hand .card .fkw{display:none}
+#hand .card .ftext{max-height:30%}
+.perms{padding-top:14px}
+
+/* ===== layout fixes round 4 ===== */
+.cardgrid .card{--cw:clamp(78px,26vw,112px)}
+.face .fart{flex:1 1 26%;min-height:22px}
+.face .ftext{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;line-clamp:4;max-height:34%}
+#hand .card .ftext{-webkit-line-clamp:3;line-clamp:3}
+.inspect .big .face .ftext{-webkit-line-clamp:unset;line-clamp:unset;display:block}
+.gn{line-height:1}
+.face .fcost{padding:1px 4px 1px 2px}

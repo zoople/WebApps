@@ -95,6 +95,7 @@ const UI = {
     const cols = d.types.includes('Land') ? landCols(d) : [];
     if (cols.length === 2) { f.style.setProperty('--f1', COLOR_HEX[cols[0]]); f.style.setProperty('--f2', COLOR_HEX[cols[1]]); }
     const pt = d.types.includes('Creature') ? `<div class="fpt">${d.power == null ? '*' : d.power}/${d.toughness}</div>` : '';
+    const nl = d.name.length; f.dataset.len = nl > 17 ? 'xl' : nl > 12 ? 'l' : 's';
     f.innerHTML = `<div class="fh"><span class="fname">${esc(d.name)}</span><span class="fcost">${manaHTML(d.cost)}</span></div>` +
       `<div class="fart">${artEmoji(d)}</div><div class="ftype">${esc(d.token ? 'Token ' + d.types.join(' ') : typeLine(d))}</div>` +
       `<div class="ftext">${esc(rulesText(d))}</div><div class="fkw">${kwIcons(d)}</div>${pt}`;
@@ -248,7 +249,7 @@ const UI = {
     const wrap = $('#handWrap'), n = cards.length;
     if (n) {
       const w = box.firstElementChild.offsetWidth || 70, avail = wrap.clientWidth - 20;
-      const need = n * w + (n - 1) * 4, overlap = n > 1 && need > avail ? (need - avail) / (n - 1) : 0;
+      const need = n * w + (n - 1) * 4, overlap = n > 1 && need > avail ? Math.min((need - avail) / (n - 1), w * 0.3) : 0;
       cards.forEach((c, i) => { UI.cardEl(c).style.marginLeft = i && overlap ? `-${overlap.toFixed(1)}px` : ''; });
     }
   },
@@ -400,6 +401,9 @@ const UI = {
     const info = el('div', 'info');
     const ch = c.zone === 'battlefield' ? g.chars(c) : null;
     let h = `<h4>${esc(d.name)}</h4><div class="costline">${manaHTML(d.cost)}</div><div class="typeline">${esc(typeLine(d))}${g.isCreature(c) ? ` · ${ch ? ch.power + '/' + (ch.toughness - c.damage) : d.power + '/' + d.toughness}` : ''}</div><div class="rules">${esc(rulesText(d))}</div>`;
+    const GL = { flying: 'can only be blocked by flying or reach creatures', 'first strike': 'deals combat damage before creatures without it', 'double strike': 'deals first-strike and regular combat damage', deathtouch: 'any damage it deals to a creature is lethal', lifelink: 'damage it deals also gains you that much life', trample: 'excess combat damage goes to the player', vigilance: 'attacking does not tap it', haste: 'can attack the turn it enters', reach: 'can block flying creatures', menace: 'needs two or more blockers', defender: "can't attack", hexproof: "can't be the target of opponents' spells or abilities", indestructible: "isn't destroyed by lethal damage", flash: 'can be cast at instant speed' };
+    const kwl = (d.kw || []).filter((k) => GL[k]);
+    if (kwl.length) h += `<div class="kwlist">${kwl.map((k) => `<div>${KW_ICON[k] || ''} <b>${esc(KW_NAMES[k] || k)}</b> — ${esc(GL[k])}</div>`).join('')}</div>`;
     const st = [];
     if (c.zone === 'battlefield') {
       if (c.tapped) st.push('Tapped'); if (g.isSick(c)) st.push('Summoning sick'); if (c.damage) st.push(c.damage + ' damage');
