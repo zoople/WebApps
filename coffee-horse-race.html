@@ -392,7 +392,7 @@ const grassPattern = (() => {
 let state = 'setup';          // setup | countdown | racing
 let horses = [], hist = [], cross = [], order = [], finishRank = [], events = [], evPtr = 0, lastStumCap = -9;
 let timeScale = 1, v0 = 1, raceT = 0, cdT = 0, animT = 0;
-let camTop = 0, zoomMul = 1, ex = 0.1, surge = 0, gateOpen = 0, paused = false;
+let ex = 0.1, surge = 0, gateOpen = 0, paused = false;
 let flash = 0, caption = { text:'', t:0 }, prevLeader = -1, prevTop3 = '', lastReact = 0, lastLeadCap = -9, nextTension = 6;
 let winnerFired = false, resultShown = false, swelled = false, midRoar = 0, confetti = [], particles = [], cdBeeped = -1, lastMilestone = 0;
 let raceDur = 60, prog = 0, closeness = 0, gapM = 99;
@@ -470,8 +470,9 @@ function startRace(){
   raceT = 0; cdT = 0; gateOpen = 0; flash = 0; ex = 0.1; surge = 0; particles = []; confetti = [];
   prevLeader = -1; prevTop3 = ''; lastReact = 0; lastLeadCap = -9; nextTension = 6;
   winnerFired = resultShown = swelled = false; midRoar = 0; cdBeeped = -1; lastMilestone = 0;
-  prog = 0; closeness = 0; zoomMul = 1; sampleAt(0);
-  camTop = viewH() * 0.32 + START_Y + 40;
+  prog = 0; closeness = 0; sampleAt(0);
+  order = [...Array(N).keys()]; finalSide = false; lastForcedCut = -9;
+  cutTo('chase', 0); camNextCut = 7;
   setupEl.classList.add('hidden'); resultEl.classList.add('hidden'); toolsEl.style.display = 'flex';
   state = 'countdown'; AU.racing = false; AU.bugle(); setCaption('Horses to the gate…');
   document.activeElement && document.activeElement.blur();
@@ -498,7 +499,61 @@ window.addEventListener('keydown', e => {
 
 /* ───────────────────────── Camera ───────────────────────── */
 function baseScale(){ return clamp(Math.min(W / (TRACK_W + 300), H / 560), 0.3, 2.4); }
-function viewH(){ return H / (baseScale() * zoomMul); }
+
+/* ── TV-style camera: hard cuts between angles ── */
+const cam = { cx:0, cy:300, rot:0, S:1 };
+const MODE_LABEL = { chase:'CHASE CAM', wide:'WIDE SHOT', close:'CLOSE-UP', side:'GRANDSTAND', finish:'FINISH LINE CAM' };
+let camMode = 'chase', camFocus = 0, camNextCut = 7, camSnap = true, camLabelT = 0, cutFade = 0, finalSide = false, lastForcedCut = -9;
+function cutTo(mode, focus){
+  camMode = mode; camFocus = focus ?? order[0] ?? 0; camSnap = true; camLabelT = 2.4; cutFade = mode === 'chase' && raceT === 0 ? 0 : 1;
+  const iv = clamp(raceDur * 0.1, 3.5, 9);
+  camNextCut = raceT + iv * (0.8 + Math.random() * 0.8);
+}
+function camTarget(mode){
+  const bs = baseScale(), lead = order[0] ?? 0, ly = (cur.pos[lead] || 0) + START_Y;
+  if (mode === 'side'){
+    const S = clamp(H / (TRACK_W + 300), 0.3, 1.6);
+    return { cx:0, cy:ly - 0.12 * W / S, rot:Math.PI / 2, S };
+  }
+  if (mode === 'finish'){
+    const S = bs * 1.1;
+    return { cx:0, cy:L - 0.24 * H / S, rot:0, S };
+  }
+  if (mode === 'close'){
+    const f = camFocus, S = Math.min(bs * 1.9, 3), fy = (cur.pos[f] || 0) + START_Y, fx = horses[f] ? (horses[f].dx ?? horses[f].x) : 0;
+    return { cx:fx * 0.8, cy:Math.min(fy - 0.08 * H / S, L - 0.1 * H / S), rot:0, S };
+  }
+  if (mode === 'wide'){
+    const top = cur.pos[lead] || 0, bot = cur.pos[order[Math.min(6, N - 1)]] || 0, spread = (top - bot);
+    const S = clamp(H * 0.78 / (spread + 150), bs * 0.4, bs * 0.8);
+    return { cx:0, cy:Math.min((top + bot) / 2 + START_Y + 20, L - 0.12 * H / S), rot:0, S };
+  }
+  const S = bs, VH = H / S;       // chase
+  return { cx:0, cy:Math.min(ly - 0.12 * VH, L - 0.18 * VH), rot:0, S };
+}
+function updateCamera(dt){
+  if (state === 'racing' && !winnerFired){
+    const leadNose = (cur.pos[order[0]] || 0) + START_Y + NOSE, finVH = H / (baseScale() * 1.1);
+    if (camMode !== 'finish' && prog > 0.8 && L - leadNose < finVH * 0.7) cutTo('finish');
+    else if (camMode !== 'finish' && !finalSide && prog > 0.86){ finalSide = true; cutTo('side'); }
+    else if (camMode !== 'finish' && !finalSide && raceT > camNextCut && prog < 0.84){
+      const opts = ['chase', 'wide', 'close', 'side'].filter(m => m !== camMode);
+      const m = opts[(Math.random() * opts.length) | 0];
+      cutTo(m, m === 'close' ? order[Math.random() < 0.55 ? 0 : (Math.random() * 3) | 0] : undefined);
+    }
+  }
+  const t = camTarget(camMode);
+  if (camSnap){ Object.assign(cam, t); camSnap = false; }
+  else {
+    const k = 1 - Math.exp(-dt * (camMode === 'finish' ? 3 : 10));
+    cam.cx += (t.cx - cam.cx) * k; cam.cy += (t.cy - cam.cy) * k; cam.S += (t.S - cam.S) * k * 0.6; cam.rot = t.rot;
+  }
+  camLabelT = Math.max(0, camLabelT - dt); cutFade = Math.max(0, cutFade - dt * 4);
+}
+function w2s(x, y){
+  const a = cam.S * (x - cam.cx), b = -cam.S * (y - cam.cy), c = Math.cos(cam.rot), s = Math.sin(cam.rot);
+  return [W / 2 + a * c - b * s, H / 2 + a * s + b * c];
+}
 
 /* ───────────────────────── Update ───────────────────────── */
 function update(dt){
@@ -520,7 +575,7 @@ function update(dt){
     horses.forEach(h => { h.phase += dt * 2; });
     ex += (0.14 - ex) * (1 - Math.exp(-dt));
     AU.setLevel(ex, animT);
-    followCamera(dt, 0, 0);
+    updateCamera(dt);
     return;
   }
 
@@ -578,7 +633,7 @@ function update(dt){
 
   // ── the finish ──
   if (!winnerFired && raceT >= raceDur){
-    winnerFired = true; flash = 1;
+    winnerFired = true; flash = 1; if (camMode !== 'finish') cutTo('finish');
     const photo = (cross[finishRank[1]] - cross[finishRank[0]]) / timeScale < 0.25;
     surge = 1;
     if (photo){ AU.gasp(1); AU.ooh(1); setCaption('PHOTO FINISH!'); setTimeout(() => { AU.cheer(1); AU.applause(5); AU.fanfare(); }, 700); }
@@ -615,9 +670,7 @@ function update(dt){
     if (c.y > H + 20) confetti.splice(k, 1);
   }
 
-  const lead = cur.pos[leader];
-  const closeFinish = prog > 0.92 && prog < 1 && closeness > 0.4 ? 1 : 0;
-  followCamera(dt, lead, closeFinish);
+  updateCamera(dt);
 }
 
 function onStumble(e){
@@ -631,17 +684,10 @@ function onStumble(e){
   AU.aah(0.25 + weight * 0.35);
   if (rank < 3 && e.sev > 0.4) AU.gasp(0.3 + weight * 0.3);
   surge = Math.min(0.5, surge + 0.07 * weight);
+  if (rank <= 3 && e.sev > 0.35 && prog < 0.82 && camMode !== 'close' && raceT - lastForcedCut > 5){ lastForcedCut = raceT; cutTo('close', e.i); camNextCut = raceT + 3.2; }
   if (raceT - lastStumCap > 2.2 && (rank < 6 || e.sev > 0.5)){
     setCaption(`${h.name} ${e.type === 'clip' ? 'clips the hurdle!' : 'stumbles!'}`); lastStumCap = raceT;
   }
-}
-
-function followCamera(dt, leadPos, closeFinish){
-  zoomMul += ((1 + 0.12 * closeFinish) - zoomMul) * (1 - Math.exp(-dt * 1.2));
-  const VH = viewH(), y = leadPos + START_Y;
-  let target = y + VH * 0.38;
-  target = Math.min(target, L + VH * 0.32);
-  camTop += (target - camTop) * (1 - Math.exp(-dt * 14));
 }
 
 function showResult(){
@@ -675,12 +721,18 @@ function textW(str, x, y, size, color, rot = 0, font = 'bold'){
 }
 
 function render(){
-  const S = baseScale() * zoomMul;
+  const S = cam.S, cr = Math.cos(cam.rot), sr = Math.sin(cam.rot);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = '#2b6a30'; ctx.fillRect(0, 0, W, H);
-  // world transform: x right, y UP (forward), origin at track centre / camTop
-  ctx.setTransform(DPR * S, 0, 0, -DPR * S, DPR * W / 2, DPR * camTop * S);
-  const yTop = camTop, yBot = camTop - H / S, xL = -W / 2 / S - 5, xR = W / 2 / S + 5;
+  // world transform (x right, y up/forward), camera centred on (cam.cx, cam.cy), optionally rotated
+  ctx.translate(W / 2, H / 2); ctx.rotate(cam.rot); ctx.scale(S, -S); ctx.translate(-cam.cx, -cam.cy);
+  let xL = 1e9, xR = -1e9, yBot = 1e9, yTop = -1e9;
+  for (const [px, py] of [[0, 0], [W, 0], [0, H], [W, H]]){
+    const vx = px - W / 2, vy = py - H / 2, u = vx * cr + vy * sr, v = -vx * sr + vy * cr;
+    const wx = cam.cx + u / S, wy = cam.cy - v / S;
+    xL = Math.min(xL, wx); xR = Math.max(xR, wx); yBot = Math.min(yBot, wy); yTop = Math.max(yTop, wy);
+  }
+  xL -= 5; xR += 5;
   drawGround(yTop, yBot, xL, xR);
   drawCourse(yTop, yBot);
   drawStands(yTop, yBot, xL, xR);
@@ -701,12 +753,14 @@ function render(){
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const h of horses){
       const y = h.dy ?? START_Y, x = h.dx ?? h.x;
-      const sx = W / 2 + x * S, sy = (camTop - y) * S + 52 * S;
-      if (sy < -20 || sy > H + 20) continue;
+      let [sx, sy] = w2s(x, y); sy += (cam.rot ? 34 : 52) * S;
+      if (sy < -20 || sy > H + 20 || sx < -60 || sx > W + 60) continue;
       drawTag(h, sx, sy, S, order[0] === h.i && state === 'racing' && raceT > 1);
     }
     drawHUD(S);
+    drawCamLabel();
   }
+  if (cutFade > 0){ ctx.fillStyle = `rgba(0,0,0,${cutFade * 0.5})`; ctx.fillRect(0, 0, W, H); }
   if (flash > 0){ ctx.fillStyle = `rgba(255,255,255,${flash * 0.7})`; ctx.fillRect(0, 0, W, H); }
   for (const c of confetti){ ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.r); ctx.fillStyle = c.c; ctx.fillRect(-c.s / 2, -c.s / 4, c.s, c.s / 2); ctx.restore(); }
   if (paused){
@@ -905,7 +959,7 @@ function drawHorse(h, x, y, vn){
 }
 
 function drawTag(h, sx, sy, S, isLeader){
-  const maxW = Math.max(58, LANE_W * S * 1.55);
+  const maxW = cam.rot ? 120 : Math.max(36, LANE_W * S * 1.5);
   let size = clamp(12 * Math.max(.85, Math.min(1.25, S * .85)), 11, 15);
   ctx.font = `bold ${size}px system-ui, sans-serif`;
   let t = h.name; while (ctx.measureText(t).width > maxW && size > 9){ size -= 0.5; ctx.font = `bold ${size}px system-ui, sans-serif`; }
@@ -914,6 +968,16 @@ function drawTag(h, sx, sy, S, isLeader){
   ctx.fillStyle = isLeader ? 'rgba(255,196,0,.92)' : 'rgba(15,10,6,.62)';
   ctx.beginPath(); ctx.roundRect(sx - w / 2, sy - size * .7, w, size * 1.4, 6); ctx.fill();
   ctx.fillStyle = isLeader ? '#2a1a00' : '#fff'; ctx.fillText(t, sx, sy + 0.5);
+}
+
+function drawCamLabel(){
+  if (state !== 'racing') return;
+  const txt = MODE_LABEL[camMode];
+  ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(txt).width + 34, x = 14, y = H - 44;
+  ctx.fillStyle = 'rgba(15,10,6,.6)'; ctx.beginPath(); ctx.roundRect(x, y, w, 26, 6); ctx.fill();
+  ctx.fillStyle = (Math.floor(animT * 1.5) & 1) ? '#ff4d4d' : '#b02626'; ctx.beginPath(); ctx.arc(x + 14, y + 13, 4.5, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.fillText(txt, x + 26, y + 13.5);
 }
 
 function drawHUD(S){
@@ -975,11 +1039,11 @@ function frame(ts){
   requestAnimationFrame(frame);
 }
 // setup-screen backdrop: parade of grass with empty track
-horses = []; camTop = 300;
+horses = []; cam.S = baseScale(); cam.cy = 300;
 requestAnimationFrame(frame);
 
 // test hook (harmless)
-window.__chr = { simulate, N,  get state(){ return state; }, get raceT(){ return raceT; }, get ex(){ return ex; }, get prog(){ return prog; }, get closeness(){ return closeness; }, startRace, AU };
+window.__chr = { get camMode(){ return camMode; }, simulate, N,  get state(){ return state; }, get raceT(){ return raceT; }, get ex(){ return ex; }, get prog(){ return prog; }, get closeness(){ return closeness; }, startRace, AU };
 })();
 </script>
 </body>
