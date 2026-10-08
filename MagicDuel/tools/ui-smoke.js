@@ -1,0 +1,31 @@
+// Drives the real UI in headless Chromium at phone size. node tools/ui-smoke.js [outdir]
+const { chromium } = require('playwright');
+const path = require('path');
+const out = process.argv[2] || '/tmp/shots';
+require('fs').mkdirSync(out, { recursive: true });
+const fakeArt = (name) => `<svg xmlns="http://www.w3.org/2000/svg" width="146" height="204"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#${(Math.abs([...name].reduce((a, c) => a * 31 + c.charCodeAt(0), 7)) % 0xffffff).toString(16).padStart(6, '0')}"/><stop offset="1" stop-color="#222"/></linearGradient></defs><rect width="146" height="204" rx="9" fill="url(#g)" stroke="#000" stroke-width="6"/><rect x="10" y="10" width="126" height="20" fill="#fff" opacity=".8"/><text x="14" y="25" font-size="12" font-family="sans-serif">${name.replace(/&/g, '&amp;')}</text><rect x="10" y="40" width="126" height="90" fill="#000" opacity=".25"/></svg>`;
+(async () => {
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] }).catch(() => chromium.launch({ args: ['--no-sandbox'] }));
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message + '\n' + (e.stack || '').split('\n').slice(0, 4).join('\n')));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('CONSOLE ' + m.text()); });
+  if (!process.argv.includes('--noart')) await ctx.route('https://api.scryfall.com/**', (route) => { const u = new URL(route.request().url()); route.fulfill({ status: 200, contentType: 'image/svg+xml', body: fakeArt(u.searchParams.get('exact') || u.searchParams.get('fuzzy') || '?') }); });
+  else await ctx.route('https://api.scryfall.com/**', (route) => route.abort());
+  await page.goto('file://' + path.resolve(__dirname, '../web/index.html'));
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: out + '/01-menu.png' });
+  await page.click('#mDecks'); await page.waitForTimeout(200);
+  await page.screenshot({ path: out + '/02-decks.png' });
+  await page.click('[data-t="jump"]'); await page.waitForTimeout(100);
+  await page.screenshot({ path: out + '/03-jump.png' });
+  await page.click('#dBack'); await page.click('#mQuick'); await page.waitForTimeout(500);
+  await page.screenshot({ path: out + '/04-brief.png' });
+  await page.click('text=Let\'s play'); await page.waitForTimeout(500);
+  await page.screenshot({ path: out + '/05-mulligan.png' });
+  await page.click('.sheet footer .btn.primary'); await page.waitForTimeout(1200);
+  await page.screenshot({ path: out + '/06-game.png' });
+  console.log(errors.length ? errors.join('\n') : 'no errors');
+  await browser.close();
+})();
