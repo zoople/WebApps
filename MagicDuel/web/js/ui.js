@@ -58,6 +58,12 @@ function costHTML_old(cost) {
 const typeLine = (d) => [...d.types, ...(d.subtypes && d.subtypes.length ? ['—', ...d.subtypes] : [])].join(' ') + (d.basic ? '' : '');
 const faceClass = (d) => { if (d.types.includes('Land')) { const c = landCols(d); return 'L L' + (c.length === 1 ? c[0] : c.length ? 'M' : 'X'); } const cs = d.colors; if (cs.length === 0) return 'A'; if (cs.length > 1) return 'M'; return cs[0]; };
 
+// Keep `box` children equal to `els` in order, moving nodes only when needed (re-attaching a node cancels in-flight touches).
+function placeInOrder(box, els) {
+  for (let i = 0; i < els.length; i++) { if (box.children[i] !== els[i]) box.insertBefore(els[i], box.children[i] || null); }
+  while (box.children.length > els.length) box.lastElementChild.remove();
+}
+
 /* ---------- UI singleton ---------- */
 const UI = {
   g: null, cardEls: new Map(), landEls: new Map(), mode: 'idle', renderQueued: false, highlight: new Set(), logLines: [], coachNotes: [],
@@ -116,12 +122,13 @@ const UI = {
     let e = UI.cardEls.get(c.id);
     if (!e) {
       e = UI.buildCardEl(c); UI.cardEls.set(c.id, e);
-      let timer = null, moved = false;
-      e.addEventListener('pointerdown', (ev) => { moved = false; timer = setTimeout(() => { timer = null; UI.inspect(c.card || c, {}); }, 520); });
-      e.addEventListener('pointermove', () => { if (timer) { moved = true; } });
+      let timer = null, sx = 0, sy = 0;
       const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
-      e.addEventListener('pointerleave', cancel); e.addEventListener('pointercancel', cancel);
-      e.addEventListener('pointerup', (ev) => { if (timer) { clearTimeout(timer); timer = null; UI.onCardTap(c); } });
+      e.addEventListener('pointerdown', (ev) => { sx = ev.clientX; sy = ev.clientY; cancel(); timer = setTimeout(() => { timer = null; UI.inspect(c.card || c, {}); }, 480); });
+      e.addEventListener('pointermove', (ev) => { if (timer && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 12) cancel(); });
+      e.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') cancel(); });
+      e.addEventListener('pointercancel', cancel);
+      e.addEventListener('pointerup', () => { if (timer) { cancel(); UI.onCardTap(c); } });
       e.addEventListener('contextmenu', (ev) => ev.preventDefault());
     }
     return e;
@@ -233,19 +240,14 @@ const UI = {
   renderField(pi, permsBox, landsBox) {
     const g = UI.g;
     const cards = UI.fieldCards(pi);
-    const want = new Set();
-    for (const c of cards) { const e = UI.cardEl(c); UI.updateCardEl(e, c, false); permsBox.append(e); want.add(e); }
-    for (const e of [...permsBox.children]) if (!want.has(e)) e.remove();
-    const lands = g.lands(pi); const lw = new Set();
-    for (const c of lands) { const e = UI.landEl(c); landsBox.append(e); lw.add(e); }
-    for (const e of [...landsBox.children]) if (!lw.has(e)) e.remove();
+    const els = cards.map((c) => { const e = UI.cardEl(c); UI.updateCardEl(e, c, false); return e; });
+    placeInOrder(permsBox, els);
+    placeInOrder(landsBox, g.lands(pi).map((c) => UI.landEl(c)));
   },
   renderHand() {
     const g = UI.g, p = g.players[0], box = $('#hand');
     const cards = p.hand.slice().sort((a, b) => (g.isLand(a) - g.isLand(b)) || (a.def.cmc - b.def.cmc) || a.name.localeCompare(b.name));
-    const want = new Set();
-    for (const c of cards) { const e = UI.cardEl(c); UI.updateCardEl(e, c, true); box.append(e); want.add(e); }
-    for (const e of [...box.children]) if (!want.has(e)) e.remove();
+    placeInOrder(box, cards.map((c) => { const e = UI.cardEl(c); UI.updateCardEl(e, c, true); return e; }));
     const wrap = $('#handWrap'), n = cards.length;
     if (n) {
       const w = box.firstElementChild.offsetWidth || 70, avail = wrap.clientWidth - 20;

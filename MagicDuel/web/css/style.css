@@ -297,3 +297,7 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 .inspect .big .face .ftext{-webkit-line-clamp:unset;line-clamp:unset;display:block}
 .gn{line-height:1}
 .face .fcost{padding:1px 4px 1px 2px}
+
+.card{touch-action:manipulation}
+#handWrap{touch-action:pan-x;overscroll-behavior-x:contain}
+#hand .card{touch-action:pan-x}
