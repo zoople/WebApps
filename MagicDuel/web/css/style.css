@@ -9,8 +9,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
 button{font:inherit;color:inherit;cursor:pointer}
-#app{position:fixed;inset:0;overflow:hidden}
-.screen{position:absolute;inset:0;display:none;overflow:hidden;padding-top:var(--safe-t)}
+#app{position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden}
+.screen{position:absolute;top:0;left:0;right:0;bottom:0;display:none;overflow:hidden;padding-top:var(--safe-t)}
 .screen.active{display:flex;flex-direction:column}
 .hidden{display:none!important}
 h1,h2,h3{margin:0}
@@ -91,7 +91,7 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 
 /* ---------- cards ---------- */
 .card{position:relative;width:var(--cw);height:calc(var(--cw)*1.4);border-radius:6px;flex:0 0 auto;transition:transform .18s,filter .2s,box-shadow .2s,opacity .2s;background:#222;box-shadow:0 2px 6px rgba(0,0,0,.6);cursor:pointer;overflow:visible}
-.card .art,.card .face{position:absolute;inset:0;width:100%;height:100%;border-radius:6px}
+.card .art,.card .face{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:6px}
 .card .art{object-fit:cover;opacity:0;transition:opacity .25s}
 .card.has-art .art{opacity:1}
 .card.has-art .face{opacity:0}
@@ -107,7 +107,7 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 .card .pt.buff{color:#7cf0a5}.card .pt.nerf{color:#ff8f86}.card .pt.dmg{background:#7a1f1a}
 .card .cnt{left:-2px;top:-2px;background:#6b4aa8}
 .card .zz{position:absolute;left:2px;bottom:2px;font-size:11px;z-index:2;pointer-events:none;filter:drop-shadow(0 0 2px #000)}
-.card .mark{position:absolute;inset:-3px;border-radius:8px;pointer-events:none;z-index:1}
+.card .mark{position:absolute;top:-3px;left:-3px;right:-3px;bottom:-3px;border-radius:8px;pointer-events:none;z-index:1}
 .card.tapped{transform:rotate(90deg);margin:calc(var(--cw)*.2) calc(var(--cw)*.2)}
 .card.attached{margin-left:calc(var(--cw)*-.55);transform:translateY(-6px) scale(.8);z-index:0}
 .card.legal .mark{box-shadow:0 0 0 3px var(--gold),0 0 14px 2px var(--gold);animation:pulse 1s infinite}
@@ -149,11 +149,11 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 @keyframes floatup{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-44px)}}
 
 /* ---------- modals ---------- */
-#modal-root{position:fixed;inset:0;pointer-events:none;z-index:50}
-.modal{position:absolute;inset:0;background:rgba(3,5,10,.74);display:flex;align-items:flex-end;justify-content:center;pointer-events:auto;animation:fadein .15s}
+#modal-root{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:50}
+.modal{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(3,5,10,.74);display:flex;align-items:flex-end;justify-content:center;pointer-events:auto;animation:fadein .15s}
 .modal.center{align-items:center}
 @keyframes fadein{from{opacity:0}}
-.sheet{width:100%;max-width:560px;max-height:88dvh;background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:slide .2s ease-out;padding-bottom:var(--safe-b)}
+.sheet{width:100%;max-width:560px;max-height:88vh;max-height:88dvh;background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:slide .2s ease-out;padding-bottom:var(--safe-b)}
 .modal.center .sheet{border-radius:18px;max-width:92vw}
 @keyframes slide{from{transform:translateY(40px);opacity:0}}
 .sheet header{padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
@@ -163,7 +163,7 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 .sheet footer .btn{flex:1;max-width:none;padding:12px;font-size:15px;min-width:110px}
 .xbtn{background:none;border:none;font-size:22px;color:var(--muted)}
 .inspect{display:flex;gap:12px}
-.inspect .big{width:min(46vw,220px);aspect-ratio:5/7;flex:0 0 auto;position:relative;border-radius:10px}
+.inspect .big{width:min(46vw,220px);height:calc(min(46vw,220px)*1.4);flex:0 0 auto;position:relative;border-radius:10px}
 .inspect .big .card{width:100%;height:100%;--cw:min(46vw,220px);cursor:default}
 .inspect .big .face{font-size:clamp(9px,2.9vw,13px);padding:6px}
 .inspect .info{flex:1;min-width:0;font-size:13px;line-height:1.4}

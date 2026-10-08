@@ -11,9 +11,9 @@ const COLOR_HEX = { W: '#f4edcf', U: '#2f80d8', B: '#6a5a78', R: '#d9553f', G: '
 
 /* ---------- settings ---------- */
 const Settings = {
-  hints: true, images: true, speed: 'normal', confirmEnd: true, stopEnd: true,
+  hints: true, images: true, speed: 'normal', confirmEnd: true, stopEnd: true, holdPriority: false,
   load() { try { Object.assign(Settings, JSON.parse(localStorage.getItem('magicduel.settings') || '{}')); } catch (e) { /* ignore */ } Images.enabled = Settings.images; },
-  save() { try { localStorage.setItem('magicduel.settings', JSON.stringify({ hints: Settings.hints, images: Settings.images, speed: Settings.speed, confirmEnd: Settings.confirmEnd, stopEnd: Settings.stopEnd })); } catch (e) { /* ignore */ } Images.enabled = Settings.images; },
+  save() { try { localStorage.setItem('magicduel.settings', JSON.stringify({ hints: Settings.hints, images: Settings.images, speed: Settings.speed, confirmEnd: Settings.confirmEnd, stopEnd: Settings.stopEnd, holdPriority: Settings.holdPriority })); } catch (e) { /* ignore */ } Images.enabled = Settings.images; },
   pace() { return { slow: 1.7, normal: 1, fast: 0.35 }[Settings.speed] || 1; },
 };
 MTG.Settings = Settings;
@@ -60,6 +60,7 @@ const UI = {
     UI.dialogs.push({ m, close });
     return { m, sheet, body, footer, close, promise: p };
   },
+  closeInspect() { if (UI.inspectModal) { UI.inspectModal.close(null); UI.inspectModal = null; } },
   closeTopDialog() { const d = UI.dialogs[UI.dialogs.length - 1]; if (d) { d.close(null); return true; } return false; },
   sleep,
 
@@ -381,8 +382,10 @@ const UI = {
     const abilityZone = c.zone === 'battlefield' ? c.controller === 0 : (c.zone === 'graveyard' && c.owner === 0);
     if (abilityZone) d.abilities.forEach((ab, i) => { if (ab.mana) return; const ck = g.abilityUsable(me, c, i); addAct(ab.text || 'Ability', ab.cost && ab.cost.mana ? 'Cost: ' + ab.cost.mana + (ab.cost.tap ? ', tap' : '') : (ab.cost && ab.cost.tap ? 'Tap' : ''), ck.ok && !waiting, () => UI.act({ type: 'activate', perm: c, idx: i })); });
     if (acts.children.length) body.append(acts);
-    const m = UI.modal({ title: '', body, closable: true, buttons: [{ label: 'Close', cls: 'ghost', value: null }] });
+    UI.closeInspect();
+    const m = UI.modal({ title: '', body, closable: true, buttons: [{ label: 'Close', cls: 'ghost', value: null }], onClose: () => { if (UI.inspectModal === m) UI.inspectModal = null; } });
     m.sheet.querySelector('header').remove();
+    UI.inspectModal = m;
     return m;
   },
   showGraveyard(pi) {
@@ -423,7 +426,7 @@ const UI = {
     const myTurn = g.active === 0;
     const insts = p.hand.some((c) => !g.isLand(c) && g.hasFlash(c) && g.canCast(p, c).ok);
     if (g.stack.length) {
-      if (top.controller === 0) return !UI.holdPriority;
+      if (top.controller === 0) return !Settings.holdPriority;
       return !insts && !UI.canActivateAny(g, p, true);
     }
     if (myTurn) {
@@ -441,7 +444,7 @@ const UI = {
   },
   async priority(g, p) {
     if (UI.autoPass(g, p)) { await sleep(g.pace ? 40 : 0); return { type: 'pass' }; }
-    UI.mode = 'priority';
+    UI.closeInspect(); UI.mode = 'priority';
     const isMain = g.active === 0 && g.isMain() && !g.stack.length;
     UI.setAdviceCtx(isMain ? 'main' : 'respond');
     if (g.stack.length && g.stack[g.stack.length - 1].controller !== 0 && Settings.hints) UI.toast(`Opponent cast ${g.stack[g.stack.length - 1].card ? g.stack[g.stack.length - 1].card.name : 'an ability'} — respond or pass.`, 2200);
@@ -452,7 +455,7 @@ const UI = {
   targeting(g, p, spec, o) {
     return new Promise((resolve) => {
       if (o.forced && o.legal.length === 1) return resolve([o.legal[0]]);
-      UI.mode = 'target'; UI.legalSet = new Set(o.legal); UI.targetRes = resolve; UI.targetCancel = !o.forced;
+      UI.closeInspect(); UI.mode = 'target'; UI.legalSet = new Set(o.legal); UI.targetRes = resolve; UI.targetCancel = !o.forced;
       UI.setAdviceCtx('target', { spec, o });
       UI.setPrompt(`${o.label ? o.label + ': ' : ''}choose ${spec.label || 'a target'}.`, UI.advice && Settings.hints ? [{ label: 'Coach pick', onclick: () => { if (UI.advice.pick) UI.pickTarget(UI.advice.pick); } }] : []);
       UI.render();
@@ -460,7 +463,7 @@ const UI = {
   },
   attackMode(g, p, possible) {
     return new Promise((resolve) => {
-      UI.mode = 'attack'; UI.atkPossible = possible; UI.atkSet = new Set(possible.filter((c) => g.has(c, 'attacksEachCombat')));
+      UI.closeInspect(); UI.mode = 'attack'; UI.atkPossible = possible; UI.atkSet = new Set(possible.filter((c) => g.has(c, 'attacksEachCombat')));
       UI.attackRes = resolve;
       UI.setAdviceCtx('attack', { possible });
       UI.plan = UI.advice && UI.advice.plan;
@@ -479,7 +482,7 @@ const UI = {
   },
   blockMode(g, p, atk, blk) {
     return new Promise((resolve) => {
-      UI.mode = 'block'; UI.blockers = blk; UI.blockAtk = new Set(atk); UI.blockMap = new Map(); UI.activeBlocker = null; UI.blockRes = resolve;
+      UI.closeInspect(); UI.mode = 'block'; UI.blockers = blk; UI.blockAtk = new Set(atk); UI.blockMap = new Map(); UI.activeBlocker = null; UI.blockRes = resolve;
       UI.setAdviceCtx('block', { atk, blk });
       UI.plan = UI.advice && UI.advice.plan;
       const total = atk.reduce((a, c) => a + g.power(c), 0);

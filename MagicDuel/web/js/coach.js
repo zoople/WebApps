@@ -107,7 +107,8 @@ Coach.adviseMain = function (g, p) {
   if (lethalStep) { lesson = 'lethal'; }
   for (const s of plan.steps) {
     const why = s.reason.replace(/^(Cast|Play|Equip|Use|Activate|Crack|Bring|Spend) [^:—]*[:—]\s*/, '').replace(/^./, (ch) => ch.toUpperCase());
-    items.push({ text: s.kind === 'land' ? `Play ${s.card.name}` : s.kind === 'cast' ? `Cast ${s.card.name}` : `Activate ${s.perm.name}`, why });
+    const later = g.step === 'main1' && s.kind !== 'land' && !s.pre;
+    items.push({ text: (s.kind === 'land' ? `Play ${s.card.name}` : s.kind === 'cast' ? `Cast ${s.card.name}` : `Activate ${s.perm.name}`) + (later ? ' (after combat)' : ''), why: why + (later ? ' Cast it after combat in Main 2: the opponent has less information when deciding blocks, and your mana stays open for tricks during combat.' : '') });
     highlight.push((s.card || s.perm).id);
     if (!lethalStep && s.principle && ['removal', 'ramp', 'card-advantage', 'mana', 'tempo', 'reach'].includes(s.principle)) lesson = s.principle;
   }
@@ -170,7 +171,7 @@ Coach.adviseTarget = function (g, p, spec, o) {
   else if (pick.kind === 'spell') why = 'This is the most expensive/threatening spell on the stack.';
   else if (pick.controller !== p.idx) why = `${describe(g, pick)} is the most valuable thing you can hit (value ${B.permValue(g, pick).toFixed(0)}).`;
   else why = `${describe(g, pick)} benefits most from this.`;
-  return { title: 'Choose a target', headline: `Target ${name}`, items: [{ text: `Target ${name}`, why }], highlight: [pick.id || pick.card.id].filter(Boolean), lesson: 'removal', alternatives: [], pick };
+  return { title: 'Choose a target', headline: `Target ${name}`, items: [{ text: `Target ${name}`, why }], highlight: [pick.isPlayer ? null : (pick.card ? pick.card.id : pick.id)].filter(Boolean), lesson: 'removal', alternatives: [], pick };
 };
 function describe(g, c) { const ch = g.chars(c); return `${c.name} (${ch.power}/${ch.toughness})`; }
 Coach.adviseScry = function (g, p, cards) {

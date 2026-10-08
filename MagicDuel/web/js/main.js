@@ -124,6 +124,7 @@ const App = (MTG.App = {
     body.append(row('images', 'Card artwork', 'Download card images from Scryfall by name (needs internet). Off = text cards'));
     body.append(row('confirmEnd', 'Confirm wasteful turn end', 'Ask before ending the turn with castable cards and spare mana'));
     body.append(row('stopEnd', 'Stop at opponent\'s end step', 'Pause when you hold a castable instant at the end of their turn'));
+    body.append(row('holdPriority', 'Hold priority after casting', 'Get priority back with your spell on the stack (to chain spells). Off = it resolves automatically'));
     const sp = el('div', 'toggle', '<div>Game speed<small>How fast the opponent\'s actions play out</small></div>');
     const sel = el('select'); sel.style.flex = '0 0 120px'; sel.innerHTML = ['slow', 'normal', 'fast'].map((s) => `<option ${Settings.speed === s ? 'selected' : ''}>${s}</option>`).join('');
     sel.onchange = () => { Settings.speed = sel.value; Settings.save(); if (UI.g) UI.g.pace = Settings.pace(); }; sp.append(sel); body.append(sp);
@@ -132,7 +133,7 @@ const App = (MTG.App = {
     UI.modal({ title: 'Settings', body, buttons: [{ label: 'Done', cls: 'primary', value: null }] });
   },
   guideHTML() {
-    let h = '<p class="menu-sub" style="max-width:none">The Coach in this game uses the same planner as the computer opponent, so its advice is a real, working strategy — plus the reasoning behind it. These are the core ideas it keeps coming back to.</p>';
+    let h = '<div class="lesson"><h3>Controls</h3><p><b>Tap</b> a card to see it and its actions (cast, play land, activate). <b>Press and hold</b> any card to inspect it. Cards with a green glow in your hand are castable. Mana is paid automatically from your lands. Press the gold button to move the game on: it always says what it will do next. When you attack, tap your creatures then confirm; when you block, tap your blocker, then the attacker. 💡 asks the coach, 📜 shows the log, tap a graveyard icon to see it.</p></div><p class="menu-sub" style="max-width:none">The Coach in this game uses the same planner as the computer opponent, so its advice is a real, working strategy — plus the reasoning behind it. These are the core ideas it keeps coming back to.</p>';
     for (const k of Object.keys(Coach.lessons)) { const L = Coach.lessons[k]; h += `<div class="lesson"><h3>${esc(L.title)}</h3><p>${esc(L.text)}</p></div>`; }
     h += `<div class="lesson"><h3>Turn checklist</h3><p>1) Check for lethal for both players. 2) Play a land. 3) Remove the biggest threat if the trade is good. 4) Attack if it is safe. 5) Spend the rest of your mana on the best development. 6) Keep instants for when they matter.</p></div>`;
     return h;
@@ -147,7 +148,7 @@ const App = (MTG.App = {
 
   /* ---------- game lifecycle ---------- */
   startGame(myDeck, oppDeck) {
-    App.last = [myDeck, oppDeck];
+    App.last = [myDeck, oppDeck]; Images.reset();
     const human = new MTG.HumanController(), ai = new MTG.AIController();
     const g = new MTG.Game({ decks: [Decks.names(myDeck), Decks.names(oppDeck)], controllers: [human, ai], names: ['You', 'Opponent'], deckNames: [myDeck.name, oppDeck.name] });
     App.game = g; UI.bindGame(g); UI.showScreen('game'); UI.render();

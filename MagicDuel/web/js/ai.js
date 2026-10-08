@@ -483,9 +483,9 @@ Brain.attackPlan = function (g, p, possible) {
     if (e.verdict === 'evasive' || e.verdict === 'safe') chosen.push(e);
     else if (e.verdict === 'trade') {
       const bv = Brain.cv(g, e.blocker);
-      if (e.value <= bv * 0.85) { e.reason += ' You are happy with that trade: your creature is worth less than theirs.'; chosen.push(e); }
-      else if (ahead && blockers.length <= possible.length) { e.reason += ' You are ahead on board, so an even trade favours you and speeds up the race.'; chosen.push(e); }
-      else res.stay.push({ card: e.card, reason: e.reason + ' An even trade is not worth it while you are not ahead on board.' });
+      if (e.value <= bv * 0.9) { e.reason += ' You are happy with that trade: your creature is worth less than theirs.'; chosen.push(e); }
+      else if (ahead && e.value <= bv * 1.3 && blockers.length <= possible.length) { e.reason += ' You are ahead on board, so an even trade favours you and speeds up the race.'; chosen.push(e); }
+      else res.stay.push({ card: e.card, reason: e.reason + ` Trading ${e.card.name} (worth about ${e.value.toFixed(0)}) for a less valuable creature (${bv.toFixed(0)}) is a bad deal.` });
     } else res.stay.push({ card: e.card, reason: e.reason + ' Keep it home.' });
   }
   // utility creatures that matter more at home

@@ -22,7 +22,7 @@ javac -nowarn --release 8 -classpath "$ANDROID_JAR" -d $OUT/classes \
 dalvik-exchange --dex --output=$OUT/classes.dex $OUT/classes
 ( cd $OUT && aapt add -f unaligned.apk classes.dex >/dev/null )
 zipalign -f -p 4 $OUT/unaligned.apk $OUT/aligned.apk
-apksigner sign --ks "$KS" --ks-pass pass:android --key-pass pass:android \
+apksigner sign --v4-signing-enabled false --ks "$KS" --ks-pass pass:android --key-pass pass:android \
   --out MagicDuel.apk $OUT/aligned.apk
 apksigner verify --verbose MagicDuel.apk | head -5
 ls -la MagicDuel.apk
