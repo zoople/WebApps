@@ -132,6 +132,15 @@ Brain.landChoice = function (g, p) {
       if (!wantsUntapped) why.push('entering tapped costs you nothing this turn');
     } else if (wantsUntapped) { s += 1.5; why.push('it enters untapped so you can use the mana right away'); }
     if (cols.length > 1) s += 0.8;
+    if (!(l.def.etbTapped || l.def.name === 'Evolving Wilds')) {
+      const haveCols = new Set(); for (const x of g.lands(p.idx)) for (const k of (x.def.abilities.find((a) => a.mana) || { mana: { colors: [] } }).mana.colors) haveCols.add(k);
+      for (const k of cols) haveCols.add(k);
+      const enabled = spells.filter((c) => !c.def.fx || c.def.fx.kind !== 'counter').filter((c) => c.def.cmc <= nLands + 1 && c.def.cmc >= 1 && MTG.COLORS.every((k) => !c.def.costObj[k] || haveCols.has(k)));
+      const before = spells.filter((c) => c.def.cmc <= nLands && MTG.COLORS.every((k) => !c.def.costObj[k] || (have[k] > 0)));
+      const gain = enabled.filter((c) => !before.includes(c));
+      const best = gain.sort((a, b) => b.def.cmc - a.def.cmc)[0];
+      if (best) { s += g.isCreature(best) ? 2.5 : 1.2; why.unshift(`it lets you cast ${best.name} this turn`); }
+    }
     s += (4 - Math.min(4, cols.reduce((a, k) => a + have[k], 0))) * 0.05;
     if (s > bs) { bs = s; best = { card: l, why }; }
   }
@@ -169,6 +178,21 @@ Brain.removalThreshold = function (g, p) {
 };
 const describe = (g, c) => { const ch = g.chars(c); return `${c.name} (${ch.power}/${ch.toughness})`; };
 const kwNice = (g, c) => [...g.chars(c).kw].filter((k) => !/:/.test(k) && k !== 'cantBlock' && k !== 'cantAttack' && k !== 'attacksEachCombat').join(', ');
+
+/* ---------- danger: can they kill me (or nearly) next turn? ---------- */
+Brain.danger = function (g, p) {
+  const me = p.idx;
+  const atk = g.creatures(1 - me).filter((c) => !g.has(c, 'defender') && !g.has(c, 'cantAttack'));
+  const mine = g.creatures(me).filter((c) => !c.tapped);
+  const dmg = Brain.minDamage(g, atk, mine);
+  const burn = 0;   // we do not assume hidden burn
+  return { dmg, life: p.life, lethal: dmg + burn >= p.life, near: dmg >= p.life - 3 && dmg > 0 };
+};
+// A castable instant worth keeping mana open for while in danger
+Brain.reserveCard = function (g, p, exclude) {
+  const cands = p.hand.filter((c) => !exclude.includes(c) && g.hasFlash(c) && !g.isLand(c) && c.def.fx && ['damage', 'destroy', 'shrink', 'pump', 'protect'].includes(c.def.fx.kind) || (c.def.name === 'Raise the Alarm' && !exclude.includes(c)) || (c.def.name === 'Valorous Stance' && !exclude.includes(c)));
+  return cands.sort((a, b) => a.def.cmc - b.def.cmc)[0] || null;
+};
 
 /* ---------- option evaluation (what could I do right now, and how good is it?) ---------- */
 function mkOpt(kind, ref, extra) { return Object.assign({ kind, score: 0, pre: false, order: 6, reason: '', principle: 'development', intent: { targets: [] }, cost: null }, ref, extra); }
@@ -219,13 +243,16 @@ function evalCast(g, p, card) {
       const dmg = dmgOf(fx, x);
       if (dmg >= opp.life) { o.score = 100; o.pre = true; o.order = 0; o.intent = { targets: [opp], x }; o.cost = costWith(d.costObj, x); o.principle = 'lethal'; o.reason = `${card.name} deals ${dmg} — that's exactly lethal (${opp.name} is at ${opp.life}). Take the win.`; return o; }
     }
-    if (best && best.v >= th) {
+    const premium = (fx.kind === 'destroy' || fx.kind === 'pacify' || fx.kind === 'exile') && !Brain.danger(g, p).near ? 1.8 : 0;
+    if (best && best.v >= th + premium) {
       let xx = x;
       if (d.x) { xx = Math.max(1, g.toughness(best.t) - best.t.damage); xx = Math.min(xx, x); }
       o.intent = { targets: [best.t], x: xx }; o.cost = costWith(d.costObj, xx);
       o.score = best.v * 1.1 - d.cmc * 0.3 - (d.x ? xx * 0.25 : 0); o.pre = true; o.order = 2; o.principle = 'removal';
       const mana = d.cmc + xx;
-      o.reason = `${fx.kind === 'pacify' ? 'Neutralise' : fx.kind === 'exile' ? 'Exile' : 'Kill'} ${describe(g, best.t)} with ${card.name}. It's their best creature${mana < Brain.cv(g, best.t) / 2.2 ? ` and you're trading ${mana} mana for a much more expensive card — a tempo win` : ''}. Removing blockers/threats first also makes your attacks safer.`;
+      const tc = best.t.def.cmc;
+      const eco = tc > mana ? ` It costs you ${mana} mana to answer a ${tc}-mana card — a tempo win.` : tc === mana ? ` It's an even trade of mana, but it's a clean one-for-one that removes their best body.` : ` Their creature is cheap, but it is the most dangerous thing they have right now.`;
+      o.reason = `${fx.kind === 'pacify' ? 'Neutralise' : fx.kind === 'exile' ? 'Exile' : 'Kill'} ${describe(g, best.t)} with ${card.name}.${eco} Removing blockers/threats first also makes your attacks safer.`;
       return o;
     }
     if (fx.kind === 'damage' && d.targets && d.targets[0].kind === 'any') {
@@ -375,10 +402,12 @@ const parseC = (s) => MTG.parseCost(s);
 
 Brain.options = function (g, p) {
   const opts = [];
+  const danger = Brain.danger(g, p);
   for (const card of p.hand) {
     if (g.isLand(card)) continue;
     if (!g.canCast(p, card).ok) continue;
-    const o = evalCast(g, p, card); if (o && o.score > 0) opts.push(o);
+    const o = evalCast(g, p, card);
+    if (o && o.score > 0) { if (g.isCreature(card) && danger.near && !g.has(card, 'cantBlock')) { o.score += 2.5; o.reason += ' You are under pressure, so you need blockers.'; } opts.push(o); }
   }
   const pool = [...g.bf.filter((c) => c.controller === p.idx), ...p.graveyard];
   for (const perm of pool) {
@@ -396,14 +425,14 @@ function sumCost(list) {
   for (const c of list) for (const k of Object.keys(t)) t[k] += c[k] || 0;
   return t;
 }
-Brain.bestSubset = function (g, p, opts) {
+Brain.bestSubset = function (g, p, opts, reserve) {
   const cand = opts.filter((o) => o.score >= 0.9).sort((a, b) => b.score - a.score).slice(0, 8);
   let best = { score: 0, set: [] };
   const rec = (i, set, score) => {
     if (score > best.score) best = { score, set: set.slice() };
     for (let j = i; j < cand.length; j++) {
       const o = cand[j];
-      const c = sumCost([...set.map((s) => s.cost), o.cost]);
+      const c = sumCost([...set.map((s) => s.cost), o.cost, ...(reserve ? [reserve.def.costObj] : [])]);
       if (!g.canPay(p, c)) continue;
       // same card can't be used twice
       if (set.some((s) => s.card && s.card === o.card)) continue;
@@ -419,8 +448,25 @@ Brain.planMain = function (g, p) {
   const steps = [];
   const land = Brain.landChoice(g, p);
   if (land) steps.push({ kind: 'land', card: land.card, reason: land.reason, principle: land.principle, pre: true, order: -1 });
+  // Plan as if the land drop has already happened (it may unlock spells), then undo the simulation.
+  let undo = null;
+  if (land) {
+    const c = land.card, idx = p.hand.indexOf(c), st = { zone: c.zone, tapped: c.tapped, summoned: c.summonedTurn, controller: c.controller };
+    p.hand.splice(idx, 1); c.zone = 'battlefield'; c.controller = p.idx; c.tapped = !!c.def.etbTapped || c.def.name === 'Evolving Wilds'; c.summonedTurn = g.turnNo; g.bf.push(c); g.touch();
+    undo = () => { const j = g.bf.indexOf(c); if (j >= 0) g.bf.splice(j, 1); c.zone = st.zone; c.tapped = st.tapped; c.summonedTurn = st.summoned; c.controller = st.controller; p.hand.splice(idx, 0, c); g.touch(); };
+  }
+  try {
   const opts = Brain.options(g, p);
-  const best = Brain.bestSubset(g, p, opts);
+  const danger = Brain.danger(g, p);
+  let reserve = null;
+  if (danger.near) {
+    const r = Brain.reserveCard(g, p, []);
+    // only worth holding if it is not itself the best proactive play (e.g. lethal burn)
+    if (r && !opts.some((o) => o.card === r && o.score >= 50)) reserve = r;
+  }
+  let best = Brain.bestSubset(g, p, opts, reserve);
+  if (reserve && !best.set.length && !opts.length) reserve = null;
+  if (reserve) { if (g.step === 'main1' || true) { /* keep mana for the instant */ } }
   const set = best.set.slice().sort((a, b) => a.order - b.order || b.score - a.score);
   const post = g.step === 'main1';
   const holdNotes = [];
@@ -428,7 +474,9 @@ Brain.planMain = function (g, p) {
   if (counter) holdNotes.push(`You hold ${counter.name}: consider leaving ${counter.def.cmc} mana untapped on their turn so you can counter their best spell.`);
   const castable = opts.filter((o) => !set.includes(o)).sort((a, b) => b.score - a.score);
   void post;
-  return { steps: [...steps, ...set], land, opts, castable, notes: holdNotes, set };
+  if (reserve) holdNotes.unshift(`Danger: they can deal about ${danger.dmg} next turn and you're at ${p.life}. Holding ${reserve.name} mana open is better than tapping out.`);
+  return { steps: [...steps, ...set], land, opts, castable, notes: holdNotes, set, danger, reserve };
+  } finally { if (undo) undo(); }
 };
 // Next action for the *current* main phase. Returns an option/step or null (= nothing left to do / move to combat).
 Brain.nextMainAction = function (g, p) {
@@ -465,12 +513,15 @@ Brain.attackPlan = function (g, p, possible) {
   if (!possible.length) return res;
   const minD = Brain.minDamage(g, possible, blockers);
   const reach = Brain.burnReach(g, p);
-  if (minD >= opp.life) {
+  // lifelink blockers gain life at the same moment combat damage is dealt, so they can save the opponent from "exact" lethal
+  const llGain = sum(blockers.filter((b) => g.has(b, 'lifelink')), (b) => Math.max(0, g.power(b)));
+  const effLife = opp.life + llGain;
+  if (minD >= effLife) {
     res.lethal = true; res.notes.push('LETHAL');
     res.attackers = possible.map((c) => ({ card: c, reason: `Lethal: even with ${opp.name}'s best blocks, ${minD} damage gets through and they're at ${opp.life}.` }));
     return res;
   }
-  if (minD + reach >= opp.life && reach > 0) {
+  if (minD + reach >= effLife && reach > 0) {
     res.lethal = true; res.notes.push('LETHAL with burn');
     res.attackers = possible.map((c) => ({ card: c, reason: `Attack with everything: ${minD} combat damage + ${reach} burn from your hand is lethal (${opp.name} is at ${opp.life}).` }));
     return res;
@@ -571,8 +622,8 @@ Brain.blockPlan = function (g, p, attackers, blockers) {
   let guard = 0;
   while (guard++ < 10) {
     const rem = unblockedDamage();
-    if (rem < p.life - (p.life > 12 ? 0 : 2) && rem < p.life) break;
-    if (rem < p.life && p.life > 6) break;
+    if (p.life - rem > 3) break;
+    if (rem <= 0) break;
     const unblocked = order.filter((a) => !res.blocks.some((b) => b.attacker === a) && !g.has(a, 'menace'));
     const target = unblocked[0]; if (!target) break;
     const cands = blockers.filter((b) => !used.has(b) && g.canBlock(b, target)).sort((x, y) => Brain.cv(g, x) - Brain.cv(g, y));
@@ -798,6 +849,12 @@ Brain.endStepAdvice = function (g, p) {
   // lethal burn
   for (const c of insts) {
     const f = c.def.fx; if (f && f.kind === 'damage' && !f.combatOnly && f.n !== 'x' && f.n >= opp.life) return { kind: 'cast', card: c, intent: { targets: [opp] }, reason: `${c.name} to the face for the win.`, principle: 'lethal' };
+  }
+  for (const c of insts) {
+    const f = c.def.fx; if (!f || !['damage', 'destroy', 'shrink'].includes(f.kind) || f.combatOnly || c.def.x) continue;
+    const spec = c.def.targets && c.def.targets[0]; if (!spec) continue;
+    const bk = bestKill(g, p, c, spec, f, 0);
+    if (bk && bk.v >= Brain.removalThreshold(g, p) + (f.kind === 'destroy' ? 1.8 : 0)) return { kind: 'cast', card: c, intent: { targets: [bk.t] }, reason: `End of their turn: ${c.name} kills ${describe(g, bk.t)} using mana that would otherwise go to waste, and you untap with all your mana free for your own turn.`, principle: 'mana-efficiency' };
   }
   for (const c of insts) {
     if (c.def.name === 'Opt' && spare >= 1) return { kind: 'cast', card: c, intent: { targets: [] }, reason: 'Cast Opt at end of turn: the mana would be wasted otherwise, and you dig toward the card you need.', principle: 'mana-efficiency' };

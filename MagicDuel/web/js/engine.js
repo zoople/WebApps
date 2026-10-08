@@ -70,7 +70,9 @@ class Game {
   rand() { return this.rng(); }
   touch() { this.ver++; }
   changed() { if (this.onChange) this.onChange(this); }
-  log(msg) { this.logs.push(msg); if (this.onLog) this.onLog(msg); }
+  log(msg) {
+    if (msg.startsWith('You ')) msg = msg.replace(/^You (\w+)/, (m, v) => 'You ' + ({ draws: 'draw', plays: 'play', casts: 'cast', does: 'do', gains: 'gain', loses: 'lose', activates: 'activate', attacks: 'attack', scries: 'scry', sacrifices: 'sacrifice', discards: 'discard', searches: 'search', creates: 'create', takes: 'take', keeps: 'keep', goes: 'go' }[v] || v));
+    this.logs.push(msg); if (this.onLog) this.onLog(msg); }
   fx(type, data) { if (this.onEvent) this.onEvent(type, data); }
   async pause(ms) { if (this.pace > 0 && ms > 0) { this.changed(); await sleep(ms * this.pace); } }
   shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(this.rand() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
@@ -205,7 +207,7 @@ class Game {
     const sc = src ? this.colorsOf(src) : [];
     if (tgt.isPlayer) {
       tgt.life -= n; this.log(`${src ? src.name : 'Something'} deals ${n} damage to ${tgt.name}.`);
-      if (src) this.players[src.controller].stats.damageDealt += n;
+      if (src && src.controller !== tgt.idx) this.players[src.controller].stats.damageDealt += n;
       this.fx('damage', { target: tgt, n });
     } else {
       if (tgt.zone !== 'battlefield') return 0;
@@ -499,7 +501,7 @@ class Game {
       const nm = lost[0].name, be = nm === 'You' ? 'are' : 'is';
       this.resultReason = lost[0].drewEmpty ? `${nm} tried to draw from an empty library.` : (lost[0].conceded ? `${nm} conceded.` : `${nm} ${be} at ${lost[0].life} life.`);
     }
-    this.log('Game over: ' + (this.winner < 0 ? 'draw' : this.pn(this.winner) + ' wins') + '. ' + this.resultReason);
+    this.log('Game over: ' + (this.winner < 0 ? 'draw' : this.pn(this.winner) + (this.pn(this.winner) === 'You' ? ' win' : ' wins')) + '. ' + this.resultReason);
     this.changed();
   }
   concede(pi) { this.players[pi].lost = true; this.players[pi].conceded = true; this.endGame(); }

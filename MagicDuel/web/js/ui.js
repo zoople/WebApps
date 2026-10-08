@@ -75,7 +75,9 @@ const UI = {
     const e = el('div', 'card'); e.dataset.id = c.id;
     const img = el('img', 'art'); img.alt = ''; img.draggable = false;
     e.append(UI.makeFace(d), img);
-    if (!d.token && Images.enabled) { img.dataset.name = d.name; Images.attach(img, d.name, opts.big ? 'normal' : 'small', (ok) => { if (ok) e.classList.add('has-art'); }); }
+    img.addEventListener('load', () => { if (img.getAttribute('src')) e.classList.add('has-art'); });
+    img.addEventListener('error', () => { e.classList.remove('has-art'); img.removeAttribute('src'); });
+    if (!d.token && Images.enabled) { img.dataset.name = d.name; Images.attach(img, d.name, opts.big ? 'normal' : 'small'); }
     e.append(el('div', 'mark'));
     return e;
   },
@@ -105,6 +107,7 @@ const UI = {
       const b = el('div', 'badge pt' + (c.damage ? ' dmg' : ch.power > base[0] || ch.toughness > base[1] ? ' buff' : ch.power < base[0] || ch.toughness < base[1] ? ' nerf' : ''), `${ch.power}/${t}`);
       e.append(b);
       if (g.isSick(c) && c.controller === 0) e.append(el('div', 'zz', '💤'));
+      if (g.has(c, 'cantAttack') && g.has(c, 'cantBlock')) e.append(el('div', 'zz', '🚫'));
     }
     const cn = Object.entries(c.counters).filter(([, v]) => v);
     if (onBf && cn.length) e.append(el('div', 'badge cnt', cn.map(([k, v]) => (k === 'p1p1' ? '+' + v : k === 'm1m1' ? '-' + v : v + k)).join(' ')));
@@ -240,6 +243,7 @@ const UI = {
     if (!UI.promptText) pb.classList.add('hidden');
   },
   setPrompt(text, buttons) {
+    UI.promptAt = Date.now();
     const pb = $('#promptBar'); UI.promptText = text;
     if (!text) { pb.classList.add('hidden'); pb.innerHTML = ''; return; }
     pb.classList.remove('hidden'); pb.innerHTML = '';
@@ -326,16 +330,24 @@ const UI = {
     UI.inspect(c, {});
   },
   onPlayerTap(pi) { if (UI.mode === 'target' && UI.legalSet.has(UI.g.players[pi])) UI.pickTarget(UI.g.players[pi]); },
-  pickTarget(t) { if (UI.targetRes) { const r = UI.targetRes; UI.targetRes = null; UI.legalSet = new Set(); UI.setPrompt(null); UI.mode = 'idle'; UI.highlight = new Set(); r([t]); UI.scheduleRender(); } },
+  pickTarget(t, confirmed) {
+    const sp = UI.targetSpec;
+    if (!confirmed && UI.targetRes && sp && sp.ai === 'harm' && (t.isPlayer ? t.idx === 0 : (t.kind !== 'spell' && t.controller === 0))) {
+      UI.modal({ center: true, title: 'Target yourself?', body: `<p>This effect is meant to hurt or hinder — you chose <b>${esc(t.isPlayer ? 'yourself' : t.name)}</b>. Are you sure?</p>`, buttons: [{ label: 'Pick again', value: false }, { label: 'Yes, target it', value: true, cls: 'primary' }] }).promise.then((v) => { if (v && UI.targetRes) UI.pickTarget(t, true); });
+      return;
+    }
+    if (UI.targetRes) { const r = UI.targetRes; UI.targetRes = null; UI.legalSet = new Set(); UI.setPrompt(null); UI.mode = 'idle'; UI.highlight = new Set(); r([t]); UI.scheduleRender(); } },
   act(action) { if (UI.priorityResolve) { const r = UI.priorityResolve; UI.priorityResolve = null; UI.mode = 'idle'; UI.highlight = new Set(); r(action); UI.scheduleRender(); return true; } UI.toast('Wait for your priority.'); return false; },
   mainButton() {
     const g = UI.g; const m = UI.mode;
+    if (Date.now() - (UI.promptAt || 0) < 350) return;   // ignore accidental double-taps right after a new prompt
     if (m === 'priority') {
       if (Settings.confirmEnd && g.active === 0 && g.step === 'main2' && !g.stack.length) {
         const p = g.players[0];
         const left = p.hand.filter((c) => !g.isLand(c) && !g.hasFlash(c) && g.canPay(p, c.def.costObj, 0));
         const land = p.hand.some((c) => g.isLand(c)) && p.landDrops > 0;
-        if (left.length || land) {
+        const holding = p.hand.some((c) => g.hasFlash(c) && g.canPay(p, c.def.costObj, 0));
+        if ((left.length || land) && !(holding && !land)) {
           const msg = (land ? 'You still have a land drop. ' : '') + (left.length ? `You have ${g.availableMana(p)} mana and could cast ${left.slice(0, 3).map((c) => c.name).join(', ')}. ` : '');
           UI.modal({ center: true, title: 'End turn?', body: `<p>${esc(msg)}Ending the turn now wastes that mana.</p>`, buttons: [{ label: 'Go back', value: false }, { label: 'End turn', value: true, cls: 'primary' }] }).promise.then((v) => { if (v) { UI.endTurnNote(); UI.act({ type: 'pass' }); } });
           return;
@@ -444,7 +456,7 @@ const UI = {
   },
   async priority(g, p) {
     if (UI.autoPass(g, p)) { await sleep(g.pace ? 40 : 0); return { type: 'pass' }; }
-    UI.closeInspect(); UI.mode = 'priority';
+    UI.closeInspect(); UI.mode = 'priority'; UI.promptAt = Date.now();
     const isMain = g.active === 0 && g.isMain() && !g.stack.length;
     UI.setAdviceCtx(isMain ? 'main' : 'respond');
     if (g.stack.length && g.stack[g.stack.length - 1].controller !== 0 && Settings.hints) UI.toast(`Opponent cast ${g.stack[g.stack.length - 1].card ? g.stack[g.stack.length - 1].card.name : 'an ability'} — respond or pass.`, 2200);
@@ -455,7 +467,7 @@ const UI = {
   targeting(g, p, spec, o) {
     return new Promise((resolve) => {
       if (o.forced && o.legal.length === 1) return resolve([o.legal[0]]);
-      UI.closeInspect(); UI.mode = 'target'; UI.legalSet = new Set(o.legal); UI.targetRes = resolve; UI.targetCancel = !o.forced;
+      UI.closeInspect(); UI.mode = 'target'; UI.targetSpec = spec; UI.legalSet = new Set(o.legal); UI.targetRes = resolve; UI.targetCancel = !o.forced;
       UI.setAdviceCtx('target', { spec, o });
       UI.setPrompt(`${o.label ? o.label + ': ' : ''}choose ${spec.label || 'a target'}.`, UI.advice && Settings.hints ? [{ label: 'Coach pick', onclick: () => { if (UI.advice.pick) UI.pickTarget(UI.advice.pick); } }] : []);
       UI.render();

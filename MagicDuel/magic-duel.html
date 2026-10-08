@@ -322,7 +322,9 @@ class Game {
   rand() { return this.rng(); }
   touch() { this.ver++; }
   changed() { if (this.onChange) this.onChange(this); }
-  log(msg) { this.logs.push(msg); if (this.onLog) this.onLog(msg); }
+  log(msg) {
+    if (msg.startsWith('You ')) msg = msg.replace(/^You (\w+)/, (m, v) => 'You ' + ({ draws: 'draw', plays: 'play', casts: 'cast', does: 'do', gains: 'gain', loses: 'lose', activates: 'activate', attacks: 'attack', scries: 'scry', sacrifices: 'sacrifice', discards: 'discard', searches: 'search', creates: 'create', takes: 'take', keeps: 'keep', goes: 'go' }[v] || v));
+    this.logs.push(msg); if (this.onLog) this.onLog(msg); }
   fx(type, data) { if (this.onEvent) this.onEvent(type, data); }
   async pause(ms) { if (this.pace > 0 && ms > 0) { this.changed(); await sleep(ms * this.pace); } }
   shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(this.rand() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
@@ -457,7 +459,7 @@ class Game {
     const sc = src ? this.colorsOf(src) : [];
     if (tgt.isPlayer) {
       tgt.life -= n; this.log(`${src ? src.name : 'Something'} deals ${n} damage to ${tgt.name}.`);
-      if (src) this.players[src.controller].stats.damageDealt += n;
+      if (src && src.controller !== tgt.idx) this.players[src.controller].stats.damageDealt += n;
       this.fx('damage', { target: tgt, n });
     } else {
       if (tgt.zone !== 'battlefield') return 0;
@@ -751,7 +753,7 @@ class Game {
       const nm = lost[0].name, be = nm === 'You' ? 'are' : 'is';
       this.resultReason = lost[0].drewEmpty ? `${nm} tried to draw from an empty library.` : (lost[0].conceded ? `${nm} conceded.` : `${nm} ${be} at ${lost[0].life} life.`);
     }
-    this.log('Game over: ' + (this.winner < 0 ? 'draw' : this.pn(this.winner) + ' wins') + '. ' + this.resultReason);
+    this.log('Game over: ' + (this.winner < 0 ? 'draw' : this.pn(this.winner) + (this.pn(this.winner) === 'You' ? ' win' : ' wins')) + '. ' + this.resultReason);
     this.changed();
   }
   concede(pi) { this.players[pi].lost = true; this.players[pi].conceded = true; this.endGame(); }
@@ -1606,6 +1608,15 @@ Brain.landChoice = function (g, p) {
       if (!wantsUntapped) why.push('entering tapped costs you nothing this turn');
     } else if (wantsUntapped) { s += 1.5; why.push('it enters untapped so you can use the mana right away'); }
     if (cols.length > 1) s += 0.8;
+    if (!(l.def.etbTapped || l.def.name === 'Evolving Wilds')) {
+      const haveCols = new Set(); for (const x of g.lands(p.idx)) for (const k of (x.def.abilities.find((a) => a.mana) || { mana: { colors: [] } }).mana.colors) haveCols.add(k);
+      for (const k of cols) haveCols.add(k);
+      const enabled = spells.filter((c) => !c.def.fx || c.def.fx.kind !== 'counter').filter((c) => c.def.cmc <= nLands + 1 && c.def.cmc >= 1 && MTG.COLORS.every((k) => !c.def.costObj[k] || haveCols.has(k)));
+      const before = spells.filter((c) => c.def.cmc <= nLands && MTG.COLORS.every((k) => !c.def.costObj[k] || (have[k] > 0)));
+      const gain = enabled.filter((c) => !before.includes(c));
+      const best = gain.sort((a, b) => b.def.cmc - a.def.cmc)[0];
+      if (best) { s += g.isCreature(best) ? 2.5 : 1.2; why.unshift(`it lets you cast ${best.name} this turn`); }
+    }
     s += (4 - Math.min(4, cols.reduce((a, k) => a + have[k], 0))) * 0.05;
     if (s > bs) { bs = s; best = { card: l, why }; }
   }
@@ -1643,6 +1654,21 @@ Brain.removalThreshold = function (g, p) {
 };
 const describe = (g, c) => { const ch = g.chars(c); return `${c.name} (${ch.power}/${ch.toughness})`; };
 const kwNice = (g, c) => [...g.chars(c).kw].filter((k) => !/:/.test(k) && k !== 'cantBlock' && k !== 'cantAttack' && k !== 'attacksEachCombat').join(', ');
+
+/* ---------- danger: can they kill me (or nearly) next turn? ---------- */
+Brain.danger = function (g, p) {
+  const me = p.idx;
+  const atk = g.creatures(1 - me).filter((c) => !g.has(c, 'defender') && !g.has(c, 'cantAttack'));
+  const mine = g.creatures(me).filter((c) => !c.tapped);
+  const dmg = Brain.minDamage(g, atk, mine);
+  const burn = 0;   // we do not assume hidden burn
+  return { dmg, life: p.life, lethal: dmg + burn >= p.life, near: dmg >= p.life - 3 && dmg > 0 };
+};
+// A castable instant worth keeping mana open for while in danger
+Brain.reserveCard = function (g, p, exclude) {
+  const cands = p.hand.filter((c) => !exclude.includes(c) && g.hasFlash(c) && !g.isLand(c) && c.def.fx && ['damage', 'destroy', 'shrink', 'pump', 'protect'].includes(c.def.fx.kind) || (c.def.name === 'Raise the Alarm' && !exclude.includes(c)) || (c.def.name === 'Valorous Stance' && !exclude.includes(c)));
+  return cands.sort((a, b) => a.def.cmc - b.def.cmc)[0] || null;
+};
 
 /* ---------- option evaluation (what could I do right now, and how good is it?) ---------- */
 function mkOpt(kind, ref, extra) { return Object.assign({ kind, score: 0, pre: false, order: 6, reason: '', principle: 'development', intent: { targets: [] }, cost: null }, ref, extra); }
@@ -1693,13 +1719,16 @@ function evalCast(g, p, card) {
       const dmg = dmgOf(fx, x);
       if (dmg >= opp.life) { o.score = 100; o.pre = true; o.order = 0; o.intent = { targets: [opp], x }; o.cost = costWith(d.costObj, x); o.principle = 'lethal'; o.reason = `${card.name} deals ${dmg} — that's exactly lethal (${opp.name} is at ${opp.life}). Take the win.`; return o; }
     }
-    if (best && best.v >= th) {
+    const premium = (fx.kind === 'destroy' || fx.kind === 'pacify' || fx.kind === 'exile') && !Brain.danger(g, p).near ? 1.8 : 0;
+    if (best && best.v >= th + premium) {
       let xx = x;
       if (d.x) { xx = Math.max(1, g.toughness(best.t) - best.t.damage); xx = Math.min(xx, x); }
       o.intent = { targets: [best.t], x: xx }; o.cost = costWith(d.costObj, xx);
       o.score = best.v * 1.1 - d.cmc * 0.3 - (d.x ? xx * 0.25 : 0); o.pre = true; o.order = 2; o.principle = 'removal';
       const mana = d.cmc + xx;
-      o.reason = `${fx.kind === 'pacify' ? 'Neutralise' : fx.kind === 'exile' ? 'Exile' : 'Kill'} ${describe(g, best.t)} with ${card.name}. It's their best creature${mana < Brain.cv(g, best.t) / 2.2 ? ` and you're trading ${mana} mana for a much more expensive card — a tempo win` : ''}. Removing blockers/threats first also makes your attacks safer.`;
+      const tc = best.t.def.cmc;
+      const eco = tc > mana ? ` It costs you ${mana} mana to answer a ${tc}-mana card — a tempo win.` : tc === mana ? ` It's an even trade of mana, but it's a clean one-for-one that removes their best body.` : ` Their creature is cheap, but it is the most dangerous thing they have right now.`;
+      o.reason = `${fx.kind === 'pacify' ? 'Neutralise' : fx.kind === 'exile' ? 'Exile' : 'Kill'} ${describe(g, best.t)} with ${card.name}.${eco} Removing blockers/threats first also makes your attacks safer.`;
       return o;
     }
     if (fx.kind === 'damage' && d.targets && d.targets[0].kind === 'any') {
@@ -1849,10 +1878,12 @@ const parseC = (s) => MTG.parseCost(s);
 
 Brain.options = function (g, p) {
   const opts = [];
+  const danger = Brain.danger(g, p);
   for (const card of p.hand) {
     if (g.isLand(card)) continue;
     if (!g.canCast(p, card).ok) continue;
-    const o = evalCast(g, p, card); if (o && o.score > 0) opts.push(o);
+    const o = evalCast(g, p, card);
+    if (o && o.score > 0) { if (g.isCreature(card) && danger.near && !g.has(card, 'cantBlock')) { o.score += 2.5; o.reason += ' You are under pressure, so you need blockers.'; } opts.push(o); }
   }
   const pool = [...g.bf.filter((c) => c.controller === p.idx), ...p.graveyard];
   for (const perm of pool) {
@@ -1870,14 +1901,14 @@ function sumCost(list) {
   for (const c of list) for (const k of Object.keys(t)) t[k] += c[k] || 0;
   return t;
 }
-Brain.bestSubset = function (g, p, opts) {
+Brain.bestSubset = function (g, p, opts, reserve) {
   const cand = opts.filter((o) => o.score >= 0.9).sort((a, b) => b.score - a.score).slice(0, 8);
   let best = { score: 0, set: [] };
   const rec = (i, set, score) => {
     if (score > best.score) best = { score, set: set.slice() };
     for (let j = i; j < cand.length; j++) {
       const o = cand[j];
-      const c = sumCost([...set.map((s) => s.cost), o.cost]);
+      const c = sumCost([...set.map((s) => s.cost), o.cost, ...(reserve ? [reserve.def.costObj] : [])]);
       if (!g.canPay(p, c)) continue;
       // same card can't be used twice
       if (set.some((s) => s.card && s.card === o.card)) continue;
@@ -1893,8 +1924,25 @@ Brain.planMain = function (g, p) {
   const steps = [];
   const land = Brain.landChoice(g, p);
   if (land) steps.push({ kind: 'land', card: land.card, reason: land.reason, principle: land.principle, pre: true, order: -1 });
+  // Plan as if the land drop has already happened (it may unlock spells), then undo the simulation.
+  let undo = null;
+  if (land) {
+    const c = land.card, idx = p.hand.indexOf(c), st = { zone: c.zone, tapped: c.tapped, summoned: c.summonedTurn, controller: c.controller };
+    p.hand.splice(idx, 1); c.zone = 'battlefield'; c.controller = p.idx; c.tapped = !!c.def.etbTapped || c.def.name === 'Evolving Wilds'; c.summonedTurn = g.turnNo; g.bf.push(c); g.touch();
+    undo = () => { const j = g.bf.indexOf(c); if (j >= 0) g.bf.splice(j, 1); c.zone = st.zone; c.tapped = st.tapped; c.summonedTurn = st.summoned; c.controller = st.controller; p.hand.splice(idx, 0, c); g.touch(); };
+  }
+  try {
   const opts = Brain.options(g, p);
-  const best = Brain.bestSubset(g, p, opts);
+  const danger = Brain.danger(g, p);
+  let reserve = null;
+  if (danger.near) {
+    const r = Brain.reserveCard(g, p, []);
+    // only worth holding if it is not itself the best proactive play (e.g. lethal burn)
+    if (r && !opts.some((o) => o.card === r && o.score >= 50)) reserve = r;
+  }
+  let best = Brain.bestSubset(g, p, opts, reserve);
+  if (reserve && !best.set.length && !opts.length) reserve = null;
+  if (reserve) { if (g.step === 'main1' || true) { /* keep mana for the instant */ } }
   const set = best.set.slice().sort((a, b) => a.order - b.order || b.score - a.score);
   const post = g.step === 'main1';
   const holdNotes = [];
@@ -1902,7 +1950,9 @@ Brain.planMain = function (g, p) {
   if (counter) holdNotes.push(`You hold ${counter.name}: consider leaving ${counter.def.cmc} mana untapped on their turn so you can counter their best spell.`);
   const castable = opts.filter((o) => !set.includes(o)).sort((a, b) => b.score - a.score);
   void post;
-  return { steps: [...steps, ...set], land, opts, castable, notes: holdNotes, set };
+  if (reserve) holdNotes.unshift(`Danger: they can deal about ${danger.dmg} next turn and you're at ${p.life}. Holding ${reserve.name} mana open is better than tapping out.`);
+  return { steps: [...steps, ...set], land, opts, castable, notes: holdNotes, set, danger, reserve };
+  } finally { if (undo) undo(); }
 };
 // Next action for the *current* main phase. Returns an option/step or null (= nothing left to do / move to combat).
 Brain.nextMainAction = function (g, p) {
@@ -1939,12 +1989,15 @@ Brain.attackPlan = function (g, p, possible) {
   if (!possible.length) return res;
   const minD = Brain.minDamage(g, possible, blockers);
   const reach = Brain.burnReach(g, p);
-  if (minD >= opp.life) {
+  // lifelink blockers gain life at the same moment combat damage is dealt, so they can save the opponent from "exact" lethal
+  const llGain = sum(blockers.filter((b) => g.has(b, 'lifelink')), (b) => Math.max(0, g.power(b)));
+  const effLife = opp.life + llGain;
+  if (minD >= effLife) {
     res.lethal = true; res.notes.push('LETHAL');
     res.attackers = possible.map((c) => ({ card: c, reason: `Lethal: even with ${opp.name}'s best blocks, ${minD} damage gets through and they're at ${opp.life}.` }));
     return res;
   }
-  if (minD + reach >= opp.life && reach > 0) {
+  if (minD + reach >= effLife && reach > 0) {
     res.lethal = true; res.notes.push('LETHAL with burn');
     res.attackers = possible.map((c) => ({ card: c, reason: `Attack with everything: ${minD} combat damage + ${reach} burn from your hand is lethal (${opp.name} is at ${opp.life}).` }));
     return res;
@@ -2045,8 +2098,8 @@ Brain.blockPlan = function (g, p, attackers, blockers) {
   let guard = 0;
   while (guard++ < 10) {
     const rem = unblockedDamage();
-    if (rem < p.life - (p.life > 12 ? 0 : 2) && rem < p.life) break;
-    if (rem < p.life && p.life > 6) break;
+    if (p.life - rem > 3) break;
+    if (rem <= 0) break;
     const unblocked = order.filter((a) => !res.blocks.some((b) => b.attacker === a) && !g.has(a, 'menace'));
     const target = unblocked[0]; if (!target) break;
     const cands = blockers.filter((b) => !used.has(b) && g.canBlock(b, target)).sort((x, y) => Brain.cv(g, x) - Brain.cv(g, y));
@@ -2274,6 +2327,12 @@ Brain.endStepAdvice = function (g, p) {
     const f = c.def.fx; if (f && f.kind === 'damage' && !f.combatOnly && f.n !== 'x' && f.n >= opp.life) return { kind: 'cast', card: c, intent: { targets: [opp] }, reason: `${c.name} to the face for the win.`, principle: 'lethal' };
   }
   for (const c of insts) {
+    const f = c.def.fx; if (!f || !['damage', 'destroy', 'shrink'].includes(f.kind) || f.combatOnly || c.def.x) continue;
+    const spec = c.def.targets && c.def.targets[0]; if (!spec) continue;
+    const bk = bestKill(g, p, c, spec, f, 0);
+    if (bk && bk.v >= Brain.removalThreshold(g, p) + (f.kind === 'destroy' ? 1.8 : 0)) return { kind: 'cast', card: c, intent: { targets: [bk.t] }, reason: `End of their turn: ${c.name} kills ${describe(g, bk.t)} using mana that would otherwise go to waste, and you untap with all your mana free for your own turn.`, principle: 'mana-efficiency' };
+  }
+  for (const c of insts) {
     if (c.def.name === 'Opt' && spare >= 1) return { kind: 'cast', card: c, intent: { targets: [] }, reason: 'Cast Opt at end of turn: the mana would be wasted otherwise, and you dig toward the card you need.', principle: 'mana-efficiency' };
     if (c.def.name === 'Raise the Alarm' && spare >= 2) return { kind: 'cast', card: c, intent: { targets: [] }, reason: 'Make Soldiers at end of turn so they can attack on your turn without giving the opponent time to answer.', principle: 'mana-efficiency' };
     if (c.def.name === 'Spectral Sailor' && spare >= 1) return { kind: 'cast', card: c, intent: { targets: [] }, reason: 'Flash in Spectral Sailor at end of turn: it dodges sorcery-speed removal and attacks next turn.', principle: 'mana-efficiency' };
@@ -2480,10 +2539,15 @@ Coach.adviseMain = function (g, p) {
   if (lethalStep) { lesson = 'lethal'; }
   for (const s of plan.steps) {
     const why = s.reason.replace(/^(Cast|Play|Equip|Use|Activate|Crack|Bring|Spend) [^:—]*[:—]\s*/, '').replace(/^./, (ch) => ch.toUpperCase());
-    const later = g.step === 'main1' && s.kind !== 'land' && !s.pre;
+    const later = g.step === 'main1' && s.kind !== 'land' && !s.pre && g.creatures(p.idx).some((c) => g.canAttack(c));
     items.push({ text: (s.kind === 'land' ? `Play ${s.card.name}` : s.kind === 'cast' ? `Cast ${s.card.name}` : `Activate ${s.perm.name}`) + (later ? ' (after combat)' : ''), why: why + (later ? ' Cast it after combat in Main 2: the opponent has less information when deciding blocks, and your mana stays open for tricks during combat.' : '') });
     highlight.push((s.card || s.perm).id);
     if (!lethalStep && s.principle && ['removal', 'ramp', 'card-advantage', 'mana', 'tempo', 'reach'].includes(s.principle)) lesson = s.principle;
+  }
+  if (plan.danger && plan.danger.near) {
+    const d = plan.danger;
+    items.unshift({ text: d.lethal ? '⚠ You are facing lethal damage' : '⚠ You are under heavy pressure', why: `Their creatures can deal about ${d.dmg} damage next turn and you are at ${p.life}${d.lethal ? ' — that is lethal if you do nothing' : ''}. Priorities: keep blockers back, and hold instant-speed removal${plan.reserve ? ` (${plan.reserve.name})` : ''} with mana open instead of tapping out.` });
+    lesson = 'block';
   }
   const state = Coach.positionLine(g, p);
   const mana = g.availableMana(p);
@@ -2494,7 +2558,8 @@ Coach.adviseMain = function (g, p) {
     items.push({ text: 'Move to combat or pass the turn', why: p.hand.length ? 'None of your cards is a good play with the mana you have. Holding cards is fine — do not cast things just to cast them.' : 'Your hand is empty. Keep attacking where it is safe and topdeck.' });
   } else headline = (plan.land ? 'Land, then ' : '') + (post.length ? post.slice(0, 2).map((s) => (s.card || s.perm).name).join(' + ') : 'pass');
   const alts = [];
-  for (const o of plan.castable.slice(0, 2)) alts.push(`${o.card ? o.card.name : o.perm.name}: also playable, but it doesn't fit alongside the plan above (mana) or it scores lower.`);
+  const top = plan.set.reduce((a, s) => a + s.score, 0);
+  for (const o of plan.castable.slice(0, 2)) alts.push(`${o.card ? o.card.name : o.perm.name}: also castable (rated ${o.score.toFixed(1)}), but you can't afford it together with the plan above (plan rated ${top.toFixed(1)}). Pick it instead if you value ${g.isCreature(o.card || o.perm) ? 'a different body on the board' : 'its effect'} more.`);
   for (const n of plan.notes) alts.push(n);
   const unspent = mana - post.reduce((a, s) => a + (s.cost ? s.cost.generic + s.cost.W + s.cost.U + s.cost.B + s.cost.R + s.cost.G + s.cost.C : 0), 0) - (plan.land ? 1 : 0);
   if (post.length && unspent > 1 && p.hand.some((c) => !g.isLand(c))) alts.push(`After this plan you still have about ${Math.max(0, unspent)} mana unspent — normal if nothing else is castable.`);
@@ -2528,6 +2593,7 @@ Coach.adviseResponse = function (g, p) {
   const r = B.respond(g, p);
   if (r && r.kind !== 'skip') return { title: 'Respond?', headline: `Yes: ${r.card ? r.card.name : r.perm.name}`, items: [{ text: `Cast ${(r.card || r.perm).name}`, why: r.reason }], highlight: [(r.card || r.perm).id], lesson: r.principle === 'counter' ? 'counter' : (r.principle === 'protect' ? 'protect' : 'trick'), alternatives: ['Pass priority to let it resolve.'] };
   let why = 'You have nothing useful to respond with.';
+  if (!top) { const held = p.hand.filter((c) => g.hasFlash(c)); why = held.length ? `Nothing is worth casting right now. Keep ${held.slice(0, 2).map((c) => c.name).join(' / ')} for a better moment (combat, or in response to their spell).` : 'Nothing to respond to — just pass.'; return { title: 'Priority', headline: held.length ? 'Pass — keep your instants' : 'Pass priority', items: [{ text: 'Pass priority', why }], highlight: [], lesson: 'trick', alternatives: [] }; }
   if (top && top.kind === 'spell') {
     const cn = B.counterAdvice(g, p, top);
     if (cn && cn.kind === 'skip') why = cn.reason;
@@ -2733,7 +2799,9 @@ const UI = {
     const e = el('div', 'card'); e.dataset.id = c.id;
     const img = el('img', 'art'); img.alt = ''; img.draggable = false;
     e.append(UI.makeFace(d), img);
-    if (!d.token && Images.enabled) { img.dataset.name = d.name; Images.attach(img, d.name, opts.big ? 'normal' : 'small', (ok) => { if (ok) e.classList.add('has-art'); }); }
+    img.addEventListener('load', () => { if (img.getAttribute('src')) e.classList.add('has-art'); });
+    img.addEventListener('error', () => { e.classList.remove('has-art'); img.removeAttribute('src'); });
+    if (!d.token && Images.enabled) { img.dataset.name = d.name; Images.attach(img, d.name, opts.big ? 'normal' : 'small'); }
     e.append(el('div', 'mark'));
     return e;
   },
@@ -2763,6 +2831,7 @@ const UI = {
       const b = el('div', 'badge pt' + (c.damage ? ' dmg' : ch.power > base[0] || ch.toughness > base[1] ? ' buff' : ch.power < base[0] || ch.toughness < base[1] ? ' nerf' : ''), `${ch.power}/${t}`);
       e.append(b);
       if (g.isSick(c) && c.controller === 0) e.append(el('div', 'zz', '💤'));
+      if (g.has(c, 'cantAttack') && g.has(c, 'cantBlock')) e.append(el('div', 'zz', '🚫'));
     }
     const cn = Object.entries(c.counters).filter(([, v]) => v);
     if (onBf && cn.length) e.append(el('div', 'badge cnt', cn.map(([k, v]) => (k === 'p1p1' ? '+' + v : k === 'm1m1' ? '-' + v : v + k)).join(' ')));
@@ -2898,6 +2967,7 @@ const UI = {
     if (!UI.promptText) pb.classList.add('hidden');
   },
   setPrompt(text, buttons) {
+    UI.promptAt = Date.now();
     const pb = $('#promptBar'); UI.promptText = text;
     if (!text) { pb.classList.add('hidden'); pb.innerHTML = ''; return; }
     pb.classList.remove('hidden'); pb.innerHTML = '';
@@ -2984,16 +3054,24 @@ const UI = {
     UI.inspect(c, {});
   },
   onPlayerTap(pi) { if (UI.mode === 'target' && UI.legalSet.has(UI.g.players[pi])) UI.pickTarget(UI.g.players[pi]); },
-  pickTarget(t) { if (UI.targetRes) { const r = UI.targetRes; UI.targetRes = null; UI.legalSet = new Set(); UI.setPrompt(null); UI.mode = 'idle'; UI.highlight = new Set(); r([t]); UI.scheduleRender(); } },
+  pickTarget(t, confirmed) {
+    const sp = UI.targetSpec;
+    if (!confirmed && UI.targetRes && sp && sp.ai === 'harm' && (t.isPlayer ? t.idx === 0 : (t.kind !== 'spell' && t.controller === 0))) {
+      UI.modal({ center: true, title: 'Target yourself?', body: `<p>This effect is meant to hurt or hinder — you chose <b>${esc(t.isPlayer ? 'yourself' : t.name)}</b>. Are you sure?</p>`, buttons: [{ label: 'Pick again', value: false }, { label: 'Yes, target it', value: true, cls: 'primary' }] }).promise.then((v) => { if (v && UI.targetRes) UI.pickTarget(t, true); });
+      return;
+    }
+    if (UI.targetRes) { const r = UI.targetRes; UI.targetRes = null; UI.legalSet = new Set(); UI.setPrompt(null); UI.mode = 'idle'; UI.highlight = new Set(); r([t]); UI.scheduleRender(); } },
   act(action) { if (UI.priorityResolve) { const r = UI.priorityResolve; UI.priorityResolve = null; UI.mode = 'idle'; UI.highlight = new Set(); r(action); UI.scheduleRender(); return true; } UI.toast('Wait for your priority.'); return false; },
   mainButton() {
     const g = UI.g; const m = UI.mode;
+    if (Date.now() - (UI.promptAt || 0) < 350) return;   // ignore accidental double-taps right after a new prompt
     if (m === 'priority') {
       if (Settings.confirmEnd && g.active === 0 && g.step === 'main2' && !g.stack.length) {
         const p = g.players[0];
         const left = p.hand.filter((c) => !g.isLand(c) && !g.hasFlash(c) && g.canPay(p, c.def.costObj, 0));
         const land = p.hand.some((c) => g.isLand(c)) && p.landDrops > 0;
-        if (left.length || land) {
+        const holding = p.hand.some((c) => g.hasFlash(c) && g.canPay(p, c.def.costObj, 0));
+        if ((left.length || land) && !(holding && !land)) {
           const msg = (land ? 'You still have a land drop. ' : '') + (left.length ? `You have ${g.availableMana(p)} mana and could cast ${left.slice(0, 3).map((c) => c.name).join(', ')}. ` : '');
           UI.modal({ center: true, title: 'End turn?', body: `<p>${esc(msg)}Ending the turn now wastes that mana.</p>`, buttons: [{ label: 'Go back', value: false }, { label: 'End turn', value: true, cls: 'primary' }] }).promise.then((v) => { if (v) { UI.endTurnNote(); UI.act({ type: 'pass' }); } });
           return;
@@ -3102,7 +3180,7 @@ const UI = {
   },
   async priority(g, p) {
     if (UI.autoPass(g, p)) { await sleep(g.pace ? 40 : 0); return { type: 'pass' }; }
-    UI.closeInspect(); UI.mode = 'priority';
+    UI.closeInspect(); UI.mode = 'priority'; UI.promptAt = Date.now();
     const isMain = g.active === 0 && g.isMain() && !g.stack.length;
     UI.setAdviceCtx(isMain ? 'main' : 'respond');
     if (g.stack.length && g.stack[g.stack.length - 1].controller !== 0 && Settings.hints) UI.toast(`Opponent cast ${g.stack[g.stack.length - 1].card ? g.stack[g.stack.length - 1].card.name : 'an ability'} — respond or pass.`, 2200);
@@ -3113,7 +3191,7 @@ const UI = {
   targeting(g, p, spec, o) {
     return new Promise((resolve) => {
       if (o.forced && o.legal.length === 1) return resolve([o.legal[0]]);
-      UI.closeInspect(); UI.mode = 'target'; UI.legalSet = new Set(o.legal); UI.targetRes = resolve; UI.targetCancel = !o.forced;
+      UI.closeInspect(); UI.mode = 'target'; UI.targetSpec = spec; UI.legalSet = new Set(o.legal); UI.targetRes = resolve; UI.targetCancel = !o.forced;
       UI.setAdviceCtx('target', { spec, o });
       UI.setPrompt(`${o.label ? o.label + ': ' : ''}choose ${spec.label || 'a target'}.`, UI.advice && Settings.hints ? [{ label: 'Coach pick', onclick: () => { if (UI.advice.pick) UI.pickTarget(UI.advice.pick); } }] : []);
       UI.render();

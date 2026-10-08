@@ -107,10 +107,15 @@ Coach.adviseMain = function (g, p) {
   if (lethalStep) { lesson = 'lethal'; }
   for (const s of plan.steps) {
     const why = s.reason.replace(/^(Cast|Play|Equip|Use|Activate|Crack|Bring|Spend) [^:—]*[:—]\s*/, '').replace(/^./, (ch) => ch.toUpperCase());
-    const later = g.step === 'main1' && s.kind !== 'land' && !s.pre;
+    const later = g.step === 'main1' && s.kind !== 'land' && !s.pre && g.creatures(p.idx).some((c) => g.canAttack(c));
     items.push({ text: (s.kind === 'land' ? `Play ${s.card.name}` : s.kind === 'cast' ? `Cast ${s.card.name}` : `Activate ${s.perm.name}`) + (later ? ' (after combat)' : ''), why: why + (later ? ' Cast it after combat in Main 2: the opponent has less information when deciding blocks, and your mana stays open for tricks during combat.' : '') });
     highlight.push((s.card || s.perm).id);
     if (!lethalStep && s.principle && ['removal', 'ramp', 'card-advantage', 'mana', 'tempo', 'reach'].includes(s.principle)) lesson = s.principle;
+  }
+  if (plan.danger && plan.danger.near) {
+    const d = plan.danger;
+    items.unshift({ text: d.lethal ? '⚠ You are facing lethal damage' : '⚠ You are under heavy pressure', why: `Their creatures can deal about ${d.dmg} damage next turn and you are at ${p.life}${d.lethal ? ' — that is lethal if you do nothing' : ''}. Priorities: keep blockers back, and hold instant-speed removal${plan.reserve ? ` (${plan.reserve.name})` : ''} with mana open instead of tapping out.` });
+    lesson = 'block';
   }
   const state = Coach.positionLine(g, p);
   const mana = g.availableMana(p);
@@ -121,7 +126,8 @@ Coach.adviseMain = function (g, p) {
     items.push({ text: 'Move to combat or pass the turn', why: p.hand.length ? 'None of your cards is a good play with the mana you have. Holding cards is fine — do not cast things just to cast them.' : 'Your hand is empty. Keep attacking where it is safe and topdeck.' });
   } else headline = (plan.land ? 'Land, then ' : '') + (post.length ? post.slice(0, 2).map((s) => (s.card || s.perm).name).join(' + ') : 'pass');
   const alts = [];
-  for (const o of plan.castable.slice(0, 2)) alts.push(`${o.card ? o.card.name : o.perm.name}: also playable, but it doesn't fit alongside the plan above (mana) or it scores lower.`);
+  const top = plan.set.reduce((a, s) => a + s.score, 0);
+  for (const o of plan.castable.slice(0, 2)) alts.push(`${o.card ? o.card.name : o.perm.name}: also castable (rated ${o.score.toFixed(1)}), but you can't afford it together with the plan above (plan rated ${top.toFixed(1)}). Pick it instead if you value ${g.isCreature(o.card || o.perm) ? 'a different body on the board' : 'its effect'} more.`);
   for (const n of plan.notes) alts.push(n);
   const unspent = mana - post.reduce((a, s) => a + (s.cost ? s.cost.generic + s.cost.W + s.cost.U + s.cost.B + s.cost.R + s.cost.G + s.cost.C : 0), 0) - (plan.land ? 1 : 0);
   if (post.length && unspent > 1 && p.hand.some((c) => !g.isLand(c))) alts.push(`After this plan you still have about ${Math.max(0, unspent)} mana unspent — normal if nothing else is castable.`);
@@ -155,6 +161,7 @@ Coach.adviseResponse = function (g, p) {
   const r = B.respond(g, p);
   if (r && r.kind !== 'skip') return { title: 'Respond?', headline: `Yes: ${r.card ? r.card.name : r.perm.name}`, items: [{ text: `Cast ${(r.card || r.perm).name}`, why: r.reason }], highlight: [(r.card || r.perm).id], lesson: r.principle === 'counter' ? 'counter' : (r.principle === 'protect' ? 'protect' : 'trick'), alternatives: ['Pass priority to let it resolve.'] };
   let why = 'You have nothing useful to respond with.';
+  if (!top) { const held = p.hand.filter((c) => g.hasFlash(c)); why = held.length ? `Nothing is worth casting right now. Keep ${held.slice(0, 2).map((c) => c.name).join(' / ')} for a better moment (combat, or in response to their spell).` : 'Nothing to respond to — just pass.'; return { title: 'Priority', headline: held.length ? 'Pass — keep your instants' : 'Pass priority', items: [{ text: 'Pass priority', why }], highlight: [], lesson: 'trick', alternatives: [] }; }
   if (top && top.kind === 'spell') {
     const cn = B.counterAdvice(g, p, top);
     if (cn && cn.kind === 'skip') why = cn.reason;
