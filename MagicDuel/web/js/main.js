@@ -5,7 +5,7 @@ const MTG = (globalThis.MTG = globalThis.MTG || {});
 const { UI, Decks, Coach, Settings, Images } = MTG;
 const $ = (s, r) => (r || document).querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = (s) => UI.emojiText(String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
 const PIPE = { W: '⚪', U: '🔵', B: '⚫', R: '🔴', G: '🟢', C: '◆' };
 const pips = (cols) => `<span class="pips" style="font-size:15px">${(cols.length ? cols : ['C']).map((c) => PIPE[c]).join('')}</span>`;
 

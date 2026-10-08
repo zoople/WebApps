@@ -6,7 +6,12 @@ const { Brain, Coach, Images } = MTG;
 const $ = (s, r) => (r || document).querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const EMO = { W: '⚪', U: '🔵', B: '⚫', R: '🔴', G: '🟢', C: '◆', T: '↷', X: 'Ⓧ', S: '❄️' };
+const CIRC = '⓪①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+// {W} {T} {2} ... -> emoji; also handles raw cost strings via emojiCost
+function emojiText(s) { return String(s).replace(/\{([WUBRGCTXS]|\d+)\}/g, (m, k) => (EMO[k] || (+k <= 20 ? CIRC[+k] : k))); }
+function emojiCost(c) { return String(c).replace(/[0-9]+|[WUBRGCX]/g, (m) => EMO[m] || (+m <= 20 ? CIRC[+m] : m)); }
+const esc = (s) => emojiText(String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
 const COLOR_HEX = { W: '#f4edcf', U: '#2f80d8', B: '#6a5a78', R: '#d9553f', G: '#3fa564', C: '#a9a9b3' };
 
 /* ---------- settings ---------- */
@@ -70,7 +75,7 @@ const UI = {
   priorityResolve: null, advice: null, advCtx: null, lastAdviceKey: '', gameOver: false, dialogs: [], human: null,
 
   /* ----- basic infra ----- */
-  toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(UI._tt); UI._tt = setTimeout(() => t.classList.add('hidden'), ms || 2600); },
+  toast(msg, ms) { const t = $('#toast'); t.textContent = emojiText(msg); t.classList.remove('hidden'); clearTimeout(UI._tt); UI._tt = setTimeout(() => t.classList.add('hidden'), ms || 2600); },
   showScreen(id) { document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === 'screen-' + id)); UI.screen = id; },
   modal(opts) {
     const root = $('#modal-root');
@@ -278,7 +283,7 @@ const UI = {
     const pb = $('#promptBar'); UI.promptText = text;
     if (!text) { pb.classList.add('hidden'); pb.innerHTML = ''; return; }
     pb.classList.remove('hidden'); pb.innerHTML = '';
-    pb.append(el('div', 'ptxt', text));
+    pb.append(el('div', 'ptxt', emojiText(text)));
     for (const bt of buttons || []) { const x = el('button', bt.cls || '', bt.label); x.onclick = bt.onclick; pb.append(x); }
   },
 
@@ -423,10 +428,10 @@ const UI = {
     const addAct = (label, sub, enabled, fn) => { const b = el('button', 'abtn', `${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ''}`); b.disabled = !enabled; b.onclick = () => { m.close(null); fn(); }; acts.append(b); };
     if (c.zone === 'hand' && c.owner === 0) {
       if (g.isLand(c)) { const ck = g.canCast(me, c); addAct('Play land', ck.ok ? 'Put it onto the battlefield' : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'land', card: c })); }
-      else { const ck = g.canCast(me, c); addAct(`Cast ${d.name}`, ck.ok ? (d.cost ? 'Cost: ' + d.cost : '') : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'cast', card: c })); }
+      else { const ck = g.canCast(me, c); addAct(`Cast ${d.name}`, ck.ok ? (d.cost ? 'Cost: ' + emojiCost(d.cost) : '') : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'cast', card: c })); }
     }
     const abilityZone = c.zone === 'battlefield' ? c.controller === 0 : (c.zone === 'graveyard' && c.owner === 0);
-    if (abilityZone) d.abilities.forEach((ab, i) => { if (ab.mana) return; const ck = g.abilityUsable(me, c, i); addAct(ab.text || 'Ability', ab.cost && ab.cost.mana ? 'Cost: ' + ab.cost.mana + (ab.cost.tap ? ', tap' : '') : (ab.cost && ab.cost.tap ? 'Tap' : ''), ck.ok && !waiting, () => UI.act({ type: 'activate', perm: c, idx: i })); });
+    if (abilityZone) d.abilities.forEach((ab, i) => { if (ab.mana) return; const ck = g.abilityUsable(me, c, i); addAct(ab.text || 'Ability', ab.cost && ab.cost.mana ? 'Cost: ' + emojiCost(ab.cost.mana) + (ab.cost.tap ? ', ↷ tap' : '') : (ab.cost && ab.cost.tap ? '↷ Tap' : ''), ck.ok && !waiting, () => UI.act({ type: 'activate', perm: c, idx: i })); });
     if (acts.children.length) body.append(acts);
     UI.closeInspect();
     const m = UI.modal({ title: '', body, closable: true, buttons: [{ label: 'Close', cls: 'ghost', value: null }], onClose: () => { if (UI.inspectModal === m) UI.inspectModal = null; } });
@@ -632,7 +637,7 @@ class HumanController {
 }
 MTG.HumanController = HumanController;
 
-UI.manaHTML = manaHTML;
+UI.manaHTML = manaHTML; UI.emojiText = emojiText; UI.emojiCost = emojiCost;
 UI.showScreenGame = () => { UI.showScreen('game'); };
 UI.bindGame = function (g) {
   UI.g = g; UI.cardEls.clear(); UI.landEls.clear(); UI.logLines = []; UI.coachNotes = []; UI.mode = 'idle'; UI.highlight = new Set(); UI.lastLife = [null, null]; UI.advCtx = null; UI.advice = null; UI.gameOver = false;
