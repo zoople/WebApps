@@ -220,15 +220,22 @@ const AU = {
     this.noiseBuf = nb;
     // continuous crowd bed (murmur → roar)
     this.bed = c.createGain(); this.bed.gain.value = 0; this.bed.connect(this.crowdBus);
-    const mk = (f, q, off) => {
+    const mk = (f, q, off) => {  // gentle filtered noise
       const s = c.createBufferSource(); s.buffer = nb; s.loop = true;
       const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
       const g = c.createGain(); s.connect(bp); bp.connect(g); g.connect(this.bed); s.start(0, off); return { bp, g };
     };
-    this.bedLow = mk(520, 0.6, 0);  this.bedLow.g.gain.value = 1.0;
-    this.bedMid = mk(1500, 0.5, 1.1); this.bedMid.g.gain.value = 0.0;
-    this.bedHi  = mk(3200, 0.7, 2.0); this.bedHi.g.gain.value = 0.0;
-    this.voiceBus = c.createGain(); this.voiceBus.gain.value = 1; this.voiceBus.connect(this.crowdBus);
+    this.bedLow = mk(520, 0.4, 0);  this.bedLow.g.gain.value = 1.0;
+    this.bedMid = mk(1300, 0.35, 1.1); this.bedMid.g.gain.value = 0.0;
+    this.bedHi  = mk(2400, 0.4, 2.0); this.bedHi.g.gain.value = 0.0;
+    // voices: softened by a low-pass and blended into a hall-like reverb so they never poke out
+    this.voiceBus = c.createGain(); this.voiceBus.gain.value = 1;
+    const vlp = c.createBiquadFilter(); vlp.type = 'lowpass'; vlp.frequency.value = 1900; vlp.Q.value = 0.4;
+    this.voiceBus.connect(vlp); vlp.connect(this.crowdBus);
+    const il = Math.floor(c.sampleRate * 2.2), ib = c.createBuffer(2, il, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++){ const d = ib.getChannelData(ch); for (let i = 0; i < il; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / il, 2.5); }
+    const rev = c.createConvolver(); rev.buffer = ib; const wet = c.createGain(); wet.gain.value = 0.7;
+    vlp.connect(rev); rev.connect(wet); wet.connect(this.crowdBus);
     this.startMusic();
   },
   tone(f, t, dur, {type='square', vol=0.1, to=null, bus=this.sfxBus, lp=null}={}){
@@ -253,12 +260,13 @@ const AU = {
     const t0 = c.currentTime + delay, F = FORMANT[kind] || FORMANT.ooh;
     const out = c.createGain();
     out.gain.setValueAtTime(0.0001, t0);
-    out.gain.linearRampToValueAtTime(vol * 2.2, t0 + attack);
-    out.gain.setValueAtTime(vol * 2.2, t0 + Math.max(attack, dur * 0.45));
-    out.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    attack = Math.max(attack, 0.3);
+    out.gain.linearRampToValueAtTime(vol * 1.0, t0 + attack);
+    out.gain.setValueAtTime(vol * 1.0, t0 + Math.max(attack, dur * 0.4));
+    out.gain.linearRampToValueAtTime(0.0001, t0 + dur);
     out.connect(this.voiceBus);
     const mix = c.createGain(); mix.gain.value = 1 / n;
-    F.forEach((f, k) => { const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 4.5;
+    F.forEach((f, k) => { const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 2.5;
       const g = c.createGain(); g.gain.value = k ? 0.7 : 1; mix.connect(bp); bp.connect(g); g.connect(out); });
     for (let i = 0; i < n; i++){
       const o = c.createOscillator(); o.type = 'sawtooth';
@@ -272,7 +280,7 @@ const AU = {
     // breath
     const s = c.createBufferSource(); s.buffer = this.noiseBuf;
     const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = F[1]; bp.Q.value = 1.2;
-    const g = c.createGain(); g.gain.value = 0.35; s.connect(bp); bp.connect(g); g.connect(out);
+    const g = c.createGain(); g.gain.value = 0.12; s.connect(bp); bp.connect(g); g.connect(out);
     s.start(t0, Math.random() * 2); s.stop(t0 + dur + 0.1);
   },
   ooh(i=0.6){ this.voice('ooh', { dur:1.0 + i*0.9, vol:0.22 + i*0.3, pitch:230, glide:1.25, n:6 }); },       // rising "ooooh"
@@ -282,14 +290,14 @@ const AU = {
     const c = this.ctx; if (!c) return;
     this.voice('woo', { dur:1.4 + i, vol:0.3 + i*0.35, pitch:260, glide:1.6, n:9, attack:0.1 });
     this.voice('aah', { dur:1.8 + i*1.5, vol:0.25 + i*0.3, pitch:200, glide:1.15, n:9, delay:0.1 });
-    if (this.crowdOn) this.noiseHit(c.currentTime, 1.6 + i, { f:2200, q:0.6, vol:0.18*i, bus:this.crowdBus });
+    if (this.crowdOn) this.noiseHit(c.currentTime, 1.6 + i, { f:1500, q:0.4, vol:0.04*i, bus:this.crowdBus });
   },
   applause(sec=3, dens=1){
     const c = this.ctx; if (!c || !this.crowdOn) return;
-    const t0 = c.currentTime, count = Math.floor(sec * 38 * dens);
+    const t0 = c.currentTime, count = Math.floor(sec * 22 * dens);
     for (let i = 0; i < count; i++){
       const t = t0 + Math.random() * sec, env = Math.sin(Math.PI * Math.min(1, (t - t0) / sec * 0.9 + 0.05));
-      this.noiseHit(t, 0.03 + Math.random() * 0.03, { f:1800 + Math.random()*2500, q:1.2, type:'highpass', vol:0.07*env, bus:this.crowdBus });
+      this.noiseHit(t, 0.03 + Math.random() * 0.03, { f:1400 + Math.random()*1400, q:0.7, type:'bandpass', vol:0.03*env, bus:this.crowdBus });
     }
   },
   beep(f=880, dur=0.18){ const c = this.ctx; if (c) this.tone(f, c.currentTime, dur, { type:'square', vol:0.12, lp:3000 }); },
@@ -307,12 +315,12 @@ const AU = {
   setLevel(ex, time){
     const c = this.ctx; if (!c) return;
     const now = c.currentTime;
-    const wob = 1 + 0.14 * Math.sin(time * 2.1) + 0.09 * Math.sin(time * 5.3 + 1);
-    const lvl = (this.crowdOn ? CFG.crowdVolume : 0) * (0.02 + 0.5 * Math.pow(ex, 1.3)) * wob;
-    this.bed.gain.setTargetAtTime(lvl, now, 0.12);
-    this.bedMid.g.gain.setTargetAtTime(clamp((ex - 0.25) * 1.6, 0, 1), now, 0.2);
-    this.bedHi.g.gain.setTargetAtTime(clamp((ex - 0.5) * 1.8, 0, 1) * 0.8, now, 0.2);
-    this.bedLow.bp.frequency.setTargetAtTime(420 + ex * 450, now, 0.3);
+    const wob = 1 + 0.07 * Math.sin(time * 0.9) + 0.04 * Math.sin(time * 2.3 + 1);
+    const lvl = (this.crowdOn ? CFG.crowdVolume : 0) * (0.02 + 0.3 * Math.pow(ex, 1.3)) * wob;
+    this.bed.gain.setTargetAtTime(lvl, now, 0.5);
+    this.bedMid.g.gain.setTargetAtTime(clamp((ex - 0.25) * 1.0, 0, 1), now, 0.5);
+    this.bedHi.g.gain.setTargetAtTime(clamp((ex - 0.5) * 1.4, 0, 1) * 0.3, now, 0.5);
+    this.bedLow.bp.frequency.setTargetAtTime(420 + ex * 300, now, 0.6);
     this.crowdBus.gain.setTargetAtTime(this.crowdOn ? 1 : 0, now, 0.05);
     this.musicBus.gain.setTargetAtTime(this.musicOn ? CFG.musicVolume * 0.8 : 0, now, 0.05);
     this.voiceBus.gain.value = CFG.crowdVolume;
@@ -382,7 +390,7 @@ const grassPattern = (() => {
 
 /* ───────────────────────── Race state ───────────────────────── */
 let state = 'setup';          // setup | countdown | racing
-let horses = [], hist = [], cross = [], order = [], finishRank = [];
+let horses = [], hist = [], cross = [], order = [], finishRank = [], events = [], evPtr = 0, lastStumCap = -9;
 let timeScale = 1, v0 = 1, raceT = 0, cdT = 0, animT = 0;
 let camTop = 0, zoomMul = 1, ex = 0.1, surge = 0, gateOpen = 0, paused = false;
 let flash = 0, caption = { text:'', t:0 }, prevLeader = -1, prevTop3 = '', lastReact = 0, lastLeadCap = -9, nextTension = 6;
@@ -392,39 +400,53 @@ const cur = { pos:new Float32Array(N), vel:new Float32Array(N) };
 
 function setCaption(text){ caption = { text, t:2.6 }; }
 
+const HURDLES = [1500, 2700, 3900, 5100, 6300, 7500];   // world y of each hurdle (same in every lane)
+const CLIP_CHANCE = 0.10;       // chance a horse clips any given hurdle
+const TRIP_CHANCE = 0.20;       // chance a horse trips somewhere during a race
+
+/* Every horse is identical: same ability, same odds of clipping a hurdle, same odds of tripping.
+   Only the dice differ. */
 function simulate(D, drama, seed){
   const rnd = mulberry32(seed), R = (a, b) => a + (b - a) * rnd();
-  const v0 = FP / D, rubber = (0.25 + rnd() * 1.15) * drama;
+  const v0 = FP / D, rubber = (0.25 + rnd() * 1.15) * drama, tscale = clamp(D / 60, 0.5, 2.5);
   const P = [];
   for (let i = 0; i < N; i++) P.push({
-    base: 1 + R(-0.025, 0.025) * Math.min(1.5, drama + 0.3),
-    style: R(-1, 1), kick: R(0, 0.05) * drama,
     waves: [[0.050, R(.25,.45)*D, R(0,6.28)], [0.040, R(.10,.20)*D, R(0,6.28)], [0.022, R(.04,.08)*D, R(0,6.28)]],
   });
-  const pos = new Float32Array(N), h = [pos.slice()], cr = new Array(N).fill(null);
-  const maxSteps = Math.ceil(D * 2.2 / SIM_DT);
+  const tripP = 1 - Math.pow(1 - TRIP_CHANCE, SIM_DT / (D * 0.9));
+  const pos = new Float32Array(N), h = [pos.slice()], cr = new Array(N).fill(null), evs = [], stum = new Array(N).fill(null);
+  const maxSteps = Math.ceil(D * 2.4 / SIM_DT);
+  const addStumble = (i, t, type) => {
+    const e = { i, t, t0: t, type, sev: type === 'clip' ? R(0.35, 0.65) : R(0.25, 0.6), dur: R(1.0, 2.0) * tscale };
+    stum[i] = e; evs.push(e);
+  };
   for (let step = 1; step < maxSteps; step++){
     const t = step * SIM_DT;
     let lead = 0, mean = 0; for (let i = 0; i < N; i++){ lead = Math.max(lead, pos[i]); mean += pos[i] / N; }
     const next = pos.slice();
     for (let i = 0; i < N; i++){
-      const p = P[i], fr = pos[i] / FP; let m = p.base;
+      const p = P[i], fr = pos[i] / FP; let m = 1;
       let w = 0; for (const [a, T, ph] of p.waves) w += a * Math.sin(6.2832 * t / T + ph);
       m *= 1 + w * drama;
-      m *= 1 + p.style * (0.5 - fr) * 0.10 * drama;
-      if (fr > 0.85) m *= 1 + p.kick * smooth((fr - 0.85) / 0.15);
       const behind = clamp((lead - pos[i]) / FP, 0, 0.25), ahead = clamp((pos[i] - mean) / FP, 0, 0.25);
       m *= 1 + rubber * (2.2 * behind) - rubber * (0.9 * ahead);
-      const s = clamp(pos[i] / (FP * 0.04), 0, 1); m *= 0.3 + 0.7 * s * (2 - s);
+      const s0 = clamp(pos[i] / (FP * 0.04), 0, 1); m *= 0.3 + 0.7 * s0 * (2 - s0);
+      // stumbles: sharp slowdown, then recovery
+      const st = stum[i];
+      if (st){ const u = (t - st.t0) / st.dur; if (u >= 1) stum[i] = null; else m *= 1 - st.sev * (1 - u) * (1 - u); }
+      else if (fr > 0.05 && fr < 0.93 && rnd() < tripP) addStumble(i, t, 'trip');
       if (pos[i] > FP) m *= Math.max(0.04, 1 - (pos[i] - FP) / 170);
       next[i] = pos[i] + v0 * m * SIM_DT;
+      // hurdles (nose crosses at pos = y + 9)
+      for (const hy of HURDLES) if (pos[i] < hy + 9 && next[i] >= hy + 9 && rnd() < CLIP_CHANCE) addStumble(i, t, 'clip');
       if (cr[i] === null && next[i] >= FP) cr[i] = t - SIM_DT * (next[i] - FP) / (next[i] - pos[i]);
     }
     pos.set(next); h.push(pos.slice());
     if (cr.every(x => x !== null) && t > Math.max(...cr) + 4) break;
   }
   for (let i = 0; i < N; i++) if (cr[i] === null) cr[i] = h.length * SIM_DT;
-  return { hist: h, cross: cr, v0 };
+  evs.sort((a, b) => a.t - b.t);
+  return { hist: h, cross: cr, v0, events: evs };
 }
 function sampleAt(tau){
   const f = clamp(tau / SIM_DT, 0, hist.length - 1.001), k = Math.floor(f), a = f - k;
@@ -441,10 +463,10 @@ function startRace(){
   AU.init();
   raceDur = CFG.duration;
   const sim = simulate(raceDur, CFG.drama, (Math.random() * 1e9) | 0);
-  hist = sim.hist; cross = sim.cross; v0 = sim.v0;
+  hist = sim.hist; cross = sim.cross; v0 = sim.v0; events = sim.events; evPtr = 0; lastStumCap = -9;
   const tw = Math.min(...cross); timeScale = tw / raceDur;
   finishRank = [...Array(N).keys()].sort((a, b) => cross[a] - cross[b] || Math.random() - .5);
-  horses = names.map((name, i) => ({ i, name, coat:COATS[i], silk:SILKS[i], phase:Math.random()*6, wob:Math.random()*6, x:laneX(i), dy:0 }));
+  horses = names.map((name, i) => ({ i, name, coat:COATS[i], silk:SILKS[i], phase:Math.random()*6, wob:Math.random()*6, x:laneX(i), dy:0, stum:null, jump:0, st:0 }));
   raceT = 0; cdT = 0; gateOpen = 0; flash = 0; ex = 0.1; surge = 0; particles = []; confetti = [];
   prevLeader = -1; prevTop3 = ''; lastReact = 0; lastLeadCap = -9; nextTension = 6;
   winnerFired = resultShown = swelled = false; midRoar = 0; cdBeeped = -1; lastMilestone = 0;
@@ -522,16 +544,20 @@ function update(dt){
   ex += (target - ex) * (1 - Math.exp(-dt * (target > ex ? 2.6 : 0.8)));
   AU.setLevel(ex, animT);
 
+  // ── hurdles & stumbles ──
+  const tau = raceT * timeScale;
+  while (evPtr < events.length && events[evPtr].t <= tau) onStumble(events[evPtr++]);
+
   // ── reactions ──
   const leader = order[0], top3 = order.slice(0, 3).join(',');
-  if (prog > 0.04 && raceT - lastReact > 1.4){
+  if (prog > 0.04 && raceT - lastReact > 3){
     if (prevLeader >= 0 && leader !== prevLeader){
       const strong = 0.45 + closeness * 0.55;
-      AU.ooh(strong); if (closeness > 0.4) AU.gasp(strong);
+      AU.ooh(strong * 0.8);
       surge = Math.min(0.5, surge + 0.12 + closeness * 0.12); lastReact = raceT;
       if (raceT - lastLeadCap > 3){ setCaption(`${horses[leader].name} takes the lead!`); lastLeadCap = raceT; }
-    } else if (prevTop3 && top3 !== prevTop3 && closeness > 0.25){
-      Math.random() < 0.5 ? AU.ooh(0.35 + closeness * 0.4) : AU.aah(0.35 + closeness * 0.4);
+    } else if (prevTop3 && top3 !== prevTop3 && closeness > 0.4){
+      Math.random() < 0.5 ? AU.ooh(0.3 + closeness * 0.3) : AU.aah(0.3 + closeness * 0.3);
       surge = Math.min(0.5, surge + 0.06); lastReact = raceT;
     }
   }
@@ -541,12 +567,12 @@ function update(dt){
     const i = (closeness - 0.3);
     const r = Math.random();
     if (r < 0.45) AU.ooh(i); else if (r < 0.8) AU.aah(i); else AU.gasp(i);
-    nextTension = raceT + 2.6 + Math.random() * 3.2;
+    nextTension = raceT + 5 + Math.random() * 5;
   }
   if (ex > 0.6 && raceT > midRoar){            // occasional whoop when the place is lively
-    AU.cheer(0.25 + ex * 0.35); midRoar = raceT + 5 + Math.random() * 5;
+    AU.cheer(0.2 + ex * 0.2); midRoar = raceT + 10 + Math.random() * 8;
   } else if (midRoar === 0) midRoar = raceT + 8;
-  if (!swelled && prog > 0.9 && closeness > 0.45){ swelled = true; AU.voice('ooh', { dur:3, vol:0.4, pitch:200, glide:1.6, n:9, attack:1.2 }); setCaption('DOWN TO THE WIRE!'); }
+  if (!swelled && prog > 0.9 && closeness > 0.45){ swelled = true; AU.voice('ooh', { dur:3.5, vol:0.3, pitch:200, glide:1.6, n:9, attack:1.2 }); setCaption('DOWN TO THE WIRE!'); }
   const ms = Math.floor(prog * 4);
   if (ms > lastMilestone){ lastMilestone = ms; if (ms === 2) setCaption('Halfway!'); if (ms === 3) setCaption('Final furlongs…'); }
 
@@ -568,6 +594,10 @@ function update(dt){
     h.vn = clamp(v / (v0 * 1.12), 0, 1.25);
     h.dy = cur.pos[h.i] + START_Y;
     h.dx = h.x + Math.sin(h.wob * 0.9 + h.i * 2) * 5;
+    h.jump = 0; const nose = h.dy + NOSE;
+    for (const hy of HURDLES){ const u = (nose - (hy - 30)) / 70; if (u > 0 && u < 1){ h.jump = Math.sin(Math.PI * u); break; } }
+    h.st = 0;
+    if (h.stum){ const u = (tau - h.stum.t0) / h.stum.dur; if (u >= 1) h.stum = null; else h.st = Math.sin(u * 16) * (1 - u) * Math.min(1, h.stum.sev * 1.8); }
     if (h.vn > 0.35 && Math.random() < dt * 40 * h.vn){
       particles.push({ x:h.dx + (Math.random() - .5) * 12, y:h.dy - 22, vx:(Math.random() - .5) * 20, vy:-v * 0.12 - Math.random() * 25,
         life:0.7, c:Math.random() < .5 ? '#3f6d2c' : '#8a6a44' });
@@ -588,6 +618,22 @@ function update(dt){
   const lead = cur.pos[leader];
   const closeFinish = prog > 0.92 && prog < 1 && closeness > 0.4 ? 1 : 0;
   followCamera(dt, lead, closeFinish);
+}
+
+function onStumble(e){
+  const h = horses[e.i], rank = order.indexOf(e.i);
+  h.stum = e;
+  const x = h.dx ?? h.x, y = (h.dy ?? 0) + (e.type === 'clip' ? NOSE : 0);
+  for (let k = 0; k < (e.type === 'clip' ? 16 : 10); k++)
+    particles.push({ x:x + (Math.random() - .5) * 14, y, vx:(Math.random() - .5) * 120, vy:(Math.random() - .3) * 90, life:0.9,
+      c:e.type === 'clip' ? (Math.random() < .5 ? '#c79a5a' : '#2f7d32') : '#8a6a44' });
+  const weight = rank < 3 ? 1 : rank < 6 ? 0.6 : 0.35;
+  AU.aah(0.25 + weight * 0.35);
+  if (rank < 3 && e.sev > 0.4) AU.gasp(0.3 + weight * 0.3);
+  surge = Math.min(0.5, surge + 0.07 * weight);
+  if (raceT - lastStumCap > 2.2 && (rank < 6 || e.sev > 0.5)){
+    setCaption(`${h.name} ${e.type === 'clip' ? 'clips the hurdle!' : 'stumbles!'}`); lastStumCap = raceT;
+  }
 }
 
 function followCamera(dt, leadPos, closeFinish){
@@ -700,6 +746,19 @@ function drawCourse(yTop, yBot){
     textW(`${m}m`, HALF - 26, y + 9, 12, 'rgba(255,255,255,.7)');
     textW(`${m}m`, -HALF + 26, y + 9, 12, 'rgba(255,255,255,.7)');
   }
+  // hurdles
+  for (const hy of HURDLES){
+    if (hy > yTop + 20 || hy < yBot - 20) continue;
+    for (let i = 0; i < N; i++){
+      const x = -HALF + i * LANE_W + 5, w = LANE_W - 10;
+      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(x + 2, hy - 7, w, 8);
+      ctx.fillStyle = '#2f7d32'; ctx.fillRect(x, hy - 3.5, w, 7);
+      ctx.fillStyle = '#4fa24a'; for (let k = 0; k < w; k += 5) ctx.fillRect(x + k, hy + 1, 3, 3);
+      ctx.fillStyle = '#f4f4f0'; ctx.fillRect(x - 1, hy - 1.5, w + 2, 3);
+      ctx.fillStyle = '#d6501f'; for (let k = 0; k < w + 2; k += 12) ctx.fillRect(x - 1 + k, hy - 1.5, 6, 3);
+      ctx.fillStyle = '#6b4a2b'; ctx.fillRect(x - 2, hy - 4, 3, 8); ctx.fillRect(x + w - 1, hy - 4, 3, 8);
+    }
+  }
   // start line
   ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(-HALF, -1.5, TRACK_W, 3);
   // finish line (checkers) + text
@@ -785,9 +844,12 @@ function drawGates(yTop, yBot){
 }
 
 function drawHorse(h, x, y, vn){
-  const c = h.coat, sk = h.silk, ph = h.phase, amp = 2 + 6 * Math.min(1, vn);
+  const c = h.coat, sk = h.silk, ph = h.phase, amp = (2 + 6 * Math.min(1, vn)) * (1 - 0.55 * (h.jump || 0)) * (1 + 0.5 * Math.abs(h.st || 0));
+  const jmp = h.jump || 0, stm = h.st || 0;
   ctx.save(); ctx.translate(x, y);
-  ctx.fillStyle = 'rgba(0,0,0,.24)'; ell(5, -2, 10.5, 25);
+  ctx.fillStyle = 'rgba(0,0,0,.24)'; ell(5 + jmp * 7, -2 - jmp * 5, 10.5, 25);
+  if (stm) ctx.rotate(stm * 0.38);
+  if (jmp) ctx.scale(1 + 0.24 * jmp, 1 + 0.24 * jmp);
   // legs
   ctx.lineCap = 'round';
   for (const side of [-1, 1]){
@@ -917,7 +979,7 @@ horses = []; camTop = 300;
 requestAnimationFrame(frame);
 
 // test hook (harmless)
-window.__chr = { get state(){ return state; }, get raceT(){ return raceT; }, get ex(){ return ex; }, get prog(){ return prog; }, get closeness(){ return closeness; }, startRace, AU };
+window.__chr = { simulate, N,  get state(){ return state; }, get raceT(){ return raceT; }, get ex(){ return ex; }, get prog(){ return prog; }, get closeness(){ return closeness; }, startRace, AU };
 })();
 </script>
 </body>
