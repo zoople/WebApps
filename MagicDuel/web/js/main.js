@@ -6,7 +6,8 @@ const { UI, Decks, Coach, Settings, Images } = MTG;
 const $ = (s, r) => (r || document).querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const pips = (cols) => `<span class="pips">${(cols.length ? cols : ['C']).map((c) => `<span class="pip ${c}"></span>`).join('')}</span>`;
+const PIPE = { W: '⚪', U: '🔵', B: '⚫', R: '🔴', G: '🟢', C: '◆' };
+const pips = (cols) => `<span class="pips" style="font-size:15px">${(cols.length ? cols : ['C']).map((c) => PIPE[c]).join('')}</span>`;
 
 const App = (MTG.App = {
   sel: { tab: 'starter', starter: 's-rw', packs: [], opp: 'random' },
@@ -103,7 +104,7 @@ const App = (MTG.App = {
     const rows = d.list.slice().sort((a, b) => (MTG.cards[a[0]].types.includes('Land') - MTG.cards[b[0]].types.includes('Land')) || MTG.cards[a[0]].cmc - MTG.cards[b[0]].cmc);
     for (const [n, q] of rows) {
       const def = MTG.cards[n];
-      const r = el('div', 'logline', `<b>${q}×</b> ${esc(n)} <span style="float:right;color:var(--muted)">${esc(def.cost || def.types[0])}</span>`);
+      const r = el('div', 'logline', `<b>${q}×</b> ${esc(n)} <span style="float:right">${def.cost ? UI.manaHTML(def.cost) : esc(def.types[0])}</span>`);
       r.onclick = () => UI.inspect({ id: -1, def, name: n, zone: null, counters: {}, attachments: [], controller: 0, owner: 0, damage: 0, tapped: false, flags: {} }, {});
       body.append(r);
     }

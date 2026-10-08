@@ -26,12 +26,37 @@ function rulesText(d) {
   const k = (d.kw || []).filter((x) => KW_NAMES[x]);
   return k.length ? kwText(k) + '.' : '';
 }
+const MANA_EMOJI = { W: '⚪', U: '🔵', B: '⚫', R: '🔴', G: '🟢', C: '◆' };
+const SUB_EMOJI = { Angel: '👼', Pegasus: '🦄', Bird: '🦅', Dragon: '🐉', Drake: '🐲', Elemental: '🌀', Spirit: '👻', Pirate: '🏴‍☠️', Octopus: '🐙', Wizard: '🧙', Knight: '⚔️', Noble: '👑', Soldier: '🛡️', Cat: '🐱', Ox: '🐂', Vampire: '🧛', Zombie: '🧟', Skeleton: '💀', Rat: '🐀', Aetherborn: '🩸', Goblin: '👺', Viashino: '🦎', Lizard: '🦎', Giant: '🗿', Elf: '🧝', Druid: '🌿', Beast: '🐗', Centaur: '🐴', Spider: '🕷️', Wurm: '🐛', Bear: '🐻', Juggernaut: '⚙️', Thopter: '🪽', Djinn: '🧞', Scout: '🧝', Human: '🧑', Berserker: '🪓' };
+const KW_ICON = { flying: '🕊️', 'first strike': '🗡️', 'double strike': '⚔️', deathtouch: '☠️', lifelink: '💖', trample: '🦏', vigilance: '👁️', haste: '💨', reach: '🕸️', hexproof: '🔒', indestructible: '💎', flash: '⚡', menace: '👥', defender: '🧱' };
+function manaHTML(cost) {
+  if (!cost) return '';
+  return cost.replace(/[0-9]+|[WUBRGCX]/g, (m) => /\d|X/.test(m) ? `<b class="gn">${m}</b>` : `<span class="me">${MANA_EMOJI[m]}</span>`);
+}
+function landCols(d) { return d.dual ? d.dual.split('') : (d.basic ? [d.abilities[0].mana.colors[0]] : []); }
+function artEmoji(d) {
+  if (d.types.includes('Land')) { const c = landCols(d); return c.length ? c.map((k) => MANA_EMOJI[k]).join('') : '🌍'; }
+  for (const s of d.subtypes || []) if (SUB_EMOJI[s]) return SUB_EMOJI[s];
+  if (d.types.includes('Creature')) return '🐾';
+  const f = d.fx && d.fx.kind;
+  if (d.subtypes && d.subtypes.includes('Equipment')) return '🗡️';
+  if (d.subtypes && d.subtypes.includes('Aura')) return f === 'pacify' ? '🚫' : '✨';
+  const m = { damage: '🔥', destroy: '💀', shrink: '🩸', counter: '🚫', bounce: '↩️', pump: '💪', fight: '🥊', exile: '☀️', pacify: '🚫', modal: '🛡️', naturalize: '🍃' }[f]; if (m) return m;
+  const t = { draw: '📖', cantrip: '🔮', ramp: '🌱', mana: '💎', tokens: '👥', sweeper: '🌋', anthem: '🚩', finisher: '🌊', drain: '🩸', tempo: '💤', threaten: '🎭', removal: '☀️' }[d.tag]; if (t) return t;
+  if (d.types.includes('Artifact')) return '⚙️';
+  if (d.types.includes('Enchantment')) return '🔮';
+  return d.types.includes('Sorcery') ? '📜' : '⚡';
+}
+const kwIcons = (d) => (d.kw || []).map((k) => KW_ICON[k]).filter(Boolean).join('');
 function costHTML(cost) {
+  return manaHTML(cost);
+}
+function costHTML_old(cost) {
   if (!cost) return '';
   return cost.replace(/[0-9]+|[WUBRGCX]/g, (m) => /\d|X/.test(m) ? `<b class="cn">${m}</b>` : `<span class="pip ${m}"></span>`);
 }
 const typeLine = (d) => [...d.types, ...(d.subtypes && d.subtypes.length ? ['—', ...d.subtypes] : [])].join(' ') + (d.basic ? '' : '');
-const faceClass = (d) => { if (d.types.includes('Land')) return 'L'; const cs = d.colors; if (cs.length === 0) return 'A'; if (cs.length > 1) return 'M'; return cs[0]; };
+const faceClass = (d) => { if (d.types.includes('Land')) { const c = landCols(d); return 'L L' + (c.length === 1 ? c[0] : c.length ? 'M' : 'X'); } const cs = d.colors; if (cs.length === 0) return 'A'; if (cs.length > 1) return 'M'; return cs[0]; };
 
 /* ---------- UI singleton ---------- */
 const UI = {
@@ -67,7 +92,12 @@ const UI = {
   /* ----- card elements ----- */
   makeFace(d) {
     const f = el('div', 'face ' + faceClass(d) + (d.token ? ' token' : ''));
-    f.innerHTML = `<div class="fname">${esc(d.name)}</div><div class="fcost">${esc(d.cost || '')}</div><div class="ftype">${esc(d.token ? 'Token ' + d.types.join(' ') : d.types.join(' '))}</div><div class="ftext">${esc(rulesText(d))}</div>`;
+    const cols = d.types.includes('Land') ? landCols(d) : [];
+    if (cols.length === 2) { f.style.setProperty('--f1', COLOR_HEX[cols[0]]); f.style.setProperty('--f2', COLOR_HEX[cols[1]]); }
+    const pt = d.types.includes('Creature') ? `<div class="fpt">${d.power == null ? '*' : d.power}/${d.toughness}</div>` : '';
+    f.innerHTML = `<div class="fh"><span class="fname">${esc(d.name)}</span><span class="fcost">${manaHTML(d.cost)}</span></div>` +
+      `<div class="fart">${artEmoji(d)}</div><div class="ftype">${esc(d.token ? 'Token ' + d.types.join(' ') : typeLine(d))}</div>` +
+      `<div class="ftext">${esc(rulesText(d))}</div><div class="fkw">${kwIcons(d)}</div>${pt}`;
     return f;
   },
   buildCardEl(c, opts) {
@@ -134,10 +164,8 @@ const UI = {
   landEl(c) {
     let e = UI.landEls.get(c.id);
     if (!e) {
-      const d = c.def; const cols = d.dual ? d.dual.split('') : (d.basic ? [d.abilities[0].mana.colors[0]] : []);
-      let cls = 'land ', txt = '';
-      if (cols.length === 1) { cls += cols[0]; txt = cols[0]; } else if (cols.length === 2) { cls += 'D'; txt = ''; } else { cls += 'X'; txt = '◆'; }
-      e = el('div', cls, txt); if (cols.length === 2) { e.style.setProperty('--d1', COLOR_HEX[cols[0]]); e.style.setProperty('--d2', COLOR_HEX[cols[1]]); }
+      const d = c.def; const cols = landCols(d);
+      e = el('div', 'land' + (cols.length > 1 ? ' dual' : ''), cols.length ? cols.map((k) => MANA_EMOJI[k]).join('') : '◆');
       e.addEventListener('click', () => UI.onCardTap(c));
       UI.landEls.set(c.id, e);
     }
@@ -371,7 +399,7 @@ const UI = {
     const be = UI.buildCardEl(c, { big: true }); be.classList.remove('tapped'); big.append(be);
     const info = el('div', 'info');
     const ch = c.zone === 'battlefield' ? g.chars(c) : null;
-    let h = `<h4>${esc(d.name)}</h4><div class="costline">${costHTML(d.cost)}</div><div class="typeline">${esc(typeLine(d))}${g.isCreature(c) ? ` · ${ch ? ch.power + '/' + (ch.toughness - c.damage) : d.power + '/' + d.toughness}` : ''}</div><div class="rules">${esc(rulesText(d))}</div>`;
+    let h = `<h4>${esc(d.name)}</h4><div class="costline">${manaHTML(d.cost)}</div><div class="typeline">${esc(typeLine(d))}${g.isCreature(c) ? ` · ${ch ? ch.power + '/' + (ch.toughness - c.damage) : d.power + '/' + d.toughness}` : ''}</div><div class="rules">${esc(rulesText(d))}</div>`;
     const st = [];
     if (c.zone === 'battlefield') {
       if (c.tapped) st.push('Tapped'); if (g.isSick(c)) st.push('Summoning sick'); if (c.damage) st.push(c.damage + ' damage');
@@ -598,6 +626,7 @@ class HumanController {
 }
 MTG.HumanController = HumanController;
 
+UI.manaHTML = manaHTML;
 UI.showScreenGame = () => { UI.showScreen('game'); };
 UI.bindGame = function (g) {
   UI.g = g; UI.cardEls.clear(); UI.landEls.clear(); UI.logLines = []; UI.coachNotes = []; UI.mode = 'idle'; UI.highlight = new Set(); UI.lastLife = [null, null]; UI.advCtx = null; UI.advice = null; UI.gameOver = false;
