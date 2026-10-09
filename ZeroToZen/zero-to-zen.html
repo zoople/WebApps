@@ -576,6 +576,12 @@ const AU={
   }
 };
 
+/* ---------- native (Android app) bridge ---------- */
+// In the Android app, window.ZZ starts a foreground service so sound and the timer keep going with the screen locked.
+let nativeStopT=null;
+function nativeStart(text){clearTimeout(nativeStopT);try{window.ZZ&&ZZ.start(text)}catch(e){}}
+function nativeStop(delay){clearTimeout(nativeStopT);nativeStopT=setTimeout(()=>{try{window.ZZ&&ZZ.stop()}catch(e){}},delay||0)}
+
 /* ---------- wake lock ---------- */
 let wake=null;
 async function lockScreen(){try{if('wakeLock' in navigator)wake=await navigator.wakeLock.request('screen')}catch(e){}}
@@ -620,6 +626,7 @@ function beginSession(c,l){
   $('#ringFg').style.strokeDashoffset=301.6;
   show('session');
   lockScreen();
+  nativeStart(c+' min \u00b7 Lesson '+l+' \u00b7 '+L.t);
   if(audioOK)AU.startAmbient(st.set.amb,st.set.ambVol);
   clearInterval(timer);timer=setInterval(tick,200);
   tick();poke();
@@ -657,7 +664,7 @@ function tick(){
       if(S.audioOK)AU.bell(b.f===0?1:b.f===1?1:.85);
     }
   });
-  if(S.audioOK)AU.musicTick();
+  if(S.audioOK){AU.musicTick();if(AU.ctx.state!=='running')AU.ctx.resume()} // recover if the system suspended audio
   guidance(el);
   // music fades out before the end
   if(S.audioOK&&!S.musicOut&&S.L.m>0&&el>=S.D-6){S.musicOut=true;AU.setMusic(0,6)}
@@ -716,6 +723,7 @@ function teardown(){
   stopVoice();
   if(AU.ctx){AU.stopMusic();AU.stopAmbient();AU.duck(false)}
   unlockScreen();
+  nativeStop(S&&S.phase==='done'?15000:0); // let the end bell ring out
   S=null;
 }
 
