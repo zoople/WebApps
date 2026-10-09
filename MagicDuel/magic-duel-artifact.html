@@ -383,6 +383,18 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 #banner{pointer-events:none}
 .float{pointer-events:none}
 
+/* ===== zoom sheet: bold Cast button, Close as ✕ top-right ===== */
+.inspectsheet header{border-bottom:none;padding:4px 8px 0;min-height:0}
+.inspectsheet header h3{display:none}
+.inspectsheet header .xbtn{margin-left:auto;width:38px;height:38px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);font-size:18px;color:var(--text);display:flex;align-items:center;justify-content:center}
+.inspectsheet .body{padding-top:2px}
+.abtn.cast{background:linear-gradient(180deg,#f0cb71,#c99732);color:#1b1405;border:1px solid #f3d789;font-size:17px;font-weight:900;text-align:center;padding:14px 12px;box-shadow:0 2px 10px rgba(227,185,90,.35)}
+.abtn.cast small{color:#4a3a10;font-weight:700}
+.abtn.cast:disabled{background:#2a3144;color:#8f9bb6;border-color:var(--line);box-shadow:none;opacity:1}
+.abtn.cast:disabled small{color:#aab3c9;font-weight:600}
+.abtn.ability{background:#16314f;border-color:#3d6ea8;color:#d8e8ff}
+.abtn.ability:disabled{background:var(--panel2);color:var(--muted);border-color:var(--line);opacity:.8}
+
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text)}
 </style>
 
@@ -3361,17 +3373,17 @@ const UI = {
     const body = el('div'); body.append(wrap);
     const me = g.players[0]; const waiting = UI.mode !== 'priority';
     const acts = el('div');
-    const addAct = (label, sub, enabled, fn) => { const b = el('button', 'abtn', `${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ''}`); b.disabled = !enabled; b.onclick = () => { m.close(null); fn(); }; acts.append(b); };
+    const addAct = (label, sub, enabled, fn, kind) => { const b = el('button', 'abtn ' + (kind || 'ability'), `${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ''}`); b.disabled = !enabled; b.onclick = () => { m.close(null); fn(); }; acts.append(b); };
     if (c.zone === 'hand' && c.owner === 0) {
-      if (g.isLand(c)) { const ck = g.canCast(me, c); addAct('Play land', ck.ok ? 'Put it onto the battlefield' : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'land', card: c })); }
-      else { const ck = g.canCast(me, c); addAct(`Cast ${d.name}`, ck.ok ? (d.cost ? 'Cost: ' + emojiCost(d.cost) : '') : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'cast', card: c })); }
+      if (g.isLand(c)) { const ck = g.canCast(me, c); addAct('🌍 Play land', ck.ok ? 'Put it onto the battlefield' : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'land', card: c }), 'cast'); }
+      else { const ck = g.canCast(me, c); addAct(`✨ Cast ${d.name}`, ck.ok ? (d.cost ? 'Cost: ' + emojiCost(d.cost) : '') : (waiting && ck.ok !== false ? 'Wait for your priority' : ck.reason), ck.ok && !waiting, () => UI.act({ type: 'cast', card: c }), 'cast'); }
     }
     const abilityZone = c.zone === 'battlefield' ? c.controller === 0 : (c.zone === 'graveyard' && c.owner === 0);
     if (abilityZone) d.abilities.forEach((ab, i) => { if (ab.mana) return; const ck = g.abilityUsable(me, c, i); addAct(ab.text || 'Ability', ab.cost && ab.cost.mana ? 'Cost: ' + emojiCost(ab.cost.mana) + (ab.cost.tap ? ', ↷ tap' : '') : (ab.cost && ab.cost.tap ? '↷ Tap' : ''), ck.ok && !waiting, () => UI.act({ type: 'activate', perm: c, idx: i })); });
     if (acts.children.length) body.append(acts);
     UI.closeInspect();
-    const m = UI.modal({ title: '', body, closable: true, buttons: [{ label: 'Close', cls: 'ghost', value: null }], onClose: () => { if (UI.inspectModal === m) UI.inspectModal = null; } });
-    m.sheet.querySelector('header').remove();
+    const m = UI.modal({ title: '', body, closable: true, onClose: () => { if (UI.inspectModal === m) UI.inspectModal = null; } });
+    m.sheet.classList.add('inspectsheet');
     UI.inspectModal = m;
     if (ctx && ctx.hold) {
       // opened by a long-press: the finger is still down, so ignore touches on the sheet until it lifts (avoids a ghost click pressing "Cast")

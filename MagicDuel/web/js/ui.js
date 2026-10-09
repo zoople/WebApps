@@ -462,17 +462,17 @@ const UI = {
     const body = el('div'); body.append(wrap);
     const me = g.players[0]; const waiting = UI.mode !== 'priority';
     const acts = el('div');
-    const addAct = (label, sub, enabled, fn) => { const b = el('button', 'abtn', `${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ''}`); b.disabled = !enabled; b.onclick = () => { m.close(null); fn(); }; acts.append(b); };
+    const addAct = (label, sub, enabled, fn, kind) => { const b = el('button', 'abtn ' + (kind || 'ability'), `${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ''}`); b.disabled = !enabled; b.onclick = () => { m.close(null); fn(); }; acts.append(b); };
     if (c.zone === 'hand' && c.owner === 0) {
-      if (g.isLand(c)) { const ck = g.canCast(me, c); addAct('Play land', ck.ok ? 'Put it onto the battlefield' : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'land', card: c })); }
-      else { const ck = g.canCast(me, c); addAct(`Cast ${d.name}`, ck.ok ? (d.cost ? 'Cost: ' + emojiCost(d.cost) : '') : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'cast', card: c })); }
+      if (g.isLand(c)) { const ck = g.canCast(me, c); addAct('🌍 Play land', ck.ok ? 'Put it onto the battlefield' : ck.reason, ck.ok && !waiting, () => UI.act({ type: 'land', card: c }), 'cast'); }
+      else { const ck = g.canCast(me, c); addAct(`✨ Cast ${d.name}`, ck.ok ? (d.cost ? 'Cost: ' + emojiCost(d.cost) : '') : (waiting && ck.ok !== false ? 'Wait for your priority' : ck.reason), ck.ok && !waiting, () => UI.act({ type: 'cast', card: c }), 'cast'); }
     }
     const abilityZone = c.zone === 'battlefield' ? c.controller === 0 : (c.zone === 'graveyard' && c.owner === 0);
     if (abilityZone) d.abilities.forEach((ab, i) => { if (ab.mana) return; const ck = g.abilityUsable(me, c, i); addAct(ab.text || 'Ability', ab.cost && ab.cost.mana ? 'Cost: ' + emojiCost(ab.cost.mana) + (ab.cost.tap ? ', ↷ tap' : '') : (ab.cost && ab.cost.tap ? '↷ Tap' : ''), ck.ok && !waiting, () => UI.act({ type: 'activate', perm: c, idx: i })); });
     if (acts.children.length) body.append(acts);
     UI.closeInspect();
-    const m = UI.modal({ title: '', body, closable: true, buttons: [{ label: 'Close', cls: 'ghost', value: null }], onClose: () => { if (UI.inspectModal === m) UI.inspectModal = null; } });
-    m.sheet.querySelector('header').remove();
+    const m = UI.modal({ title: '', body, closable: true, onClose: () => { if (UI.inspectModal === m) UI.inspectModal = null; } });
+    m.sheet.classList.add('inspectsheet');
     UI.inspectModal = m;
     if (ctx && ctx.hold) {
       // opened by a long-press: the finger is still down, so ignore touches on the sheet until it lifts (avoids a ghost click pressing "Cast")
