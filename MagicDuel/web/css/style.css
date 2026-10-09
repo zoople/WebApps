@@ -371,3 +371,9 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 
 #hand .card .fart .e-f{font-size:1.65em}
 #hand .card .fart .e-t,#hand .card .fart .e-x{font-size:1.02em}
+
+/* ===== v4: type emoji in the title; row = character + up to 3 effects ===== */
+.face .ety{display:inline-block;margin-right:1px}
+.perms .face[data-kind="creature"] .ety{display:none}
+#hand .card .fart .e-f{font-size:1.6em}
+#hand .card .fart .e-x{font-size:.98em}

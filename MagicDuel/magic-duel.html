@@ -383,6 +383,12 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 #hand .card .fart .e-f{font-size:1.65em}
 #hand .card .fart .e-t,#hand .card .fart .e-x{font-size:1.02em}
 
+/* ===== v4: type emoji in the title; row = character + up to 3 effects ===== */
+.face .ety{display:inline-block;margin-right:1px}
+.perms .face[data-kind="creature"] .ety{display:none}
+#hand .card .fart .e-f{font-size:1.6em}
+#hand .card .fart .e-x{font-size:.98em}
+
 </style>
 </head>
 <body>
@@ -2974,14 +2980,18 @@ const EFFECT_OVERRIDE = {
   'Act of Treason': ['🎭', '💨'], 'Rancor': ['➕', '🦏'], 'Short Sword': ['➕', '1️⃣'], 'Bonesplitter': ['➕', '2️⃣'], 'Naturalize': ['🍃'],
 };
 const KW_FALLBACK = (d) => KW_ORDER.filter((k) => (d.kw || []).includes(k)).map((k) => KW_ICON[k]);
-function effectIcons(d) { return (EFFECT_OVERRIDE[d.name] ? EFFECT_OVERRIDE[d.name] : KW_FALLBACK(d)).slice(); }
+function effectIcons(d) {
+  // hand-picked effects first, then any keywords not already shown, de-duplicated
+  const out = []; for (const e of [...(EFFECT_OVERRIDE[d.name] || []), ...KW_FALLBACK(d)]) if (e && !out.includes(e)) out.push(e);
+  return out;
+}
 // [type, flavour, effect, effect] shown as the centre emoji row; lands show their mana.
 function emojiRow(d) {
   const kind = kindOf(d);
   if (kind === 'land') return { type: '', flavor: artEmoji(d), eff: [] };
   const flavor = artEmoji(d);
-  const eff = effectIcons(d).filter((e) => e !== flavor && e !== TYPE_INFO[kind][0]).slice(0, 2);
-  return { type: TYPE_INFO[kind][0], flavor, eff };
+  const eff = effectIcons(d).filter((e) => e !== flavor && e !== TYPE_INFO[kind][0]).slice(0, 3);
+  return { type: '', flavor, eff };   // the type emoji now lives in the card title
 }
 const kwIcons = (d) => effectIcons(d).slice(0, 3).join('');
 function costHTML(cost) {
@@ -3040,8 +3050,8 @@ const UI = {
     if (cols.length === 2) { f.style.setProperty('--f1', COLOR_HEX[cols[0]]); f.style.setProperty('--f2', COLOR_HEX[cols[1]]); }
     const pt = d.types.includes('Creature') ? `<div class="fpt">${d.power == null ? '*' : d.power}/${d.toughness}</div>` : '';
     f.dataset.kind = kindOf(d); const ti = TYPE_INFO[f.dataset.kind]; const flash = d.kw && d.kw.includes('flash') && f.dataset.kind === 'creature' ? ' ⚡' : '';
-    const nl = d.name.length; f.dataset.len = nl > 17 ? 'xl' : nl > 12 ? 'l' : 's';
-    f.innerHTML = `<div class="fh"><span class="fname">${esc(d.name)}</span><span class="fcost">${manaHTML(d.cost)}</span></div>` +
+    const nl = d.name.length + (f.dataset.kind === 'land' ? 0 : 3); f.dataset.len = nl > 17 ? 'xl' : nl > 12 ? 'l' : 's';
+    f.innerHTML = `<div class="fh"><span class="fname">${f.dataset.kind === 'land' ? '' : `<span class="ety">${ti[0]}</span> `}${esc(d.name)}</span><span class="fcost">${manaHTML(d.cost)}</span></div>` +
       `<div class="fart">${(() => { const r = emojiRow(d); return (r.type ? `<span class="e-t">${r.type}</span>` : '') + `<span class="e-f">${r.flavor}</span>` + r.eff.map((x) => `<span class="e-x">${x}</span>`).join(''); })()}</div><div class="ftype">${esc(d.token ? 'Token ' + d.types.join(' ') : typeLine(d))}</div>` +
       `<div class="ftext">${esc(rulesText(d))}</div><div class="fkw">${kwIcons(d)}</div>${pt}`;
     return f;
