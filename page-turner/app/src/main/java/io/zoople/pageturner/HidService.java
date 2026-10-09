@@ -23,6 +23,9 @@ import android.bluetooth.le.AdvertisingSetParameters;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.media.AudioAttributes;
+import android.media.AudioFormat;
+import android.media.AudioTrack;
 import android.media.VolumeProvider;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
@@ -158,6 +161,7 @@ public class HidService extends Service {
     };
 
     private MediaSession mediaSession;
+    private AudioTrack silence;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -193,6 +197,14 @@ public class HidService extends Service {
                 Log.w(TAG, "close", e);
             }
             server = null;
+        }
+        if (silence != null) {
+            try {
+                silence.stop();
+            } catch (Throwable ignored) {
+            }
+            silence.release();
+            silence = null;
         }
         if (mediaSession != null) {
             mediaSession.release();
@@ -551,8 +563,39 @@ public class HidService extends Service {
                     .setActions(PlaybackState.ACTION_PLAY_PAUSE)
                     .build());
             mediaSession.setActive(true);
+            startSilence();
         } catch (Throwable t) {
             Log.w(TAG, "media session", t);
+        }
+    }
+
+    /**
+     * With the screen off, Android only routes the volume buttons to the media session of an app
+     * that is actually playing audio. Loop a short buffer of pure silence so this session counts
+     * as the active player; it never takes audio focus, so other apps' music isn't paused.
+     */
+    private void startSilence() {
+        try {
+            int rate = 8000;
+            int frames = rate / 2; // half a second, looped forever
+            silence = new AudioTrack.Builder()
+                    .setAudioAttributes(new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build())
+                    .setAudioFormat(new AudioFormat.Builder()
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setSampleRate(rate)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .build())
+                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .setBufferSizeInBytes(frames * 2)
+                    .build();
+            silence.write(new short[frames], 0, frames);
+            silence.setLoopPoints(0, frames, -1);
+            silence.play();
+        } catch (Throwable t) {
+            Log.w(TAG, "silence", t);
         }
     }
 
