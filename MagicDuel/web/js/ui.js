@@ -160,7 +160,7 @@ const UI = {
       e = UI.buildCardEl(c); UI.cardEls.set(c.id, e);
       let timer = null, sx = 0, sy = 0;
       const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
-      e.addEventListener('pointerdown', (ev) => { sx = ev.clientX; sy = ev.clientY; cancel(); timer = setTimeout(() => { timer = null; UI.inspect(c.card || c, {}); }, 480); });
+      e.addEventListener('pointerdown', (ev) => { sx = ev.clientX; sy = ev.clientY; cancel(); timer = setTimeout(() => { timer = null; UI.inspect(c.card || c, { hold: true }); }, 480); });
       e.addEventListener('pointermove', (ev) => { if (timer && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 12) cancel(); });
       e.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') cancel(); });
       e.addEventListener('pointercancel', cancel);
@@ -470,6 +470,13 @@ const UI = {
     const m = UI.modal({ title: '', body, closable: true, buttons: [{ label: 'Close', cls: 'ghost', value: null }], onClose: () => { if (UI.inspectModal === m) UI.inspectModal = null; } });
     m.sheet.querySelector('header').remove();
     UI.inspectModal = m;
+    if (ctx && ctx.hold) {
+      // opened by a long-press: the finger is still down, so ignore touches on the sheet until it lifts (avoids a ghost click pressing "Cast")
+      m.m.style.pointerEvents = 'none';
+      const release = () => { window.removeEventListener('pointerup', release, true); window.removeEventListener('pointercancel', release, true); window.removeEventListener('touchend', release, true); setTimeout(() => { if (m.m.isConnected) m.m.style.pointerEvents = ''; }, 450); };
+      window.addEventListener('pointerup', release, true); window.addEventListener('pointercancel', release, true); window.addEventListener('touchend', release, true);
+      setTimeout(() => { if (m.m.isConnected) m.m.style.pointerEvents = ''; }, 6000);
+    }
     return m;
   },
   showGraveyard(pi) {
