@@ -72,6 +72,7 @@ button{font:inherit;cursor:pointer}
 #title p{margin:0;color:#f2dcae;max-width:520px;line-height:1.45}
 #title .menu{display:flex;flex-direction:column;gap:10px;width:min(340px,86vw);margin-top:10px}
 #title .menu .btn{font-size:18px;padding:13px}
+#title .ver{margin-top:2px;padding:3px 12px;border-radius:999px;background:rgba(0,0,0,.35);color:#ffe9a8;font-size:13px;font-weight:700;letter-spacing:.5px}
 #title .sub{font-size:13px;color:#f2dcae;opacity:.85}
 .sign{background:var(--tex-paper),var(--paper);border:3px solid #7a5530;border-radius:14px;padding:14px 18px;box-shadow:0 8px 22px rgba(0,0,0,.5)}
 
@@ -218,6 +219,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
+const VERSION='v5 · 9 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -715,8 +717,44 @@ addEventListener('keydown',e=>{if((e.key==='e'||e.key==='E'||e.key==='Enter')&&t
 /* ---- arrival effects ---- */
 function onArrive(){
   const b=doorAt[P.x+','+P.y];if(!b)return;
-  if(b.kind==='barn')barnAct(b);
-  else if(b.kind==='craft')craftAct(b);
+  if(b.kind==='barn'||b.kind==='craft')P.xfer={b,phase:'in',t:.08,n:0,put:0,took:0,full:false,bagFull:false};
+}
+/* ---- unloading / loading happens one item at a time ---- */
+const flyers=[];
+function fly(item,dir,b){
+  const px=P.px,py=P.py-26,bx=b.x*TS+72,by=(b.y+2)*TS+4;
+  flyers.push(dir==='in'?{e:ITEMS[item].e,x0:px,y0:py,x1:bx,y1:by,t:0}:{e:ITEMS[item].e,x0:bx,y0:by,x1:px,y1:py,t:0});
+}
+function xferStep(){
+  const x=P.xfer,b=x.b,idx=x.n+x.put+x.took;
+  if(b.kind==='barn'){
+    const k=Object.keys(S.carry).find(k=>S.carry[k]>0);
+    if(!k){finishXfer();return}
+    S.carry[k]--;S.store[k]=(S.store[k]||0)+1;stat('st_'+k);stat('delivered');fly(k,'in',b);x.n++;
+  }else{
+    const[item,need]=Object.entries(b.in)[0],s=stn(b.id);
+    if(x.phase==='in'){
+      if((S.carry[item]||0)>0&&s.buf<need*3){S.carry[item]--;s.buf++;fly(item,'in',b);x.put++}
+      else{if((S.carry[item]||0)>0)x.full=true;x.phase='out';x.t=.05;return}
+    }else{
+      if(s.out>0&&carryN()<S.cap){s.out--;S.carry[b.out]=(S.carry[b.out]||0)+1;fly(b.out,'out',b);x.took++}
+      else{if(s.out>0)x.bagFull=true;finishXfer();return}
+    }
+  }
+  tone(470+Math.min(idx,14)*38,.09,'triangle',.07);
+  hud();
+}
+function finishXfer(){
+  const x=P.xfer,b=x.b;P.xfer=null;
+  if(b.kind==='barn'){if(x.n){sfx.get();fl(b.x*TS+72,b.y*TS-4,`Stored ${x.n}`,'#ffe9a8');save(true)}}
+  else{
+    if(x.took){sfx.get();fl(b.x*TS+72,b.y*TS-4,`+${x.took} ${ITEMS[b.out].e}`,'#fff')}
+    if(x.put)fl(b.x*TS+72,b.y*TS+14,`Fed ${x.put}`,'#fff');
+    if(x.full)toast(`${b.name} is full`);
+    if(x.bagFull)toast('Bag full!');
+    if(x.put||x.took)save(true);
+  }
+  hud();
 }
 // game halls and the quest board open once you come to rest on their mat
 function idleDoor(){
@@ -724,22 +762,6 @@ function idleDoor(){
   if(!b||!(b.kind==='game'||b.kind==='board')||P.lastDoor===b.id)return;
   P.lastDoor=b.id;held.length=0;P.path=[];b.kind==='board'?openQuests():openBuilding(b);
 }
-function barnAct(b){
-  const n=carryN();
-  if(n>0){
-    let txt=[];for(const[k,v]of Object.entries(S.carry)){if(v>0){S.store[k]=(S.store[k]||0)+v;stat('st_'+k,v);txt.push(`${ITEMS[k].e}${v}`)}}
-    S.carry={};stat('delivered',n);sfx.drop();fl(b.x*TS+72,b.y*TS-4,'+'+txt.join(' '),'#ffe9a8');toast(`Stored ${txt.join(' ')}`);save(true);hud();
-  }
-}
-function craftAct(b){
-  const s=stn(b.id);const[item,need]=Object.entries(b.in)[0];
-  const room=need*3-s.buf,have=S.carry[item]||0,put=Math.min(room,have);let msg=[];
-  if(put>0){S.carry[item]-=put;s.buf+=put;msg.push(`-${ITEMS[item].e}${put}`)}
-  if(s.out>0){const t=Math.min(S.cap-carryN(),s.out);if(t>0){S.carry[b.out]=(S.carry[b.out]||0)+t;s.out-=t;msg.push(`+${ITEMS[b.out].e}${t}`);sfx.get()}else toast('Bag full!')}
-  if(put>0&&put<have)toast(`${b.name} is full`);
-  if(msg.length){fl(b.x*TS+72,b.y*TS-4,msg.join(' '),'#fff');if(put>0)sfx.drop();hud();save()}
-}
-
 /* ---- update ---- */
 function update(dt){
   const stepT=.15;
@@ -747,6 +769,12 @@ function update(dt){
   for(const b of BLD){if(b.kind!=='craft')continue;const s=stn(b.id);const need=Object.values(b.in)[0];
     if(s.buf>=need&&s.out<6){s.prog+=dt;if(s.prog>=b.time){s.prog=0;s.buf-=need;s.out++;stat('craft_'+b.out);sfx.get();fl(b.x*TS+72,b.y*TS+20,ITEMS[b.out].e,'#fff');hud();checkQuestBadge()}}
     else s.prog=0}
+  // one-at-a-time transfers + flying items
+  if(P.xfer){
+    if(P.moving||doorAt[P.x+','+P.y]!==P.xfer.b)P.xfer=null;
+    else{P.xfer.t-=dt;if(P.xfer.t<=0){P.xfer.t=Math.max(.07,.17-P.xfer.n*.008-P.xfer.put*.008-P.xfer.took*.008);xferStep()}}
+  }
+  for(let i=flyers.length-1;i>=0;i--){flyers[i].t+=dt;if(flyers[i].t>=.4)flyers.splice(i,1)}
   // nodes regrow
   for(const n of nodes){if(n.ch<NODE_T[n.type].max){n.t+=dt;if(n.t>=NODE_T[n.type].regrow){n.ch=NODE_T[n.type].max;n.t=0}}}
   // movement
@@ -971,6 +999,8 @@ function render(time){
   bubble(g,BOARD.x*TS+TS/2,BOARD.y*TS-62,'Quests');
   g.restore();
   if(GUIDE)drawGuide(g,time);
+  for(const f of flyers){const u=f.t/.4,e=u*u*(3-2*u);g.globalAlpha=u>.85?(1-u)/.15:1;g.font='24px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';
+    g.fillStyle='#000';g.fillText(f.e,f.x0+(f.x1-f.x0)*e,f.y0+(f.y1-f.y0)*e-Math.sin(u*Math.PI)*38);g.globalAlpha=1}
   // floats
   for(const f of floats){g.globalAlpha=1-f.t/1.1;g.font='bold 17px "Trebuchet MS",sans-serif';g.textAlign='center';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.65)';g.strokeText(f.text,f.x,f.y-f.t*38);g.fillStyle=f.col;g.fillText(f.text,f.x,f.y-f.t*38);g.globalAlpha=1}
   // soft vignette (screen space)
@@ -1149,7 +1179,7 @@ function openFreeSetup(game){
   }
 }
 function openMenu(){
-  openModal(`<h2>☰ Menu</h2>
+  openModal(`<h2>☰ Menu</h2><div class="muted">Harvest Hollow · version ${VERSION}</div>
     <div class="row"><div class="grow"><b>Free Play</b><div class="muted">Play either mini-game without touching your progress.</div></div><button class="btn small blue" data-fp="bolt">⚙️ Bolts</button><button class="btn small blue" data-fp="card">🃏 Beans</button></div>
     <div class="row"><div class="grow"><b>Guide arrows</b><div class="muted">Yellow arrows and a dotted trail to your next goal.</div></div><button class="btn small blue" id="mGuide">Toggle</button></div>
     <div class="row"><div class="grow"><b>Title screen</b></div><button class="btn small grey" id="mTitle">Go</button></div>
@@ -1794,7 +1824,8 @@ function showTitle(){
       <button class="btn blue" id="tFC">🃏 Free Play — Bean Harvest</button>
       ${has?'<button class="btn grey" id="tReset" style="font-size:15px">🗑 Start over (erase my village)</button>':''}
     </div>
-    <div class="sub">Free play never touches your progress · Progress saves in this browser</div>`;
+    <div class="sub">Free play never touches your progress · Progress saves in this browser</div>
+    <div class="ver">Version ${VERSION}</div>`;
   $('#tPlay').onclick=()=>{sfx.click();startWorld()};
   $('#tFB').onclick=()=>openFreeSetup('bolt');
   $('#tFC').onclick=()=>openFreeSetup('card');
