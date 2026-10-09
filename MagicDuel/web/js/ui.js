@@ -140,16 +140,17 @@ const UI = {
   },
   updateCardEl(e, c, inHand) {
     const g = UI.g, d = c.def;
-    for (const b of [...e.querySelectorAll('.badge,.zz,.tag')]) b.remove();
+    for (const b of [...e.querySelectorAll('.badge,.zz,.tag,.sickbadge')]) b.remove();
     const onBf = c.zone === 'battlefield';
     e.classList.toggle('tapped', onBf && c.tapped);
+    e.classList.toggle('sick', onBf && c.controller === 0 && g.isCreature(c) && g.isSick(c));
     e.classList.toggle('attached', onBf && !!c.attachedTo);
     if (onBf && g.isCreature(c)) {
       const ch = g.chars(c); const base = [d.power || 0, d.toughness || 0];
       const t = ch.toughness - c.damage;
       const b = el('div', 'badge pt' + (c.damage ? ' dmg' : ch.power > base[0] || ch.toughness > base[1] ? ' buff' : ch.power < base[0] || ch.toughness < base[1] ? ' nerf' : ''), `${ch.power}/${t}`);
       e.append(b);
-      if (g.isSick(c) && c.controller === 0) e.append(el('div', 'zz', '💤'));
+      if (g.isSick(c) && c.controller === 0) e.append(el('div', 'sickbadge', '💤'));
       if (g.has(c, 'cantAttack') && g.has(c, 'cantBlock')) e.append(el('div', 'zz', '🚫'));
     }
     const cn = Object.entries(c.counters).filter(([, v]) => v);
@@ -348,6 +349,7 @@ const UI = {
     const g = UI.g;
     if (UI.mode === 'target' && UI.legalSet.has(c)) return UI.pickTarget(c);
     if (UI.mode === 'attack') {
+      if (c.controller === 0 && g.isCreature(c) && g.isSick(c)) { UI.toast(`${c.name} is summoning sick — it can't attack until your next turn.`); return; }
       if (UI.atkPossible.includes(c)) { if (g.has(c, 'attacksEachCombat')) { UI.toast(c.name + ' must attack.'); return; } if (UI.atkSet.has(c)) UI.atkSet.delete(c); else UI.atkSet.add(c); UI.scheduleRender(); return; }
     }
     if (UI.mode === 'block') {

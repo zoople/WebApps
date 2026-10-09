@@ -301,3 +301,25 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 .card{touch-action:manipulation}
 #handWrap{touch-action:pan-x;overscroll-behavior-x:contain}
 #hand .card{touch-action:pan-x}
+
+/* ===== uniform hand + summoning sickness ===== */
+#hand .card.rec{transform:none}
+#hand .card,#hand .card.castable,#hand .card.rec,#hand .card.unplayable{transform:none;box-shadow:0 2px 6px rgba(0,0,0,.6)}
+#hand .card .mark{top:-2px;left:-2px;right:-2px;bottom:-2px;border-radius:8px}
+#hand .card.castable .mark{box-shadow:0 0 0 2px #46c47c}
+#hand .card.rec .mark{box-shadow:0 0 0 3px #e3b95a}
+#hand .card.rec::after{content:"★";position:absolute;top:-7px;right:-4px;width:18px;height:18px;border-radius:50%;background:#e3b95a;color:#1b1405;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;z-index:5;pointer-events:none}
+#hand .card.unplayable{filter:brightness(.6)}
+#hand{align-items:flex-start;padding-top:12px}
+.card.sick{filter:brightness(.72) saturate(.65)}
+.card.sick::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;border-radius:6px;background:repeating-linear-gradient(135deg,rgba(10,16,40,.5) 0 5px,rgba(10,16,40,0) 5px 10px);pointer-events:none;z-index:2}
+.card.sick .mark{box-shadow:0 0 0 2px #6f9bff}
+.sickbadge{position:absolute;top:-7px;right:-6px;width:24px;height:24px;border-radius:50%;background:#16203a;border:2px solid #7aa7ff;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:6;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.6)}
+.card.sick.tapped{filter:brightness(.55) saturate(.6)}
+.card{isolation:isolate}
+#hand .card:nth-child(n){z-index:auto}
+#hand .card .mark{top:0;left:0;right:0;bottom:0;border-radius:6px}
+#hand .card.castable .mark{box-shadow:inset 0 0 0 3px #46c47c}
+#hand .card.rec .mark{box-shadow:inset 0 0 0 3px #e3b95a}
+#hand .card.rec.castable .mark{box-shadow:inset 0 0 0 3px #e3b95a}
+#hand .card.rec::after{top:auto;right:auto;left:4px;bottom:4px;width:20px;height:20px;font-size:13px}
