@@ -196,6 +196,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
       <span class="pill" id="hEnergy">⚡ 5/5</span>
       <span class="pill" id="bag"></span>
       <span class="sp"></span>
+      <button class="btn small" id="bUp" title="Upgrades" style="background:linear-gradient(#b9e38a,#6fb04a);box-shadow:0 3px 0 #3d7a26,0 6px 10px rgba(0,0,0,.35)">⬆<span class="lbl"> Upgrades</span></button>
       <button class="btn small blue" id="bStore">🧺<span class="lbl"> Storage</span></button>
       <button class="btn small" id="bQuests">📜<span class="lbl"> Quests</span> <span class="badge hidden" id="qBadge">0</span></button>
       <button class="btn small grey" id="bGuide" title="Guide arrows">🧭</button>
@@ -219,7 +220,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v6 · 9 Oct 2026';
+const VERSION='v7 · 9 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -258,7 +259,7 @@ const ITEMS={
   wood:{n:'Wood',e:'🪵'},stone:{n:'Stone',e:'🪨'},berries:{n:'Berries',e:'🫐'},wheat:{n:'Wheat',e:'🌾'},
   plank:{n:'Planks',e:'🟫'},brick:{n:'Bricks',e:'🧱'},jam:{n:'Jam',e:'🍯'},bread:{n:'Bread',e:'🍞'}
 };
-const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1},boltLvl:0,st:{},claimed:{},seen:{},story:0,say:1});
+const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1},boltLvl:0,st:{},claimed:{},seen:{},story:0,say:1,tools:{axe:1,pick:1,basket:1}});
 let S=defState();
 function load(){try{const j=JSON.parse(localStorage.getItem(SAVE_KEY));if(j&&j.v===1){S=Object.assign(defState(),j);return true}}catch(e){}return false}
 let saveT=0;
@@ -377,11 +378,14 @@ const BLD=[
 BLD.forEach(b=>{b.door=[b.x+1,b.y+3]});
 const BOARD={x:15,y:10,door:[15,11]};
 const NODE_T={
-  tree:{item:'wood',max:4,time:.85,regrow:22,sfx:'chop',verb:'Chopping'},
-  rock:{item:'stone',max:4,time:1.05,regrow:26,sfx:'chop',verb:'Mining'},
-  bush:{item:'berries',max:3,time:.65,regrow:18,sfx:'get',verb:'Picking'},
-  wheat:{item:'wheat',max:3,time:.7,regrow:20,sfx:'get',verb:'Reaping'}
+  tree:{item:'wood',max:4,time:1.7,regrow:22,sfx:'chop',verb:'Chopping'},
+  rock:{item:'stone',max:4,time:2.1,regrow:26,sfx:'chop',verb:'Mining'},
+  bush:{item:'berries',max:3,time:1.3,regrow:18,sfx:'get',verb:'Picking'},
+  wheat:{item:'wheat',max:3,time:1.4,regrow:20,sfx:'get',verb:'Reaping'}
 };
+
+const TOOL_OF={tree:'axe',rock:'pick',bush:'basket',wheat:'basket'};
+const gatherTime=type=>NODE_T[type].time*(1-.14*(((S.tools||{})[TOOL_OF[type]]||1)-1));
 
 /* ---- map ---- */
 const grid=[];            // 0 grass 1 path 2 water 3 mat
@@ -490,6 +494,18 @@ function makeSprites(){
     blobs.forEach(([x,y,rr])=>{for(let k=0;k<26;k++){const a=r()*6.28,d=Math.sqrt(r())*rr*.9;const lx=x+Math.cos(a)*d,ly=y+Math.sin(a)*d;
       g.fillStyle=ly<y-rr*.1?`hsla(${hu+10},60%,${60+r()*12}%,.55)`:`hsla(${hu},45%,${16+r()*10}%,.5)`;g.beginPath();g.ellipse(lx,ly,2.2+r()*2.2,1.3+r()*1.2,r()*3,0,7);g.fill()}});
     if(v===2){for(let k=0;k<7;k++){g.fillStyle='#e0402f';g.beginPath();g.arc(20+r()*52,28+r()*40,2.6,0,7);g.fill();g.fillStyle='rgba(255,255,255,.7)';g.fillRect(19.5+0,0,0,0)}}
+  }));
+  SP.pine=[0,1,2].map(v=>spr(84,116,42,108,(g)=>{
+    const r=mulberry(800+v);shadowEll(g,42,108,26,8,.34);
+    g.fillStyle=lg(g,36,0,48,0,[[0,'#3b2a1c'],[1,'#2a1c12']]);g.fillRect(37,92,10,16);
+    const hue=[168,176,160][v];
+    for(let i=0;i<4;i++){
+      const base=100-i*22,hw=33-i*6,top=base-38;
+      g.fillStyle=lg(g,42-hw,0,42+hw,0,[[0,`hsl(${hue} 34% 30%)`],[.5,`hsl(${hue} 38% 20%)`],[1,`hsl(${hue} 42% 12%)`]]);
+      g.beginPath();g.moveTo(42,top);g.lineTo(42+hw,base);g.quadraticCurveTo(42,base+7,42-hw,base);g.closePath();g.fill();
+      g.strokeStyle='rgba(0,15,10,.55)';g.lineWidth=1.2;g.stroke();
+      for(let k=0;k<22;k++){const yy=top+8+r()*(base-top-8),xx=42+(r()-.5)*2*hw*((yy-top)/(base-top))*.85;g.strokeStyle=`rgba(${r()<.5?'150,210,170':'0,25,20'},.3)`;g.lineWidth=1;g.beginPath();g.moveTo(xx,yy);g.lineTo(xx+(r()-.5)*8,yy+5);g.stroke()}
+    }
   }));
   SP.stump=spr(60,50,30,42,(g)=>{
     shadowEll(g,30,42,18,6,.3);g.fillStyle=lg(g,14,0,46,0,[[0,'#4a2e18'],[.5,'#8a5c33'],[1,'#3e2512']]);
@@ -720,25 +736,33 @@ function onArrive(){
   if(b.kind==='barn'||b.kind==='craft')P.xfer={b,phase:'in',t:.15,n:0,put:0,took:0,full:false,bagFull:false};
 }
 /* ---- unloading / loading happens one item at a time ---- */
-const flyers=[],FLY=.6;
-function fly(item,dir,b){
+const flyers=[],FLY=.6;let inbound=0;const bufFly={};
+const transferBusy=()=>!!P.xfer||flyers.length>0;
+function fly(item,dir,b,land){
   const px=P.px,py=P.py-26,bx=b.x*TS+72,by=(b.y+2)*TS+4;
-  flyers.push(dir==='in'?{e:ITEMS[item].e,x0:px,y0:py,x1:bx,y1:by,t:0}:{e:ITEMS[item].e,x0:bx,y0:by,x1:px,y1:py,t:0});
+  flyers.push(Object.assign(dir==='in'?{e:ITEMS[item].e,x0:px,y0:py,x1:bx,y1:by,t:0}:{e:ITEMS[item].e,x0:bx,y0:by,x1:px,y1:py,t:0},{land}));
 }
+function flushFlyers(){while(flyers.length){const f=flyers.pop();if(f.land)f.land()}}
+// items only count (store, stats, objectives) when they actually land
 function xferStep(){
   const x=P.xfer,b=x.b,idx=x.n+x.put+x.took;
   if(b.kind==='barn'){
     const k=Object.keys(S.carry).find(k=>S.carry[k]>0);
     if(!k){finishXfer();return}
-    S.carry[k]--;S.store[k]=(S.store[k]||0)+1;stat('st_'+k);stat('delivered');fly(k,'in',b);x.n++;
+    S.carry[k]--;x.n++;
+    fly(k,'in',b,()=>{S.store[k]=(S.store[k]||0)+1;stat('st_'+k);stat('delivered');hud();save()});
   }else{
     const[item,need]=Object.entries(b.in)[0],s=stn(b.id);
     if(x.phase==='in'){
-      if((S.carry[item]||0)>0&&s.buf<need*3){S.carry[item]--;s.buf++;fly(item,'in',b);x.put++}
-      else{if((S.carry[item]||0)>0)x.full=true;x.phase='out';x.t=.3;return}
+      if((S.carry[item]||0)>0&&s.buf+(bufFly[b.id]||0)<need*3){
+        S.carry[item]--;bufFly[b.id]=(bufFly[b.id]||0)+1;x.put++;
+        fly(item,'in',b,()=>{bufFly[b.id]--;s.buf++;hud();save()});
+      }else{if((S.carry[item]||0)>0)x.full=true;x.phase='out';x.t=.3;return}
     }else{
-      if(s.out>0&&carryN()<S.cap){s.out--;S.carry[b.out]=(S.carry[b.out]||0)+1;fly(b.out,'out',b);x.took++}
-      else{if(s.out>0)x.bagFull=true;finishXfer();return}
+      if(s.out>0&&carryN()+inbound<S.cap){
+        s.out--;inbound++;x.took++;
+        fly(b.out,'out',b,()=>{inbound--;S.carry[b.out]=(S.carry[b.out]||0)+1;hud();save()});
+      }else{if(s.out>0)x.bagFull=true;finishXfer();return}
     }
   }
   tone(470+Math.min(idx,14)*38,.09,'triangle',.07);
@@ -746,13 +770,12 @@ function xferStep(){
 }
 function finishXfer(){
   const x=P.xfer,b=x.b;P.xfer=null;
-  if(b.kind==='barn'){if(x.n){sfx.get();fl(b.x*TS+72,b.y*TS-4,`Stored ${x.n}`,'#ffe9a8');save(true)}}
+  if(b.kind==='barn'){if(x.n){sfx.get();fl(b.x*TS+72,b.y*TS-4,`Stored ${x.n}`,'#ffe9a8')}}
   else{
     if(x.took){sfx.get();fl(b.x*TS+72,b.y*TS-4,`+${x.took} ${ITEMS[b.out].e}`,'#fff')}
     if(x.put)fl(b.x*TS+72,b.y*TS+14,`Fed ${x.put}`,'#fff');
     if(x.full)toast(`${b.name} is full`);
     if(x.bagFull)toast('Bag full!');
-    if(x.put||x.took)save(true);
   }
   hud();
 }
@@ -774,7 +797,7 @@ function update(dt){
     if(P.moving||doorAt[P.x+','+P.y]!==P.xfer.b)P.xfer=null;
     else{P.xfer.t-=dt;if(P.xfer.t<=0){P.xfer.t=Math.max(.22,.36-(P.xfer.n+P.xfer.put+P.xfer.took)*.012);xferStep()}}
   }
-  for(let i=flyers.length-1;i>=0;i--){flyers[i].t+=dt;if(flyers[i].t>=FLY)flyers.splice(i,1)}
+  for(let i=flyers.length-1;i>=0;i--){flyers[i].t+=dt;if(flyers[i].t>=FLY){const f=flyers.splice(i,1)[0];if(f.land)f.land()}}
   // nodes regrow
   for(const n of nodes){if(n.ch<NODE_T[n.type].max){n.t+=dt;if(n.t>=NODE_T[n.type].regrow){n.ch=NODE_T[n.type].max;n.t=0}}}
   // movement
@@ -798,7 +821,7 @@ function update(dt){
     if(carryN()>=S.cap){P.gather=0;if(!P.fullToast||performance.now()-P.fullToast>2500){P.fullToast=performance.now();toast('Bag full — drop it at the Barn 📦')}}
     else{
       P.gather+=dt;
-      if(P.gather>=T.time){
+      if(P.gather>=gatherTime(nd.type)){
         P.gather=0;nd.ch--;nd.t=0;S.carry[T.item]=(S.carry[T.item]||0)+1;stat('g_'+T.item);sfx[T.sfx]();
         fl(P.x*TS+24,P.y*TS-14,`+1 ${ITEMS[T.item].e}`,'#fff');hud();checkQuestBadge();save();
       }
@@ -859,6 +882,7 @@ function put(g,s,x,y){g.drawImage(s.c,Math.round(x-s.ax),Math.round(y-s.ay))}
 function drawEnt(g,e,time){
   if(e.node){
     const n=e.node,x=n.x*TS+TS/2,y=n.y*TS+TS-3,full=n.ch>0;
+    if(full&&n.type!=='wheat'){g.save();g.globalAlpha=.55+.2*Math.sin(time*3+n.x);g.fillStyle='rgba(255,236,150,.28)';g.strokeStyle='rgba(255,226,110,.9)';g.lineWidth=2.5;g.beginPath();g.ellipse(x,y-1,24,10,0,0,7);g.fill();g.stroke();g.restore()}
     if(n.type==='tree')put(g,full?SP.tree[n.v]:SP.stump,x,y);
     else if(n.type==='rock')put(g,full?SP.rock[n.v]:SP.rockGone,x,y);
     else if(n.type==='bush')put(g,full?SP.bush[n.v]:SP.bushGone[n.v],x,y);
@@ -871,7 +895,7 @@ function drawEnt(g,e,time){
     }
   }else if(e.deco){
     const d=e.deco;
-    if(d.k==='tree')put(g,SP.tree[d.v],d.x*TS+TS/2,d.y*TS+TS-3);
+    if(d.k==='tree')put(g,SP.pine[d.v],d.x*TS+TS/2,d.y*TS+TS-3);
     else put(g,SP[d.k][d.v],d.x*TS+d.ox,d.y*TS+d.oy);
   }else if(e.bld){
     const b=e.bld;put(g,b.spr,b.x*TS+72,(b.y+3)*TS-4+2);
@@ -921,7 +945,7 @@ function drawPlayer(g,time){
   g.fillStyle='#c0392b';g.fillRect(x-9,hy-10,18,3);
   // gather ring
   if(P.gather>0){const nd=nodeAt[P.x+','+P.y];if(nd){const T=NODE_T[nd.type];g.strokeStyle='rgba(0,0,0,.4)';g.lineWidth=5;g.beginPath();g.arc(x,y+8,15,0,7);g.stroke();
-    g.strokeStyle='#ffe27a';g.beginPath();g.arc(x,y+8,15,-Math.PI/2,-Math.PI/2+6.283*P.gather/T.time);g.stroke()}}
+    g.strokeStyle='#ffe27a';g.beginPath();g.arc(x,y+8,15,-Math.PI/2,-Math.PI/2+6.283*P.gather/gatherTime(nd.type));g.stroke()}}
 }
 function drawNPC(g,n,time){
   const x=n.x*TS+TS/2,y=n.y*TS+TS-6,bob=Math.sin(time*2+n.x)*.9,by=y-bob;
@@ -1045,6 +1069,8 @@ const QUESTS=[
   {id:'q14',t:'Solve 6 Bolt Works puzzles',g:()=>[sget('boltWins'),6],r:{coins:50,energy:2}},
   {id:'q15',t:'Harvest 60 coins of beans',g:()=>[sget('cardCoins'),60],r:{coins:60,plank:3,brick:3}},
   {id:'q16',t:'Stitch a bigger backpack',g:()=>[sget('packUp'),1],r:{coins:40,jam:2}},
+  {id:'q19',t:'Sharpen a tool (axe, pickaxe or basket)',g:()=>[sget('toolUp'),1],r:{coins:30}},
+  {id:'q20',t:'Upgrade your tools 4 times',g:()=>[sget('toolUp'),4],r:{coins:80,energy:2}},
   {id:'q17',t:'Craft 10 goods of any kind',g:()=>[sget('craft_plank')+sget('craft_brick')+sget('craft_jam')+sget('craft_bread'),10],r:{coins:60,energy:3}},
   {id:'q18',t:'Earn 600 coins in total',g:()=>[sget('earned'),600],r:{coins:120,energy:3}}
 ];
@@ -1052,7 +1078,7 @@ const qDone=q=>{const[a,b]=q.g();return a>=b};
 function claimable(){return QUESTS.filter(q=>!S.claimed[q.id]&&qDone(q)).length}
 function checkQuestBadge(){
   const n=claimable(),bd=$('#qBadge');bd.textContent=n;bd.classList.toggle('hidden',!n);
-  QUESTS.forEach(q=>{if(!S.claimed[q.id]&&!S.seen[q.id]&&qDone(q)){S.seen[q.id]=1;toast(`📜 Quest ready: ${q.t}`);sfx.win()}});
+  if(!transferBusy())QUESTS.forEach(q=>{if(!S.claimed[q.id]&&!S.seen[q.id]&&qDone(q)){S.seen[q.id]=1;toast(`📜 Quest ready: ${q.t}`);sfx.win()}});
 }
 function hud(){
   energyTick();
@@ -1068,6 +1094,7 @@ $('#bSound').onclick=()=>{muted=!muted;try{localStorage.setItem('hh.muted',muted
 $('#bSound').textContent=muted?'🔇':'🔊';
 $('#bQuests').onclick=()=>{held.length=0;openQuests()};
 $('#bStore').onclick=()=>{held.length=0;openStorage()};
+$('#bUp').onclick=()=>{held.length=0;openUpgrades()};
 $('#bMenu').onclick=()=>{held.length=0;openMenu()};
 
 function openQuests(){
@@ -1100,16 +1127,48 @@ function openStorage(){
     const items=Object.keys(ITEMS).map(k=>`<div class="row"><span style="font-size:26px">${ITEMS[k].e}</span><div class="grow"><b>${ITEMS[k].n}</b></div><b style="font-size:20px">${S.store[k]||0}</b>
       ${k==='bread'?`<button class="btn small green" data-eat="bread" ${(S.store.bread||0)&&S.energy<MAXE?'':'disabled'}>Eat +2⚡</button>`:''}
       ${k==='jam'?`<button class="btn small green" data-eat="jam" ${(S.store.jam||0)&&S.energy<MAXE?'':'disabled'}>Eat +3⚡</button>`:''}</div>`).join('');
-    const maxed=S.cap>=14,pc=packCost();
-    return `<h2>🧺 Barn Storage</h2><div class="muted">Everything you drop off at the Barn lives here. Upgrades are paid from storage.</div>${items}
-      <div class="row"><span style="font-size:26px">🎒</span><div class="grow"><b>Backpack</b> <span class="lvl">${S.cap} slots</span><div class="muted">${maxed?'Fully stitched!':'Carry 2 more items per trip'}</div>${maxed?'':costHTML(pc,true)}</div>
-      <button class="btn small" data-pack ${maxed||!canPay(pc)?'disabled':''}>Upgrade</button></div>`;
+    return `<h2>🧺 Barn Storage</h2><div class="muted">Everything you drop off at the Barn lives here. Upgrades are paid from it.</div>${items}
+      <div style="margin-top:10px"><button class="btn" id="stUp">⬆ Upgrade backpack &amp; tools</button></div>`;
   };
   const wire=()=>{
     const sh=$('#modal .sheet');
     const redraw=()=>{sh.innerHTML=`<button class="x">✕</button>`+draw();sh.querySelector('.x').onclick=closeModal;wire()};
     sh.querySelectorAll('[data-eat]').forEach(b=>b.onclick=()=>{const k=b.dataset.eat;if(!(S.store[k]>0)||S.energy>=MAXE)return;S.store[k]--;S.energy=Math.min(MAXE,S.energy+(k==='bread'?2:3));if(S.energy>=MAXE)S.eT=Date.now();sfx.get();save(true);hud();redraw()});
-    const pk=sh.querySelector('[data-pack]');if(pk)pk.onclick=()=>{const c=packCost();if(!canPay(c))return;pay(c);S.cap+=2;stat('packUp');sfx.win();toast('🎒 Backpack upgraded!');save(true);hud();redraw()};
+    $('#stUp').onclick=()=>{closeModal();openUpgrades()};
+  };
+  openModal(draw());wire();
+}
+
+/* ---- backpack + tool upgrades ---- */
+const TOOLS={
+  axe:{n:'Axe',e:'🪓',what:'Chopping a tree',type:'tree',cost:[{coins:20,plank:1},{coins:45,plank:2,brick:1},{coins:80,plank:3,brick:2},{coins:130,plank:4,brick:3}]},
+  pick:{n:'Pickaxe',e:'⛏️',what:'Mining a rock',type:'rock',cost:[{coins:20,brick:1},{coins:45,plank:1,brick:2},{coins:80,plank:2,brick:3},{coins:130,plank:3,brick:4}]},
+  basket:{n:'Forage Basket',e:'🧺',what:'Picking berries & reaping wheat',type:'bush',cost:[{coins:20,plank:1},{coins:45,jam:1},{coins:80,jam:1,bread:1},{coins:130,jam:2,bread:2}]}
+};
+const toolLv=k=>(S.tools||{})[k]||1;
+const toolSecs=(k,lv)=>NODE_T[TOOLS[k].type].time*(1-.14*(lv-1));
+function openUpgrades(){
+  const draw=()=>{
+    const maxed=S.cap>=14,pc=packCost();
+    const pack=`<div class="row"><span style="font-size:30px">🎒</span><div class="grow"><b>Backpack</b> <span class="lvl">${S.cap} slots</span>
+      <div class="muted">${maxed?'Fully stitched!':`Carry ${S.cap} → ${S.cap+2} items per trip`}</div>${maxed?'':costHTML(pc,true)}</div>
+      <button class="btn small" data-pack ${maxed||!canPay(pc)?'disabled':''}>Upgrade</button></div>`;
+    const tools=Object.keys(TOOLS).map(k=>{
+      const T=TOOLS[k],lv=toolLv(k),max=lv>=5,c=max?null:T.cost[lv-1];
+      return `<div class="row"><span style="font-size:30px">${T.e}</span><div class="grow"><b>${T.n}</b> <span class="lvl">Level ${lv}${max?' · MAX':''}</span>
+        <div class="muted">${T.what}: ${toolSecs(k,lv).toFixed(1)}s${max?'':` → <b>${toolSecs(k,lv+1).toFixed(1)}s</b>`}</div>${max?'':costHTML(c,true)}</div>
+        <button class="btn small" data-tool="${k}" ${max||!canPay(c)?'disabled':''}>Upgrade</button></div>`;
+    }).join('');
+    return `<h2>⬆ Upgrades</h2><div class="muted">Pay with coins and goods stored in the Barn (the number in brackets is what you have).</div>${pack}${tools}`;
+  };
+  const wire=()=>{
+    const sh=$('#modal .sheet');
+    const redraw=()=>{const keep=sh.scrollTop;sh.innerHTML=`<button class="x">✕</button>`+draw();sh.querySelector('.x').onclick=closeModal;sh.scrollTop=keep;wire()};
+    const pk=sh.querySelector('[data-pack]');if(pk)pk.onclick=()=>{const c=packCost();if(!canPay(c)||S.cap>=14)return;pay(c);S.cap+=2;stat('packUp');sfx.win();toast('🎒 Backpack upgraded!');save(true);hud();redraw()};
+    sh.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{
+      const k=b.dataset.tool,lv=toolLv(k);if(lv>=5)return;const c=TOOLS[k].cost[lv-1];if(!canPay(c))return;
+      pay(c);S.tools[k]=lv+1;stat('toolUp');sfx.win();toast(`${TOOLS[k].e} ${TOOLS[k].n} is now Level ${lv+1}!`);save(true);hud();redraw();
+    });
   };
   openModal(draw());wire();
 }
@@ -1229,7 +1288,7 @@ const END_SAY=["Harvest Hollow is thriving, thanks to you!","The workshops are h
 function curStep(){return STORY[S.story]||null}
 function checkStory(silent){
   let moved=false;
-  while(curStep()&&curStep().done()){
+  while(curStep()&&!transferBusy()&&curStep().done()){
     const st=curStep();
     if(!silent){reward(st.r);toast(`⭐ Step complete! ${rewardHTML(st.r)}`);sfx.win()}
     S.story++;S.say=1;moved=true;
@@ -1409,7 +1468,7 @@ function openHowTo(){
       <li><b>Drop off</b> — step on the red mat in front of the 📦 Barn to store everything.</li>
       <li><b>Craft</b> — feed goods into the Sawmill, Kiln, Jam Kitchen or Bakery by stepping on their mats. Step on again later to collect.</li>
       <li><b>Play</b> — step on the red mat under the ⚙️ Bolt Works or 🃏 Card Barn and press ▶ Play (costs ⚡1) to earn 🪙 coins.</li>
-      <li><b>Upgrade</b> — spend coins plus planks and bricks from the Barn on workshop upgrades for better rewards.</li>
+      <li><b>Upgrade</b> — spend coins and goods from the Barn on workshop levels, and on the ⬆ Upgrades screen for a bigger 🎒 backpack and a faster 🪓 axe, ⛏️ pickaxe and 🧺 forage basket.</li>
       <li><b>Eat</b> — bread and jam (🧺 Storage) refill your ⚡ energy.</li></ol>
     <div class="muted">Move: arrow keys / WASD, or the thumbstick. Walk up to a character and press 💬 Talk.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
@@ -1843,8 +1902,8 @@ leaveMG=function(){
 load();
 checkStory(true);
 setInterval(()=>save(true),8000);
-addEventListener('visibilitychange',()=>{if(document.hidden)save(true)});
-addEventListener('beforeunload',()=>save(true));
+addEventListener('visibilitychange',()=>{if(document.hidden){flushFlyers();save(true)}});
+addEventListener('beforeunload',()=>{flushFlyers();save(true)});
 showTitle();
 </script>
 </body>
