@@ -36,6 +36,15 @@ button{font:inherit;cursor:pointer}
 #hud>*{pointer-events:auto}
 #hud .sp{flex:1;pointer-events:none}
 #bag{display:flex;gap:8px}
+#goalrow{flex-basis:100%;order:10;pointer-events:none}
+#goal{pointer-events:auto;cursor:pointer;white-space:normal;max-width:min(640px,100%);background:linear-gradient(#fff3cf,#f0d58a);color:#3a2606;border:2px solid #b8851a;font-size:14px;line-height:1.3}
+.sec{font-weight:800;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:12px 0 2px}
+.row.ready{background:rgba(120,200,90,.25);border-radius:10px;padding:8px;border-bottom:0;margin:3px 0}
+.say{display:flex;gap:12px;align-items:flex-start;margin-top:4px}
+.say .face{flex:none;width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;background:radial-gradient(#fff6d8,#e5c682);border:3px solid #7a5530;box-shadow:inset 0 -5px 8px rgba(120,70,10,.3),0 3px 6px rgba(0,0,0,.3)}
+.say .who{font-weight:800;font-family:Georgia,serif;font-size:19px}
+.say .txt{background:rgba(255,255,255,.6);border:2px solid #7a5530;border-radius:14px;padding:10px 12px;line-height:1.45}
+.goalbox{margin-top:12px;padding:9px 11px;border-radius:10px;background:rgba(232,178,48,.3);border:1px solid rgba(184,133,26,.6);font-weight:700}
 #bag span.it{display:inline-flex;gap:3px;align-items:center}
 .badge{display:inline-block;min-width:18px;height:18px;border-radius:9px;background:#e0412f;color:#fff;font-size:11px;line-height:18px;text-align:center;padding:0 4px}
 #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + var(--safe-b));padding:6px 14px;border-radius:999px;background:rgba(30,20,10,.72);color:#ffeec8;font-size:13px;pointer-events:none;max-width:90vw;text-align:center;transition:opacity .5s}
@@ -182,6 +191,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
       <button class="btn small" id="bQuests">📜<span class="lbl"> Quests</span> <span class="badge hidden" id="qBadge">0</span></button>
       <button class="btn small grey" id="bSound" title="Sound">🔊</button>
       <button class="btn small grey" id="bMenu">☰</button>
+      <div id="goalrow"><span class="pill" id="goal"></span></div>
     </div>
     <div id="hint"></div>
     <div id="dpad"><button class="u" data-d="u">▲</button><button class="l" data-d="l">◀</button><button class="r" data-d="r">▶</button><button class="d" data-d="d">▼</button></div>
@@ -235,7 +245,7 @@ const ITEMS={
   wood:{n:'Wood',e:'🪵'},stone:{n:'Stone',e:'🪨'},berries:{n:'Berries',e:'🫐'},wheat:{n:'Wheat',e:'🌾'},
   plank:{n:'Planks',e:'🟫'},brick:{n:'Bricks',e:'🧱'},jam:{n:'Jam',e:'🍯'},bread:{n:'Bread',e:'🍞'}
 };
-const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1},boltLvl:0,st:{},claimed:{},seen:{}});
+const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1},boltLvl:0,st:{},claimed:{},seen:{},story:0,say:1});
 let S=defState();
 function load(){try{const j=JSON.parse(localStorage.getItem(SAVE_KEY));if(j&&j.v===1){S=Object.assign(defState(),j);return true}}catch(e){}return false}
 let saveT=0;
@@ -409,6 +419,12 @@ function buildMap(){
   [[8,8],[9,11],[25,9],[27,11],[14,7],[21,7],[5,10],[30,16]].forEach(([x,y])=>{if(free(x,y)){block[y*MW+x]=1;decor.push({k:'tree',x,y,v:(x+y)%3,big:true})}});
 }
 buildMap();
+const NPCS=[
+  {id:'granny',name:'Granny Marigold',x:16,y:11,col:'#8e5aa8',hair:'#e6e6e6'},
+  {id:'tess',name:'Tinker Tess',x:24,y:7,col:'#d9822b',hair:'#5a2a12'},
+  {id:'bram',name:'Farmer Bram',x:30,y:7,col:'#4a7a3a',hair:'#7a4a22'}
+];
+NPCS.forEach(n=>{block[n.y*MW+n.x]=1;for(let i=decor.length-1;i>=0;i--){if(decor[i].x===n.x&&decor[i].y===n.y)decor.splice(i,1)}});
 
 /* =====================================================================
    SPRITES (procedurally painted once to offscreen canvases)
@@ -649,7 +665,10 @@ function walkTo(tx,ty){
 }
 cv.addEventListener('pointerdown',e=>{
   if(paused())return;const r=cv.getBoundingClientRect();
-  const wx=cam.x+(e.clientX-r.left)/Z,wy=cam.y+(e.clientY-r.top)/Z;walkTo(Math.floor(wx/TS),Math.floor(wy/TS));
+  const wx=cam.x+(e.clientX-r.left)/Z,wy=cam.y+(e.clientY-r.top)/Z,tx=Math.floor(wx/TS),ty=Math.floor(wy/TS);
+  const npc=NPCS.find(n=>Math.abs(n.x-tx)<=0&&(ty===n.y||ty===n.y-1)&&tx===n.x);
+  if(npc){talkTo(npc.id);return}
+  walkTo(tx,ty);
 });
 const KEYMAP={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r',w:'u',s:'d',a:'l',d:'r',W:'u',S:'d',A:'l',D:'r'};
 addEventListener('keydown',e=>{
@@ -679,7 +698,7 @@ function idleDoor(){
 function barnAct(b){
   const n=carryN();
   if(n>0){
-    let txt=[];for(const[k,v]of Object.entries(S.carry)){if(v>0){S.store[k]=(S.store[k]||0)+v;txt.push(`${ITEMS[k].e}${v}`)}}
+    let txt=[];for(const[k,v]of Object.entries(S.carry)){if(v>0){S.store[k]=(S.store[k]||0)+v;stat('st_'+k,v);txt.push(`${ITEMS[k].e}${v}`)}}
     S.carry={};stat('delivered',n);sfx.drop();fl(b.x*TS+72,b.y*TS-4,'+'+txt.join(' '),'#ffe9a8');toast(`Stored ${txt.join(' ')}`);save(true);hud();
   }
 }
@@ -774,6 +793,7 @@ function buildEnts(){
   decor.forEach(d=>{if(d.k==='tree')ents.push({by:d.y*TS+TS-3,deco:d});else ents.push({by:d.y*TS+d.oy,deco:d,low:true})});
   BLD.forEach(b=>ents.push({by:(b.y+3)*TS-4,bld:b}));
   ents.push({by:BOARD.y*TS+TS-2,board:true});
+  NPCS.forEach(n=>ents.push({by:n.y*TS+TS-3,npc:n}));
   ents.sort((a,b)=>a.by-b.by);
 }
 buildEnts();
@@ -798,6 +818,7 @@ function drawEnt(g,e,time){
   }else if(e.bld){
     const b=e.bld;put(g,b.spr,b.x*TS+72,(b.y+3)*TS-4+2);
   }else if(e.board){put(g,SP.board,BOARD.x*TS+TS/2,BOARD.y*TS+TS-2)}
+  else if(e.npc)drawNPC(g,e.npc,time);
 }
 function drawPlayer(g,time){
   const x=P.px,y=P.py+TS/2-6,d=P.dir,mv=P.moving;
@@ -844,6 +865,34 @@ function drawPlayer(g,time){
   if(P.gather>0){const nd=nodeAt[P.x+','+P.y];if(nd){const T=NODE_T[nd.type];g.strokeStyle='rgba(0,0,0,.4)';g.lineWidth=5;g.beginPath();g.arc(x,y+8,15,0,7);g.stroke();
     g.strokeStyle='#ffe27a';g.beginPath();g.arc(x,y+8,15,-Math.PI/2,-Math.PI/2+6.283*P.gather/T.time);g.stroke()}}
 }
+function drawNPC(g,n,time){
+  const x=n.x*TS+TS/2,y=n.y*TS+TS-6,bob=Math.sin(time*2+n.x)*.9,by=y-bob;
+  shadowEll(g,x,y+1,13,5,.35);
+  g.fillStyle='#4b3426';g.fillRect(x-8,y-10,6,10);g.fillRect(x+2,y-10,6,10);g.fillStyle='#2e1e14';g.fillRect(x-9,y-2,7,3);g.fillRect(x+2,y-2,7,3);
+  g.fillStyle=lg(g,x-10,by-32,x+10,by-8,[[0,n.col],[1,'rgba(0,0,0,.55)']]);
+  if(n.id==='granny'){g.beginPath();g.moveTo(x-9,by-30);g.lineTo(x+9,by-30);g.lineTo(x+13,by-8);g.lineTo(x-13,by-8);g.closePath();g.fill()}
+  else{g.beginPath();g.roundRect(x-9,by-31,18,22,6);g.fill()}
+  g.strokeStyle='rgba(0,0,0,.4)';g.lineWidth=1.2;g.stroke();
+  g.fillStyle='rgba(255,255,255,.8)';if(n.id==='granny')g.fillRect(x-6,by-20,12,11);
+  if(n.id==='tess'){g.fillStyle='#5a3b22';g.fillRect(x-9,by-18,18,3)}
+  if(n.id==='bram'){g.fillStyle='#3b5fa8';g.fillRect(x-6,by-30,12,20)}
+  g.fillStyle='#e9c19a';g.beginPath();g.arc(x-11,by-21,3.2,0,7);g.arc(x+11,by-21,3.2,0,7);g.fill();
+  const hy=by-39;
+  g.fillStyle=rg(g,x-3,hy-3,1,x,hy,11,[[0,'#f6d6b3'],[1,'#d9a679']]);g.beginPath();g.arc(x,hy,10,0,7);g.fill();
+  g.fillStyle=n.hair;
+  if(n.id==='granny'){g.beginPath();g.arc(x,hy-3,10.5,3.14,6.28);g.fill();g.beginPath();g.arc(x,hy-13,5,0,7);g.fill()}
+  if(n.id==='tess'){g.beginPath();g.arc(x,hy-2,10.5,3.3,6.1);g.fill();g.fillStyle='#e8b230';g.beginPath();g.ellipse(x,hy-8,11,4.5,0,3.14,6.28);g.fill();g.fillStyle='#2a2a2a';g.fillRect(x-9,hy-6,18,3);g.fillStyle='#9fd3ea';g.beginPath();g.arc(x-4.5,hy-4.5,3,0,7);g.arc(x+4.5,hy-4.5,3,0,7);g.fill()}
+  if(n.id==='bram'){g.fillStyle='#d9b45a';g.beginPath();g.ellipse(x,hy-7,14,4.5,0,0,7);g.fill();g.beginPath();g.moveTo(x-8,hy-7);g.quadraticCurveTo(x,hy-20,x+8,hy-7);g.fill();g.fillStyle=n.hair;g.beginPath();g.arc(x,hy+4,7,0.1,3.04);g.fill()}
+  g.fillStyle='#2a1a10';g.beginPath();g.arc(x-3.6,hy+1,1.4,0,7);g.arc(x+3.6,hy+1,1.4,0,7);g.fill();
+  if(n.id==='granny'){g.strokeStyle='#6b4a2a';g.lineWidth=1;g.beginPath();g.arc(x-3.6,hy+1,3,0,7);g.arc(x+3.6,hy+1,3,0,7);g.stroke()}
+  g.strokeStyle='#a5583d';g.lineWidth=1.2;g.beginPath();g.arc(x,hy+4,2.5,.2,2.9);g.stroke();
+  // name tag + attention marker
+  g.font='bold 11px "Trebuchet MS",sans-serif';g.textAlign='center';g.textBaseline='middle';
+  const tw=g.measureText(n.name).width+12;
+  g.fillStyle='rgba(30,20,10,.75)';g.beginPath();g.roundRect(x-tw/2,y+9,tw,15,7);g.fill();g.fillStyle='#ffeec8';g.fillText(n.name,x,y+17);
+  const st=curStep();
+  if(st&&st.who===n.id){g.font='bold 24px sans-serif';g.fillStyle='#ffd23a';g.strokeStyle='#5a3a00';g.lineWidth=3;const my=hy-30+Math.sin(time*5)*3;g.strokeText('❗',x,my);g.fillText('❗',x,my)}
+}
 function bubble(g,cx,y,text,sub){
   g.font='bold 13px "Trebuchet MS",sans-serif';g.textAlign='center';g.textBaseline='middle';
   const w=g.measureText(text).width+18;
@@ -868,7 +917,7 @@ function render(time){
   let drewP=false;const pby=P.py+TS/2-4;
   for(const e of ents){
     if(!drewP&&e.by>pby){drawPlayer(g,time);drewP=true}
-    const ex=e.node?e.node.x:e.deco?e.deco.x:e.bld?e.bld.x:BOARD.x,ey=e.node?e.node.y:e.deco?e.deco.y:e.bld?e.bld.y:BOARD.y;
+    const ex=e.node?e.node.x:e.deco?e.deco.x:e.bld?e.bld.x:e.npc?e.npc.x:BOARD.x,ey=e.node?e.node.y:e.deco?e.deco.y:e.bld?e.bld.y:e.npc?e.npc.y:BOARD.y;
     if(ex<x0-3||ex>x1+3||ey<y0-1||ey>y1+3)continue;
     drawEnt(g,e,time);
   }
@@ -951,6 +1000,7 @@ function hud(){
   const bag=Object.entries(S.carry).filter(([,v])=>v>0).map(([k,v])=>`<span class="it">${ITEMS[k].e}${v}</span>`).join('');
   $('#bag').innerHTML=`🎒 ${bag||'<small>empty</small>'} <small>${carryN()}/${S.cap}</small>`;
   checkQuestBadge();
+  checkStory();updateGoal();storyPrompt();
 }
 $('#bSound').onclick=()=>{muted=!muted;try{localStorage.setItem('hh.muted',muted?'1':'0')}catch(e){}$('#bSound').textContent=muted?'🔇':'🔊';sfx.click()};
 $('#bSound').textContent=muted?'🔇':'🔊';
@@ -959,22 +1009,28 @@ $('#bStore').onclick=()=>{held.length=0;openStorage()};
 $('#bMenu').onclick=()=>{held.length=0;openMenu()};
 
 function openQuests(){
-  const render=()=>{
-    const rows=QUESTS.map(q=>{
-      const[a,b]=q.g(),cl=!!S.claimed[q.id],ok=a>=b;
-      return `<div class="row" style="${cl?'opacity:.5':''}"><div class="grow"><b>${q.t}</b><div class="muted">${Math.min(a,b)} / ${b}</div><div class="bar"><i style="width:${Math.min(100,a/b*100)}%"></i></div></div>
-        <div>${rewardHTML(q.r)}</div>${cl?'<span>✅</span>':`<button class="btn small green" data-q="${q.id}" ${ok?'':'disabled'}>Claim</button>`}</div>`}).join('');
-    return `<h2>📜 Quest Board</h2><div class="muted">Gather, craft and play to earn rewards.</div>${rows}`;
+  const build=()=>{
+    const items=QUESTS.map(q=>{const[a,b]=q.g();return{q,a,b,cl:!!S.claimed[q.id],ok:a>=b}});
+    const ready=items.filter(i=>!i.cl&&i.ok);
+    const prog=items.filter(i=>!i.cl&&!i.ok).sort((x,y)=>y.a/y.b-x.a/x.b);
+    const done=items.filter(i=>i.cl);
+    const row=(i,kind)=>`<div class="row ${kind}" style="${kind==='done'?'opacity:.5':''}"><div class="grow"><b>${i.q.t}</b>
+      ${kind==='prog'?`<div class="muted">${Math.min(i.a,i.b)} / ${i.b}</div><div class="bar"><i style="width:${Math.min(100,i.a/i.b*100)}%"></i></div>`:''}</div>
+      <div>${rewardHTML(i.q.r)}</div>${kind==='ready'?`<button class="btn small green" data-q="${i.q.id}">Claim</button>`:kind==='done'?'<span>✅</span>':''}</div>`;
+    return `<h2>📜 Quest Board</h2><div class="muted">Gather, craft and play to earn rewards. Finished quests rise to the top.</div>
+      ${ready.length?`<div class="sec">Ready to claim · ${ready.length}</div>${ready.map(i=>row(i,'ready')).join('')}`:''}
+      ${prog.length?`<div class="sec">In progress</div>${prog.map(i=>row(i,'prog')).join('')}`:''}
+      ${done.length?`<div class="sec">Completed</div>${done.map(i=>row(i,'done')).join('')}`:''}`;
   };
   const wire=()=>{
     const sh=$('#modal .sheet');
     sh.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{
       const q=QUESTS.find(x=>x.id===b.dataset.q);if(!qDone(q)||S.claimed[q.id])return;
       S.claimed[q.id]=1;reward(q.r);sfx.coin();save(true);hud();
-      const keepScroll=sh.scrollTop;sh.innerHTML=`<button class="x">✕</button>`+render();sh.querySelector('.x').onclick=closeModal;sh.scrollTop=keepScroll;wire();
+      const keep=sh.scrollTop;sh.innerHTML=`<button class="x">✕</button>`+build();sh.querySelector('.x').onclick=closeModal;sh.scrollTop=keep;wire();
     });
   };
-  openModal(render());wire();
+  openModal(build());wire();
 }
 function packCost(){const k=(S.cap-6)/2+1;return{coins:20*k,plank:2*k,brick:k}}
 function openStorage(){
@@ -1013,12 +1069,13 @@ function openBuilding(b){
     const cur=gm.perks(lv),nxt=max?[]:gm.perks(lv+1);
     const perks=nxt.length?nxt.map((p,i)=>`<li class="${p!==cur[i]?'new':''}">${p}${p!==cur[i]?` <small>(was ${cur[i]||'—'})</small>`:''}</li>`).join(''):cur.map(p=>`<li>${p}</li>`).join('');
     return `<div class="bhead"><div class="bicon">${gm.icon}</div><div><h2>${gm.name}</h2><span class="lvl">Level ${lv}${max?' · MAX':''}</span></div></div>
-      <p>${gm.desc}</p>
+      ${buildingBlurb(b.game)}
       <b>Now:</b><ul class="perks">${cur.map(p=>`<li>${p}</li>`).join('')}</ul>
-      ${max?'':`<b>Level ${lv+1}:</b><ul class="perks">${perks}</ul><div>${costHTML(upCost(lv),true)}</div>`}
+      ${max?'':`<b>Upgrade to Level ${lv+1}:</b><ul class="perks">${perks}</ul><div class="muted">Pay from your Barn storage (the number in brackets is what you have):</div><div>${costHTML(upCost(lv),true)}</div>`}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn green" data-play ${S.energy<1?'disabled':''}>▶ Play · ⚡1</button>
         <button class="btn blue" data-free>🎮 Free Play</button>
+        <button class="btn grey" data-help>❓ How to play</button>
         ${max?'':`<button class="btn" data-up ${canPay(upCost(lv))?'':'disabled'}>⬆ Upgrade</button>`}
       </div>
       <div class="muted" style="margin-top:6px">${S.energy<1?'Out of energy — eat bread or jam from Storage, or wait a minute.':'Playing earns 🪙 coins. Upgrade with coins, planks and bricks from your Barn.'}</div>`;
@@ -1028,6 +1085,7 @@ function openBuilding(b){
     const redraw=()=>{sh.innerHTML=`<button class="x">✕</button>`+draw();sh.querySelector('.x').onclick=closeModal;wire()};
     sh.querySelector('[data-play]').onclick=()=>{if(S.energy<1)return;closeModal();spendEnergy();b.game==='bolt'?startBolt('play'):startCards('play')};
     sh.querySelector('[data-free]').onclick=()=>{closeModal();openFreeSetup(b.game)};
+    sh.querySelector('[data-help]').onclick=()=>openRules(b.game);
     const up=sh.querySelector('[data-up]');if(up)up.onclick=()=>{const lv=S.bld[b.game];const c=upCost(lv);if(!canPay(c))return;pay(c);S.bld[b.game]++;stat('up_'+b.game);sfx.win();toast(`${gm.icon} ${gm.name} is now Level ${lv+1}!`);save(true);hud();redraw()};
   };
   openModal(draw());wire();
@@ -1067,6 +1125,118 @@ function openMenu(){
   $('#mTitle').onclick=()=>{closeModal();save(true);showTitle()};
   $('#mReset').onclick=()=>{if(confirm('Really erase your village and start over?')){try{localStorage.removeItem(SAVE_KEY)}catch(e){}S=defState();nodes.forEach(n=>{n.ch=NODE_T[n.type].max});P.x=P.tx=17;P.y=P.ty=8;P.path=[];closeModal();hud()}};
 }
+/* =====================================================================
+   STORY + GUIDANCE — three characters walk you through the game
+   ===================================================================== */
+const CAST={
+  granny:{name:'Granny Marigold',short:'Granny',face:'👵',role:'Quest Board keeper'},
+  tess:{name:'Tinker Tess',short:'Tess',face:'👩‍🔧',role:'Runs the Bolt Works'},
+  bram:{name:'Farmer Bram',short:'Bram',face:'👨‍🌾',role:'Runs the Card Barn'}
+};
+const stored=k=>sget('st_'+k)>0||(S.store[k]||0)>0;
+const bothLv=()=>Math.min(S.bld.bolt,S.bld.card);
+const STORY=[
+  {who:'granny',goal:'Chop 4 wood: walk onto a tree 🌳 and stand still',prog:()=>[sget('g_wood'),4],done:()=>sget('g_wood')>=4,r:{coins:5},
+   say:"Welcome home, dear! Your grandpa Alder left you Harvest Hollow, and the old place needs some love. Let's start with wood. Walk onto a tree (arrow keys / WASD, or just tap the ground) and stand there. You'll chop automatically while the ring fills. Your backpack holds 6 things."},
+  {who:'granny',goal:'Drop your wood at the Barn: step on the red mat in front of it 📦',prog:()=>[sget('delivered'),4],done:()=>sget('delivered')>=4,r:{coins:5},
+   say:"Lovely! Now carry it to the big red Barn and step on the glowing red mat. Everything in your backpack is stored there. Upgrades are paid from the Barn's storage, so stored goods really matter."},
+  {who:'granny',goal:'Make 1 plank at the Sawmill, then store it in the Barn 🟫',done:()=>stored('plank'),r:{coins:5},
+   say:"Time to make something. The Sawmill turns 2 wood into 1 plank. Step on its mat to feed it, wait a few seconds, then step on the mat again to collect. A ❗ over a building means goods are ready. Take the plank to the Barn."},
+  {who:'granny',goal:'Make 1 brick at the Brick Kiln (needs 2 stone ⛏️), then store it 🧱',done:()=>stored('brick'),r:{coins:10},
+   say:"Bricks next! Mine 2 stone from the grey rocks out east, feed the Brick Kiln, and store the brick. Planks and bricks are what you'll pay for upgrades. Oh, and the Quest Board by my cottage has bounties for extra coins."},
+  {who:'tess',goal:'Solve a puzzle at the Bolt Works ⚙️ (the blue building)',prog:()=>[sget('boltWins'),1],done:()=>sget('boltWins')>=1,r:{coins:10},
+   say:"Hi, I'm Tess! My Bolt Works is a mess, nuts everywhere. Step onto the red mat under my blue workshop and press ▶ Play (costs ⚡1 energy). Sort the nuts so every rod holds just one colour. I pay coins for every puzzle you solve!"},
+  {who:'tess',goal:'Upgrade the Bolt Works ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_bolt')>=1,r:{coins:10},
+   say:"Great sorting! Now, coins build upgrades. Fixing up my workshop costs coins plus planks and bricks from your Barn, and it gives you more undos, hints, a spare rod and bigger payouts. Open the Bolt Works and press ⬆ Upgrade."},
+  {who:'bram',goal:'Finish a Bean Harvest game at the Card Barn 🃏 (purple roof)',prog:()=>[sget('cardGames'),1],done:()=>sget('cardGames')>=1,r:{coins:10},
+   say:"Howdy, Bram here! At the Card Barn we play Bean Harvest: plant crops from your hand in order, then harvest them for coins. Step on the red mat under my barn and press ▶ Play. Tap ❓ in the game any time for the rules."},
+  {who:'bram',goal:'Upgrade the Card Barn ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_card')>=1,r:{coins:15,energy:2},
+   say:"Fine playing! More levels mean more rounds per game, more trades and a bigger payout. Open the Card Barn and press ⬆ Upgrade whenever you've got the goods."},
+  {who:'granny',goal:'Raise both workshops to Level 3 🏗️',prog:()=>[bothLv(),3],done:()=>bothLv()>=3,r:{coins:30},
+   say:"Look at the Hollow now! Grandpa would be so proud. Keep going: the Quest Board has plenty of bounties, and both workshops can reach Level 5. And if you just want to play, Free Play (in the ☰ menu) never touches your progress."},
+  {who:'granny',goal:'Raise both workshops to Level 5 🏆',prog:()=>[bothLv(),5],done:()=>bothLv()>=5,r:{coins:100,energy:3},
+   say:"Level 3 already! Only one more push to make both workshops the finest in the valley. You can do it."}
+];
+const END_SAY="Harvest Hollow is thriving, and that's all because of you. The workshops are humming, the Barn is full, and Grandpa Alder is smiling somewhere. Free Play and the Quest Board are always open. Thank you, dear!";
+
+function curStep(){return STORY[S.story]||null}
+function checkStory(silent){
+  let moved=false;
+  while(curStep()&&curStep().done()){
+    const st=curStep();
+    if(!silent){reward(st.r);toast(`⭐ Step complete! ${rewardHTML(st.r)}`);sfx.win()}
+    S.story++;S.say=1;moved=true;
+  }
+  if(moved)save(true);
+  return moved;
+}
+function updateGoal(){
+  const g=$('#goal');if(!g)return;const st=curStep();
+  if(!st){g.innerHTML='🏆 The Hollow is fully restored!';return}
+  const p=st.prog?st.prog():null;
+  g.innerHTML=`📍 <b>${CAST[st.who].short}:</b> ${st.goal}${p?` <small>(${Math.min(p[0],p[1])}/${p[1]})</small>`:''}`;
+}
+function showSay(who,text,opts={}){
+  const c=CAST[who],st=curStep();
+  openModal(`<div class="say"><div class="face">${c.face}</div><div style="flex:1"><div class="who">${c.name}</div><div class="muted" style="margin-bottom:6px">${c.role}</div>
+    <div class="txt">${text}</div></div></div>
+    ${st&&!opts.noGoal?`<div class="goalbox">📍 Your goal: ${st.goal}</div>`:''}
+    <div style="text-align:right;margin-top:12px"><button class="btn green" id="sayOk">Got it!</button></div>`);
+  $('#sayOk').onclick=closeModal;
+}
+function storyPrompt(){
+  // auto-show the current step's speech once, when nothing else is open
+  if(!S.say||paused())return;
+  const st=curStep();S.say=0;save();
+  if(st)showSay(st.who,st.say);else showSay('granny',END_SAY,{noGoal:true});
+}
+function talkTo(id){
+  held.length=0;P.path=[];
+  const st=curStep(),c=CAST[id];
+  if(st&&st.who===id){showSay(id,st.say);return}
+  const chat={
+    granny:"I keep the Quest Board, dear. Pop over any time to see what bounties are up. Finished quests pay coins, energy, even planks and bricks!",
+    tess:"Bolt Works is open for business. Sort the nuts, pocket the coins, then spend them on fixing up the place.",
+    bram:"Nothing beats a good harvest. Plant like crops together, harvest big piles, and keep an eye on that bean-o-meter."
+  }[id];
+  showSay(id,chat+(st?` <br><br><i>(Your next step is with ${CAST[st.who].name}.)</i>`:''));
+}
+
+/* ---- per-building coaching, shown inside the building panel ---- */
+function buildingBlurb(game){
+  const who=game==='bolt'?'tess':'bram',c=CAST[who];
+  const plays=game==='bolt'?sget('boltWins'):sget('cardGames'),ups=sget('up_'+game);
+  let t;
+  if(game==='bolt'){
+    t=plays===0?"This is where you play! Press <b>▶ Play</b> (costs ⚡1) and sort the nuts so each rod holds one colour. Tap a rod to lift its top nut, tap another to drop it. I pay <b>coins</b> for every puzzle solved."
+      :ups===0?"Coins, planks and bricks in your Barn can <b>upgrade</b> this workshop. Each level gives you more undos and hints, a spare rod, and bigger coin payouts."
+      :"Welcome back! Every upgrade level means more undos, more hints and fatter payouts.";
+  }else{
+    t=plays===0?"This is where you play! Press <b>▶ Play</b> (costs ⚡1). Plant crops from your hand into your fields, then harvest them for <b>coins</b>. Tap ❓ in the game for the rules."
+      :ups===0?"Coins, planks and bricks in your Barn can <b>upgrade</b> this barn. More levels mean more rounds per game, more trades and a bigger payout."
+      :"Back for another round? Higher levels give more rounds, trades and a bigger harvest.";
+  }
+  return `<div class="say" style="margin:10px 0"><div class="face" style="width:56px;height:56px;font-size:32px">${c.face}</div><div style="flex:1"><div class="who" style="font-size:15px">${c.name}</div><div class="txt" style="font-size:14px">${t}</div></div></div>`;
+}
+const RULES={
+  bolt:`<h2>⚙️ How to play Bolt Works</h2><ul class="perks">
+    <li><b>Goal:</b> every rod ends up holding nuts of a single colour (or nothing).</li>
+    <li><b>Move:</b> tap a rod to lift its top nut, then tap where it should go.</li>
+    <li>A nut can only land on an <b>empty rod</b> or on a nut of the <b>same colour</b>, and only if the rod has room.</li>
+    <li><b>Grey “?” nuts</b> hide their colour until the nuts above them are moved away.</li>
+    <li><b>Undo</b> takes back a move, <b>Hint</b> shows a good next move (green = from, blue = to), <b>Restart</b> resets the puzzle.</li>
+    <li>Every puzzle is guaranteed solvable. Fewer moves earns more stars and coins.</li></ul>`,
+  card:`<h2>🃏 How to play Bean Harvest</h2><ul class="perks">
+    <li><b>Goal:</b> harvest as many coins as you can. Each field holds one crop type, and more of a crop pays more coins (see the little table on each card).</li>
+    <li><b>Your hand is a queue.</b> You <b>must</b> plant the first card and <b>may</b> plant the second. Tap a field to plant the highlighted card.</li>
+    <li>Planting a <b>different</b> crop on a field harvests the old one first.</li>
+    <li>Then <b>two market cards</b> flip. Plant each one, or <b>Trade away</b> (limited per round).</li>
+    <li>Then you draw 3 cards to the back of your hand. Tap <b>Harvest</b> on a field any time to bank its coins.</li>
+    <li>When the deck runs out you get a final planting turn, then every field is harvested.</li>
+    <li>You can buy a <b>3rd field</b> for 3🪙 during the game.</li></ul>`
+};
+function openRules(game){openModal(RULES[game]+`<div style="text-align:right"><button class="btn green" onclick="closeModal()">Got it</button></div>`)}
+$('#goal').onclick=()=>{const st=curStep();held.length=0;if(st)showSay(st.who,st.say);else showSay('granny',END_SAY,{noGoal:true})};
 /* =====================================================================
    MINI-GAME 1: BOLT WORKS — nuts & bolts sorting
    Levels are random but verified solvable by a solver before they're dealt.
@@ -1147,7 +1317,7 @@ function startBolt(mode,opts){
   const mg=$('#mg');mg.className='screen';mg.id='mg';
   mg.innerHTML=`<div id="bolt" class="screen" style="display:flex;flex-direction:column">
     <div class="mgbar"><button class="btn small grey" id="bBack">← Village</button><h3>⚙️ Bolt Works</h3>
-      ${mode==='free'?'':`<span class="tag">Puzzle ${S.boltLvl+1}</span>`}${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span><span class="tag" id="bMoves">Moves 0</span></div>
+      ${mode==='free'?'':`<span class="tag">Puzzle ${S.boltLvl+1}</span>`}${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span><button class="btn small grey" id="bHelp">❓</button><span class="tag" id="bMoves">Moves 0</span></div>
     <div id="boltArea"><div id="boltBoard"></div></div>
     <div class="mgfoot"><button class="btn small blue" id="bUndo">↶ Undo</button><button class="btn small" id="bHint">💡 Hint</button><button class="btn small grey" id="bReset">⟲ Restart</button>${mode==='free'?'<button class="btn small green" id="bNew">🎲 New puzzle</button>':''}</div>
   </div>`;
@@ -1159,7 +1329,7 @@ function startBolt(mode,opts){
        undos:mode==='free'?Infinity:3+2*(lv-1),hints:mode==='free'?Infinity:lv,done:false,hintMove:null};
     busy.remove();
     $('#bBack').onclick=()=>{ if(!B.done&&B.moves>0&&mode==='play'&&!confirm('Leave this puzzle? The energy spent is lost.'))return;leaveMG()};
-    $('#bUndo').onclick=boltUndo;$('#bHint').onclick=boltHint;$('#bReset').onclick=boltRestart;
+    $('#bHelp').onclick=()=>openRules('bolt');$('#bUndo').onclick=boltUndo;$('#bHint').onclick=boltHint;$('#bReset').onclick=boltRestart;
     if($('#bNew'))$('#bNew').onclick=()=>startBolt('free',o);
     renderBolt();
   },30);
@@ -1293,12 +1463,13 @@ function startCards(mode,opts){
   const mg=$('#mg');mg.className='screen';mg.id='mg';
   mg.innerHTML=`<div id="cards" class="screen" style="display:flex;flex-direction:column">
     <div class="mgbar"><button class="btn small grey" id="cBack">← Village</button><h3>🃏 Bean Harvest</h3>
-      ${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span>
+      ${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span><button class="btn small grey" id="cHelp">❓</button>
       <span class="tag" id="cRound"></span><span class="tag" id="cCoins"></span><span class="tag" id="cTrades"></span></div>
     <div class="tablewrap" id="cTable"></div>
     <div class="mgfoot" id="cFoot"></div></div>`;
   mg.classList.remove('hidden');
   $('#cBack').onclick=()=>{if(!C.done&&C.mode==='play'&&!confirm('Leave this game? The energy spent and any unbanked coins are lost.'))return;leaveMG()};
+  $('#cHelp').onclick=()=>openRules('card');
   cardRound();
 }
 function cardRound(){
@@ -1465,6 +1636,7 @@ leaveMG=function(){
   if(!worldOn){showTitle()}
 };
 load();
+checkStory(true);
 setInterval(()=>save(true),8000);
 addEventListener('visibilitychange',()=>{if(document.hidden)save(true)});
 addEventListener('beforeunload',()=>save(true));
