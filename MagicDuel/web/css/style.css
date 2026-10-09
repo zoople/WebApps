@@ -341,3 +341,33 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 .inspect .big .face .ftag{font-size:.85em}
 .sitem b{display:inline}
 #hand .card .ftag{font-size:.64em;letter-spacing:0;padding:1px 3px}
+
+/* ===== v3 card face: emoji row (type · flavour · 2 effects); tag row removed ===== */
+.face .ftag{display:none}
+.face .fart{flex-direction:row;gap:3px;align-items:center;justify-content:center;font-size:1em}
+.fart .e-f{font-size:2.3em;line-height:1}
+.fart .e-t{font-size:1.25em;line-height:1;opacity:.95}
+.fart .e-x{font-size:1.3em;line-height:1;white-space:nowrap}
+.face.L .fart .e-f{font-size:2.6em;letter-spacing:-3px}
+.perms .face .fart .e-t,.perms .face .fart .e-x{display:none}
+.perms .face .fart .e-f{font-size:3em}
+#hand .card .ftype{display:none}
+#hand .card .fart .e-f{font-size:1.9em}
+#hand .card .fart .e-t,#hand .card .fart .e-x{font-size:1.1em}
+#hand .card .ftext{max-height:36%}
+.inspect .big .face .fart .e-f{font-size:3.4em}
+.inspect .big .face .fart .e-t,.inspect .big .face .fart .e-x{font-size:1.8em}
+#hand .card .fart{gap:2px;padding:0 1px;justify-content:flex-start;overflow:hidden}
+#hand .card .fart .e-t,#hand .card .fart .e-x{font-size:1.05em}
+#hand .card .fart .e-f{font-size:1.7em}
+#hand .card .fart{gap:1px}
+#hand .card .fart .e-t,#hand .card .fart .e-x{font-size:.98em}
+#hand .card .fart .e-f{font-size:1.45em}
+.face .fart,.perms .face .fart,#hand .card .fart,.cardgrid .fart,.inspect .big .face .fart{font-size:1em}
+.perms .face .fart .e-f{font-size:2.9em}
+.face .fart .e-f{font-size:2.1em}
+#hand .card .fart .e-f{font-size:1.9em}
+#hand .card .fart .e-t,#hand .card .fart .e-x{font-size:1.15em}
+
+#hand .card .fart .e-f{font-size:1.65em}
+#hand .card .fart .e-t,#hand .card .fart .e-x{font-size:1.02em}

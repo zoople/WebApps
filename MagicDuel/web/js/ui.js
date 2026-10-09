@@ -16,9 +16,9 @@ const COLOR_HEX = { W: '#f4edcf', U: '#2f80d8', B: '#6a5a78', R: '#d9553f', G: '
 
 /* ---------- settings ---------- */
 const Settings = {
-  hints: true, images: true, speed: 'normal', confirmEnd: true, stopEnd: true, holdPriority: false,
+  hints: true, images: true, speed: 'normal', confirmEnd: true, stopEnd: true, holdPriority: false, fullscreen: false,
   load() { try { Object.assign(Settings, JSON.parse(localStorage.getItem('magicduel.settings') || '{}')); } catch (e) { /* ignore */ } if (globalThis.MTG_NO_IMAGES) Settings.images = false; Images.enabled = Settings.images; },
-  save() { try { localStorage.setItem('magicduel.settings', JSON.stringify({ hints: Settings.hints, images: Settings.images, speed: Settings.speed, confirmEnd: Settings.confirmEnd, stopEnd: Settings.stopEnd, holdPriority: Settings.holdPriority })); } catch (e) { /* ignore */ } Images.enabled = Settings.images; },
+  save() { try { localStorage.setItem('magicduel.settings', JSON.stringify({ hints: Settings.hints, images: Settings.images, speed: Settings.speed, confirmEnd: Settings.confirmEnd, stopEnd: Settings.stopEnd, holdPriority: Settings.holdPriority, fullscreen: Settings.fullscreen })); } catch (e) { /* ignore */ } Images.enabled = Settings.images; },
   pace() { return { slow: 1.7, normal: 1, fast: 0.35 }[Settings.speed] || 1; },
 };
 MTG.Settings = Settings;
@@ -52,7 +52,35 @@ function artEmoji(d) {
   if (d.types.includes('Enchantment')) return '🔮';
   return d.types.includes('Sorcery') ? '📜' : '⚡';
 }
-const kwIcons = (d) => (d.kw || []).map((k) => KW_ICON[k]).filter(Boolean).join('');
+const KW_ORDER = ['flying', 'deathtouch', 'lifelink', 'first strike', 'double strike', 'trample', 'haste', 'vigilance', 'reach', 'hexproof', 'indestructible', 'menace', 'flash', 'defender'];
+const keycap = (n) => (n >= 0 && n <= 9 ? n + '\uFE0F\u20E3' : String(n));
+// Hand-picked "what does this do" icons for cards whose effect is not a keyword (most important first).
+const EFFECT_OVERRIDE = {
+  'Llanowar Elves': ['🌱'], 'Elvish Mystic': ['🌱'], 'Mind Stone': ['💎', '📖'], "Wayfarer's Bauble": ['🌱'], 'Wood Elves': ['🌱'], 'Rampant Growth': ['🌱'], 'Evolving Wilds': ['🌱'],
+  'Prodigal Sorcerer': ['🎯', keycap(1)], 'Mogg Fanatic': ['💥', keycap(1)], 'Siege-Gang Commander': ['👥', '💥'], 'Goblin Instigator': ['👥'], 'Raise the Alarm': ['👥', keycap(2)],
+  'Viashino Pyromancer': ['💥', keycap(2)], 'Goblin Chainwhirler': ['🗡️', '💥'], 'Furnace Whelp': ['🕊️', '🔥'], 'Shivan Dragon': ['🕊️', '🔥'],
+  'Cloudkin Seer': ['🕊️', '📖'], 'Mulldrifter': ['🕊️', keycap(2) + '📖'], 'Spectral Sailor': ['⚡', '🕊️'], 'Frost Lynx': ['💤', '❄️'], 'Tempest Djinn': ['🕊️', '📈'],
+  'Charming Prince': ['💖', '🔮'], 'Pegasus Courser': ['🕊️', '🪽'], 'Youthful Valkyrie': ['🕊️', '📈'], "Ajani's Pridemate": ['💖', '📈'], 'Healer\'s Hawk': ['🕊️', '💖'],
+  'Gravedigger': ['♻️'], 'Reassembling Skeleton': ['♻️'], 'Rotting Regisaur': ['💪', '🗑️'], 'Vampire Sovereign': ['🕊️', '🩸'], 'Vampire Nighthawk': ['🕊️', '☠️'],
+  'Pelakka Wurm': ['🦏', '💖'], 'Juggernaut': ['➡️', '💪'], 'Knight of Grace': ['🗡️', '🔒'], 'Vampire Interloper': ['🕊️', '🚷'], 'Glorious Anthem': ['📈'],
+  'Shock': ['🎯', keycap(2)], 'Lightning Strike': ['🎯', keycap(3)], 'Fireball': ['🎯', '✖️'], "Gideon's Reproach": ['⚔️', keycap(4)], 'Pyroclasm': ['🌋', keycap(2)],
+  'Disfigure': ['📉', '-2'], 'Moment of Craving': ['📉', '💖'], 'Murder': ['💀'], 'Doom Blade': ['💀', '🚫⚫'], 'Eviscerate': ['💀'], 'Plummet': ['💀', '🕊️'],
+  'Opt': ['🔮', keycap(1) + '📖'], 'Divination': ['📖', keycap(2)], 'Tidings': ['📖', keycap(4)], "Sovereign's Bite": ['🩸', '💖'], 'Sleep': ['💤', '👥'],
+  'Giant Growth': ['💪', '+3'], 'Blossoming Defense': ['💪', '🔒'], 'Brute Strength': ['💪', '🦏'], 'Overrun': ['💪', '🌊'], 'Hunt the Weak': ['🥊', '➕'],
+  'Essence Scatter': ['🚫', '🐾'], 'Negate': ['🚫', '📜'], 'Cancel': ['🚫'], 'Unsummon': ['↩️'], 'Pacifism': ['🚫', '😴'], 'Banishing Light': ['☀️'], 'Valorous Stance': ['🛡️', '💀'],
+  'Act of Treason': ['🎭', '💨'], 'Rancor': ['➕', '🦏'], 'Short Sword': ['➕', '1️⃣'], 'Bonesplitter': ['➕', '2️⃣'], 'Naturalize': ['🍃'],
+};
+const KW_FALLBACK = (d) => KW_ORDER.filter((k) => (d.kw || []).includes(k)).map((k) => KW_ICON[k]);
+function effectIcons(d) { return (EFFECT_OVERRIDE[d.name] ? EFFECT_OVERRIDE[d.name] : KW_FALLBACK(d)).slice(); }
+// [type, flavour, effect, effect] shown as the centre emoji row; lands show their mana.
+function emojiRow(d) {
+  const kind = kindOf(d);
+  if (kind === 'land') return { type: '', flavor: artEmoji(d), eff: [] };
+  const flavor = artEmoji(d);
+  const eff = effectIcons(d).filter((e) => e !== flavor && e !== TYPE_INFO[kind][0]).slice(0, 2);
+  return { type: TYPE_INFO[kind][0], flavor, eff };
+}
+const kwIcons = (d) => effectIcons(d).slice(0, 3).join('');
 function costHTML(cost) {
   return manaHTML(cost);
 }
@@ -110,8 +138,8 @@ const UI = {
     const pt = d.types.includes('Creature') ? `<div class="fpt">${d.power == null ? '*' : d.power}/${d.toughness}</div>` : '';
     f.dataset.kind = kindOf(d); const ti = TYPE_INFO[f.dataset.kind]; const flash = d.kw && d.kw.includes('flash') && f.dataset.kind === 'creature' ? ' ⚡' : '';
     const nl = d.name.length; f.dataset.len = nl > 17 ? 'xl' : nl > 12 ? 'l' : 's';
-    f.innerHTML = `<div class="ftag k-${f.dataset.kind}">${ti[0]} ${ti[1].toUpperCase()}${flash}</div><div class="fh"><span class="fname">${esc(d.name)}</span><span class="fcost">${manaHTML(d.cost)}</span></div>` +
-      `<div class="fart">${artEmoji(d)}</div><div class="ftype">${esc(d.token ? 'Token ' + d.types.join(' ') : typeLine(d))}</div>` +
+    f.innerHTML = `<div class="fh"><span class="fname">${esc(d.name)}</span><span class="fcost">${manaHTML(d.cost)}</span></div>` +
+      `<div class="fart">${(() => { const r = emojiRow(d); return (r.type ? `<span class="e-t">${r.type}</span>` : '') + `<span class="e-f">${r.flavor}</span>` + r.eff.map((x) => `<span class="e-x">${x}</span>`).join(''); })()}</div><div class="ftype">${esc(d.token ? 'Token ' + d.types.join(' ') : typeLine(d))}</div>` +
       `<div class="ftext">${esc(rulesText(d))}</div><div class="fkw">${kwIcons(d)}</div>${pt}`;
     return f;
   },
@@ -260,7 +288,7 @@ const UI = {
     const wrap = $('#handWrap'), n = cards.length;
     if (n) {
       const w = box.firstElementChild.offsetWidth || 70, avail = wrap.clientWidth - 20;
-      const need = n * w + (n - 1) * 4, overlap = n > 1 && need > avail ? Math.min((need - avail) / (n - 1), w * 0.3) : 0;
+      const need = n * w + (n - 1) * 4, overlap = n > 1 && need > avail ? Math.min((need - avail) / (n - 1), w * 0.17) : 0;
       cards.forEach((c, i) => { UI.cardEl(c).style.marginLeft = i && overlap ? `-${overlap.toFixed(1)}px` : ''; });
     }
   },
@@ -642,6 +670,23 @@ class HumanController {
 }
 MTG.HumanController = HumanController;
 
+// ---- full screen (every app in this repo ships one; see /CLAUDE.md) ----
+UI.isNative = /; wv\)|MagicDuelApp/i.test(navigator.userAgent);   // Android WebView shell is already immersive full screen
+UI.fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+UI.fsSupported = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+UI.setFullscreen = async function (on) {
+  const el = document.documentElement;
+  try {
+    if (on && !UI.fsElement()) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (!f) throw new Error('unsupported'); await f.call(el, { navigationUI: 'hide' }); }
+    else if (!on && UI.fsElement()) { const x = document.exitFullscreen || document.webkitExitFullscreen; if (x) await x.call(document); }
+    return true;
+  } catch (e) {
+    UI.toast(UI.fsSupported() ? "Full screen was blocked here. Tap the button again, or open the page directly in your browser." : "This browser can't do full screen. On iPhone use Share → Add to Home Screen for a full-screen app.", 5000);
+    return false;
+  }
+};
+UI.toggleFullscreen = async function () { const want = !UI.fsElement(); const ok = await UI.setFullscreen(want); Settings.fullscreen = ok ? want : false; Settings.save(); return ok; };
+['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => { Settings.fullscreen = !!UI.fsElement(); Settings.save(); const sw = document.querySelector('#fsSwitch'); if (sw) sw.classList.toggle('on', Settings.fullscreen); }));
 UI.manaHTML = manaHTML; UI.kindOf = kindOf; UI.TYPE_INFO = TYPE_INFO; UI.emojiText = emojiText; UI.emojiCost = emojiCost;
 UI.showScreenGame = () => { UI.showScreen('game'); };
 UI.bindGame = function (g) {

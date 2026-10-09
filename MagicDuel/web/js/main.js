@@ -27,6 +27,7 @@ const App = (MTG.App = {
       <button class="btn" id="mDecks">🃏 Choose decks</button>
       <button class="btn" id="mGuide">📘 Strategy guide</button>
       <button class="btn" id="mSet">⚙️ Settings</button>
+      ${UI.isNative ? '' : '<button class="btn ghost" id="mFs">⛶ Full screen</button>'}
       <div class="record">Record: ${r.w} wins · ${r.l} losses${r.d ? ' · ' + r.d + ' draws' : ''}</div>
       <div class="menu-sub">Starter decks and Jumpstart-style theme packs, full Magic rules, and a coach that explains every decision.</div>
     </div>`;
@@ -34,6 +35,7 @@ const App = (MTG.App = {
     $('#mDecks').onclick = () => App.showDecks();
     $('#mGuide').onclick = () => App.showGuide();
     $('#mSet').onclick = () => App.showSettings();
+    const mf = $('#mFs'); if (mf) mf.onclick = () => UI.toggleFullscreen();
     UI.showScreen('menu');
   },
   quickPlay() {
@@ -121,6 +123,13 @@ const App = (MTG.App = {
       sw.onclick = () => { Settings[key] = !Settings[key]; Settings.save(); sw.classList.toggle('on', Settings[key]); };
       r.append(sw); return r;
     };
+    if (UI.isNative) body.append(el('div', 'toggle', '<div>Full screen<small>The Android app is already full screen.</small></div>'));
+    else {
+      const fr = el('div', 'toggle', `<div>Full screen<small>${UI.fsSupported() ? 'Hide the browser bars for more room for the cards' : "Not supported by this browser (on iPhone: Share → Add to Home Screen)"}</small></div>`);
+      const fs = el('button', 'switch' + (UI.fsElement() ? ' on' : ''), ''); fs.id = 'fsSwitch';
+      fs.onclick = async () => { await UI.toggleFullscreen(); fs.classList.toggle('on', !!UI.fsElement()); };
+      fr.append(fs); body.append(fr);
+    }
     body.append(row('hints', 'Coach hints', 'Show advice and highlight the recommended play on the board'));
     body.append(row('images', 'Card artwork', 'Download card images from Scryfall by name (needs internet). Off = text cards'));
     const art = el('div', 'toggle', '<div>Card art<small id="artStatus">Not downloaded yet. Art loads as cards appear.</small></div>');
@@ -156,6 +165,7 @@ const App = (MTG.App = {
   /* ---------- game lifecycle ---------- */
   startGame(myDeck, oppDeck) {
     App.last = [myDeck, oppDeck]; Images.reset();
+    if (Settings.fullscreen && !UI.isNative && !UI.fsElement()) UI.setFullscreen(true);
     const human = new MTG.HumanController(), ai = new MTG.AIController();
     const g = new MTG.Game({ decks: [Decks.names(myDeck), Decks.names(oppDeck)], controllers: [human, ai], names: ['You', 'Opponent'], deckNames: [myDeck.name, oppDeck.name] });
     App.game = g; UI.bindGame(g); UI.showScreen('game'); UI.render();
@@ -201,6 +211,7 @@ const App = (MTG.App = {
     const add = (label, fn, danger) => { const b = el('button', 'abtn', label); if (danger) b.style.borderColor = '#a04a44'; b.onclick = () => { m.close(null); fn(); }; body.append(b); };
     add('▶ Resume', () => {});
     add('💡 Strategy guide', () => App.showGuideModal());
+    if (!UI.isNative) add(UI.fsElement() ? '⛶ Exit full screen' : '⛶ Full screen', () => UI.toggleFullscreen());
     add('⚙️ Settings', () => App.showSettings());
     add('🏳️ Concede', () => UI.modal({ center: true, title: 'Concede?', body: '<p>This counts as a loss.</p>', buttons: [{ label: 'Keep playing', value: false }, { label: 'Concede', value: true, cls: 'primary' }] }).promise.then((v) => { if (v) { if (UI.priorityResolve) { g.concede(0); const r = UI.priorityResolve; UI.priorityResolve = null; r({ type: 'concede' }); } else g.concede(0); setTimeout(() => { if (!UI.gameOver) App.gameEnded(g); }, 50); } }), true);
     add('🏠 Quit to menu', () => { App.abortGame(); App.showMenu(); }, true);
