@@ -219,7 +219,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v5 · 9 Oct 2026';
+const VERSION='v6 · 9 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -693,7 +693,7 @@ function restStick(){const z=$('#stickzone'),b=$('#stick');if(z&&b&&z.clientHeig
     if(e.pointerId!==id)return;const r=zone.getBoundingClientRect();
     let dx=e.clientX-r.left-cx,dy=e.clientY-r.top-cy;const d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d}
     knob.style.transform=`translate(${dx}px,${dy}px)`;
-    if(d<R*.3)stickDir=null;else stickDir=Math.abs(dx)>Math.abs(dy)?(dx>0?'r':'l'):(dy>0?'d':'u');
+    if(d<R*[.55,.42,.3,.2,.12][(S.stickSens||3)-1])stickDir=null;else stickDir=Math.abs(dx)>Math.abs(dy)?(dx>0?'r':'l'):(dy>0?'d':'u');
   };
   zone.addEventListener('pointerdown',e=>{
     if(id!==null)return;e.preventDefault();id=e.pointerId;try{zone.setPointerCapture(id)}catch(_){}
@@ -717,10 +717,10 @@ addEventListener('keydown',e=>{if((e.key==='e'||e.key==='E'||e.key==='Enter')&&t
 /* ---- arrival effects ---- */
 function onArrive(){
   const b=doorAt[P.x+','+P.y];if(!b)return;
-  if(b.kind==='barn'||b.kind==='craft')P.xfer={b,phase:'in',t:.08,n:0,put:0,took:0,full:false,bagFull:false};
+  if(b.kind==='barn'||b.kind==='craft')P.xfer={b,phase:'in',t:.15,n:0,put:0,took:0,full:false,bagFull:false};
 }
 /* ---- unloading / loading happens one item at a time ---- */
-const flyers=[];
+const flyers=[],FLY=.6;
 function fly(item,dir,b){
   const px=P.px,py=P.py-26,bx=b.x*TS+72,by=(b.y+2)*TS+4;
   flyers.push(dir==='in'?{e:ITEMS[item].e,x0:px,y0:py,x1:bx,y1:by,t:0}:{e:ITEMS[item].e,x0:bx,y0:by,x1:px,y1:py,t:0});
@@ -735,7 +735,7 @@ function xferStep(){
     const[item,need]=Object.entries(b.in)[0],s=stn(b.id);
     if(x.phase==='in'){
       if((S.carry[item]||0)>0&&s.buf<need*3){S.carry[item]--;s.buf++;fly(item,'in',b);x.put++}
-      else{if((S.carry[item]||0)>0)x.full=true;x.phase='out';x.t=.05;return}
+      else{if((S.carry[item]||0)>0)x.full=true;x.phase='out';x.t=.3;return}
     }else{
       if(s.out>0&&carryN()<S.cap){s.out--;S.carry[b.out]=(S.carry[b.out]||0)+1;fly(b.out,'out',b);x.took++}
       else{if(s.out>0)x.bagFull=true;finishXfer();return}
@@ -772,9 +772,9 @@ function update(dt){
   // one-at-a-time transfers + flying items
   if(P.xfer){
     if(P.moving||doorAt[P.x+','+P.y]!==P.xfer.b)P.xfer=null;
-    else{P.xfer.t-=dt;if(P.xfer.t<=0){P.xfer.t=Math.max(.07,.17-P.xfer.n*.008-P.xfer.put*.008-P.xfer.took*.008);xferStep()}}
+    else{P.xfer.t-=dt;if(P.xfer.t<=0){P.xfer.t=Math.max(.22,.36-(P.xfer.n+P.xfer.put+P.xfer.took)*.012);xferStep()}}
   }
-  for(let i=flyers.length-1;i>=0;i--){flyers[i].t+=dt;if(flyers[i].t>=.4)flyers.splice(i,1)}
+  for(let i=flyers.length-1;i>=0;i--){flyers[i].t+=dt;if(flyers[i].t>=FLY)flyers.splice(i,1)}
   // nodes regrow
   for(const n of nodes){if(n.ch<NODE_T[n.type].max){n.t+=dt;if(n.t>=NODE_T[n.type].regrow){n.ch=NODE_T[n.type].max;n.t=0}}}
   // movement
@@ -999,7 +999,7 @@ function render(time){
   bubble(g,BOARD.x*TS+TS/2,BOARD.y*TS-62,'Quests');
   g.restore();
   if(GUIDE)drawGuide(g,time);
-  for(const f of flyers){const u=f.t/.4,e=u*u*(3-2*u);g.globalAlpha=u>.85?(1-u)/.15:1;g.font='24px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';
+  for(const f of flyers){const u=f.t/FLY,e=u*u*(3-2*u);g.globalAlpha=u>.85?(1-u)/.15:1;g.font='24px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';
     g.fillStyle='#000';g.fillText(f.e,f.x0+(f.x1-f.x0)*e,f.y0+(f.y1-f.y0)*e-Math.sin(u*Math.PI)*38);g.globalAlpha=1}
   // floats
   for(const f of floats){g.globalAlpha=1-f.t/1.1;g.font='bold 17px "Trebuchet MS",sans-serif';g.textAlign='center';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.65)';g.strokeText(f.text,f.x,f.y-f.t*38);g.fillStyle=f.col;g.fillText(f.text,f.x,f.y-f.t*38);g.globalAlpha=1}
@@ -1181,10 +1181,13 @@ function openFreeSetup(game){
 function openMenu(){
   openModal(`<h2>☰ Menu</h2><div class="muted">Harvest Hollow · version ${VERSION}</div>
     <div class="row"><div class="grow"><b>Free Play</b><div class="muted">Play either mini-game without touching your progress.</div></div><button class="btn small blue" data-fp="bolt">⚙️ Bolts</button><button class="btn small blue" data-fp="card">🃏 Beans</button></div>
-    <div class="row"><div class="grow"><b>Guide arrows</b><div class="muted">Yellow arrows and a dotted trail to your next goal.</div></div><button class="btn small blue" id="mGuide">Toggle</button></div>
+    <div class="row" style="flex-wrap:wrap"><div class="grow"><b>Thumbstick sensitivity</b><div class="muted">Higher = a smaller push moves you.</div></div>
+      <div style="width:100%"><input type="range" id="mSens" min="1" max="5" step="1" value="${S.stickSens||3}" style="width:100%;accent-color:#b8851a"><div class="muted" style="display:flex;justify-content:space-between"><span>Low</span><span>High</span></div></div></div>
+    <div class="row"><div class="grow"><b>Guide arrows</b><div class="muted">Yellow arrows pointing to your next goal.</div></div><button class="btn small blue" id="mGuide">Toggle</button></div>
     <div class="row"><div class="grow"><b>Title screen</b></div><button class="btn small grey" id="mTitle">Go</button></div>
     <div class="row"><div class="grow"><b>Reset all progress</b><div class="muted">Starts a brand-new village.</div></div><button class="btn small" style="background:#e07a68" id="mReset">Reset</button></div>`);
   $('#modal').querySelectorAll('[data-fp]').forEach(b=>b.onclick=()=>{closeModal();openFreeSetup(b.dataset.fp)});
+  $('#mSens').oninput=e=>{S.stickSens=+e.target.value;save(true)};
   $('#mGuide').onclick=()=>{closeModal();toggleGuide()};
   $('#mTitle').onclick=()=>{closeModal();save(true);showTitle()};
   $('#mReset').onclick=()=>{closeModal();askReset()};
