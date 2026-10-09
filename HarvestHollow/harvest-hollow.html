@@ -37,9 +37,12 @@ button{font:inherit;cursor:pointer}
 #hud .sp{flex:1;pointer-events:none}
 #bag{display:flex;gap:8px}
 #bGuide.off{opacity:.5;filter:grayscale(1)}
+#goal.min{cursor:pointer;padding:5px 12px}#goal.min #goalMin{display:none}
+#goalMin{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid #b8851a;background:rgba(255,255,255,.55);color:#5b3a18;font-weight:900;line-height:1;padding:0}
 #goal .tip{display:block;font-weight:600;font-size:13px;margin-top:2px}
 #goalrow{flex-basis:100%;order:10;pointer-events:none}
-#goal{pointer-events:auto;cursor:pointer;white-space:normal;max-width:min(640px,100%);background:linear-gradient(#fff3cf,#f0d58a);color:#3a2606;border:2px solid #b8851a;font-size:14px;line-height:1.3}
+#goal{pointer-events:auto;white-space:normal;max-width:min(380px,100%);display:inline-flex;align-items:flex-start;gap:8px;background:linear-gradient(#fff3cf,#f0d58a);color:#3a2606;border:2px solid #b8851a;font-size:14px;line-height:1.3}
+.blt{margin:0;padding-left:20px}.blt li{margin:5px 0;line-height:1.4}
 .sec{font-weight:800;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:12px 0 2px}
 .row.ready{background:rgba(120,200,90,.25);border-radius:10px;padding:8px;border-bottom:0;margin:3px 0}
 .say{display:flex;gap:12px;align-items:flex-start;margin-top:4px}
@@ -50,10 +53,13 @@ button{font:inherit;cursor:pointer}
 #bag span.it{display:inline-flex;gap:3px;align-items:center}
 .badge{display:inline-block;min-width:18px;height:18px;border-radius:9px;background:#e0412f;color:#fff;font-size:11px;line-height:18px;text-align:center;padding:0 4px}
 #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + var(--safe-b));padding:6px 14px;border-radius:999px;background:rgba(30,20,10,.72);color:#ffeec8;font-size:13px;pointer-events:none;max-width:90vw;text-align:center;transition:opacity .5s}
-#dpad{position:absolute;left:14px;bottom:calc(14px + var(--safe-b));width:150px;height:150px;display:none}
-#dpad button{position:absolute;width:50px;height:50px;border-radius:14px;border:1px solid rgba(255,230,170,.5);background:rgba(40,28,16,.6);color:#ffeec8;font-size:22px;backdrop-filter:blur(2px)}
-#dpad .u{left:50px;top:0}#dpad .d{left:50px;top:100px}#dpad .l{left:0;top:50px}#dpad .r{left:100px;top:50px}
-@media (pointer:coarse){#dpad{display:block}#hint{left:auto;right:10px;transform:none;bottom:calc(20px + var(--safe-b));max-width:calc(100vw - 190px);font-size:12px;border-radius:14px}}
+#stickzone{position:absolute;left:0;bottom:0;width:60%;height:55%;display:none;touch-action:none;z-index:4}
+#stick{position:absolute;width:140px;height:140px;border-radius:50%;background:radial-gradient(rgba(255,238,200,.16),rgba(40,28,16,.38));border:2px solid rgba(255,230,170,.45);box-shadow:inset 0 0 18px rgba(0,0,0,.35);opacity:.55;transition:opacity .15s;pointer-events:none}
+#stick.on{opacity:.95}
+#knob{position:absolute;left:40px;top:40px;width:60px;height:60px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3cf,#e0a526 70%,#9a6a0e);box-shadow:0 3px 8px rgba(0,0,0,.5),inset 0 -3px 5px rgba(0,0,0,.25)}
+#talkBtn{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(64px + var(--safe-b));display:none;z-index:5;font-size:16px;padding:12px 20px}
+@media (pointer:coarse){#stickzone{display:block}#talkBtn{left:auto;right:16px;transform:none;bottom:calc(70px + var(--safe-b))}}
+@media (pointer:coarse){#hint{left:auto;right:10px;transform:none;bottom:calc(20px + var(--safe-b));max-width:calc(100vw - 190px);font-size:12px;border-radius:14px}}
 @media (max-width:560px){#hud .lbl{display:none}#hud .btn.small{padding:7px 10px}}
 #toasts{position:absolute;left:50%;transform:translateX(-50%);top:calc(64px + var(--safe-t));display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:50}
 .toast{padding:8px 16px;border-radius:12px;background:rgba(255,246,222,.96);color:var(--ink);font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.4);animation:toastIn .25s ease-out,toastOut .4s 2.4s forwards;border:2px solid var(--gold)}
@@ -195,10 +201,11 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
       <button class="btn small grey" id="bHow" title="How to play">❓</button>
       <button class="btn small grey" id="bSound" title="Sound">🔊</button>
       <button class="btn small grey" id="bMenu">☰</button>
-      <div id="goalrow"><span class="pill" id="goal"></span></div>
+      <div id="goalrow"><span class="pill" id="goal"><span id="goalTxt"></span><button id="goalMin" title="Hide mission" aria-label="Hide mission">–</button></span></div>
     </div>
     <div id="hint"></div>
-    <div id="dpad"><button class="u" data-d="u">▲</button><button class="l" data-d="l">◀</button><button class="r" data-d="r">▶</button><button class="d" data-d="d">▼</button></div>
+    <div id="stickzone"><div id="stick"><div id="knob"></div></div></div>
+    <button class="btn green" id="talkBtn"></button>
   </div>
   <div id="title" class="screen"></div>
   <div id="mg" class="screen hidden"></div>
@@ -259,6 +266,7 @@ const sget=k=>S.st[k]||0;
 const carryN=()=>Object.values(S.carry).reduce((a,b)=>a+b,0);
 function toast(t){const d=el(`<div class="toast">${t}</div>`);$('#toasts').appendChild(d);setTimeout(()=>d.remove(),3000);while($('#toasts').children.length>3)$('#toasts').firstChild.remove()}
 function openModal(html,onClose){
+  held.length=0;if(typeof stickReset==='function')stickReset();
   const m=$('#modal');m.innerHTML=`<div class="sheet"><button class="x" aria-label="Close">✕</button>${html}</div>`;m.classList.remove('hidden');
   const close=()=>{m.classList.add('hidden');m.innerHTML='';if(onClose)onClose()};
   $('.x',m).onclick=close;m.onclick=e=>{if(e.target===m)close()};
@@ -635,7 +643,7 @@ let worldOn=false,lastT=0,hintT=0;
 function resize(){
   const r=cv.getBoundingClientRect();if(!r.width)return;
   DPR=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(r.width*DPR);cv.height=Math.round(r.height*DPR);
-  const tiles=clamp(Math.round(r.width/50),8,20);Z=r.width/(tiles*TS);VW=tiles*TS;VH=r.height/Z;
+  const tiles=clamp(Math.round(r.width/50),8,20);Z=r.width/(tiles*TS);VW=tiles*TS;VH=r.height/Z;restStick();
 }
 window.addEventListener('resize',()=>{resize();if(typeof fitBolt==='function')fitBolt()});
 
@@ -667,25 +675,42 @@ function walkTo(tx,ty){
   const fromX=P.moving?P.tx:P.x,fromY=P.moving?P.ty:P.y;
   const p=bfs(fromX,fromY,tx,ty);if(p){P.path=p}
 }
-cv.addEventListener('pointerdown',e=>{
-  if(paused())return;const r=cv.getBoundingClientRect();
-  const wx=cam.x+(e.clientX-r.left)/Z,wy=cam.y+(e.clientY-r.top)/Z,tx=Math.floor(wx/TS),ty=Math.floor(wy/TS);
-  const npc=NPCS.find(n=>Math.abs(n.x-tx)<=0&&(ty===n.y||ty===n.y-1)&&tx===n.x);
-  if(npc){talkTo(npc.id);return}
-  walkTo(tx,ty);
-});
 const KEYMAP={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r',w:'u',s:'d',a:'l',d:'r',W:'u',S:'d',A:'l',D:'r'};
 addEventListener('keydown',e=>{
   const d=KEYMAP[e.key];if(!d)return;if(paused())return;e.preventDefault();
   if(!held.includes(d))held.push(d);P.path=[];
 });
 addEventListener('keyup',e=>{const d=KEYMAP[e.key];if(!d)return;const i=held.indexOf(d);if(i>=0)held.splice(i,1)});
-document.querySelectorAll('#dpad button').forEach(b=>{
-  const d=b.dataset.d;
-  const on=e=>{e.preventDefault();if(!held.includes(d))held.push(d);P.path=[]};
-  const off=e=>{e.preventDefault();const i=held.indexOf(d);if(i>=0)held.splice(i,1)};
-  b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);
-});
+/* ---- thumbstick (floating: appears wherever the left thumb lands) ---- */
+let stickDir=null;
+function stickReset(){stickDir=null;const k=$('#knob');if(k)k.style.transform='translate(0,0)'}
+function restStick(){const z=$('#stickzone'),b=$('#stick');if(z&&b&&z.clientHeight){b.style.left='20px';b.style.top=(z.clientHeight-160)+'px'}}
+(function(){
+  const zone=$('#stickzone'),base=$('#stick'),knob=$('#knob');let id=null,cx=0,cy=0;const R=54;
+  const move=e=>{
+    if(e.pointerId!==id)return;const r=zone.getBoundingClientRect();
+    let dx=e.clientX-r.left-cx,dy=e.clientY-r.top-cy;const d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d}
+    knob.style.transform=`translate(${dx}px,${dy}px)`;
+    if(d<R*.3)stickDir=null;else stickDir=Math.abs(dx)>Math.abs(dy)?(dx>0?'r':'l'):(dy>0?'d':'u');
+  };
+  zone.addEventListener('pointerdown',e=>{
+    if(id!==null)return;e.preventDefault();id=e.pointerId;try{zone.setPointerCapture(id)}catch(_){}
+    const r=zone.getBoundingClientRect();cx=clamp(e.clientX-r.left,70,r.width-70);cy=clamp(e.clientY-r.top,70,r.height-70);
+    base.style.left=(cx-70)+'px';base.style.top=(cy-70)+'px';base.classList.add('on');move(e);
+  });
+  zone.addEventListener('pointermove',move);
+  const up=e=>{if(e.pointerId!==id)return;id=null;base.classList.remove('on');stickReset();restStick()};
+  zone.addEventListener('pointerup',up);zone.addEventListener('pointercancel',up);
+})();
+/* ---- talk button: appears when you stand next to a character ---- */
+const talkBtn=$('#talkBtn');
+function updateTalk(){
+  const n=!paused()&&NPCS.find(n=>Math.abs(n.x-P.x)<=1&&Math.abs(n.y-P.y)<=1);
+  if(n){talkBtn.style.display='block';if(talkBtn._id!==n.id){talkBtn._id=n.id;talkBtn.textContent=`💬 Talk to ${CAST[n.id].short}`}}
+  else talkBtn.style.display='none';
+}
+talkBtn.onclick=()=>talkTo(talkBtn._id);
+addEventListener('keydown',e=>{if((e.key==='e'||e.key==='E'||e.key==='Enter')&&talkBtn.style.display==='block'&&!paused()){e.preventDefault();talkTo(talkBtn._id)}});
 
 /* ---- arrival effects ---- */
 function onArrive(){
@@ -731,7 +756,8 @@ function update(dt){
   }
   if(!P.moving&&!paused()){
     let dx=0,dy=0;
-    if(held.length){const d=DIRS[held[held.length-1]];dx=d[0];dy=d[1]}
+    const dk=held.length?held[held.length-1]:stickDir;
+    if(dk){const d=DIRS[dk];dx=d[0];dy=d[1]}
     else if(P.path.length){const nx=P.path[0];dx=nx[0]-P.x;dy=nx[1]-P.y;
       if(Math.abs(dx)+Math.abs(dy)!==1||isBlocked(nx[0],nx[1])){P.path=[];dx=dy=0}else P.path.shift()}
     if(dx||dy){const keep=P.t;tryStep(dx,dy);P.t=Math.min(keep,stepT*.5)}
@@ -956,7 +982,7 @@ function render(time){
 function frame(t){
   if(!worldOn)return;
   const now=t/1000,dt=Math.min(.05,now-lastT||0);lastT=now;
-  energyTick();update(dt);guideT+=dt;if(guideT>.3){guideT=0;refreshGuide()}render(now);
+  energyTick();update(dt);guideT+=dt;if(guideT>.3){guideT=0;refreshGuide()}updateTalk();render(now);
   hudT+=dt;if(hudT>.5){hudT=0;hud()}
   requestAnimationFrame(frame);
 }
@@ -965,7 +991,7 @@ function startWorld(){
   $('#title').classList.add('hidden');$('#world').classList.remove('hidden');worldOn=true;resize();
   cam.x=clamp(P.x*TS-VW/2,0,MW*TS-VW);cam.y=clamp(P.y*TS-VH/2,0,MH*TS-VH);
   lastT=performance.now()/1000;hud();requestAnimationFrame(frame);
-  $('#hint').textContent='Arrow keys / WASD or tap the ground to walk · stand on trees, rocks, bushes & wheat to gather';
+  $('#hint').textContent='Walk with the thumbstick or arrow keys / WASD · stand on trees, rocks, bushes & wheat to gather';
   $('#hint').style.opacity=1;clearTimeout(hintT);hintT=setTimeout(()=>$('#hint').style.opacity=0,14000);
 }
 function stopWorld(){worldOn=false;held.length=0;P.path=[]}
@@ -1145,27 +1171,27 @@ const stored=k=>sget('st_'+k)>0||(S.store[k]||0)>0;
 const bothLv=()=>Math.min(S.bld.bolt,S.bld.card);
 const STORY=[
   {who:'granny',goal:'Chop 4 wood: walk onto a tree 🌳 and stand still',prog:()=>[sget('g_wood'),4],done:()=>sget('g_wood')>=4,r:{coins:5},
-   say:"Welcome home, dear! Your grandpa Alder left you Harvest Hollow, and the old place needs some love. Let's start with wood. Walk onto a tree (arrow keys / WASD, or just tap the ground) and stand there. You'll chop automatically while the ring fills. Your backpack holds 6 things. Follow the glowing yellow arrows 🧭 and dotted trail to see where to go, and tap ❓ any time for help."},
+   say:["Welcome home! Grandpa Alder left you Harvest Hollow, and it needs some love.", "Walk onto a 🌳 tree and stand still to chop wood.", "Your 🎒 backpack holds 6 things.", "Follow the yellow 🧭 arrow. Tap ❓ for help any time."]},
   {who:'granny',goal:'Drop your wood at the Barn: step on the red mat in front of it 📦',prog:()=>[sget('delivered'),4],done:()=>sget('delivered')>=4,r:{coins:5},
-   say:"Lovely! Now carry it to the big red Barn and step on the glowing red mat. Everything in your backpack is stored there. Upgrades are paid from the Barn's storage, so stored goods really matter."},
+   say:["Carry your wood to the 📦 Barn.", "Step on the red mat in front of it to store everything.", "Upgrades are paid from the Barn's storage."]},
   {who:'granny',goal:'Make 1 plank at the Sawmill, then store it in the Barn 🟫',done:()=>stored('plank'),r:{coins:5},
-   say:"Time to make something. The Sawmill turns 2 wood into 1 plank. Step on its mat to feed it, wait a few seconds, then step on the mat again to collect. A ❗ over a building means goods are ready. Take the plank to the Barn."},
+   say:["The Sawmill turns 2 wood into 1 plank.", "Step on its mat to feed it, wait a few seconds, then step on again to collect.", "A ❗ over a building means goods are ready.", "Store the plank in the Barn."]},
   {who:'granny',goal:'Make 1 brick at the Brick Kiln (needs 2 stone ⛏️), then store it 🧱',done:()=>stored('brick'),r:{coins:10},
-   say:"Bricks next! Mine 2 stone from the grey rocks out east, feed the Brick Kiln, and store the brick. Planks and bricks are what you'll pay for upgrades. Oh, and the Quest Board by my cottage has bounties for extra coins."},
+   say:["Mine 2 stone from the grey rocks out east.", "Feed the Brick Kiln, then collect the brick.", "Store it in the Barn. Planks and bricks pay for upgrades.", "The Quest Board by my cottage has bounties too."]},
   {who:'tess',goal:'Solve a puzzle at the Bolt Works ⚙️ (the blue building)',prog:()=>[sget('boltWins'),1],done:()=>sget('boltWins')>=1,r:{coins:10},
-   say:"Hi, I'm Tess! My Bolt Works is a mess, nuts everywhere. Step onto the red mat under my blue workshop and press ▶ Play (costs ⚡1 energy). Sort the nuts so every rod holds just one colour. I pay coins for every puzzle you solve!"},
+   say:["I'm Tess! My Bolt Works needs sorting out.", "Step on the red mat under the blue workshop, then press ▶ Play (costs ⚡1).", "Sort the nuts so each rod holds one colour.", "I pay coins for every puzzle you solve."]},
   {who:'tess',goal:'Upgrade the Bolt Works ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_bolt')>=1,r:{coins:10},
-   say:"Great sorting! Now, coins build upgrades. Fixing up my workshop costs coins plus planks and bricks from your Barn, and it gives you more undos, hints, a spare rod and bigger payouts. Open the Bolt Works and press ⬆ Upgrade."},
+   say:["Coins build upgrades.", "An upgrade costs coins + planks + bricks from your Barn.", "You get more undos, hints, a spare rod and bigger payouts.", "Open the Bolt Works and press ⬆ Upgrade."]},
   {who:'bram',goal:'Finish a Bean Harvest game at the Card Barn 🃏 (purple roof)',prog:()=>[sget('cardGames'),1],done:()=>sget('cardGames')>=1,r:{coins:10},
-   say:"Howdy, Bram here! At the Card Barn we play Bean Harvest: plant crops from your hand in order, then harvest them for coins. Step on the red mat under my barn and press ▶ Play. Tap ❓ in the game any time for the rules."},
+   say:["Bram here! At the Card Barn we play Bean Harvest.", "Plant crops from your hand, then harvest them for coins.", "Step on the red mat under my barn and press ▶ Play.", "Tap ❓ in the game for the rules."]},
   {who:'bram',goal:'Upgrade the Card Barn ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_card')>=1,r:{coins:15,energy:2},
-   say:"Fine playing! More levels mean more rounds per game, more trades and a bigger payout. Open the Card Barn and press ⬆ Upgrade whenever you've got the goods."},
+   say:["More levels mean more rounds, more trades and bigger harvests.", "Open the Card Barn and press ⬆ Upgrade when you have the goods."]},
   {who:'granny',goal:'Raise both workshops to Level 3 🏗️',prog:()=>[bothLv(),3],done:()=>bothLv()>=3,r:{coins:30},
-   say:"Look at the Hollow now! Grandpa would be so proud. Keep going: the Quest Board has plenty of bounties, and both workshops can reach Level 5. And if you just want to play, Free Play (in the ☰ menu) never touches your progress."},
+   say:["Look at the Hollow now! Grandpa would be proud.", "The Quest Board has plenty of bounties.", "Both workshops can reach Level 5.", "Free Play (☰ menu) never touches your progress."]},
   {who:'granny',goal:'Raise both workshops to Level 5 🏆',prog:()=>[bothLv(),5],done:()=>bothLv()>=5,r:{coins:100,energy:3},
-   say:"Level 3 already! Only one more push to make both workshops the finest in the valley. You can do it."}
+   say:["Level 3 already!", "One more push makes both workshops the finest in the valley."]}
 ];
-const END_SAY="Harvest Hollow is thriving, and that's all because of you. The workshops are humming, the Barn is full, and Grandpa Alder is smiling somewhere. Free Play and the Quest Board are always open. Thank you, dear!";
+const END_SAY=["Harvest Hollow is thriving, thanks to you!","The workshops are humming and the Barn is full.","Free Play and the Quest Board are always open.","Thank you, dear!"];
 
 function curStep(){return STORY[S.story]||null}
 function checkStory(silent){
@@ -1180,15 +1206,18 @@ function checkStory(silent){
 }
 function updateGoal(){
   const g=$('#goal');if(!g)return;const st=curStep();
-  if(!st){g.innerHTML='🏆 The Hollow is fully restored!';return}
+  g.classList.toggle('min',!!S.goalMin);
+  if(S.goalMin){$('#goalTxt').innerHTML='📍 Mission';return}
+  if(!st){$('#goalTxt').innerHTML='🏆 The Hollow is fully restored!';return}
   const p=st.prog?st.prog():null;
   const a=S.guide===false?null:(GUIDE&&GUIDE.a);
-  g.innerHTML=`📍 <b>${CAST[st.who].short}:</b> ${st.goal}${p?` <small>(${Math.min(p[0],p[1])}/${p[1]})</small>`:''}${a?`<span class="tip">👉 ${a.text}</span>`:''}`;
+  $('#goalTxt').innerHTML=`📍 <b>${CAST[st.who].short}:</b> ${st.goal}${p?` <small>(${Math.min(p[0],p[1])}/${p[1]})</small>`:''}${a?`<span class="tip">👉 ${a.text}</span>`:''}`;
 }
+const bullets=t=>Array.isArray(t)?`<ul class="blt">${t.map(x=>`<li>${x}</li>`).join('')}</ul>`:t;
 function showSay(who,text,opts={}){
   const c=CAST[who],st=curStep();
   openModal(`<div class="say"><div class="face">${c.face}</div><div style="flex:1"><div class="who">${c.name}</div><div class="muted" style="margin-bottom:6px">${c.role}</div>
-    <div class="txt">${text}</div></div></div>
+    <div class="txt">${bullets(text)}</div></div></div>
     ${st&&!opts.noGoal?`<div class="goalbox">📍 Your goal: ${st.goal}</div>`:''}
     <div style="text-align:right;margin-top:12px"><button class="btn green" id="sayOk">Got it!</button></div>`);
   $('#sayOk').onclick=closeModal;
@@ -1204,11 +1233,11 @@ function talkTo(id){
   const st=curStep(),c=CAST[id];
   if(st&&st.who===id){showSay(id,st.say);return}
   const chat={
-    granny:"I keep the Quest Board, dear. Pop over any time to see what bounties are up. Finished quests pay coins, energy, even planks and bricks!",
-    tess:"Bolt Works is open for business. Sort the nuts, pocket the coins, then spend them on fixing up the place.",
-    bram:"Nothing beats a good harvest. Plant like crops together, harvest big piles, and keep an eye on that bean-o-meter."
+    granny:["I keep the Quest Board.","Finished quests pay coins, energy, even planks and bricks."],
+    tess:["The Bolt Works is open for business.","Sort the nuts, pocket the coins, spend them on upgrades."],
+    bram:["Nothing beats a good harvest.","Plant like crops together and harvest big piles."]
   }[id];
-  showSay(id,chat+(st?` <br><br><i>(Your next step is with ${CAST[st.who].name}.)</i>`:''));
+  showSay(id,st?chat.concat([`<i>Your next step is with ${CAST[st.who].name}.</i>`]):chat);
 }
 
 /* ---- per-building coaching, shown inside the building panel ---- */
@@ -1217,15 +1246,15 @@ function buildingBlurb(game){
   const plays=game==='bolt'?sget('boltWins'):sget('cardGames'),ups=sget('up_'+game);
   let t;
   if(game==='bolt'){
-    t=plays===0?"This is where you play! Press <b>▶ Play</b> (costs ⚡1) and sort the nuts so each rod holds one colour. Tap a rod to lift its top nut, tap another to drop it. I pay <b>coins</b> for every puzzle solved."
-      :ups===0?"Coins, planks and bricks in your Barn can <b>upgrade</b> this workshop. Each level gives you more undos and hints, a spare rod, and bigger coin payouts."
-      :"Welcome back! Every upgrade level means more undos, more hints and fatter payouts.";
+    t=plays===0?["Press <b>▶ Play</b> (costs ⚡1) to start a puzzle.","Tap a rod to lift its top nut, tap another to drop it.","Make every rod one colour.","You earn <b>coins</b> for each puzzle."]
+      :ups===0?["Coins + planks + bricks from your Barn <b>upgrade</b> this workshop.","Each level: more undos and hints, a spare rod, bigger payouts."]
+      :["Each upgrade level adds undos, hints and bigger payouts."];
   }else{
-    t=plays===0?"This is where you play! Press <b>▶ Play</b> (costs ⚡1). Plant crops from your hand into your fields, then harvest them for <b>coins</b>. Tap ❓ in the game for the rules."
-      :ups===0?"Coins, planks and bricks in your Barn can <b>upgrade</b> this barn. More levels mean more rounds per game, more trades and a bigger payout."
-      :"Back for another round? Higher levels give more rounds, trades and a bigger harvest.";
+    t=plays===0?["Press <b>▶ Play</b> (costs ⚡1) to start a game.","Plant crops from your hand into fields, then harvest them for <b>coins</b>.","Tap ❓ in the game for the rules."]
+      :ups===0?["Coins + planks + bricks from your Barn <b>upgrade</b> this barn.","Each level: more rounds, more trades, bigger harvests."]
+      :["Higher levels give more rounds, trades and a bigger harvest."];
   }
-  return `<div class="say" style="margin:10px 0"><div class="face" style="width:56px;height:56px;font-size:32px">${c.face}</div><div style="flex:1"><div class="who" style="font-size:15px">${c.name}</div><div class="txt" style="font-size:14px">${t}</div></div></div>`;
+  return `<div class="say" style="margin:10px 0"><div class="face" style="width:56px;height:56px;font-size:32px">${c.face}</div><div style="flex:1"><div class="who" style="font-size:15px">${c.name}</div><div class="txt" style="font-size:14px">${bullets(t)}</div></div></div>`;
 }
 const RULES={
   bolt:`<h2>⚙️ How to play Bolt Works</h2><ul class="perks">
@@ -1245,7 +1274,7 @@ const RULES={
     <li>You can buy a <b>3rd field</b> for 3🪙 during the game.</li></ul>`
 };
 function openRules(game){openModal(RULES[game]+`<div style="text-align:right"><button class="btn green" onclick="closeModal()">Got it</button></div>`)}
-$('#goal').onclick=()=>{const st=curStep();held.length=0;if(st)showSay(st.who,st.say);else showSay('granny',END_SAY,{noGoal:true})};
+
 
 /* =====================================================================
    GUIDE ARROWS — "what do I do right now, and where?"
@@ -1300,16 +1329,10 @@ let GUIDE=null,guideT=0;
 function refreshGuide(){
   if(S.guide===false){GUIDE=null;return}
   const a=nextAction();if(!a){GUIDE=null;return}
-  const fx=P.moving?P.tx:P.x,fy=P.moving?P.ty:P.y;
-  GUIDE={a,path:(fx===a.t.x&&fy===a.t.y)?null:bfs(fx,fy,a.t.x,a.t.y)};
+  GUIDE={a};
 }
 function drawGuide(g,time){
-  if(!GUIDE)return;const{a,path}=GUIDE,t=a.t;
-  if(path&&path.length){
-    g.save();g.setLineDash([3,11]);g.lineDashOffset=-time*26;g.lineCap='round';g.lineJoin='round';
-    g.strokeStyle='rgba(30,20,0,.45)';g.lineWidth=7;g.beginPath();g.moveTo(P.px,P.py+8);path.forEach(([x,y])=>g.lineTo(x*TS+TS/2,y*TS+TS/2));g.stroke();
-    g.strokeStyle='#ffe27a';g.lineWidth=4;g.stroke();g.restore();
-  }
+  if(!GUIDE)return;const t=GUIDE.a.t;
   const x=t.x*TS+TS/2,y=t.y*TS,b=Math.sin(time*5)*5;
   g.save();g.globalAlpha=.55+.35*Math.sin(time*4);g.strokeStyle='#ffe27a';g.lineWidth=4;g.beginPath();g.ellipse(x,t.y*TS+TS/2+8,22,11,0,0,7);g.stroke();g.restore();
   g.fillStyle='#ffd23a';g.strokeStyle='#5a3a00';g.lineWidth=3;g.lineJoin='round';
@@ -1355,7 +1378,7 @@ function openHowTo(){
       <li><b>Play</b> — step on the red mat under the ⚙️ Bolt Works or 🃏 Card Barn and press ▶ Play (costs ⚡1) to earn 🪙 coins.</li>
       <li><b>Upgrade</b> — spend coins plus planks and bricks from the Barn on workshop upgrades for better rewards.</li>
       <li><b>Eat</b> — bread and jam (🧺 Storage) refill your ⚡ energy.</li></ol>
-    <div class="muted">Move: arrow keys / WASD, or tap the ground. Tap a character to talk to them.</div>
+    <div class="muted">Move: arrow keys / WASD, or the thumbstick. Walk up to a character and press 💬 Talk.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       <button class="btn blue" id="hGuide">🧭 Guide arrows: ${S.guide===false?'OFF — turn on':'ON — turn off'}</button>
       ${st?'<button class="btn grey" id="hSay">💬 Hear it again</button>':''}
@@ -1378,6 +1401,9 @@ function resetGame(){
 }
 $('#bGuide').onclick=()=>toggleGuide();
 $('#bHow').onclick=()=>{held.length=0;openHowTo()};
+
+$('#goal').onclick=e=>{if(!S.goalMin&&!e.target.closest('#goalMin'))return;S.goalMin=!S.goalMin;save(true);updateGoal()};
+$('#goalMin').onclick=e=>{e.stopPropagation();S.goalMin=true;save(true);updateGoal()};
 /* =====================================================================
    MINI-GAME 1: BOLT WORKS — nuts & bolts sorting
    Levels are random but verified solvable by a solver before they're dealt.
