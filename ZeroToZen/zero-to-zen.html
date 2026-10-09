@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1320">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Zero to Zen</title>
+<style>
+:root{
+  --bg:#0d1320; --bg2:#141c2e; --card:#18223a; --line:rgba(255,255,255,.08);
+  --ink:#ece8dd; --ink2:#a9adb8; --dim:#6c7385;
+  --sand:#dcc9a0; --teal:#7fbab2; --teal2:#4f8f88;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Avenir Next","Segoe UI",system-ui,sans-serif;overflow:hidden}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:400;margin:0;letter-spacing:.02em}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+.hidden{display:none!important}
+.screen{position:fixed;inset:0;overflow-y:auto;padding:calc(18px + var(--safe-t)) 18px calc(28px + var(--safe-b));background:radial-gradient(120% 80% at 50% 0%,#1a2540 0%,var(--bg) 62%)}
+.wrap{max-width:520px;margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;min-height:40px}
+.top h2{font-size:22px}
+.link{color:var(--teal);font-size:14px;padding:8px 4px}
+.ghost{border:1px solid var(--line);border-radius:999px;padding:8px 16px;color:var(--ink2);font-size:14px}
+.ghost:active{background:rgba(255,255,255,.05)}
+.cta{background:linear-gradient(#8ac6bd,#4f8f88);color:#06201d;border-radius:999px;padding:14px 28px;font-weight:600;font-size:16px;box-shadow:0 8px 24px rgba(79,143,136,.3)}
+.cta:active{transform:scale(.98)}
+
+/* home */
+.brand{text-align:center;margin-top:4vh}
+.brand h1{font-size:34px;color:var(--sand)}
+.brand p{color:var(--ink2);margin:8px 0 0;font-size:15px}
+.playwrap{display:flex;flex-direction:column;align-items:center;margin:5vh 0 3vh}
+.play{width:156px;height:156px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#a6dcd3,#4f8f88 62%,#2f6762);box-shadow:0 0 0 14px rgba(127,186,178,.08),0 0 0 30px rgba(127,186,178,.04),0 20px 50px rgba(0,0,0,.5);display:grid;place-items:center;animation:glow 7s ease-in-out infinite}
+.play:active{transform:scale(.97)}
+.play svg{width:54px;height:54px;margin-left:6px;fill:#06201d}
+@keyframes glow{50%{box-shadow:0 0 0 20px rgba(127,186,178,.1),0 0 0 44px rgba(127,186,178,.03),0 20px 50px rgba(0,0,0,.5)}}
+.next{margin-top:26px;text-align:center}
+.next b{display:block;font-family:Georgia,serif;font-weight:400;font-size:20px;color:var(--ink)}
+.next span{color:var(--ink2);font-size:14px}
+.next .why{display:block;color:var(--teal);font-size:13px;margin-top:4px}
+.stats{display:flex;gap:10px;margin:2vh 0}
+.stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 8px;text-align:center}
+.stat b{display:block;font-size:22px;font-family:Georgia,serif;font-weight:400;color:var(--sand)}
+.stat span{font-size:12px;color:var(--dim)}
+.row2{display:flex;gap:10px;justify-content:center;margin-top:10px}
+
+/* courses */
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tab{flex:1;padding:10px 0;border-radius:14px;background:var(--card);border:1px solid var(--line);text-align:center;color:var(--ink2)}
+.tab b{display:block;font-family:Georgia,serif;font-weight:400;font-size:20px;color:var(--ink)}
+.tab small{font-size:11px}
+.tab.on{border-color:var(--teal);background:#1c2d3a}
+.tab.on b{color:var(--sand)}
+.prog{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin:2px 0 14px}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--teal2),var(--sand))}
+.note{color:var(--ink2);font-size:13px;margin:0 0 12px;line-height:1.45}
+.lessons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lc{position:relative;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 12px 10px;min-height:96px}
+.lc.nxt{border-color:var(--teal)}
+.lc:active{background:#1d2a47}
+.lc .n{font-size:11px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+.lc .t{font-family:Georgia,serif;font-size:17px;margin:2px 0 8px}
+.lc .tick{position:absolute;top:10px;right:12px;color:var(--teal);font-size:15px}
+.lc .tag{position:absolute;top:10px;right:12px;font-size:10px;color:#06201d;background:var(--teal);border-radius:8px;padding:2px 7px;font-weight:600}
+.meters{display:grid;grid-template-columns:auto 1fr;gap:3px 8px;align-items:center;font-size:10px;color:var(--dim)}
+.meters .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.meters .bar i{display:block;height:100%;background:var(--sand);border-radius:2px}
+.meters .dots{display:flex;gap:3px}
+.meters .dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.meters .dots i.on{background:var(--teal)}
+.sheet{position:fixed;inset:0;background:rgba(5,8,14,.65);display:flex;align-items:flex-end;z-index:20}
+.sheet .box{width:100%;max-width:520px;margin:0 auto;background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 22px calc(24px + var(--safe-b));border:1px solid var(--line)}
+.sheet h3{font-size:24px;color:var(--sand)}
+.sheet .sub{color:var(--dim);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.sheet p{color:var(--ink2);line-height:1.5;margin:10px 0 16px}
+.sheet .meters{font-size:12px;margin-bottom:20px}
+.sheet .meters .bar{height:6px}
+.sheet .meters .dots i{width:9px;height:9px}
+.sheet .acts{display:flex;gap:10px;justify-content:space-between;align-items:center}
+
+/* settings */
+.set{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 16px;margin-bottom:14px}
+.sr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.sr:last-child{border:0}
+.sr label{flex:1}
+.sr small{display:block;color:var(--dim);font-size:12px;margin-top:2px;line-height:1.35}
+select,input[type=range]{background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:inherit;max-width:190px}
+input[type=range]{padding:0;accent-color:var(--teal);width:150px}
+.sw{width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--ink2);transition:.2s}
+.sw.on{background:var(--teal2)}
+.sw.on::after{left:21px;background:#fff}
+.danger{color:#e08a7c}
+
+/* session */
+#session{background:radial-gradient(90% 70% at 50% 40%,#16213a 0%,var(--bg) 70%);display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;transition:background 2s}
+#session.zen{background:#06090f}
+.s-top{width:100%;color:var(--dim);font-size:13px;letter-spacing:.06em;transition:opacity 1.2s;min-height:20px}
+.stage{position:relative;width:min(78vw,340px);aspect-ratio:1;display:grid;place-items:center}
+.ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:1.5}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:var(--sand);stroke-linecap:round;opacity:.7}
+.orb{width:62%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 38% 32%,#bfe6df,#5ba39a 55%,#2a5f5a);box-shadow:0 0 70px rgba(127,186,178,.35);animation:breathe 10s ease-in-out infinite;opacity:var(--orb,1)}
+@keyframes breathe{0%,100%{transform:scale(.82)}50%{transform:scale(1.12)}}
+.reduce .orb{animation:none}
+.clock{position:absolute;font-family:Georgia,serif;font-size:40px;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.45);font-variant-numeric:tabular-nums;transition:opacity .6s}
+.clock.off{opacity:0}
+.cap{min-height:84px;max-width:440px;width:100%;color:var(--ink);font-family:Georgia,serif;font-size:19px;line-height:1.45;opacity:0;transition:opacity 1.2s;padding:0 6px}
+.cap.on{opacity:.92}
+.s-bot{display:flex;gap:14px;transition:opacity 1.2s}
+#session.idle .s-top,#session.idle .s-bot{opacity:0;pointer-events:none}
+#session.idle .clock{opacity:.55}
+.ctl{width:64px;height:64px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink)}
+.ctl svg{width:26px;height:26px;fill:currentColor}
+.ctl:disabled{opacity:.3}
+.confirm{position:fixed;inset:0;background:rgba(5,8,14,.8);display:grid;place-items:center;z-index:30}
+.confirm .box{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:24px;max-width:300px;text-align:center}
+.confirm p{margin:0 0 18px;color:var(--ink2)}
+.confirm .acts{display:flex;gap:10px;justify-content:center}
+
+/* done */
+#done{display:flex;align-items:center;justify-content:center;text-align:center}
+#done h2{font-size:30px;color:var(--sand);margin:14px 0 8px}
+#done p{color:var(--ink2);line-height:1.55;margin:0 auto 24px;max-width:340px}
+.lotus{width:84px;height:84px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 38% 32%,#bfe6df,#5ba39a 55%,#2a5f5a);box-shadow:0 0 60px rgba(127,186,178,.4)}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<section id="home" class="screen">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Zero to Zen</h1>
+      <p>From full guidance to pure silence.</p>
+    </div>
+    <div class="playwrap">
+      <button class="play" id="playBtn" aria-label="Play"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+      <div class="next" id="nextInfo"></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stStreak">0</b><span>day streak</span></div>
+      <div class="stat"><b id="stSits">0</b><span>sits</span></div>
+      <div class="stat"><b id="stMins">0</b><span>minutes</span></div>
+    </div>
+    <div class="row2">
+      <button class="ghost" id="goCourses">Courses &amp; lessons</button>
+      <button class="ghost" id="goSettings">Settings</button>
+    </div>
+  </div>
+</section>
+
+<!-- COURSES -->
+<section id="courses" class="screen hidden">
+  <div class="wrap">
+    <div class="top"><button class="link" data-back>‹ Home</button><h2>Courses</h2><span style="width:60px"></span></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="prog"><i id="progBar"></i></div>
+    <p class="note" id="courseNote"></p>
+    <div class="lessons" id="lessonGrid"></div>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section id="settings" class="screen hidden">
+  <div class="wrap">
+    <div class="top"><button class="link" data-back>‹ Home</button><h2>Settings</h2><span style="width:60px"></span></div>
+
+    <div class="set">
+      <div class="sr"><label>Guide voice<small>Uses your device's built-in voices.</small></label><select id="setVoice"></select></div>
+      <div class="sr"><label>Voice speed</label><input type="range" id="setRate" min="0.6" max="1.1" step="0.02"></div>
+      <div class="sr"><label>Volume</label><input type="range" id="setVol" min="0.2" max="1" step="0.05"></div>
+      <div class="sr"><label>Preview voice</label><button class="ghost" id="prevVoice">Play</button></div>
+    </div>
+
+    <div class="set">
+      <div class="sr"><label>Soft sound<small>Optional masking sound under any session, to drown out the world outside. Off by default.</small></label>
+        <select id="setAmb"><option value="off">Off</option><option value="brown">Brown noise</option><option value="pink">Pink noise</option><option value="white">White noise</option><option value="drone">Slow drone</option></select></div>
+      <div class="sr"><label>Soft sound level</label><input type="range" id="setAmbVol" min="0.1" max="1" step="0.05"></div>
+    </div>
+
+    <div class="set">
+      <div class="sr"><label>Bells<small>Follow each lesson, or switch every bell off.</small></label>
+        <select id="setBells"><option value="lesson">Follow lesson</option><option value="off">Always off</option></select></div>
+      <div class="sr"><label>Soft chime at the end of silent sits<small>The final lessons end with no bell. Turn this on if you'd like a gentle one anyway.</small></label><button class="sw" id="setZen" aria-label="toggle"></button></div>
+      <div class="sr"><label>Show timer<small>Hide it to sit without watching the clock.</small></label><button class="sw" id="setTimer" aria-label="toggle"></button></div>
+      <div class="sr"><label>Reduce motion<small>Stop the breathing orb animating.</small></label><button class="sw" id="setReduce" aria-label="toggle"></button></div>
+    </div>
+
+    <div class="set">
+      <div class="sr"><label class="danger">Reset all progress</label><button class="ghost danger" id="resetBtn">Reset</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- SESSION -->
+<section id="session" class="screen hidden">
+  <div class="s-top" id="sTop"></div>
+  <div class="stage" id="stage">
+    <svg class="ring" viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="48"/><circle class="fg" id="ringFg" cx="50" cy="50" r="48" stroke-dasharray="301.6" stroke-dashoffset="301.6"/></svg>
+    <div class="orb" id="orb"></div>
+    <div class="clock" id="clock"></div>
+  </div>
+  <div class="cap" id="cap"></div>
+  <div class="s-bot">
+    <button class="ctl" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24" id="pauseIco"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
+    <button class="ctl" id="endBtn" aria-label="End"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
+  </div>
+</section>
+
+<!-- DONE -->
+<section id="done" class="screen hidden">
+  <div class="wrap">
+    <div class="lotus"></div>
+    <h2 id="doneTitle">Well done</h2>
+    <p id="doneText"></p>
+    <button class="cta" id="doneHome">Back to home</button>
+  </div>
+</section>
+
+<div id="sheetHost"></div>
+<div id="confirmHost"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   Zero to Zen — learn to meditate, from full guidance to silence.
+   Single file. All sound (bells, music, noise) is synthesised
+   with Web Audio; guidance clips are short phrases spoken by the
+   device voice, so the app stays tiny.
+   ========================================================= */
+
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const TS=Math.max(1,+new URLSearchParams(location.search).get('speed')||1); // dev only: ?speed=30 fast-forwards time
+
+/* ---------- course design ---------- */
+const COURSES=[5,10,15,20];
+// g = how often the guide speaks, m = music level, b = bell pattern
+const LESSONS=[
+ {t:'Zero',        d:'Full guidance with music. A voice walks you through every breath.',               g:1,   m:1,    b:'ends'},
+ {t:'Settling',    d:'Still a steady voice, with a little more room between the words.',                g:.9,  m:.95,  b:'ends'},
+ {t:'Breath',      d:'Guidance centred on counting and following the breath.',                         g:.75, m:.85,  b:'ends'},
+ {t:'Quarter Bells',d:'Bells now mark each quarter of the sit, a quiet way to know where you are.',     g:.6,  m:.75,  b:'quarters'},
+ {t:'Fewer Words', d:'The voice steps back and you begin to fill the gaps yourself.',                  g:.45, m:.6,   b:'quarters'},
+ {t:'Space',       d:'Longer silences. The music starts to thin out.',                                 g:.35, m:.45,  b:'quarters'},
+ {t:'Soft Music',  d:'Music is only a faint colour behind your own attention.',                        g:.25, m:.3,   b:'quarters'},
+ {t:'Distant Guide',d:'Only short cues now: a single word to bring you back.',                         g:.15, m:.18,  b:'quarters'},
+ {t:'A Few Whispers',d:'Two or three single-word cues. The music is almost gone.',                     g:.07, m:.08,  b:'quarters'},
+ {t:'Bells Only',  d:'No voice, no music. Silence, marked by a bell at each quarter.',                 g:0,   m:0,    b:'quarters'},
+ {t:'Halfway Bell',d:'One bell at the middle of the sit. The rest is yours.',                          g:0,   m:0,    b:'half'},
+ {t:'Open & Close',d:'A bell to begin, a bell to end, and silence between.',                           g:0,   m:0,    b:'ends'},
+ {t:'One Bell',    d:'A single bell to begin. The end is signalled only by a soft light.',             g:0,   m:0,    b:'start'},
+ {t:'Zen',         d:'Nothing. No voice, no music, no bell. Only you and the time.',                   g:0,   m:0,    b:'none'},
+];
+const BELLS={none:[],start:[0],ends:[0,1],half:[0,.5,1],quarters:[0,.25,.5,.75,1]};
+
+/* ---------- guidance clip bank ---------- */
+const CLIPS={
+ open:[
+  "Find a comfortable position. Let your back be tall and your shoulders soft. Close your eyes, or let your gaze fall gently downward.",
+  "Welcome. Settle into your seat and let your hands rest wherever they are comfortable. There is nowhere else to be.",
+  "Take a moment to arrive. Feel the weight of your body being held by the ground beneath you.",
+  "Let's begin. Sit comfortably, close your eyes, and take one slow, deep breath in... and let it go."],
+ openBrief:["Settle in. Eyes closed.","Arrive.","Sit tall. Breathe.","Begin."],
+ full:[
+  // breath
+  "Now count your breath. One on the in-breath, two on the out-breath, up to ten. Then begin again.",
+  "Follow your breath. Feel the air entering at the nostrils, and leaving again.",
+  "Let your breathing find its own rhythm. You don't need to change it. Just watch it.",
+  "Feel your belly rise as you breathe in, and fall as you breathe out.",
+  "Count each out-breath from one to five. If you lose count, simply start again at one.",
+  "Breathe in slowly through the nose. And out, a little longer than the in-breath.",
+  // body
+  "Now feel the tension in your body. Scan from your forehead down to your jaw, and let it soften.",
+  "Notice your shoulders. Let them drop away from your ears.",
+  "Bring your attention to your hands. Feel them warm and heavy, and let them relax.",
+  "Feel the whole body sitting here. Notice any tightness, and breathe into it.",
+  "Soften your face. Unclench your jaw. Let your tongue rest.",
+  "Feel where your body meets the seat. Let yourself be supported.",
+  // mind
+  "If your mind has wandered, that is completely normal. Notice it, and gently come back to the breath.",
+  "Thoughts will come. Watch them like clouds passing, and return to your breath.",
+  "There is no need to stop your thoughts. Just don't follow them. Return to the breath.",
+  "Every time you notice you've drifted is a moment of awareness. Well done. Begin again.",
+  "Be kind to yourself. There is nothing to get right.",
+  // sound & space
+  "Listen to the sounds around you. Let them come and go without naming them.",
+  "Notice the quiet beneath the sounds. Rest your attention there.",
+  "Rest in the pause at the end of each breath. Just a little space.",
+  "Let your attention be wide and open. Nothing to do. Nowhere to go.",
+  "Simply be here, in this moment. This is all there is."],
+ brief:["Breathe.","Return to the breath.","Soften.","Let go.","Just this breath.","Notice.","Feel your body.","Listen.","Again, gently.","Here. Now.","Count your breath.","Relax your shoulders.","Rest."],
+ close:[
+  "Slowly begin to let the practice go. Notice your body, and the room around you. When you are ready, open your eyes.",
+  "Take one last deep breath. Notice how you feel. Gently wiggle your fingers and toes, and when you're ready, open your eyes.",
+  "This sit is coming to a close. Thank yourself for taking this time. Return slowly."],
+ closeBrief:["Slowly come back.","Gently open your eyes.","Return."]
+};
+
+/* ---------- persistent state ---------- */
+const KEY='zerotozen.v1';
+const defState=()=>({done:{5:[],10:[],15:[],20:[]},last:null,log:[],set:{voice:'',rate:.82,vol:.9,amb:'off',ambVol:.5,bells:'lesson',zenChime:false,showTimer:true,reduce:false}});
+let st=defState();
+try{const j=JSON.parse(localStorage.getItem(KEY));if(j){st=Object.assign(defState(),j);st.set=Object.assign(defState().set,j.set||{});st.done=Object.assign(defState().done,j.done||{})}}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
+const dstr=d=>{d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const today=()=>dstr();
+
+function streak(){
+  const days=new Set(st.log.map(x=>x.date));let n=0;const d=new Date();
+  if(!days.has(dstr(d)))d.setDate(d.getDate()-1);
+  while(days.has(dstr(d))){n++;d.setDate(d.getDate()-1)}
+  return n;
+}
+// Where Play takes you: wherever you were in the last meditation.
+function target(){
+  const L=st.last;
+  if(!L)return{c:5,l:1,why:'Begin your first sit'};
+  if(L.done&&L.date!==today()){
+    if(L.l<14)return{c:L.c,l:L.l+1,why:'Next step in your course'};
+    const i=COURSES.indexOf(L.c);
+    return i<3?{c:COURSES[i+1],l:1,why:'Course complete. Onward to '+COURSES[i+1]+' minutes'}:{c:L.c,l:14,why:'You’ve reached Zen. Sit again'};
+  }
+  return{c:L.c,l:L.l,why:L.done?'Sit again today':'Pick up where you left off'};
+}
+const sat=(c,l)=>st.done[c].includes(l);
+const satToday=()=>st.log.some(x=>x.date===today());
+
+/* ---------- screens ---------- */
+let screen='home';
+function show(id){
+  screen=id;
+  $$('.screen').forEach(s=>s.classList.toggle('hidden',s.id!==id));
+  if(id==='home')renderHome();
+  if(id==='courses')renderCourses();
+  if(id==='settings')renderSettings();
+  const el=$('#'+id);if(el&&id!=='session')el.scrollTop=0;
+}
+$$('[data-back]').forEach(b=>b.onclick=()=>show('home'));
+$('#goCourses').onclick=()=>{viewCourse=target().c;show('courses')};
+$('#goSettings').onclick=()=>show('settings');
+$('#doneHome').onclick=()=>show('home');
+
+/* ---------- home ---------- */
+function renderHome(){
+  const t=target();const L=LESSONS[t.l-1];
+  $('#nextInfo').innerHTML='<b>'+t.c+' min · Lesson '+t.l+' · '+L.t+'</b><span class="why">'+t.why+'</span>';
+  $('#stStreak').textContent=streak();
+  $('#stSits').textContent=st.log.length;
+  $('#stMins').textContent=st.log.reduce((a,x)=>a+x.mins,0);
+}
+$('#playBtn').onclick=()=>{const t=target();beginSession(t.c,t.l)};
+
+/* ---------- courses ---------- */
+let viewCourse=5;
+function metersHTML(L){
+  const n={none:0,start:1,ends:2,half:3,quarters:5}[L.b];
+  let dots='';for(let i=0;i<5;i++)dots+='<i'+(i<n?' class="on"':'')+'></i>';
+  return '<div class="meters"><span>Voice</span><div class="bar"><i style="width:'+Math.round(L.g*100)+'%"></i></div>'+
+         '<span>Music</span><div class="bar"><i style="width:'+Math.round(L.m*100)+'%"></i></div>'+
+         '<span>Bells</span><div class="dots">'+dots+'</div></div>';
+}
+function renderCourses(){
+  $('#tabs').innerHTML=COURSES.map(c=>'<button class="tab'+(c===viewCourse?' on':'')+'" data-c="'+c+'"><b>'+c+'</b><small>'+st.done[c].length+'/14</small></button>').join('');
+  $$('#tabs .tab').forEach(b=>b.onclick=()=>{viewCourse=+b.dataset.c;renderCourses()});
+  const dn=st.done[viewCourse].length;
+  $('#progBar').style.width=(dn/14*100)+'%';
+  $('#courseNote').textContent=(dn>=14?'Course complete. ':'')+'14 lessons, one a day. Tap any lesson to sit it, and repeat whenever you like.'+(satToday()?' You’ve already sat today. Come back tomorrow for the next step, or repeat any lesson now.':'');
+  const t=target();
+  $('#lessonGrid').innerHTML=LESSONS.map((L,i)=>{
+    const n=i+1,isNext=t.c===viewCourse&&t.l===n;
+    return '<button class="lc'+(isNext?' nxt':'')+'" data-l="'+n+'">'+
+      (sat(viewCourse,n)?'<span class="tick">✓</span>':isNext?'<span class="tag">NEXT</span>':'')+
+      '<div class="n">Lesson '+n+'</div><div class="t">'+L.t+'</div>'+metersHTML(L)+'</button>';
+  }).join('');
+  $$('#lessonGrid .lc').forEach(b=>b.onclick=()=>openSheet(viewCourse,+b.dataset.l));
+}
+function openSheet(c,l){
+  const L=LESSONS[l-1];
+  $('#sheetHost').innerHTML='<div class="sheet" id="sheet"><div class="box"><div class="sub">'+c+' minutes · Lesson '+l+' of 14</div><h3>'+L.t+'</h3><p>'+L.d+'</p>'+metersHTML(L)+
+    '<div class="acts"><button class="link" id="shClose">Close</button><button class="cta" id="shGo">Begin · '+c+' min</button></div></div></div>';
+  $('#shClose').onclick=closeSheet;
+  $('#sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet()};
+  $('#shGo').onclick=()=>{closeSheet();beginSession(c,l)};
+}
+const closeSheet=()=>{$('#sheetHost').innerHTML=''};
+
+/* ---------- settings ---------- */
+let voices=[];
+function loadVoices(){
+  if(!('speechSynthesis' in window))return;
+  voices=(speechSynthesis.getVoices()||[]).filter(v=>/^en/i.test(v.lang));
+  if(screen==='settings')fillVoices();
+}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+function pickVoice(){
+  if(!voices.length)return null;
+  const saved=voices.find(v=>v.voiceURI===st.set.voice);if(saved)return saved;
+  for(const n of ['Samantha','Karen','Moira','Daniel','Google UK English Female','Google US English','Serena','Tessa','Aria','Jenny']){
+    const v=voices.find(v=>v.name.includes(n));if(v)return v;
+  }
+  return voices.find(v=>v.default)||voices[0];
+}
+function fillVoices(){
+  const sel=$('#setVoice');
+  if(!voices.length){sel.innerHTML='<option>Device default</option>';return}
+  const cur=pickVoice();
+  sel.innerHTML=voices.map(v=>'<option value="'+v.voiceURI+'"'+(cur&&cur.voiceURI===v.voiceURI?' selected':'')+'>'+v.name+'</option>').join('');
+}
+function bindSw(id,key,after){
+  const b=$(id);b.classList.toggle('on',!!st.set[key]);
+  b.onclick=()=>{st.set[key]=!st.set[key];b.classList.toggle('on',st.set[key]);save();after&&after()};
+}
+function applyReduce(){document.body.classList.toggle('reduce',!!st.set.reduce)}
+function renderSettings(){
+  fillVoices();
+  $('#setVoice').onchange=e=>{st.set.voice=e.target.value;save()};
+  $('#setRate').value=st.set.rate;$('#setRate').oninput=e=>{st.set.rate=+e.target.value;save()};
+  $('#setVol').value=st.set.vol;$('#setVol').oninput=e=>{st.set.vol=+e.target.value;save()};
+  $('#setAmb').value=st.set.amb;$('#setAmb').onchange=e=>{st.set.amb=e.target.value;save()};
+  $('#setAmbVol').value=st.set.ambVol;$('#setAmbVol').oninput=e=>{st.set.ambVol=+e.target.value;save()};
+  $('#setBells').value=st.set.bells;$('#setBells').onchange=e=>{st.set.bells=e.target.value;save()};
+  bindSw('#setZen','zenChime');bindSw('#setTimer','showTimer');bindSw('#setReduce','reduce',applyReduce);
+  $('#prevVoice').onclick=()=>{unlockSpeech();speakRaw('Now count your breath. One on the in-breath, two on the out-breath.')};
+  $('#resetBtn').onclick=()=>askConfirm('Reset all progress and settings? This can’t be undone.','Reset',()=>{st=defState();save();applyReduce();show('home')});
+}
+function askConfirm(msg,yes,fn,no){
+  $('#confirmHost').innerHTML='<div class="confirm"><div class="box"><p>'+msg+'</p><div class="acts"><button class="ghost" id="cfNo">'+(no||'Cancel')+'</button><button class="cta" id="cfYes">'+yes+'</button></div></div></div>';
+  $('#cfNo').onclick=()=>{$('#confirmHost').innerHTML=''};
+  $('#cfYes').onclick=()=>{$('#confirmHost').innerHTML='';fn()};
+}
+
+/* ---------- speech ---------- */
+const hasSpeech='speechSynthesis' in window&&'SpeechSynthesisUtterance' in window;
+function unlockSpeech(){ // iOS needs speech started from a tap
+  if(!hasSpeech)return;
+  try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}
+}
+function speakRaw(text,onend){
+  if(!hasSpeech){onend&&onend();return}
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    const v=pickVoice();if(v){u.voice=v;u.lang=v.lang}
+    u.rate=st.set.rate;u.pitch=.92;u.volume=st.set.vol;
+    u.onend=u.onerror=()=>{onend&&onend()};
+    speechSynthesis.speak(u);
+  }catch(e){onend&&onend()}
+}
+
+/* ---------- audio engine (all synthesised) ---------- */
+const AU={
+  ctx:null,
+  init(){
+    if(!this.ctx){
+      const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;
+      const c=this.ctx=new C();
+      this.master=c.createGain();this.master.connect(c.destination);
+      // reverb send
+      this.rev=c.createConvolver();this.rev.buffer=this.impulse(4,2.6);
+      this.revGain=c.createGain();this.revGain.gain.value=.55;
+      this.rev.connect(this.revGain);this.revGain.connect(this.master);
+      // music chain: musicIn -> level -> duck -> (dry + reverb)
+      this.musicIn=c.createGain();this.level=c.createGain();this.level.gain.value=0;
+      this.duckG=c.createGain();
+      this.musicIn.connect(this.level);this.level.connect(this.duckG);
+      this.duckG.connect(this.master);this.duckG.connect(this.rev);
+      // bell bus
+      this.bellBus=c.createGain();this.bellBus.connect(this.master);this.bellBus.connect(this.rev);
+      // ambient bus
+      this.ambG=c.createGain();this.ambG.gain.value=0;this.ambG.connect(this.master);
+    }
+    this.master.gain.value=st.set.vol;
+    if(this.ctx.state==='suspended')this.ctx.resume();
+    return true;
+  },
+  impulse(sec,decay){
+    const c=this.ctx,n=Math.floor(c.sampleRate*sec),b=c.createBuffer(2,n,c.sampleRate);
+    for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,decay)}
+    return b;
+  },
+  /* singing-bowl style bell */
+  bell(vel){
+    const c=this.ctx;if(!c)return;vel=vel||1;const t=c.currentTime+.02;
+    const f0=196;
+    [[1,1,9],[2.01,.4,6],[2.76,.28,4.5],[4.07,.12,3],[5.4,.06,2]].forEach(([r,a,dec])=>{
+      [-1.5,1.5].forEach(det=>{
+        const o=c.createOscillator(),g=c.createGain();
+        o.type='sine';o.frequency.value=f0*r;o.detune.value=det*r;
+        g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22*a*vel,t+.01);
+        g.gain.exponentialRampToValueAtTime(.0001,t+dec);
+        o.connect(g);g.connect(this.bellBus);o.start(t);o.stop(t+dec+.1);
+      });
+    });
+  },
+  /* generative ambient music: slow pentatonic pads over a quiet drone */
+  scale:[146.83,164.81,185,220,246.94,293.66,329.63,370,440,493.88],
+  startMusic(){
+    const c=this.ctx;if(!c||this.drone)return;
+    this.drone=[73.42,110].map((f,i)=>{
+      const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f;g.gain.value=i?.05:.08;
+      o.connect(g);g.connect(this.musicIn);o.start();return o;
+    });
+    this.nextNote=c.currentTime+.5;
+  },
+  musicTick(){
+    const c=this.ctx;if(!c||!this.drone)return;
+    while(this.nextNote<c.currentTime+1.5){
+      const t=this.nextNote,f=this.scale[Math.floor(Math.random()*this.scale.length)];
+      const dur=rnd(9,14);
+      this.pad(t,f,dur,.07);
+      if(Math.random()<.35)this.pad(t+rnd(.5,2),f*1.5,dur*.8,.035);
+      if(Math.random()<.3)this.pluck(t+rnd(1,3),this.scale[Math.floor(Math.random()*this.scale.length)]*2,.05);
+      this.nextNote+=rnd(3.5,6.5);
+    }
+  },
+  pad(t,f,dur,vol){
+    const c=this.ctx,g=c.createGain(),lp=c.createBiquadFilter();
+    lp.type='lowpass';lp.frequency.value=900;lp.Q.value=.3;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+dur*.4);g.gain.linearRampToValueAtTime(0,t+dur);
+    [-7,7].forEach(d=>{const o=c.createOscillator();o.type='triangle';o.frequency.value=f;o.detune.value=d;o.connect(lp);o.start(t);o.stop(t+dur+.1)});
+    lp.connect(g);g.connect(this.musicIn);
+  },
+  pluck(t,f,vol){
+    const c=this.ctx,o=c.createOscillator(),g=c.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+4);
+    o.connect(g);g.connect(this.musicIn);o.start(t);o.stop(t+4.2);
+  },
+  setMusic(v,secs){this.ctx&&this.level.gain.setTargetAtTime(v*.9,this.ctx.currentTime,(secs||1)/3)},
+  stopMusic(){
+    if(!this.ctx||!this.drone)return;
+    const d=this.drone;this.drone=null;this.setMusic(0,2);
+    setTimeout(()=>d.forEach(o=>{try{o.stop()}catch(e){}}),4000);
+  },
+  duck(on){this.ctx&&this.duckG.gain.setTargetAtTime(on?.35:1,this.ctx.currentTime,.4)},
+  /* soft mode: masking noise or a slow drone */
+  startAmbient(type,vol){
+    const c=this.ctx;if(!c||type==='off'||this.amb)return;
+    let src;
+    if(type==='drone'){
+      const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=420;lp.connect(this.ambG);
+      const oscs=[55,82.41,110.4,164.9].map((f,i)=>{
+        const o=c.createOscillator(),g=c.createGain(),l=c.createOscillator(),lg=c.createGain();
+        o.type=i<2?'sine':'triangle';o.frequency.value=f;g.gain.value=[.5,.3,.18,.08][i];
+        l.frequency.value=.04+i*.017;lg.gain.value=g.gain.value*.5;l.connect(lg);lg.connect(g.gain);l.start();
+        o.connect(g);g.connect(lp);o.start();return[o,l];
+      });
+      this.amb={stop(){oscs.forEach(a=>a.forEach(o=>{try{o.stop()}catch(e){}}))}};
+      this.ambScale=.55;
+    }else{
+      const n=c.sampleRate*10,buf=c.createBuffer(2,n,c.sampleRate);
+      for(let ch=0;ch<2;ch++){
+        const d=buf.getChannelData(ch);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0,last=0,peak=0;
+        for(let i=0;i<n;i++){
+          const w=Math.random()*2-1;let o;
+          if(type==='white')o=w;
+          else if(type==='pink'){b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;o=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11;b6=w*.115926}
+          else{last=(last+.02*w)/1.02;o=last*3.5}
+          d[i]=o;peak=Math.max(peak,Math.abs(o));
+        }
+        for(let i=0;i<n;i++)d[i]/=peak; // normalise
+        const f=2000;for(let i=0;i<2000;i++){d[i]*=i/2000;d[n-1-i]*=i/2000} // smooth loop seam
+      }
+      const s=c.createBufferSource();s.buffer=buf;s.loop=true;
+      const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=type==='white'?6000:type==='pink'?4000:1200;
+      s.connect(lp);lp.connect(this.ambG);s.start();
+      this.amb={stop(){try{s.stop()}catch(e){}}};
+      this.ambScale=type==='white'?.14:type==='pink'?.28:.5;
+    }
+    this.ambG.gain.setTargetAtTime(vol*this.ambScale,c.currentTime,1.5);
+  },
+  stopAmbient(){
+    if(!this.ctx||!this.amb)return;
+    const a=this.amb;this.amb=null;this.ambG.gain.setTargetAtTime(0,this.ctx.currentTime,1);
+    setTimeout(()=>a.stop(),5000);
+  }
+};
+
+/* ---------- wake lock ---------- */
+let wake=null;
+async function lockScreen(){try{if('wakeLock' in navigator)wake=await navigator.wakeLock.request('screen')}catch(e){}}
+function unlockScreen(){try{wake&&wake.release()}catch(e){}wake=null}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S&&!S.paused)lockScreen()});
+
+/* ---------- the session ---------- */
+let S=null,timer=null,idleT=null;
+const LEAD=5;
+const fmt=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+
+function bag(name){ // shuffled, no repeats until exhausted
+  const a=CLIPS[name].slice();
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+  return a;
+}
+function nextClip(name){
+  if(!S.bags[name]||!S.bags[name].length)S.bags[name]=bag(name);
+  return S.bags[name].pop();
+}
+
+function beginSession(c,l){
+  if(S)return;
+  const L=LESSONS[l-1];
+  const audioOK=AU.init();
+  unlockSpeech();
+  S={c,l,L,D:c*60,phase:'lead',paused:false,leadStart:performance.now(),acc:0,t0:0,el:0,
+     bells:(st.set.bells==='off'?[]:BELLS[L.b]).map(f=>({f,fired:false})),
+     bags:{},speaking:false,sayId:0,nextClip:Infinity,openDone:false,closeDone:false,audioOK,
+     zen:L.g===0&&L.m===0&&L.b==='none'};
+  // remember where we are right away so Play resumes here even if we stop early
+  st.last={c,l,done:false,date:today()};save();
+
+  $('#sTop').textContent=c+' min · Lesson '+l+' · '+L.t;
+  $('#session').classList.toggle('zen',S.zen);
+  $('#session').classList.remove('idle');
+  $('#stage').style.setProperty('--orb',L.g||L.m?1:.5);
+  $('#orb').style.setProperty('--orb',L.g||L.m?1:.5);
+  $('#cap').className='cap';$('#cap').textContent='';
+  $('#pauseBtn').disabled=true;
+  setPauseIcon(false);
+  $('#ringFg').style.strokeDashoffset=301.6;
+  show('session');
+  lockScreen();
+  if(audioOK)AU.startAmbient(st.set.amb,st.set.ambVol);
+  clearInterval(timer);timer=setInterval(tick,200);
+  tick();poke();
+}
+
+function startRun(){
+  S.phase='run';S.t0=performance.now();S.acc=0;
+  $('#pauseBtn').disabled=false;
+  if(S.audioOK&&S.L.m>0){AU.startMusic();AU.setMusic(S.L.m,5)}
+  S.nextClip=S.L.g>0?3:Infinity;
+}
+
+function tick(){
+  if(!S||S.paused)return;
+  const now=performance.now();
+  const clock=$('#clock');
+  if(S.phase==='lead'){
+    const left=LEAD-(now-S.leadStart)/1000*TS;
+    if(left<=0){startRun()}
+    else{
+      clock.classList.remove('off');
+      clock.textContent=Math.ceil(left);
+      return;
+    }
+  }
+  const el=S.el=S.acc+(now-S.t0)/1000*TS;
+  clock.classList.toggle('off',!st.set.showTimer);
+  clock.textContent=fmt(S.D-el);
+  $('#ringFg').style.strokeDashoffset=301.6*(1-clamp(el/S.D,0,1));
+
+  // bells
+  S.bells.forEach(b=>{
+    if(!b.fired&&el>=b.f*S.D-(b.f===1?0:0)){
+      b.fired=true;
+      if(S.audioOK)AU.bell(b.f===0?1:b.f===1?1:.85);
+    }
+  });
+  if(S.audioOK)AU.musicTick();
+  guidance(el);
+  // music fades out before the end
+  if(S.audioOK&&!S.musicOut&&S.L.m>0&&el>=S.D-6){S.musicOut=true;AU.setMusic(0,6)}
+  if(el>=S.D)finish();
+}
+
+function gapFor(g){return 10+Math.pow(1-g,1.5)*150}
+
+function guidance(el){
+  const g=S.L.g;if(!g||S.speaking||S.paused)return;
+  const full=g>=.25;
+  const closeLead=full?32:14;
+  if(!S.openDone&&el>=S.nextClip){S.openDone=true;say(nextClip(full?'open':'openBrief'));return}
+  if(!S.closeDone&&el>=S.D-closeLead){S.closeDone=true;say(nextClip(full?'close':'closeBrief'));return}
+  if(S.openDone&&!S.closeDone&&el>=S.nextClip&&el<S.D-closeLead-10){
+    const pBrief=clamp((.7-g)*2,0,1);
+    say(nextClip(Math.random()<pBrief?'brief':'full'));
+  }
+}
+
+function say(text){
+  const id=++S.sayId;
+  S.speaking=true;S.nextClip=Infinity;
+  const cap=$('#cap');cap.textContent=text;cap.className='cap on';
+  if(S.audioOK)AU.duck(true);
+  const est=text.length*.075+2.5;
+  let fb=null;
+  const done=()=>{
+    if(!S||S.sayId!==id||!S.speaking)return;
+    clearTimeout(fb);S.speaking=false;
+    if(S.audioOK)AU.duck(false);
+    $('#cap').className='cap';
+    const g=S.L.g;
+    S.nextClip=S.el+gapFor(g)*rnd(.7,1.3);
+  };
+  fb=setTimeout(done,(hasSpeech?Math.max(est*2.2,9):est)*1000);
+  if(hasSpeech)speakRaw(text,()=>setTimeout(done,600));
+}
+
+function finish(){
+  const s=S;if(!s||s.phase==='done')return;
+  s.phase='done';
+  // end cue: a bell if the lesson has one, otherwise silent (optional soft chime), plus a light buzz
+  const hasEnd=s.bells.some(b=>b.f===1);
+  if(!hasEnd&&st.set.zenChime&&st.set.bells!=='off'&&s.audioOK)AU.bell(.5);
+  try{navigator.vibrate&&navigator.vibrate([180,120,180])}catch(e){}
+  // log
+  st.last={c:s.c,l:s.l,done:true,date:today()};
+  if(!st.done[s.c].includes(s.l))st.done[s.c].push(s.l);
+  st.log.push({date:today(),c:s.c,l:s.l,mins:s.c});
+  save();
+  teardown();
+  showDone(s);
+}
+
+function teardown(){
+  clearInterval(timer);timer=null;
+  if(hasSpeech){try{speechSynthesis.cancel()}catch(e){}}
+  if(AU.ctx){AU.stopMusic();AU.stopAmbient();AU.duck(false)}
+  unlockScreen();
+  S=null;
+}
+
+function showDone(s){
+  const L=LESSONS[s.l-1];
+  let msg;
+  if(s.l===14&&s.c===20)msg='You sat for twenty minutes, in complete silence. That’s the whole course. Sit whenever you like. The silence will be there.';
+  else if(s.l===14)msg='You sat for '+s.c+' minutes with nothing at all. That is Zen. When you’re ready, the '+COURSES[COURSES.indexOf(s.c)+1]+'-minute course is waiting.';
+  else{
+    const n=LESSONS[s.l];
+    msg=s.c+' minutes done. Tomorrow’s lesson: “'+n.t+'”. '+n.d;
+  }
+  $('#doneTitle').textContent=s.l===14?'Zen':'Lesson '+s.l+' complete';
+  $('#doneText').textContent=msg;
+  show('done');
+}
+
+/* pause / end */
+function setPauseIcon(paused){
+  $('#pauseIco').innerHTML=paused?'<path d="M7 4.5v15l13-7.5z"/>':'<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>';
+  $('#pauseBtn').setAttribute('aria-label',paused?'Resume':'Pause');
+}
+$('#pauseBtn').onclick=()=>{
+  if(!S||S.phase!=='run')return;
+  if(!S.paused){
+    S.acc+=(performance.now()-S.t0)/1000*TS;S.paused=true;
+    if(hasSpeech){try{speechSynthesis.cancel()}catch(e){}}
+    S.sayId++;S.speaking=false;$('#cap').className='cap';
+    if(S.audioOK){AU.duck(false);AU.ctx.suspend()}
+    S.nextClip=S.acc+8;
+    setPauseIcon(true);
+    const cl=$('#clock');cl.classList.remove('off');
+  }else{
+    S.paused=false;S.t0=performance.now();
+    if(S.audioOK)AU.ctx.resume();
+    setPauseIcon(false);
+    lockScreen();
+  }
+  poke();
+};
+$('#endBtn').onclick=()=>{
+  if(!S)return;
+  askConfirm('End this session early? It won’t count as complete.','End session',()=>{
+    teardown();show('home');
+  },'Keep going');
+};
+
+/* hide controls after a few idle seconds so the screen stays calm */
+function poke(){
+  const el=$('#session');el.classList.remove('idle');
+  clearTimeout(idleT);
+  idleT=setTimeout(()=>{if(S&&!S.paused&&screen==='session')el.classList.add('idle')},6000);
+}
+['pointerdown','pointermove','keydown'].forEach(e=>$('#session').addEventListener(e,poke));
+// tap the clock to toggle it
+$('#stage').addEventListener('click',()=>{if(!S)return;st.set.showTimer=!st.set.showTimer;save();$('#clock').classList.toggle('off',!st.set.showTimer)});
+
+/* ---------- boot ---------- */
+applyReduce();
+show('home');
+</script>
+</body>
+</html>
