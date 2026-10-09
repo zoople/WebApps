@@ -1,0 +1,2149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bridgeburn</title>
+<link rel="icon" type="image/png" sizes="32x32" href="bridgeburn-icons/icon-32.png">
+<link rel="apple-touch-icon" href="bridgeburn-icons/icon-180.png">
+<link rel="manifest" href="bridgeburn.webmanifest">
+<meta name="theme-color" content="#12171f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@600;800;900&display=swap">
+<style>
+/* Layout: one portrait column. Scoreboard strip on top, the arena canvas fills the middle, the card tray and elixir bar sit under the thumb. */
+:root{
+  --bg:#12171f;
+  --panel:#1c2430;
+  --panel-2:#263141;
+  --line:#344256;
+  --ink:#f4efe4;
+  --muted:#93a1b3;
+  --blue:#3f86e0;
+  --red:#e0503f;
+  --elixir:#b552dc;
+  --elixir-deep:#6b2a8a;
+  --gold:#f2c14e;
+  --display:'Bungee', Impact, 'Arial Black', sans-serif;
+  --body:'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#app{position:relative;height:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;
+  padding-inline:12px;padding-block:8px;gap:8px}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* Scoreboard */
+.hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.side{display:flex;flex-direction:column;gap:3px}
+.side.you{align-items:flex-end}
+.side .who{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.crowns{display:flex;gap:4px}
+.crown{width:20px;height:15px;background:var(--line);
+  clip-path:polygon(0 100%,0 18%,24% 55%,50% 0,76% 55%,100% 18%,100% 100%);transition:background .3s}
+.rival .crown.on{background:var(--red)}
+.you .crown.on{background:var(--blue)}
+.clock{text-align:center;min-width:92px}
+.clock .time{font-family:var(--display);font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.clock .label{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.clock.hot .label{color:var(--elixir)}
+.clock.ot .label{color:var(--gold)}
+.tools{display:flex;gap:6px;justify-content:flex-end}
+.icon-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+  display:grid;place-items:center;cursor:pointer;padding:0}
+.icon-btn svg{width:14px;height:14px;fill:var(--ink)}
+.you-row{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;max-width:min(360px,calc(100% - 32px));padding:10px 14px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:800;line-height:1.35;text-align:center}
+
+/* Arena */
+#field{flex:1;min-height:0;display:grid;place-items:center}
+#arena{display:block;border-radius:12px;box-shadow:0 0 0 3px #0b0f14,0 10px 30px rgba(0,0,0,.45);touch-action:none;cursor:crosshair}
+
+/* Tray */
+.tray{display:grid;grid-template-columns:54px repeat(4,minmax(0,1fr));gap:6px;align-items:end}
+.next{display:flex;flex-direction:column;align-items:center;gap:3px}
+.next .lbl{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.next .mini{width:54px;aspect-ratio:3/4;border-radius:8px;background:var(--panel);border:1px solid var(--line);
+  display:grid;place-items:center;overflow:hidden}
+.next canvas{width:44px;height:44px}
+.card{position:relative;width:100%;max-width:90px;justify-self:center;aspect-ratio:3/4;min-width:0;min-height:0;overflow:visible;contain:size;border-radius:12px;border:2px solid var(--line);
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));cursor:grab;padding:0;touch-action:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  transition:transform .12s ease,border-color .12s ease,filter .2s}
+.card canvas{width:60%;aspect-ratio:1;height:auto;flex:none}
+.card .nm{width:100%;font-size:clamp(9px,2.6vw,11px);font-weight:800;line-height:1.1;height:2.2em;text-align:center;padding-inline:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:normal;word-break:normal}
+.card .cost{position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#e7a3ff,var(--elixir) 45%,var(--elixir-deep));
+  display:grid;place-items:center;font-family:var(--display);font-size:13px;color:#fff;
+  box-shadow:0 0 0 2px var(--bg)}
+.card.sel{transform:translateY(-8px);border-color:var(--gold)}
+.card.poor{filter:grayscale(.85) brightness(.7)}
+.card .fill{position:absolute;left:0;right:0;bottom:0;background:rgba(181,82,220,.22);border-radius:0 0 10px 10px;pointer-events:none}
+
+.elixir{display:flex;align-items:center;gap:8px}
+.elixir .drop{width:30px;height:30px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:radial-gradient(circle at 35% 30%,#e7a3ff,var(--elixir) 45%,var(--elixir-deep));
+  display:grid;place-items:center;font-family:var(--display);font-size:15px;color:#fff;flex:none}
+.elixir .bar{position:relative;flex:1;height:16px;border-radius:8px;background:#0b0f14;overflow:hidden;border:1px solid var(--line)}
+.elixir .bar i{position:absolute;inset:0 auto 0 0;width:50%;background:linear-gradient(180deg,#d98cf5,var(--elixir));transition:width .1s linear}
+.elixir .bar b{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),#0b0f14 calc(10% - 2px) 10%)}
+
+/* Overlays */
+.overlay{position:absolute;inset:0;display:grid;place-items:center;padding:16px;
+  background:rgba(10,13,18,.82);backdrop-filter:blur(3px);z-index:5}
+.panel{width:min(420px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.panel > *{flex-shrink:0}
+.panel h1{font-family:var(--display);font-size:clamp(34px,10vw,48px);line-height:.95;margin:0;letter-spacing:.01em;text-wrap:balance}
+.panel h1 .b{color:var(--blue)} .panel h1 .r{color:var(--red)}
+.panel h2{font-family:var(--display);font-size:40px;margin:0;line-height:1}
+.panel p{margin:0;line-height:1.5;color:var(--muted)}
+.panel ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;line-height:1.45;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:90px;border:0;border-radius:10px;padding:12px 10px;cursor:pointer;font-weight:900;
+  letter-spacing:.06em;text-transform:uppercase;font-size:13px;background:var(--panel-2);border:1px solid var(--line)}
+.btn.go{background:var(--gold);color:#23190a;border-color:transparent}
+.btn .sub{display:block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:none;opacity:.75;margin-top:2px}
+.lbl-sm{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.score{font-family:var(--display);font-size:28px;display:flex;gap:14px;align-items:center}
+.score .b{color:var(--blue)} .score .r{color:var(--red)}
+.roster{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.roster div{position:relative;background:var(--panel-2);border-radius:8px;padding:8px 3px 5px;text-align:center;font-size:10px;font-weight:800;line-height:1.1;min-width:0;overflow-wrap:anywhere}
+.roster canvas{width:36px;height:36px;display:block;margin:0 auto 2px}
+.roster small{display:block;color:var(--muted);font-weight:700;font-size:10px}
+.record{font-variant-numeric:tabular-nums}
+.deck-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.link-btn{background:none;border:0;padding:0;color:var(--gold);font-weight:900;font-size:12px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.panel.wide{width:min(560px,100%)}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.slot{position:relative;aspect-ratio:3/4;border-radius:10px;border:2px dashed var(--line);background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:2px;cursor:pointer;font-size:11px;font-weight:800;text-align:center;line-height:1.1}
+.slot.filled{border-style:solid;background:linear-gradient(180deg,var(--panel-2),var(--panel))}
+.slot canvas{width:58%;aspect-ratio:1;height:auto}
+.roster .cost,.slot .cost,.tile .cost{position:absolute;top:-6px;left:-6px;width:20px;height:20px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#e7a3ff,var(--elixir) 45%,var(--elixir-deep));display:grid;place-items:center;
+  font-family:var(--display);font-size:11px;color:#fff;box-shadow:0 0 0 2px var(--panel)}
+.deck-meta{display:flex;gap:14px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.deck-meta b{color:var(--ink)}
+.collection{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.tile{position:relative;display:grid;grid-template-columns:40px 1fr;gap:6px;align-items:center;text-align:left;
+  padding:8px 8px 8px 6px;border-radius:10px;border:2px solid var(--line);background:var(--panel-2);cursor:pointer}
+.tile canvas{width:40px;height:40px}
+.tile .t-name{font-weight:900;font-size:12px;line-height:1.15}
+.tile .t-blurb{font-size:11px;color:var(--muted);line-height:1.25}
+.tile .t-stats{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+.tile.in{border-color:var(--gold);background:#2f3426}
+.tile.in::after{content:'\2713';position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--gold);color:#23190a;display:grid;place-items:center;font-size:12px;font-weight:900;box-shadow:0 0 0 2px var(--panel)}
+.tile:disabled{opacity:.45;cursor:not-allowed}
+.hint{font-size:13px;min-height:1.4em}
+.toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;cursor:pointer}
+.toggle input{width:18px;height:18px;accent-color:var(--gold);margin:0}
+.panel.start{gap:12px}
+.logo{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.panel .logo h1{font-size:clamp(30px,9vw,44px)}
+.panel h2.sm{font-size:30px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:3px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
+.seg button{border:0;border-radius:9px;padding:9px 6px;background:transparent;color:var(--muted);font-weight:900;font-size:12px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--ink);box-shadow:0 0 0 1px var(--gold)}
+.btn.big{flex:none;width:100%;padding:15px 10px;font-family:var(--display);font-size:17px;letter-spacing:.06em}
+.panel p.record{font-size:12px;text-align:center}
+.panel p.record:empty{display:none}
+.toggle.clone{font-size:13px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.foot .toggle{font-size:12px;gap:6px}
+.foot .toggle input{width:15px;height:15px}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hud">
+    <div class="side rival"><span class="who">Rival</span><div class="crowns" id="crowns1"><span class="crown"></span><span class="crown"></span><span class="crown"></span></div></div>
+    <div class="clock" id="clock"><div class="time" id="time">3:00</div><div class="label" id="clockLabel">Time left</div></div>
+    <div class="side you">
+      <div class="you-row">
+        <div class="tools">
+          <button class="icon-btn fs-toggle" id="fsBtn" aria-label="Full screen"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="#f4efe4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="icon-btn" id="muteBtn" aria-label="Mute sound"><svg viewBox="0 0 16 16" id="muteIcon"><path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="#f4efe4" stroke-width="1.5"/></svg></button>
+          <button class="icon-btn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 16 16"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button>
+        </div>
+      </div>
+      <span class="who">You</span><div class="crowns" id="crowns0"><span class="crown"></span><span class="crown"></span><span class="crown"></span></div>
+    </div>
+  </div>
+
+  <div id="field"><canvas id="arena" aria-label="Arena"></canvas></div>
+
+  <div class="tray">
+    <div class="next"><span class="lbl">Next</span><div class="mini"><canvas id="nextIcon" width="88" height="88"></canvas></div></div>
+    <button class="card" id="card0"><span class="cost">3</span><canvas width="128" height="128"></canvas><span class="nm">—</span><span class="fill"></span></button>
+    <button class="card" id="card1"><span class="cost">3</span><canvas width="128" height="128"></canvas><span class="nm">—</span><span class="fill"></span></button>
+    <button class="card" id="card2"><span class="cost">3</span><canvas width="128" height="128"></canvas><span class="nm">—</span><span class="fill"></span></button>
+    <button class="card" id="card3"><span class="cost">3</span><canvas width="128" height="128"></canvas><span class="nm">—</span><span class="fill"></span></button>
+  </div>
+  <div class="elixir"><div class="drop" id="elixirNum">5</div><div class="bar"><i id="elixirFill"></i><b></b></div></div>
+
+  <div class="overlay" id="startScreen">
+    <div class="panel start">
+      <div class="logo">
+        <svg viewBox="0 0 64 48" width="64" height="48" role="img" aria-label="A burning bridge">
+          <rect x="0" y="36" width="64" height="12" rx="3" fill="#2c7fbd"/>
+          <path d="M4 42h10M26 44h12M48 42h12" stroke="#a8d4f0" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <rect x="6" y="29" width="52" height="11" fill="#b3aa9a"/>
+          <path d="M20 40Q20 31 32 31Q44 31 44 40Z" fill="#2c7fbd"/>
+          <rect x="3" y="26" width="58" height="4" rx="1.5" fill="#9c6c3c"/>
+          <path d="M32 2C36 9 43 12 41 19C40 23 36 26 32 26C28 26 24 23 23 19C22 14 28 12 32 2Z" fill="#e0503f"/>
+          <path d="M32 12C34.500 16 38 17 36.500 21C35.500 23.500 33.500 25 32 25C30.500 25 28.500 23.500 27.500 21C26.500 18 30 16 32 12Z" fill="#f2c14e"/>
+        </svg>
+        <h1><span class="b">Bridge</span><span class="r">burn</span></h1>
+        <div class="lbl-sm">Three minutes · two bridges · six towers</div>
+      </div>
+      <div class="deck-head"><span class="lbl-sm"><span id="deckName">Your deck</span> · <span id="avgStart">3.5</span> avg elixir</span><button class="link-btn" id="editDeckBtn">Edit deck</button></div>
+      <div class="roster" id="roster"></div>
+      <div class="seg" id="modeSeg" role="group" aria-label="Deck">
+        <button id="modeMine" aria-pressed="true">My deck</button>
+        <button id="modeRandom" aria-pressed="false">Random</button>
+      </div>
+      <div class="seg" id="diffSeg" role="group" aria-label="Rival">
+        <button data-diff="easy" aria-pressed="false">Easy</button>
+        <button data-diff="normal" aria-pressed="true">Normal</button>
+        <button data-diff="hard" aria-pressed="false">Hard</button>
+      </div>
+      <label class="toggle clone"><input type="checkbox" id="cloneToggle"><span>Clone match: the rival plays your exact deck</span></label>
+      <button class="btn go big" id="startBtn">Start match</button>
+      <p class="record" id="record"></p>
+      <div class="foot">
+        <button class="link-btn" id="helpBtn">How to play</button>
+        <label class="toggle"><input type="checkbox" id="musicToggle"><span>Music</span></label>
+        <button class="link-btn fs-toggle" id="fsStartBtn">Full screen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="helpScreen" hidden>
+    <div class="panel">
+      <div class="lbl-sm">How to play</div>
+      <ul>
+        <li>Drag a card onto your half of the arena, or tap a card and then tap where it should land. Keys 1–4 pick cards.</li>
+        <li>Cards cost elixir, which refills over time. The last minute runs at double speed. If crowns are level at 3:00, sudden death starts at 3× and climbs every minute (4×, 5×…) until someone takes a tower.</li>
+        <li>A side tower is worth one crown. The king tower is worth three and ends the match.</li>
+        <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
+        <li>The rival's difficulty changes how fast it reacts and how much elixir it gets: Easy is slow, Normal is fair, Hard gets extra.</li>
+      </ul>
+      <button class="btn go" id="helpClose">Got it</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="deckScreen" hidden>
+    <div class="panel wide">
+      <div class="lbl-sm">Deck builder</div>
+      <h2>Your deck</h2>
+      <div class="slots" id="deckSlots"></div>
+      <div class="deck-meta"><span><b id="deckCount">8</b>/8 cards</span><span>Average elixir <b id="deckAvg">3.5</b></span><span>Hits air <b id="deckAir">2</b></span></div>
+      <div class="lbl-sm">All cards · tap to add, tap a deck slot to remove</div>
+      <div class="collection" id="collection"></div>
+      <p class="hint" id="deckHint"></p>
+      <div class="row"><button class="btn" id="deckRandom">Random</button><button class="btn" id="deckCancel">Cancel</button><button class="btn go" id="deckSave">Save deck</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="pauseScreen" hidden>
+    <div class="panel">
+      <h2>Paused</h2>
+      <label class="toggle"><input type="checkbox" id="musicToggle2"><span>Background music</span></label>
+      <div class="row"><button class="btn go" id="resumeBtn">Resume</button><button class="btn" id="quitBtn">Quit match</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="endScreen" hidden>
+    <div class="panel">
+      <div class="lbl-sm" id="endSub">Match over</div>
+      <h2 id="endTitle">Victory</h2>
+      <div class="score"><span class="b" id="endYou">0</span><span>–</span><span class="r" id="endRival">0</span></div>
+      <p id="endNote"></p>
+      <div class="row"><button class="btn go" id="againBtn">Play again</button><button class="btn" id="menuBtn">Change rival</button></div>
+      <p class="record" id="record2"></p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const W = 18, H = 32, RIVER_T = 15, RIVER_B = 17, BRIDGES = [3.5, 14.5];
+const TEAM = [
+  { main:'#3f86e0', dark:'#173f7c', light:'#a8cbf6' },
+  { main:'#e0503f', dark:'#7e1d16', light:'#f6b0a6' }
+];
+
+// ---------- Cards ----------
+const CARDS = {
+  squire:  { name:'Squire', cost:3, type:'unit', count:1, hp:1450, dmg:165, hs:1.2, range:0.8, speed:1.0, sight:5.5, r:0.5, air:false, hitsAir:false, targets:'any', blurb:'Tough melee' },
+  longbows:{ name:'Longbows', cost:3, type:'unit', count:2, hp:320, dmg:95, hs:0.9, range:5, speed:1.05, sight:5.5, r:0.4, air:false, hitsAir:true, targets:'any', proj:'arrow', blurb:'Ranged pair' },
+  brute:   { name:'Brute', cost:5, type:'unit', count:1, hp:3800, dmg:230, hs:1.5, range:0.9, speed:0.7, sight:7, r:0.8, air:false, hitsAir:false, targets:'buildings', blurb:'Hits towers only' },
+  imps:    { name:'Imps', cost:2, type:'unit', count:3, hp:210, dmg:105, hs:1.1, range:0.6, speed:1.6, sight:5.5, r:0.33, air:false, hitsAir:false, targets:'any', blurb:'Fast swarm' },
+  drake:   { name:'Drake', cost:4, type:'unit', count:1, hp:1000, dmg:130, hs:1.6, range:3.5, speed:1.3, sight:5.5, r:0.55, air:true, hitsAir:true, targets:'any', splash:1.3, proj:'fire', blurb:'Flying splash' },
+  spire:   { name:'Sky Spire', cost:4, type:'building', hp:1000, dmg:130, hs:1.0, range:6.5, r:0.75, air:false, hitsAir:true, targets:'any', life:35, proj:'arrow', blurb:'Hits air and ground' },
+  turret:  { name:'Bolt Turret', cost:3, type:'building', hp:900, dmg:125, hs:0.9, range:5.5, r:0.8, air:false, hitsAir:false, targets:'any', life:30, proj:'bolt', blurb:'Ground defense' },
+  fireball:{ name:'Fireball', cost:4, type:'spell', spell:'lob', dmg:560, radius:2.5, towerMult:0.35, knock:0.9, blurb:'Area damage' },
+  frost:   { name:'Frost Snap', cost:2, type:'spell', spell:'flash', dmg:170, radius:2.5, towerMult:0.4, stun:1.5, blurb:'Freezes 1.5s' },
+  charger: { name:'Charger', cost:4, type:'unit', count:1, hp:1500, dmg:260, hs:1.6, range:0.8, speed:1.9, sight:9, r:0.55, air:false, jumps:true, hitsAir:false, targets:'buildings', blurb:'Leaps the river' },
+  pyromancer:{ name:'Pyromancer', cost:5, type:'unit', count:1, hp:620, dmg:230, hs:1.4, range:5, speed:1.0, sight:5.5, r:0.45, air:false, hitsAir:true, targets:'any', splash:1.5, proj:'fire', blurb:'Ranged splash' },
+  colossus:{ name:'Stone Colossus', cost:7, type:'unit', count:1, hp:4800, dmg:270, hs:2.5, range:0.9, speed:0.55, sight:7, r:1.0, air:false, hitsAir:false, targets:'buildings', deathSpawn:{ key:'pebbling', count:2 }, blurb:'Splits on death' },
+  pebbling:{ name:'Pebbling', cost:0, hidden:true, type:'unit', count:1, hp:950, dmg:75, hs:1.2, range:0.8, speed:0.75, sight:7, r:0.5, air:false, hitsAir:false, targets:'buildings' },
+  rattlers:{ name:'Rattlers', cost:3, type:'unit', count:10, hp:80, dmg:70, hs:1.0, range:0.5, speed:1.6, sight:5.5, r:0.28, air:false, hitsAir:false, targets:'any', blurb:'Ten bone fighters' },
+  gloomwings:{ name:'Gloomwings', cost:2, type:'unit', count:5, hp:70, dmg:70, hs:1.2, range:0.5, speed:2.0, sight:5.5, r:0.3, air:true, hitsAir:true, targets:'any', blurb:'Flying swarm' },
+  impden:  { name:'Imp Den', cost:4, type:'building', hp:700, dmg:0, hs:1, range:0, r:0.9, air:false, hitsAir:false, targets:'none', life:35, spawn:{ key:'imps', every:4.5 }, blurb:'Spawns imps' },
+  volley:  { name:'Volley', cost:3, type:'spell', spell:'rain', dmg:220, radius:4, towerMult:0.4, blurb:'Wide arrow rain' },
+  sapper:  { name:'Sapper', cost:3, type:'unit', count:1, hp:330, dmg:180, hs:1.8, range:4.5, speed:1.0, sight:5.5, r:0.4, air:false, hitsAir:false, targets:'any', splash:1.5, proj:'bomb', blurb:'Lobs bombs' },
+  zeppelin:{ name:'Zeppelin', cost:5, type:'unit', count:1, hp:1300, dmg:540, hs:3.0, range:-0.6, speed:1.0, sight:7, r:0.75, air:true, hitsAir:false, targets:'buildings', bomber:true, deathDmg:{ dmg:180, r:2.2, fuse:3 }, blurb:'Bombs towers; leaves a 3s bomb when destroyed' },
+  crossbow:{ name:'Crossbowman', cost:4, type:'unit', count:1, hp:650, dmg:180, hs:1.1, range:6, speed:1.0, sight:6.5, r:0.45, air:false, hitsAir:true, targets:'any', proj:'bolt', blurb:'Long range' },
+  potato:  { name:'Potato', cost:3, type:'plant', grow:20, sprouts:'spudsquire', r:0.45, blurb:'Plant away from towers. Sprouts in 20s' },
+  spudsquire:{ name:'Potato Squire', cost:0, hidden:true, type:'unit', count:1, hp:1250, dmg:155, hs:1.2, range:0.8, speed:1.0, sight:5.5, r:0.5, air:false, hitsAir:false, targets:'any' },
+  blight:  { name:'Blight Cloud', cost:4, type:'spell', spell:'zone', dmg:600, dur:8, radius:3, towerMult:0.35, slow:0.25, blurb:'Lingering poison' },
+  elixirdrop:{ name:'Elixir Drop', cost:1, type:'spell', spell:'elixir', gain:2, blurb:'Costs 1, gives 2' },
+  alarm:   { name:'Alarm', cost:1, type:'spell', spell:'alarm', selfDmg:150, blurb:'Wakes your king' },
+  meteor:  { name:'Meteor', cost:6, type:'spell', spell:'lob', dmg:1050, radius:2, towerMult:0.35, knock:1.2, slow:true, blurb:'Huge, slow hit' }
+};
+const POOL = Object.keys(CARDS).filter(k => !CARDS[k].hidden);
+const STARTER = ['squire','longbows','brute','imps','drake','turret','fireball','frost'];
+const isWin = k => CARDS[k].targets === 'buildings';
+const isSpell = k => CARDS[k].type === 'spell';
+const dmgSpell = k => isSpell(k) && CARDS[k].dmg > 0;
+// Spells with no target area: they can be played by tapping anywhere on the arena.
+const isUtility = k => CARDS[k].spell === 'elixir' || CARDS[k].spell === 'alarm';
+const antiAir = k => !isSpell(k) && CARDS[k].hitsAir;
+function rivalDeck(){
+  for (let tries=0; tries<400; tries++){
+    const d = shuffle([...POOL]).slice(0,8);
+    const spells = d.filter(isSpell).length, avg = d.reduce((s,k)=>s+CARDS[k].cost,0)/8;
+    if (d.some(isWin) && d.filter(antiAir).length >= 2 && d.some(dmgSpell) && spells <= 3 && d.filter(isUtility).length <= 1 && avg >= 2.8 && avg <= 4.3) return d;
+  }
+  return [...STARTER];
+}
+function loadDeck(){
+  try { const d = JSON.parse(localStorage.getItem('bridgeburn-deck')); if (Array.isArray(d) && d.length===8 && new Set(d).size===8 && d.every(k => POOL.includes(k))) return d; } catch(e) {}
+  return [...STARTER];
+}
+let playerDeck = loadDeck();
+let randomDeck = false;
+try { randomDeck = localStorage.getItem('bridgeburn-randomdeck') === '1'; } catch(e) {}
+let rolled = null;
+let cloneMatch = false;
+try { cloneMatch = localStorage.getItem('bridgeburn-clone') === '1'; } catch(e) {}
+const startDeck = () => randomDeck ? (rolled || (rolled = rivalDeck())) : playerDeck;
+const DIFF = {
+  // react: how long a troop must have been on the field before the Rival will spell it.
+  // spellCd: rest between the Rival's damage spells.
+  easy:   { mult:0.85, delay:1.4, attackAt:9.6, react:3.2, spellCd:7 },
+  normal: { mult:1.0,  delay:0.7, attackAt:8.0, react:2.5, spellCd:5 },
+  hard:   { mult:1.15, delay:0.35, attackAt:7.0, react:1.9, spellCd:3.5 }
+};
+
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+const edgeDist = (a,b) => dist(a,b) - a.r - b.r;
+const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.random()*(i+1)|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const nearestBridge = x => Math.abs(x-BRIDGES[0]) < Math.abs(x-BRIDGES[1]) ? BRIDGES[0] : BRIDGES[1];
+
+function newDeck(keys){ const k = shuffle([...keys]); return { hand:k.slice(0,4), queue:k.slice(4) }; }
+function cycle(d,i){ const c = d.hand[i]; d.hand[i] = d.queue.shift(); d.queue.push(c); return c; }
+
+// ---------- Sound ----------
+let AC = null, muted = false, lastHitSfx = 0;
+try { muted = localStorage.getItem('bridgeburn-muted') === '1'; } catch(e) {}
+function initAudio(){ if (!AC) { try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) {} } if (AC && AC.state==='suspended') AC.resume(); musicSync(); }
+function tone(f1,f2,dur,type='square',vol=0.06,delay=0){
+  if (muted || !AC) return;
+  const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f1,t); o.frequency.exponentialRampToValueAtTime(Math.max(20,f2), t+dur);
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t+dur+0.02);
+}
+const sfx = {
+  deploy(){ tone(260,620,0.12,'triangle',0.08); },
+  hit(){ const n=performance.now(); if (n-lastHitSfx<90) return; lastHitSfx=n; tone(180,90,0.06,'square',0.025); },
+  boom(){ tone(140,40,0.45,'sawtooth',0.09); },
+  frost(){ tone(1400,700,0.25,'sine',0.05); },
+  crown(){ [523,659,784].forEach((f,i)=>tone(f,f,0.16,'triangle',0.07,i*0.1)); },
+  lost(){ [392,330,262].forEach((f,i)=>tone(f,f,0.18,'triangle',0.07,i*0.12)); },
+  nope(){ tone(160,120,0.1,'square',0.04); }
+};
+
+// ---------- Music ----------
+// An original loop in D minor. Four kinds of eight-bar section (march, lift, bridge, return) are
+// played in a fixed order of 48 bars, about 100 seconds, so the tune keeps changing before it repeats.
+const BPM = 112, EIGHTH = 60/BPM/2, BAR = EIGHTH*8;
+const mtof = m => 440 * Math.pow(2, (m-69)/12);
+const CH = {
+  Dm:{ root:50, pad:[53,57,62] }, Bb:{ root:46, pad:[53,58,62] }, F:{ root:53, pad:[53,57,60] },
+  C:{ root:48, pad:[55,60,64] },  Gm:{ root:55, pad:[55,58,62] }, A:{ root:45, pad:[57,61,64] }
+};
+// Melody notes are [start in eighths, MIDI note, length in eighths].
+const SEC = {
+  A:{ ch:['Dm','Bb','F','C','Dm','Bb','F','A'], mel:[
+    [[0,74,3],[3,72,1],[4,69,2],[6,70,1],[7,69,1]],
+    [[0,70,3],[3,69,1],[4,65,2],[6,67,1],[7,65,1]],
+    [[0,72,3],[3,69,1],[4,65,2],[6,69,1],[7,72,1]],
+    [[0,76,4],[4,74,2],[6,72,2]],
+    [[0,74,3],[3,77,1],[4,76,2],[6,74,1],[7,72,1]],
+    [[0,74,3],[3,72,1],[4,70,2],[6,69,1],[7,70,1]],
+    [[0,72,2],[2,70,2],[4,69,2],[6,67,2]],
+    [[0,69,2],[2,73,2],[4,76,2],[6,74,2]] ] },
+  B:{ ch:['Gm','Dm','Bb','A','Gm','Dm','Bb','C'], mel:[
+    [[0,70,2],[2,74,2],[4,77,3],[7,74,1]],
+    [[0,77,4],[4,76,2],[6,74,2]],
+    [[0,74,2],[2,70,2],[4,74,2],[6,77,2]],
+    [[0,76,4],[4,73,2],[6,76,2]],
+    [[0,79,3],[3,77,1],[4,74,4]],
+    [[0,77,3],[3,76,1],[4,74,2],[6,72,2]],
+    [[0,70,2],[2,72,2],[4,74,2],[6,70,2]],
+    [[0,72,2],[2,76,2],[4,79,4]] ] },
+  C:{ ch:['Dm','Dm','Bb','Bb','Gm','Gm','A','A'], mel:[
+    [[0,69,8]], [[0,72,4],[4,70,4]], [[0,74,8]], [[0,72,4],[4,70,4]],
+    [[0,70,8]], [[0,74,4],[4,72,4]], [[0,73,4],[4,76,4]], [[0,74,2],[2,73,2],[4,69,4]] ] }
+};
+// [section, intensity 0-3]
+const ORDER = [['A',1],['B',2],['A',3],['C',0],['B',3],['A',3]];
+let MU = null, nbuf = null, musicOn = true;
+try { musicOn = localStorage.getItem('bridgeburn-music') !== '0'; } catch(e) {}
+
+function mNote(type, f, t, dur, vol, o = {}){
+  const osc = AC.createOscillator(), g = AC.createGain();
+  osc.type = type; osc.frequency.value = f; if (o.det) osc.detune.value = o.det;
+  let node = osc;
+  if (o.lp){ const fl = AC.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = o.lp; osc.connect(fl); node = fl; }
+  node.connect(g);
+  const atk = o.atk ?? 0.01, rel = o.rel ?? 0.08;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + atk);
+  g.gain.setValueAtTime(vol, t + Math.max(atk, dur));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
+  g.connect(MU.out);
+  if (o.send){ const sg = AC.createGain(); sg.gain.value = o.send; g.connect(sg); sg.connect(MU.fx); }
+  const end = t + dur + rel + 0.05;
+  if (o.vib){
+    const lfo = AC.createOscillator(), lg = AC.createGain();
+    lfo.frequency.value = 5.2; lg.gain.value = o.vib; lfo.connect(lg); lg.connect(osc.detune);
+    lfo.start(t); lfo.stop(end);
+  }
+  osc.start(t); osc.stop(end);
+}
+function noiseHit(t, dur, vol, ftype, freq, q){
+  if (!nbuf){ const n = AC.sampleRate | 0; nbuf = AC.createBuffer(1, n, AC.sampleRate); const d = nbuf.getChannelData(0); for (let i=0;i<n;i++) d[i] = Math.random()*2 - 1; }
+  const src = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain();
+  src.buffer = nbuf; fl.type = ftype; fl.frequency.value = freq; fl.Q.value = q || 0.7;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fl); fl.connect(g); g.connect(MU.out);
+  src.start(t, Math.random()*0.4); src.stop(t + dur + 0.02);
+}
+function kick(t, v){
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(135, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.16);
+  g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+  o.connect(g); g.connect(MU.out); o.start(t); o.stop(t + 0.26);
+}
+function snare(t, v){ noiseHit(t, 0.14, v, 'bandpass', 1900, 0.8); mNote('triangle', 190, t, 0.05, v*0.8, { atk:0.002, rel:0.06 }); }
+function scheduleBar(bar, t0){
+  const [name, inten] = ORDER[Math.floor(bar/8) % ORDER.length], sec = SEC[name], b = bar % 8, E = EIGHTH;
+  const ch = CH[sec.ch[b]];
+  // Pad: held across repeated chords.
+  if (b === 0 || sec.ch[b] !== sec.ch[b-1]){
+    let n = 1; while (b+n < 8 && sec.ch[b+n] === sec.ch[b]) n++;
+    for (const m of ch.pad) for (const d of [-7, 7])
+      mNote('sawtooth', mtof(m), t0, n*BAR - 0.1, inten === 0 ? 0.012 : 0.009, { atk:0.45, rel:0.5, lp:1100, det:d });
+  }
+  // Bass
+  const bassAt = inten === 0 ? [0] : inten === 1 ? [0,4,6] : [0,2,4,6];
+  for (const i of bassAt) mNote('triangle', mtof(ch.root + (inten === 3 && i === 6 ? 12 : 0)), t0 + i*E, inten === 0 ? E*7 : E*1.6, 0.11, { atk:0.01, rel:0.07 });
+  // Drums
+  if (inten === 0){ if (b % 2 === 0) kick(t0, 0.08); }
+  else {
+    kick(t0, 0.2); kick(t0 + 4*E, 0.17);
+    if (inten >= 2){ snare(t0 + 2*E, 0.06); snare(t0 + 6*E, 0.06); for (let i=0;i<8;i++) noiseHit(t0 + i*E, 0.04, i%2 ? 0.012 : 0.02, 'highpass', 7000); }
+    else snare(t0 + 6*E, 0.035);
+    if (inten === 3) snare(t0 + 3.5*E, 0.025);
+    if (b === 7) [[4,0.04],[5,0.045],[6,0.05],[6.5,0.055],[7,0.06],[7.5,0.07]].forEach(([i,v]) => snare(t0 + i*E, v));
+  }
+  // Melody
+  for (const [pos, note, len] of sec.mel[b]){
+    const t = t0 + pos*E, dur = len*E*0.95;
+    if (inten === 0) mNote('triangle', mtof(note), t, dur, 0.07, { atk:0.04, rel:0.2, send:0.4, vib:8 });
+    else {
+      mNote('sawtooth', mtof(note), t, dur, 0.04, { atk:0.03, rel:0.12, lp:2000, send:0.35, vib:10 });
+      if (inten === 3) mNote('square', mtof(note - 12), t, dur, 0.018, { atk:0.03, rel:0.12, lp:1200 });
+    }
+  }
+  // Arpeggio shimmer in the bridge and the biggest sections
+  if (inten === 0 || inten === 3){
+    const pat = [0,1,2,1,0,1,2,1];
+    for (let i=0;i<8;i++) mNote('triangle', mtof(ch.pad[pat[i]] + 12), t0 + i*E, E*0.9, 0.022, { atk:0.005, rel:0.12, send:0.3 });
+  }
+}
+function musicStart(){
+  if (MU || !AC) return;
+  const now = AC.currentTime;
+  const out = AC.createGain(), fx = AC.createGain(), dl = AC.createDelay(1), fb = AC.createGain(), fl = AC.createBiquadFilter();
+  dl.delayTime.value = 0.27; fb.gain.value = 0.3; fl.type = 'lowpass'; fl.frequency.value = 1800;
+  fx.connect(dl); dl.connect(out); dl.connect(fl); fl.connect(fb); fb.connect(dl);
+  out.gain.setValueAtTime(0.0001, now); out.gain.linearRampToValueAtTime(0.4, now + 1.5);
+  out.connect(AC.destination);
+  MU = { out, fx, bar:0, next:now + 0.15, timer:0 };
+  const pump = () => { while (MU && MU.next < AC.currentTime + 0.6){ scheduleBar(MU.bar, MU.next); MU.next += BAR; MU.bar++; } };
+  MU.timer = setInterval(pump, 120); pump();
+}
+function musicStop(){
+  if (!MU) return;
+  const m = MU; MU = null; clearInterval(m.timer);
+  const t = AC.currentTime;
+  m.out.gain.cancelScheduledValues(t); m.out.gain.setValueAtTime(Math.max(0.0001, m.out.gain.value), t); m.out.gain.linearRampToValueAtTime(0, t + 0.4);
+  setTimeout(() => { try { m.out.disconnect(); } catch(e) {} }, 800);
+}
+function musicSync(){ if (!AC) return; (musicOn && !muted) ? musicStart() : musicStop(); }
+const musicBoxes = [$('#musicToggle'), $('#musicToggle2')];
+musicBoxes.forEach(b => b.addEventListener('change', ev => {
+  musicOn = ev.target.checked;
+  try { localStorage.setItem('bridgeburn-music', musicOn ? '1' : '0'); } catch(e) {}
+  musicBoxes.forEach(x => { x.checked = musicOn; });
+  initAudio(); musicSync();
+}));
+musicBoxes.forEach(b => { b.checked = musicOn; });
+document.addEventListener('visibilitychange', () => { if (!AC) return; if (document.hidden) AC.suspend(); else AC.resume(); });
+
+// ---------- State ----------
+let G = null, nextId = 1, diffKey = 'normal';
+let S = 20, DPR = 1, cssW = 0, cssH = 0;
+const cvs = $('#arena'), ctx = cvs.getContext('2d');
+const bg = document.createElement('canvas');
+
+function makeTower(team, king, x, y){
+  return { id:nextId++, team, kind:'tower', king, x, y, r:king?1.6:1.25,
+    hp:king?4000:2500, maxHp:king?4000:2500, dmg:king?95:85, hs:king?1.0:0.8, range:king?7:7.5,
+    hitsAir:true, targets:'any', air:false, cd:0, active:!king, proj:'arrow', stun:0, deploy:0, retarget:0, flash:0, angle:0 };
+}
+function makeEnt(key, team, x, y){
+  const c = CARDS[key];
+  return { id:nextId++, key, team, kind:c.type==='building'?'building':'unit', x, y, r:c.r,
+    jumps:!!c.jumps, spawn:c.spawn||null, spawnT:c.spawn?1.5:0, avoid:null,
+    hp:c.hp, maxHp:c.hp, dmg:c.dmg, hs:c.hs, range:c.range, speed:c.speed||0, sight:c.sight||c.range,
+    air:!!c.air, hitsAir:c.hitsAir, targets:c.targets, splash:c.splash||0, proj:c.proj||null, life:c.life||0,
+    cd:0, stun:0, deploy:1, retarget:0, target:null, flash:0, swing:0, walk:Math.random()*6, born:G ? G.t : 0,
+    angle: team===0 ? -Math.PI/2 : Math.PI/2 };
+}
+
+function newGame(){
+  G = { t:0, clock:180, ot:false, over:false, endT:0, result:null, elixir:[5,5], crowns:[0,0],
+    ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], deck:[newDeck(startDeck()), newDeck(cloneMatch ? startDeck() : rivalDeck())], pending:[], zones:[],
+    aiT:2, sel:-1, ghost:null, paused:false, dblShown:false, otLevel:0, lastLane:[0,0], aiSpellAt:-99, stats:{ played:[0,0] } };
+  G.ents.push(makeTower(1,true,9,3), makeTower(1,false,3.5,6.5), makeTower(1,false,14.5,6.5));
+  G.ents.push(makeTower(0,true,9,29), makeTower(0,false,3.5,25.5), makeTower(0,false,14.5,25.5));
+  renderHand(); lastHud = {};
+}
+
+const alive = e => e.hp > 0;
+const towersOf = team => G.ents.filter(e => e.kind==='tower' && e.team===team && alive(e));
+const kingOf = team => G.ents.find(e => e.kind==='tower' && e.king && e.team===team);
+function princessAlive(team, lane){ return towersOf(team).some(t => !t.king && (t.x<9?0:1)===lane); }
+// Elixir speed: 1× for the first two minutes, 2× in the last minute, then sudden death that
+// climbs one step every minute (3×, 4×, 5×…) until somebody takes a tower.
+const elixirMult = () => G.ot ? G.otLevel : G.clock <= 60 ? 2 : 1;
+
+// ---------- Placement ----------
+const POTATO_TOWER_GAP = 2.3, POTATO_GAP = 2.3;
+function canPlace(team, key, x, y){
+  const c = CARDS[key];
+  if (x < 0 || x > W || y < 0 || y > H) return false;
+  if (c.type === 'spell') return true;
+  if (c.type === 'plant'){
+    // A potato can go on dry land on either side, but not close to any tower or another potato.
+    if (x < 0.5 || x > W-0.5 || y < 0.5 || y > H-0.5) return false;
+    if (y > RIVER_T - 0.3 && y < RIVER_B + 0.3) return false;
+    if (G.ents.some(t => t.kind === 'tower' && alive(t) && Math.hypot(t.x-x, t.y-y) < t.r + POTATO_TOWER_GAP)) return false;
+    return !G.ents.some(p => p.kind === 'plant' && Math.hypot(p.x-x, p.y-y) < POTATO_GAP);
+  }
+  if (x < 0.5 || x > W-0.5 || y < 0.5 || y > H-0.5) return false;
+  const lane = x < 9 ? 0 : 1;
+  if (team === 0){
+    const pocket = !princessAlive(1, lane);
+    if (!(y >= RIVER_B + 0.5 || (pocket && y >= 10))) return false;
+  } else {
+    const pocket = !princessAlive(0, lane);
+    if (!(y <= RIVER_T - 0.5 || (pocket && y <= 22))) return false;
+  }
+  if (y > RIVER_T - 0.3 && y < RIVER_B + 0.3) return false;
+  for (const t of G.ents){
+    if (t.kind !== 'unit' && t.kind !== 'plant' && alive(t) && Math.abs(t.x-x) < t.r+0.35 && Math.abs(t.y-y) < t.r+0.35) return false;
+  }
+  return true;
+}
+const snap = v => Math.floor(v) + 0.5;
+function findSpot(team, key, x, y){
+  x = clamp(x, 0.5, W-0.5); y = clamp(y, 0.5, H-0.5);
+  for (let rad=0; rad<6; rad++){
+    for (let dx=-rad; dx<=rad; dx++) for (let dy=-rad; dy<=rad; dy++){
+      if (Math.max(Math.abs(dx),Math.abs(dy)) !== rad) continue;
+      const px = snap(x+dx), py = snap(y+dy);
+      if (canPlace(team,key,px,py)) return [px,py];
+    }
+  }
+  return null;
+}
+
+function groupOffsets(n){
+  if (n === 1) return [[0,0]];
+  if (n === 2) return [[-0.55,0],[0.55,0]];
+  if (n === 3) return [[0,-0.45],[-0.5,0.35],[0.5,0.35]];
+  const out = [];
+  for (let i=0;i<n;i++){ const a = i/n*Math.PI*2, rad = n > 6 ? (i%2 ? 0.5 : 1.0) : 0.7; out.push([Math.cos(a)*rad, Math.sin(a)*rad]); }
+  return out;
+}
+function deploy(team, handIdx, x, y){
+  const d = G.deck[team], key = d.hand[handIdx], c = CARDS[key];
+  if (G.elixir[team] < c.cost) return false;
+  G.elixir[team] -= c.cost;
+  cycle(d, handIdx);
+  G.stats.played[team]++;
+  G.lastLane[team] = x < 9 ? 0 : 1;
+  if (c.type === 'spell'){
+    const k = kingOf(team);
+    const sx = k ? k.x : 9, sy = k ? k.y : (team===0?29:3);
+    const d = Math.hypot(x-sx, y-sy);
+    const flight = c.spell==='lob' ? Math.max(0.4, d/(c.slow ? 8 : 14)) : c.spell==='rain' ? 0.6 : c.spell==='alarm' ? 0.5 : 0.12;
+    G.spells.push({ key, team, x, y, sx, sy, t:0, dur:flight });
+  } else if (c.type === 'plant'){
+    G.ents.push({ id:nextId++, key, team, kind:'plant', x, y, r:c.r, hp:1, maxHp:1, growT:0, grow:c.grow,
+      air:false, deploy:0, stun:0, flash:0, cd:0, dmg:0, angle:0 });
+  } else if (c.type === 'building'){
+    G.ents.push(makeEnt(key, team, x, y));
+  } else {
+    const offs = groupOffsets(c.count || 1);
+    for (const [ox,oy] of offs) G.ents.push(makeEnt(key, team, x+ox, y+(team===0?oy:-oy)));
+  }
+  G.fx.push({ kind:'ring', x, y, r:c.radius||1, t:0, dur:0.45, color:TEAM[team].light });
+  if (team === 0) sfx.deploy();
+  return true;
+}
+
+// ---------- Combat ----------
+function valid(e, t){
+  return t && alive(t) && t.kind !== 'plant' && t.team !== e.team && (e.hitsAir || !t.air) && (e.targets !== 'buildings' || t.kind !== 'unit');
+}
+function defaultTarget(e){
+  const towers = towersOf(1-e.team);
+  const lane = e.x < 9 ? 0 : 1;
+  return towers.find(t => !t.king && (t.x<9?0:1)===lane) || towers.find(t => t.king) || towers[0] || null;
+}
+function acquire(e){
+  const sight = e.kind==='unit' ? e.sight : e.range;
+  let best = null, bd = Infinity;
+  for (const o of G.ents){
+    if (!valid(e,o)) continue;
+    const d = edgeDist(e,o);
+    if (d <= sight && d < bd){ bd = d; best = o; }
+  }
+  if (!best && e.kind==='unit') best = defaultTarget(e);
+  return best;
+}
+function damage(o, amt){
+  if (!alive(o)) return;
+  o.hp -= amt; o.flash = 0.12;
+  if (o.kind==='tower'){ if (o.king && !o.active) o.active = true; if (o.team===0 || o.team===1) sfx.hit(); }
+}
+function aoe(team, x, y, r, dmg, o={}){
+  for (const e of G.ents){
+    if (e.team===team || !alive(e) || e.kind === 'plant') continue;
+    if (e.air && o.hitsAir===false) continue;
+    if (Math.hypot(e.x-x, e.y-y) - e.r*0.6 > r) continue;
+    damage(e, dmg * (e.kind==='tower' ? (o.towerMult ?? 1) : 1));
+    if (o.stun){ e.stun = Math.max(e.stun, o.stun); e.cd = Math.max(e.cd, e.hs*0.5); }
+    if (o.knock && e.kind==='unit' && e.hp>0){
+      const d = Math.hypot(e.x-x, e.y-y) || 1;
+      e.x += (e.x-x)/d * o.knock * 0.8; e.y += (e.y-y)/d * o.knock * 0.8; constrain(e);
+    }
+  }
+}
+function attack(e, t){
+  e.swing = 0.2;
+  if (e.key && CARDS[e.key].bomber){
+    // Drops a bomb straight down from where it hovers over the target.
+    G.spells.push({ drop:true, team:e.team, x:e.x, y:e.y, r:0.9, dmg:e.dmg, target:t, t:0, dur:0.4, small:true });
+    return;
+  }
+  if (e.proj){
+    const h0 = e.kind==='tower' ? 1.3 : e.air ? 0.8 : 0.35;
+    const h1 = t.air ? 0.8 : t.kind==='tower' ? 0.9 : 0.3;
+    G.projs.push({ x:e.x, y:e.y, target:t, tx:t.x, ty:t.y, dmg:e.dmg, team:e.team, splash:e.splash,
+      hitsAir:e.hitsAir, kind:e.proj, speed:e.proj==='fire'?8:e.proj==='bomb'?7:e.proj==='bolt'?13:15, h0, h1, d0:Math.max(0.1,dist(e,t)) });
+  } else if (e.splash){
+    aoe(e.team, t.x, t.y, e.splash, e.dmg, { hitsAir:e.hitsAir });
+  } else {
+    damage(t, e.dmg);
+    G.fx.push({ kind:'spark', x:(e.x+t.x)/2, y:(e.y+t.y)/2, t:0, dur:0.18 });
+  }
+}
+
+// Ground units cross only on the bridges. The crossing is decided by which bank the unit is
+// on (top / bottom / on the river), so a unit halfway across keeps heading for the far bank
+// instead of turning toward its target and grinding against the bridge rail.
+function waypoint(e, tx, ty){
+  if (e.air || e.jumps) return [tx, ty];
+  const tTop = ty < 16;
+  const zone = e.y < RIVER_T ? 'top' : e.y > RIVER_B ? 'bot' : 'river';
+  const bx = nearestBridge(e.x);
+  if (zone === 'river') return [bx, tTop ? RIVER_T - 0.9 : RIVER_B + 0.9];
+  if ((zone === 'top') === tTop) return [tx, ty];
+  if (Math.abs(e.x - bx) > 0.45) return [bx, zone === 'top' ? RIVER_T - 0.5 : RIVER_B + 0.5];
+  return [bx, zone === 'top' ? RIVER_B + 0.9 : RIVER_T - 0.9];
+}
+// Steer around towers and buildings that sit between a unit and where it is going, instead of
+// pushing straight into them. The chosen side sticks until the obstacle is passed.
+function steer(e, ux, uy, gd, target){
+  if (e.air) return [ux, uy];
+  let best = null, bestAlong = Infinity;
+  for (const o of G.ents){
+    if (o === target || o.kind === 'unit' || o.kind === 'plant' || !alive(o)) continue;
+    const rx = o.x - e.x, ry = o.y - e.y;
+    const along = rx*ux + ry*uy;
+    if (along <= 0 || along > gd + o.r) continue;
+    const lat = -rx*uy + ry*ux;
+    const clear = o.r + e.r + 0.2;
+    if (Math.abs(lat) < clear && Math.hypot(rx, ry) < clear + 1.2 && along < bestAlong){ best = o; bestAlong = along; }
+  }
+  if (!best){ e.avoid = null; return [ux, uy]; }
+  const rx = best.x - e.x, ry = best.y - e.y, rl = Math.hypot(rx, ry) || 1;
+  if (!e.avoid || e.avoid.id !== best.id){
+    const lat = -rx*uy + ry*ux;
+    // Go round on the side away from the obstacle's centre; break ties toward the arena middle.
+    const side = Math.abs(lat) > 0.05 ? (lat > 0 ? -1 : 1) : ((e.x < 9) === (uy < 0) ? 1 : -1);
+    e.avoid = { id:best.id, side };
+  }
+  // Tangent to the obstacle, on the chosen side.
+  let tx = -ry/rl, ty = rx/rl;
+  const leftDot = tx*(-uy) + ty*ux;
+  if (Math.sign(leftDot) !== e.avoid.side) { tx = -tx; ty = -ty; }
+  const vx = tx*0.85 + ux*0.15, vy = ty*0.85 + uy*0.15, vl = Math.hypot(vx, vy) || 1;
+  return [vx/vl, vy/vl];
+}
+function moveToward(e, tx, ty, dt, target){
+  const [gx, gy] = waypoint(e, tx, ty);
+  const dx = gx - e.x, dy = gy - e.y, d = Math.hypot(dx,dy);
+  if (d < 0.001) return;
+  const [ux, uy] = steer(e, dx/d, dy/d, d, target);
+  const step = Math.min(e.speed*(e.slowT > 0 ? 0.75 : 1)*dt, d);
+  e.x += ux*step; e.y += uy*step;
+  e.angle = Math.atan2(uy, ux);
+  e.walk += dt*e.speed*9;
+  e.moving = true;
+}
+function constrain(e){
+  e.x = clamp(e.x, 0.4, W-0.4); e.y = clamp(e.y, 0.4, H-0.4);
+  if (!e.air && !e.jumps && e.y > RIVER_T && e.y < RIVER_B){
+    const bx = nearestBridge(e.x);
+    if (Math.abs(e.x-bx) > 0.85){
+      if (e.y - RIVER_T < 0.45) e.y = RIVER_T;
+      else if (RIVER_B - e.y < 0.45) e.y = RIVER_B;
+      else e.x = bx + Math.sign(e.x-bx)*0.85;
+    }
+  }
+}
+
+function updateEnt(e, dt){
+  if (!alive(e)) return;
+  if (e.kind === 'plant'){
+    e.growT += dt;
+    if (e.growT >= e.grow){
+      const u = makeEnt(CARDS[e.key].sprouts, e.team, e.x, e.y);
+      u.deploy = 0.5; G.pending.push(u);
+      G.fx.push({ kind:'dirt', x:e.x, y:e.y, r:1.1, t:0, dur:0.6 });
+      e.hp = 0; e.sprouted = true;
+    }
+    return;
+  }
+  e.flash = Math.max(0, e.flash-dt);
+  e.swing = Math.max(0, (e.swing||0)-dt);
+  if (e.slowT > 0) e.slowT -= dt;
+  if (e.life){ e.hp -= e.maxHp/e.life*dt; if (e.hp <= 0){ e.hp = 0; return; } }
+  if (e.deploy > 0){ e.deploy -= dt; return; }
+  if (e.stun > 0){ e.stun -= dt; return; }
+  if (e.kind==='tower' && !e.active) return;
+  if (e.spawn){
+    e.spawnT -= dt;
+    if (e.spawnT <= 0){
+      e.spawnT = e.spawn.every;
+      const u = makeEnt(e.spawn.key, e.team, e.x, e.y + (e.team===0 ? -1.2 : 1.2));
+      u.deploy = 0.3; G.pending.push(u);
+    }
+  }
+  if (!e.dmg) return;
+  const isUnit = e.kind === 'unit';
+  e.retarget -= dt;
+  if (!valid(e, e.target) || e.retarget <= 0){
+    e.retarget = 0.25;
+    const locked = valid(e, e.target) && e.attacking && edgeDist(e, e.target) <= e.range + 0.2;
+    if (!locked) e.target = acquire(e);
+  }
+  const t = e.target;
+  if (t && edgeDist(e, t) <= e.range){
+    e.attacking = true;
+    e.angle = Math.atan2(t.y-e.y, t.x-e.x);
+    e.cd -= dt;
+    if (e.cd <= 0){ attack(e, t); e.cd = e.hs; }
+  } else {
+    e.attacking = false;
+    e.cd = Math.max(e.cd - dt, isUnit && !(e.key && CARDS[e.key].bomber) ? e.hs*0.3 : 0);
+    if (isUnit && t) moveToward(e, t.x, t.y, dt, t);
+  }
+}
+
+function collide(dt){
+  const a = G.ents;
+  for (let i=0;i<a.length;i++){
+    const p = a[i]; if (!alive(p) || p.kind === 'plant') continue;
+    for (let j=i+1;j<a.length;j++){
+      const q = a[j]; if (!alive(q) || q.kind === 'plant' || p.air !== q.air) continue;
+      const pf = p.kind !== 'unit', qf = q.kind !== 'unit';
+      if (pf && qf) continue;
+      let dx = q.x-p.x, dy = q.y-p.y, d = Math.hypot(dx,dy);
+      const min = p.r + q.r;
+      if (d >= min) continue;
+      if (d < 1e-4){ dx = Math.random()-0.5; dy = Math.random()-0.5; d = Math.hypot(dx,dy); }
+      const ov = (min-d)*0.5, nx = dx/d, ny = dy/d;
+      let wp, wq;
+      if (pf){ wp=0; wq=1; } else if (qf){ wp=1; wq=0; }
+      else { const mp=p.r*p.r, mq=q.r*q.r; wp=mq/(mp+mq); wq=mp/(mp+mq); }
+      p.x -= nx*ov*wp*2*0.5; p.y -= ny*ov*wp*2*0.5;
+      q.x += nx*ov*wq*2*0.5; q.y += ny*ov*wq*2*0.5;
+    }
+  }
+  for (const e of a){
+    if (e.kind !== 'unit' || !alive(e)) continue;
+    constrain(e);
+    // Stuck check uses where the unit ended up after collisions, compared with last tick.
+    if (e.moving && e.lastX !== undefined){
+      const moved = Math.hypot(e.x - e.lastX, e.y - e.lastY);
+      e.stuckT = moved < e.speed*dt*0.2 ? (e.stuckT || 0) + dt : Math.max(0, (e.stuckT || 0) - dt*2);
+    } else e.stuckT = 0;
+    e.moving = false;
+    // A unit pinned in place for over a second (crowd on a bridge, wedged on a tower corner)
+    // gets a small sideways shove so it can slip past.
+    if (e.stuckT > 1 && !e.attacking){
+      const s = (e.id % 2 ? 1 : -1) * 0.25;
+      e.x += Math.cos(e.angle + Math.PI/2) * s; e.y += Math.sin(e.angle + Math.PI/2) * s;
+      e.stuckT = 0; e.avoid = null; constrain(e);
+    }
+    e.lastX = e.x; e.lastY = e.y;
+  }
+}
+
+function onTowerDown(t){
+  const other = 1 - t.team;
+  G.ruins.push({ x:t.x, y:t.y, r:t.r, team:t.team });
+  G.fx.push({ kind:'blast', x:t.x, y:t.y, r:t.r*2, t:0, dur:0.7 });
+  if (other === 0) sfx.crown(); else sfx.lost();
+  if (t.king){
+    G.crowns[other] = 3;
+    G.texts.push({ x:9, y:16, txt:other===0?'King tower down!':'Your king fell', t:0, dur:2, color:TEAM[other].light, size:1 });
+    endGame(other); return;
+  }
+  G.crowns[other]++;
+  const k = kingOf(t.team); if (k) k.active = true;
+  G.texts.push({ x:t.x, y:t.y, txt:'+1 crown', t:0, dur:1.6, color:TEAM[other].light, size:0.8 });
+  if (G.ot) endGame(other);
+}
+function endGame(winner){
+  if (G.over) return;
+  G.over = true; G.endT = 0;
+  G.result = winner===0 ? 'win' : winner===1 ? 'lose' : 'draw';
+  G.sel = -1;
+  saveRecord(G.result);
+  setTimeout(showEnd, 1600);
+}
+
+// ---------- Rival AI ----------
+function aiPlace(key, x, y){
+  const d = G.deck[1], i = d.hand.indexOf(key);
+  if (i < 0 || G.elixir[1] < CARDS[key].cost) return false;
+  if (CARDS[key].type === 'spell') return deploy(1, i, x, y);
+  const spot = findSpot(1, key, x, y);
+  return spot ? deploy(1, i, spot[0], spot[1]) : false;
+}
+const dps = k => CARDS[k].dmg / CARDS[k].hs * (CARDS[k].count || 1);
+// What the Rival knows about its own deck, worked out once per match.
+function deckProfile(deck){
+  const units = deck.filter(k => CARDS[k].type === 'unit');
+  return {
+    wins: deck.filter(isWin),
+    tanks: deck.filter(k => isWin(k) && CARDS[k].hp >= 2500),
+    fast: deck.filter(k => isWin(k) && (CARDS[k].speed >= 1.5 || CARDS[k].air)),
+    support: units.filter(k => !isWin(k) && (CARDS[k].range > 2 || CARDS[k].splash)),
+    swarms: units.filter(k => (CARDS[k].count || 1) >= 3),
+    potato: deck.includes('potato')
+  };
+}
+// The Rival "counts elixir" like a good player. Hard reads it exactly, Normal is a bit off.
+function readPlayerElixir(){
+  const e = G.elixir[0];
+  return diffKey === 'hard' ? e : diffKey === 'normal' ? e + (G.aiNoise || 0) : 5;
+}
+function aiThink(){
+  const D = DIFF[diffKey], mult = elixirMult();
+  const hand = G.deck[1].hand;
+  const el = G.elixir[1];
+  const can = k => hand.includes(k) && CARDS[k].cost <= el;
+  const prof = G.aiProfile || (G.aiProfile = deckProfile([...G.deck[1].hand, ...G.deck[1].queue]));
+  if (Math.random() < 0.05) G.aiNoise = (Math.random()*2 - 1) * 1.5;
+  const foes = G.ents.filter(e => e.team===0 && alive(e) && e.kind==='unit');
+  const mine = G.ents.filter(e => e.team===1 && alive(e) && e.kind==='unit');
+  const playerTowers = towersOf(0);
+  // With faster elixir it can afford to commit sooner, and should, or it wastes elixir.
+  const attackAt = Math.max(4.5, D.attackAt - (mult - 1) * 1.2);
+
+  // 1) Spells: finish a tower, hit a valuable cluster, clear a swarm, or chip a tower.
+  // The Rival only spells troops it has had time to see (they must have been on the field
+  // for a moment), and it rests between spells, so it is not instant.
+  const seen = foes.filter(f => G.t - (f.born || 0) >= D.react);
+  const spellReady = G.t - G.aiSpellAt >= D.spellCd;
+  const castSpell = (k, x, y) => { if (aiPlace(k, x, y)){ G.aiSpellAt = G.t; return true; } return false; };
+  const quiet = foes.reduce((s,f) => s + f.hp, 0) < 300;
+  for (const k of hand.filter(k => dmgSpell(k) && can(k))){
+    const c = CARDS[k];
+    for (const t of playerTowers) if (t.hp <= c.dmg*c.towerMult){ castSpell(k, t.x, t.y); return; }
+    if (!spellReady) continue;
+    let best = null, bv = 0, bn = 0;
+    for (const u of seen){
+      let v = 0, n = 0;
+      for (const o of seen) if (Math.hypot(o.x-u.x, o.y-u.y) <= c.radius*0.9){ v += Math.min(o.hp, c.dmg); if (o.hp <= c.dmg) n++; }
+      // A cluster sitting on a tower is worth more: the spell chips the tower too.
+      if (playerTowers.some(t => Math.hypot(t.x-u.x, t.y-u.y) <= c.radius + t.r)) v += c.dmg*c.towerMult;
+      if (v > bv){ bv = v; best = u; bn = n; }
+    }
+    const lead = c.spell === 'lob' ? (c.slow ? -1.2 : -0.6) : -0.3;
+    const need = c.dmg >= 400 ? c.cost * 240 / Math.sqrt(mult) : 0;
+    if (best && (c.dmg >= 400 ? bv >= need : (bn >= 3 || (c.stun && bv >= 600)))){ if (castSpell(k, best.x, best.y + lead)) return; }
+    // Chip a tower: with spare elixir and nothing to defend, a damage spell goes on your
+    // weakest side tower (the king only once a side tower is down, so it is not woken early).
+    const spare = mult >= 2 ? c.cost + 2 : Math.max(8, c.cost + 4);
+    const towerHit = c.dmg * c.towerMult;
+    if (quiet && el >= spare && !c.stun && (towerHit >= 150 || el >= 9.5)){
+      const sides = playerTowers.filter(t => !t.king);
+      const t = (sides.length ? sides : playerTowers).sort((a,b) => a.hp - b.hp)[0];
+      if (t && castSpell(k, t.x, t.y)) return;
+    }
+  }
+
+  // Alarm: wake our king when a real push is landing on a side tower.
+  const myKing = kingOf(1);
+  if (can('alarm') && myKing && !myKing.active){
+    const pressure = foes.filter(f => f.y < 12).reduce((s,f) => s + f.hp, 0);
+    if (pressure >= 1500 || (mult >= 2 && pressure >= 900)){ aiPlace('alarm', myKing.x, myKing.y); return; }
+  }
+  // Elixir Drop: a free +1 whenever it would not overflow the bar.
+  if (can('elixirdrop') && el <= 10 - CARDS.elixirdrop.gain + CARDS.elixirdrop.cost - 0.2){ aiPlace('elixirdrop', 9, 5); return; }
+
+  // 2) Defend. A planted potato that is about to sprout on our side counts as a threat too:
+  //    the Rival remembers where you planted it.
+  const threats = foes.filter(e => e.y < 20.5);
+  for (const p of G.ents) if (p.kind === 'plant' && p.team === 0 && p.y < 16 && p.grow - p.growT < 3)
+    threats.push({ x:p.x, y:p.y, hp:1250, maxHp:1250, air:false, targets:'any', key:'spudsquire' });
+  threats.sort((a,b) => a.y-b.y);
+  if (threats.length){
+    const hpSum = threats.reduce((s,t) => s+t.hp, 0);
+    // Our own troops already near the threat count against it.
+    const help = mine.filter(m => threats.some(t => Math.hypot(t.x-m.x, t.y-m.y) < 4)).reduce((s,m) => s + m.hp, 0);
+    if (hpSum - help*0.6 > 350 || threats[0].y < 11){
+      const th = threats[0];
+      const air = threats.some(t => t.air);
+      const big = threats.some(t => t.maxHp >= 2000);
+      const towersOnly = threats.some(t => t.targets === 'buildings' && !t.air);
+      const swarm = threats.filter(t => t.maxHp <= 350).length >= 3;
+      let pick = null, ps = 0;
+      for (const k of hand){
+        if (!can(k) || isSpell(k) || CARDS[k].type === 'plant') continue;
+        const c = CARDS[k];
+        let sc = 2 - c.cost*0.3; // prefer the cheapest card that does the job
+        if (isWin(k)) sc -= 6;
+        if (c.targets === 'none') sc -= 1;
+        if (air) sc += antiAir(k) ? 5 : -8;
+        if (big) sc += ((c.count||1) >= 3 ? 4 : 0) + (dps(k) >= 140 ? 3 : 0) + (c.type==='building' ? 3 : 0);
+        if (towersOnly && c.type === 'building') sc += 4;
+        if (swarm) sc += c.splash ? 5 : (c.count||1) >= 3 ? 1 : -2;
+        sc += Math.random()*0.8;
+        if (sc > ps){ ps = sc; pick = k; }
+      }
+      if (pick){
+        const c = CARDS[pick];
+        let x = th.x, y;
+        // Buildings go in the middle to drag tower-only attackers away from our towers.
+        if (c.type === 'building'){ x = towersOnly ? 9 : clamp(th.x, 5.5, 12.5); y = towersOnly ? 9 : 10; }
+        // Ranged troops stand behind our tower line so the tower soaks hits.
+        else if (c.range > 2){ x = th.x + (th.x < 9 ? 1.5 : -1.5); y = Math.min(th.y - 4.5, 8); }
+        // Swarms surround; melee meets it just in front.
+        else if ((c.count||1) >= 3) y = th.y - 0.8;
+        else y = th.y - 1.5;
+        if (aiPlace(pick, x, clamp(y, 1.5, 14.5))) return;
+      }
+      if (el < 9.5) return; // save up rather than start an attack while under pressure
+    }
+  }
+
+  // 3) Support our push. Ranged and splash go behind the tank; swarms wait until the tank is
+  //    at the tower so they are not wiped on the way.
+  const lead = mine.filter(m => isWin(m.key)).sort((a,b) => b.y - a.y)[0];
+  if (lead && lead.y < 22){
+    const nearTower = playerTowers.some(t => Math.hypot(t.x-lead.x, t.y-lead.y) < t.r + 3);
+    const backed = mine.filter(m => m !== lead && Math.hypot(m.x-lead.x, m.y-lead.y) < 4).length;
+    for (const k of hand){
+      if (!can(k) || isSpell(k) || isWin(k) || CARDS[k].type !== 'unit') continue;
+      const c = CARDS[k], swarmy = (c.count||1) >= 3;
+      if (swarmy && !nearTower) continue;
+      if (!swarmy && backed >= 2 && mult < 3) continue;
+      if (el < c.cost + (diffKey === 'easy' ? 2 : 0)) continue;
+      const y = swarmy ? lead.y + 0.5 : lead.y - (c.range > 2 ? 2.5 : 1.5);
+      if (aiPlace(k, lead.x, clamp(y, 1.5, 14.5))) return;
+    }
+  }
+
+  // 4) Counter-push: survivors of a defence heading out get a win condition to escort.
+  const survivors = mine.filter(m => !isWin(m.key) && m.y > 9 && m.y < 17 && m.hp > 300);
+  if (diffKey !== 'easy' && survivors.length && !lead){
+    const lane = survivors[0].x < 9 ? 0 : 1;
+    const k = prof.wins.find(can);
+    if (k && aiPlace(k, BRIDGES[lane], CARDS[k].speed < 0.8 ? 11 : 13.5)) return;
+  }
+
+  // 5) Punish: when the player has just spent big, a fast attacker goes in on the other lane.
+  if (diffKey !== 'easy' && readPlayerElixir() <= 2.5){
+    const k = prof.fast.find(can);
+    if (k){ const lane = 1 - G.lastLane[0]; if (aiPlace(k, BRIDGES[lane], 13.5)) return; }
+  }
+
+  // 6) Potatoes: plant one in front of the player's weakest tower when things are quiet.
+  if (prof.potato && can('potato') && !threats.length && el >= CARDS.potato.cost + 2){
+    const t = playerTowers.filter(t => !t.king).sort((a,b) => a.hp-b.hp)[0] || playerTowers[0];
+    if (t && aiPlace('potato', t.x + (t.x < 9 ? 0.5 : -0.5), t.y - t.r - POTATO_TOWER_GAP - 0.5)) return;
+  }
+
+  // 7) Build a push once elixir is up. Slow tanks start at the back so support can join them.
+  if (el >= attackAt){
+    const pt = playerTowers.filter(t => !t.king);
+    let lane;
+    if (pt.length === 1) lane = Math.random() < 0.7 ? (pt[0].x<9?1:0) : (pt[0].x<9?0:1);
+    else if (pt.length === 2) lane = pt[0].hp < pt[1].hp ? (pt[0].x<9?0:1) : (pt[1].x<9?0:1);
+    else lane = Math.random() < 0.5 ? 0 : 1;
+    // At 3× and up, pressure both lanes so the player cannot stack one side.
+    if (mult >= 3 && lead) lane = lead.x < 9 ? 1 : 0;
+    const bx = BRIDGES[lane];
+    const wins = hand.filter(k => can(k) && isWin(k)).sort((a,b) => CARDS[b].hp - CARDS[a].hp);
+    if (wins.length){
+      const k = wins[0], c = CARDS[k];
+      if (aiPlace(k, bx, c.speed < 0.8 ? 3.5 : 13.5)) return;
+    }
+    const den = hand.find(k => can(k) && CARDS[k].spawn);
+    if (den && Math.random() < 0.5 && aiPlace(den, 9, 10)) return;
+    // No win condition in hand: cycle a cheap card at the back to dig for one.
+    const opts = hand.filter(k => can(k) && CARDS[k].type === 'unit').sort((a,b) => CARDS[a].cost - CARDS[b].cost);
+    if (opts.length){
+      const k = opts[0];
+      if (aiPlace(k, bx, el >= 9.5 ? (CARDS[k].range > 2 ? 11.5 : 13.5) : 4)) return;
+    }
+    if (el >= 9.5){
+      const b = hand.find(k => can(k) && CARDS[k].type === 'building');
+      if (b && aiPlace(b, 9, 10)) return;
+      if (can('potato')) aiPlace('potato', bx, 9);
+    }
+  }
+}
+
+// ---------- Main step ----------
+function step(dt){
+  updateFx(dt);
+  if (G.over){ G.endT += dt; for (const p of G.projs) p.done = true; return; }
+  G.t += dt;
+  G.clock -= dt;
+  if (!G.dblShown && elixirMult() >= 2){
+    G.dblShown = true;
+    G.texts.push({ x:9, y:16, txt:'Double elixir', t:0, dur:2, color:'#e7a3ff', size:1 });
+  }
+  if (G.clock <= 0){
+    if (!G.ot){
+      if (G.crowns[0] !== G.crowns[1]) { endGame(G.crowns[0] > G.crowns[1] ? 0 : 1); return; }
+      G.ot = true; G.otLevel = 3; G.clock = 60;
+      G.texts.push({ x:9, y:16, txt:'Sudden death 3×', t:0, dur:2.4, color:'#f2c14e', size:0.95 });
+    } else {
+      G.otLevel++; G.clock = 60;
+      G.texts.push({ x:9, y:16, txt:`${G.otLevel}× elixir`, t:0, dur:2, color:'#f2c14e', size:1 });
+      sfx.crown();
+    }
+  }
+  const rate = elixirMult() / 2.8;
+  G.elixir[0] = Math.min(10, G.elixir[0] + rate*dt);
+  G.elixir[1] = Math.min(10, G.elixir[1] + rate*dt*DIFF[diffKey].mult);
+
+  G.aiT -= dt;
+  if (G.aiT <= 0){ aiThink(); G.aiT = DIFF[diffKey].delay / Math.min(2.5, Math.sqrt(elixirMult())) * (0.7 + Math.random()*0.6); }
+
+  for (const e of G.ents) updateEnt(e, dt);
+  collide(dt);
+
+  for (const p of G.projs){
+    if (p.target && alive(p.target)){ p.tx = p.target.x; p.ty = p.target.y; }
+    const dx = p.tx-p.x, dy = p.ty-p.y, d = Math.hypot(dx,dy), s = p.speed*dt;
+    p.ang = Math.atan2(dy,dx);
+    if (d <= s + 0.05){
+      p.done = true;
+      if (p.splash){ aoe(p.team, p.tx, p.ty, p.splash, p.dmg, { hitsAir:p.hitsAir }); G.fx.push({ kind:'burst', x:p.tx, y:p.ty, r:p.splash, t:0, dur:0.35, color:'#ff9a3c' }); }
+      else if (p.target && alive(p.target)) damage(p.target, p.dmg);
+    } else { p.x += dx/d*s; p.y += dy/d*s; }
+    p.prog = clamp(1 - d/p.d0, 0, 1);
+  }
+  G.projs = G.projs.filter(p => !p.done);
+
+  for (const sp of G.spells){
+    sp.t += dt;
+    if (sp.drop){
+      // A falling bomb. Attack bombs go off on impact; the death bomb lands and
+      // then ticks on the ground for its fuse before exploding, so troops can step out.
+      if (sp.t >= sp.dur && sp.fuse > 0 && sp.fuseT < sp.fuse){
+        if (!sp.landed){ sp.landed = true; tone(300,200,0.08,'square',0.04); }
+        sp.fuseT += dt;
+        continue;
+      }
+      if (sp.t >= sp.dur){
+        sp.done = true;
+        if (sp.target){
+          // An attack bomb: full damage to what it was aimed at, a little splash around it.
+          if (alive(sp.target)) damage(sp.target, sp.dmg);
+          for (const o of G.ents){
+            if (o === sp.target || o.team === sp.team || !alive(o) || o.air || o.kind === 'plant') continue;
+            if (Math.hypot(o.x-sp.x, o.y-sp.y) - o.r*0.6 <= sp.r) damage(o, sp.dmg*0.25);
+          }
+        } else aoe(sp.team, sp.x, sp.y, sp.r, sp.dmg, { hitsAir:false, towerMult:1 });
+        G.fx.push({ kind:'burst', x:sp.x, y:sp.y, r:sp.r, t:0, dur:sp.small ? 0.45 : 0.7, color:'#ff7a2a' });
+        sfx.boom();
+      }
+      continue;
+    }
+    if (sp.t >= sp.dur){
+      sp.done = true;
+      const c = CARDS[sp.key];
+      if (c.spell === 'lob'){
+        aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult, knock:c.knock });
+        G.fx.push({ kind:'burst', x:sp.x, y:sp.y, r:c.radius, t:0, dur:c.slow ? 0.8 : 0.55, color:c.slow ? '#d9452a' : '#ff7a2a' });
+        sfx.boom();
+      } else if (c.spell === 'zone'){
+        G.zones.push({ team:sp.team, x:sp.x, y:sp.y, r:c.radius, t:0, dur:c.dur, dps:c.dmg/c.dur, towerMult:c.towerMult, slow:c.slow });
+      } else if (c.spell === 'elixir'){
+        G.elixir[sp.team] = Math.min(10, G.elixir[sp.team] + c.gain);
+        G.fx.push({ kind:'ring', x:sp.x, y:sp.y, r:1.2, t:0, dur:0.6, color:'#e7a3ff' });
+        if (sp.team === 0){ G.texts.push({ x:clamp(sp.x,3,15), y:sp.y, txt:`+${c.gain} elixir`, t:0, dur:1, color:'#e7a3ff', size:0.7 }); tone(500,900,0.15,'triangle',0.07); }
+      } else if (c.spell === 'alarm'){
+        const k = kingOf(sp.team);
+        if (k && alive(k)){
+          damage(k, c.selfDmg); k.active = true;
+          G.fx.push({ kind:'ring', x:k.x, y:k.y, r:2.2, t:0, dur:0.7, color:'#f2c14e' });
+          G.texts.push({ x:k.x, y:k.y + (sp.team===0 ? -2.4 : 2.4), txt:'King awake!', t:0, dur:1.2, color:'#f2c14e', size:0.6 });
+          [880,660,880,660].forEach((f,i) => tone(f,f,0.08,'square',0.05,i*0.09));
+        }
+      } else if (c.spell === 'rain'){
+        aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult });
+        G.fx.push({ kind:'ring', x:sp.x, y:sp.y, r:c.radius, t:0, dur:0.35, color:'#f7ecd2' });
+        sfx.hit();
+      } else {
+        aoe(sp.team, sp.x, sp.y, c.radius, c.dmg, { towerMult:c.towerMult, stun:c.stun });
+        G.fx.push({ kind:'frost', x:sp.x, y:sp.y, r:c.radius, t:0, dur:0.8 });
+        sfx.frost();
+      }
+    }
+  }
+  G.spells = G.spells.filter(s => !s.done);
+
+  for (const z of G.zones){
+    z.t += dt;
+    for (const e of G.ents){
+      if (e.team === z.team || !alive(e) || e.kind === 'plant') continue;
+      if (Math.hypot(e.x-z.x, e.y-z.y) - e.r*0.6 > z.r) continue;
+      e.hp -= z.dps * dt * (e.kind === 'tower' ? z.towerMult : 1);
+      if (e.kind === 'tower' && e.king && !e.active) e.active = true;
+      if (e.kind === 'unit') e.slowT = 0.15;
+    }
+  }
+  G.zones = G.zones.filter(z => z.t < z.dur);
+
+  for (const e of G.ents){
+    if (e.hp <= 0 && !e.dead){
+      e.dead = true;
+      if (e.kind === 'tower') { onTowerDown(e); continue; }
+      if (e.sprouted) continue;
+      G.fx.push({ kind:'puff', x:e.x, y:e.y, r:e.r, t:0, dur:0.4, air:e.air });
+      const c = CARDS[e.key];
+      if (c.deathSpawn){
+        groupOffsets(c.deathSpawn.count).forEach(([ox,oy]) => { const u = makeEnt(c.deathSpawn.key, e.team, e.x+ox*1.2, e.y+oy*1.2); u.deploy = 0.4; G.pending.push(u); });
+      }
+      if (c.deathDmg){
+        G.spells.push({ drop:true, team:e.team, x:e.x, y:e.y, r:c.deathDmg.r, dmg:c.deathDmg.dmg, t:0, dur:0.55, fuse:c.deathDmg.fuse || 0, fuseT:0 });
+      }
+    }
+  }
+  G.ents = G.ents.filter(e => !e.dead);
+  if (G.pending.length){ G.ents.push(...G.pending); G.pending = []; }
+}
+function updateFx(dt){
+  for (const f of G.fx) f.t += dt;
+  G.fx = G.fx.filter(f => f.t < f.dur);
+  for (const t of G.texts) t.t += dt;
+  G.texts = G.texts.filter(t => t.t < t.dur);
+}
+
+// ---------- Drawing ----------
+function circle(c, x, y, r, fill, stroke, lw){
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI*2);
+  if (fill){ c.fillStyle = fill; c.fill(); }
+  if (stroke){ c.strokeStyle = stroke; c.lineWidth = lw || r*0.16; c.stroke(); }
+}
+function rr(c, x, y, w, h, r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+
+// Original figures, drawn from primitives. (x,y) is the figure's centre, S is pixels per tile.
+function drawFigure(c, key, team, x, y, S, o = {}){
+  const T = TEAM[team], k = CARDS[key];
+  const r = (k.r || 0.5) * S;
+  const ang = o.angle ?? (team===0 ? -Math.PI/2 : Math.PI/2);
+  const t = o.t || 0, swing = o.swing || 0;
+  c.save(); c.translate(x, y);
+  switch (key){
+    case 'squire': {
+      c.save(); c.rotate(ang);
+      const reach = swing > 0 ? 0.35 : 0;
+      c.strokeStyle = '#6b4a2a'; c.lineWidth = r*0.22; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r*0.35, r*0.62); c.lineTo(r*0.7, r*0.62); c.stroke();
+      c.strokeStyle = '#eef1f5'; c.lineWidth = r*0.2;
+      c.beginPath(); c.moveTo(r*0.7, r*0.62); c.lineTo(r*(1.55+reach), r*(0.62-reach*0.8)); c.stroke();
+      // shield
+      c.fillStyle = T.light; c.strokeStyle = T.dark; c.lineWidth = r*0.1;
+      rr(c, r*0.25, -r*1.0, r*0.55, r*0.7, r*0.15); c.fill(); c.stroke();
+      c.restore();
+      circle(c, 0, 0, r, T.main, T.dark);
+      circle(c, 0, -r*0.08, r*0.6, '#c9ced6', '#5f6875', r*0.1);
+      c.fillStyle = '#20252d'; c.fillRect(-r*0.34, -r*0.16, r*0.68, r*0.13);
+      c.fillStyle = T.main; c.beginPath(); c.moveTo(-r*0.12,-r*0.62); c.lineTo(r*0.12,-r*0.62); c.lineTo(0,-r*1.05); c.fill();
+      break;
+    }
+    case 'longbows': {
+      circle(c, 0, 0, r, T.main, T.dark);
+      circle(c, 0, -r*0.05, r*0.62, '#4e7d3a', '#2e4f22', r*0.1);
+      circle(c, 0, r*0.05, r*0.34, '#f0c9a0');
+      c.save(); c.rotate(ang);
+      c.strokeStyle = '#8a5a2b'; c.lineWidth = r*0.18; c.lineCap = 'round';
+      c.beginPath(); c.arc(r*0.55, 0, r*0.85, -1.15, 1.15); c.stroke();
+      c.strokeStyle = '#e9e1cf'; c.lineWidth = r*0.06;
+      const pull = swing > 0 ? 0 : r*0.25;
+      c.beginPath(); c.moveTo(r*0.55+Math.cos(-1.15)*r*0.85, Math.sin(-1.15)*r*0.85); c.lineTo(r*0.55-pull+r*0.2, 0); c.lineTo(r*0.55+Math.cos(1.15)*r*0.85, Math.sin(1.15)*r*0.85); c.stroke();
+      c.restore();
+      break;
+    }
+    case 'brute': {
+      c.save(); c.rotate(ang);
+      const punch = swing > 0 ? r*0.3 : 0;
+      circle(c, r*0.75 + punch, -r*0.72, r*0.34, '#c98b5b', '#7a4e2c', r*0.08);
+      circle(c, r*0.75, r*0.72, r*0.34, '#c98b5b', '#7a4e2c', r*0.08);
+      c.restore();
+      circle(c, 0, 0, r, '#c98b5b', '#7a4e2c', r*0.08);
+      c.strokeStyle = T.main; c.lineWidth = r*0.22;
+      c.beginPath(); c.arc(0, 0, r*0.86, 0, Math.PI*2); c.stroke();
+      circle(c, 0, 0, r*0.42, '#b27447');
+      c.fillStyle = '#3a2414'; c.fillRect(-r*0.3, -r*0.18, r*0.6, r*0.1);
+      break;
+    }
+    case 'imps': {
+      c.fillStyle = '#efe4c8';
+      c.beginPath(); c.moveTo(-r*0.75,-r*0.35); c.lineTo(-r*0.95,-r*1.15); c.lineTo(-r*0.3,-r*0.72); c.fill();
+      c.beginPath(); c.moveTo(r*0.75,-r*0.35); c.lineTo(r*0.95,-r*1.15); c.lineTo(r*0.3,-r*0.72); c.fill();
+      circle(c, 0, 0, r, '#5cb847', T.main, r*0.28);
+      circle(c, -r*0.32, -r*0.1, r*0.18, '#fff6c9');
+      circle(c, r*0.32, -r*0.1, r*0.18, '#fff6c9');
+      circle(c, -r*0.32, -r*0.08, r*0.08, '#1d1b18');
+      circle(c, r*0.32, -r*0.08, r*0.08, '#1d1b18');
+      break;
+    }
+    case 'drake': {
+      c.save(); c.rotate(ang);
+      const flap = 0.65 + 0.35*Math.sin(t*14);
+      c.fillStyle = T.dark;
+      c.beginPath(); c.moveTo(r*0.1, -r*0.4); c.lineTo(-r*0.5, -r*(0.9+1.1*flap)); c.lineTo(-r*0.7, -r*0.3); c.fill();
+      c.beginPath(); c.moveTo(r*0.1, r*0.4); c.lineTo(-r*0.5, r*(0.9+1.1*flap)); c.lineTo(-r*0.7, r*0.3); c.fill();
+      c.fillStyle = '#d9772f';
+      c.beginPath(); c.moveTo(-r*0.7, -r*0.25); c.lineTo(-r*1.6, 0); c.lineTo(-r*0.7, r*0.25); c.fill();
+      circle(c, r*0.85, 0, r*0.42, '#f09a45', '#9c4d17', r*0.08);
+      circle(c, r*1.02, -r*0.15, r*0.08, '#1b1b1b');
+      c.restore();
+      circle(c, 0, 0, r*0.8, '#f09a45', T.main, r*0.22);
+      break;
+    }
+    case 'spire': {
+      // a tall stone spire seen from above: stepped base, team-coloured top, ballista on a swivel
+      c.fillStyle = '#8f887c'; c.strokeStyle = '#4a453f'; c.lineWidth = r*0.1;
+      c.beginPath(); for (let i=0;i<6;i++){ const a = i*Math.PI/3 + Math.PI/6; c[i?'lineTo':'moveTo'](Math.cos(a)*r*1.05, Math.sin(a)*r*1.05); } c.closePath(); c.fill(); c.stroke();
+      circle(c, 0, 0, r*0.72, '#b3aa9a', '#6e675c', r*0.08);
+      circle(c, 0, 0, r*0.5, T.main, T.dark, r*0.08);
+      c.save(); c.rotate(ang);
+      c.strokeStyle = '#3b352c'; c.lineWidth = r*0.14; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(-r*0.2, 0); c.lineTo(r*0.95, 0); c.stroke();
+      c.strokeStyle = '#6b4a2a'; c.lineWidth = r*0.12;
+      c.beginPath(); c.arc(r*0.35, 0, r*0.55, -1.1, 1.1); c.stroke();
+      c.restore();
+      circle(c, 0, 0, r*0.16, '#f2c14e');
+      break;
+    }
+    case 'turret': {
+      c.fillStyle = '#7d766b'; c.strokeStyle = '#4a453f'; c.lineWidth = r*0.1;
+      rr(c, -r, -r, r*2, r*2, r*0.25); c.fill(); c.stroke();
+      c.fillStyle = T.main; rr(c, -r*0.8, -r*0.8, r*1.6, r*1.6, r*0.2); c.fill();
+      c.save(); c.rotate(ang);
+      c.fillStyle = '#39352f'; rr(c, 0, -r*0.2, r*1.25 - (swing>0? r*0.2:0), r*0.4, r*0.1); c.fill();
+      c.restore();
+      circle(c, 0, 0, r*0.48, '#5b554c', '#2d2a26', r*0.1);
+      circle(c, 0, 0, r*0.18, '#ffd66b');
+      break;
+    }
+    case 'charger': {
+      c.save(); c.rotate(ang);
+      const lunge = swing > 0 ? r*0.3 : 0;
+      c.fillStyle = '#7a5236'; c.strokeStyle = '#3f2a1a'; c.lineWidth = r*0.08;
+      c.beginPath(); c.ellipse(lunge*0.5, 0, r*1.25, r*0.8, 0, 0, Math.PI*2); c.fill(); c.stroke();
+      c.strokeStyle = '#efe4c8'; c.lineWidth = r*0.16; c.lineCap = 'round';
+      c.beginPath(); c.arc(r*1.15+lunge, -r*0.45, r*0.35, Math.PI*0.9, Math.PI*1.9); c.stroke();
+      c.beginPath(); c.arc(r*1.15+lunge, r*0.45, r*0.35, Math.PI*0.1, Math.PI*-0.9, true); c.stroke();
+      circle(c, r*1.05+lunge, 0, r*0.36, '#5e3e28');
+      c.restore();
+      circle(c, -r*0.15, 0, r*0.5, T.main, T.dark, r*0.1);
+      circle(c, -r*0.15, -r*0.05, r*0.28, '#c9ced6', '#5f6875', r*0.06);
+      break;
+    }
+    case 'pyromancer': {
+      circle(c, 0, 0, r, T.main, T.dark);
+      c.save(); c.rotate(ang);
+      const glow = swing > 0 ? 1.3 : 1;
+      circle(c, r*1.0, 0, r*0.32*glow, '#ffb347', '#d2501c', r*0.08);
+      c.restore();
+      circle(c, 0, 0, r*0.62, '#3a2d4a');
+      c.fillStyle = '#5a4475';
+      c.beginPath(); c.moveTo(-r*0.45, r*0.15); c.lineTo(0, -r*1.15); c.lineTo(r*0.45, r*0.15); c.closePath(); c.fill();
+      circle(c, 0, -r*0.4, r*0.08, '#ffd66b');
+      break;
+    }
+    case 'colossus': case 'pebbling': {
+      c.save(); c.rotate(ang);
+      const punch = swing > 0 ? r*0.25 : 0;
+      circle(c, r*0.8+punch, -r*0.6, r*0.32, '#8d8a80', '#4d4b45', r*0.07);
+      circle(c, r*0.8, r*0.6, r*0.32, '#8d8a80', '#4d4b45', r*0.07);
+      c.restore();
+      circle(c, 0, 0, r, '#9b978c', '#4d4b45', r*0.08);
+      c.strokeStyle = '#5f5c55'; c.lineWidth = r*0.06;
+      c.beginPath(); c.moveTo(-r*0.6,-r*0.3); c.lineTo(-r*0.2,-r*0.05); c.lineTo(-r*0.35,r*0.4); c.moveTo(r*0.3,-r*0.6); c.lineTo(r*0.5,-r*0.2); c.stroke();
+      c.strokeStyle = T.main; c.lineWidth = r*0.14; c.beginPath(); c.arc(0,0,r*0.88,0,Math.PI*2); c.stroke();
+      circle(c, -r*0.25, -r*0.1, r*0.1, T.light); circle(c, r*0.25, -r*0.1, r*0.1, T.light);
+      break;
+    }
+    case 'rattlers': {
+      circle(c, 0, 0, r, '#ece6d4', T.main, r*0.3);
+      circle(c, -r*0.3, -r*0.1, r*0.17, '#1d1b18'); circle(c, r*0.3, -r*0.1, r*0.17, '#1d1b18');
+      break;
+    }
+    case 'gloomwings': {
+      const flap = 0.6 + 0.4*Math.sin(t*20);
+      c.fillStyle = '#2f2640';
+      c.beginPath(); c.moveTo(-r*0.4, 0); c.lineTo(-r*(1.2+0.6*flap), -r*0.7*flap); c.lineTo(-r*1.1, r*0.35); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(r*0.4, 0); c.lineTo(r*(1.2+0.6*flap), -r*0.7*flap); c.lineTo(r*1.1, r*0.35); c.closePath(); c.fill();
+      circle(c, 0, 0, r*0.75, '#4a3c63', T.main, r*0.25);
+      circle(c, -r*0.22, -r*0.1, r*0.12, '#ff5c7a'); circle(c, r*0.22, -r*0.1, r*0.12, '#ff5c7a');
+      break;
+    }
+    case 'impden': {
+      c.fillStyle = '#6d4b2e'; c.strokeStyle = '#3a2716'; c.lineWidth = r*0.08;
+      rr(c, -r, -r*0.6, r*2, r*1.6, r*0.2); c.fill(); c.stroke();
+      c.fillStyle = T.main; c.strokeStyle = T.dark;
+      c.beginPath(); c.moveTo(-r*1.15, -r*0.45); c.lineTo(0, -r*1.25); c.lineTo(r*1.15, -r*0.45); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#1d1410'; c.beginPath(); c.arc(0, r*1.0, r*0.42, Math.PI, 0); c.fill();
+      circle(c, -r*0.15, r*0.75, r*0.07, '#ffe45c'); circle(c, r*0.15, r*0.75, r*0.07, '#ffe45c');
+      break;
+    }
+    case 'sapper': {
+      circle(c, 0, 0, r, T.main, T.dark);
+      circle(c, 0, 0, r*0.6, '#d9b48a');
+      c.fillStyle = '#2b2b2b'; c.fillRect(-r*0.6, -r*0.22, r*1.2, r*0.16);
+      circle(c, -r*0.25, -r*0.14, r*0.17, '#7fe0ff', '#2b2b2b', r*0.05); circle(c, r*0.25, -r*0.14, r*0.17, '#7fe0ff', '#2b2b2b', r*0.05);
+      c.save(); c.rotate(ang);
+      circle(c, r*0.95, r*0.45, r*0.3, '#222');
+      c.strokeStyle = '#c8a46a'; c.lineWidth = r*0.06; c.beginPath(); c.moveTo(r*1.1, r*0.25); c.lineTo(r*1.25, r*0.08); c.stroke();
+      circle(c, r*1.27, r*0.05, r*0.08, '#ffcf3a');
+      c.restore();
+      break;
+    }
+    case 'zeppelin': {
+      c.fillStyle = '#5a3a1d'; c.fillRect(-r*0.3, r*0.55, r*0.6, r*0.35);
+      c.strokeStyle = '#3a2716'; c.lineWidth = r*0.05;
+      c.beginPath(); c.moveTo(-r*0.3, r*0.55); c.lineTo(-r*0.5, r*0.2); c.moveTo(r*0.3, r*0.55); c.lineTo(r*0.5, r*0.2); c.stroke();
+      c.fillStyle = T.main; c.strokeStyle = T.dark; c.lineWidth = r*0.1;
+      c.beginPath(); c.ellipse(0, -r*0.15, r*1.1, r*0.8, 0, 0, Math.PI*2); c.fill(); c.stroke();
+      c.strokeStyle = T.light; c.lineWidth = r*0.1;
+      c.beginPath(); c.ellipse(0, -r*0.15, r*0.45, r*0.8, 0, 0, Math.PI*2); c.stroke();
+      circle(c, 0, r*0.72, r*0.16, '#222');
+      break;
+    }
+    case 'crossbow': {
+      c.save(); c.rotate(ang);
+      c.strokeStyle = '#6b4a2a'; c.lineWidth = r*0.16; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r*0.2, r*0.3); c.lineTo(r*1.3, r*0.3); c.stroke();
+      c.strokeStyle = '#3b352c'; c.lineWidth = r*0.13;
+      c.beginPath(); c.moveTo(r*1.1, -r*0.25); c.quadraticCurveTo(r*1.35, r*0.3, r*1.1, r*0.85); c.stroke();
+      c.restore();
+      circle(c, 0, 0, r, T.main, T.dark);
+      circle(c, 0, -r*0.05, r*0.6, '#9aa1ab', '#4e555f', r*0.1);
+      c.fillStyle = '#4e555f'; c.fillRect(-r*0.7, -r*0.12, r*1.4, r*0.14);
+      break;
+    }
+    case 'potato': case 'spudsquire': {
+      if (key === 'potato'){
+        // card icon: a potato with a sprout
+        c.fillStyle = '#b98a55'; c.strokeStyle = '#7a5530'; c.lineWidth = r*0.1;
+        c.beginPath(); c.ellipse(0, r*0.25, r*1.15, r*0.8, -0.25, 0, Math.PI*2); c.fill(); c.stroke();
+        for (const [ox,oy] of [[-0.5,0.2],[0.3,0.55],[0.55,0.05],[-0.1,0.6]]) circle(c, ox*r, oy*r, r*0.08, '#7a5530');
+        c.strokeStyle = '#4f8f3a'; c.lineWidth = r*0.14; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(0, -r*0.5); c.lineTo(0, -r*1.0); c.stroke();
+        c.fillStyle = '#6cbf4a';
+        c.beginPath(); c.ellipse(-r*0.28, -r*1.05, r*0.3, r*0.14, -0.5, 0, Math.PI*2); c.fill();
+        c.beginPath(); c.ellipse(r*0.28, -r*1.12, r*0.3, r*0.14, 0.5, 0, Math.PI*2); c.fill();
+        break;
+      }
+      c.save(); c.rotate(ang);
+      const reach = swing > 0 ? 0.35 : 0;
+      c.strokeStyle = '#eef1f5'; c.lineWidth = r*0.2; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r*0.6, r*0.62); c.lineTo(r*(1.5+reach), r*(0.62-reach*0.8)); c.stroke();
+      c.restore();
+      c.fillStyle = '#b98a55'; c.strokeStyle = T.main; c.lineWidth = r*0.24;
+      c.beginPath(); c.ellipse(0, 0, r*1.05, r*0.88, 0.3, 0, Math.PI*2); c.fill(); c.stroke();
+      circle(c, -r*0.35, r*0.3, r*0.08, '#7a5530'); circle(c, r*0.4, r*0.35, r*0.07, '#7a5530');
+      c.fillStyle = '#c9ced6'; c.strokeStyle = '#5f6875'; c.lineWidth = r*0.08;
+      c.beginPath(); c.arc(0, -r*0.15, r*0.55, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+      circle(c, -r*0.22, r*0.05, r*0.08, '#2a1d12'); circle(c, r*0.22, r*0.05, r*0.08, '#2a1d12');
+      c.strokeStyle = '#4f8f3a'; c.lineWidth = r*0.1;
+      c.beginPath(); c.moveTo(0, -r*0.7); c.lineTo(0, -r*1.05); c.stroke();
+      c.fillStyle = '#6cbf4a'; c.beginPath(); c.ellipse(r*0.18, -r*1.08, r*0.22, r*0.1, 0.5, 0, Math.PI*2); c.fill();
+      break;
+    }
+    case 'volley': {
+      const R = S*0.55;
+      c.strokeStyle = '#f7ecd2'; c.lineWidth = R*0.12; c.lineCap = 'round';
+      for (const [ox,oy] of [[-0.5,-0.2],[0,0.15],[0.5,-0.25]]){
+        c.beginPath(); c.moveTo((ox-0.35)*R, (oy-0.7)*R); c.lineTo((ox+0.15)*R, (oy+0.5)*R); c.stroke();
+        c.fillStyle = '#c9d2dc'; c.beginPath(); c.moveTo((ox+0.25)*R, (oy+0.72)*R); c.lineTo((ox+0.02)*R, (oy+0.38)*R); c.lineTo((ox+0.3)*R, (oy+0.42)*R); c.fill();
+      }
+      break;
+    }
+    case 'blight': {
+      const R = S*0.55;
+      c.fillStyle = 'rgba(120,200,70,.85)';
+      for (const [ox,oy,rr2] of [[-0.45,0.1,0.45],[0.1,-0.2,0.55],[0.5,0.15,0.42],[0,0.3,0.45]]){ c.beginPath(); c.arc(ox*R, oy*R, rr2*R, 0, Math.PI*2); c.fill(); }
+      c.fillStyle = '#3f7a28';
+      for (const [ox,oy] of [[-0.3,0.05],[0.25,-0.1],[0.1,0.35]]) { c.beginPath(); c.arc(ox*R, oy*R, R*0.09, 0, Math.PI*2); c.fill(); }
+      c.strokeStyle = '#d9f5b8'; c.lineWidth = R*0.08;
+      c.beginPath(); c.arc(-R*0.55, -R*0.6, R*0.13, 0, Math.PI*2); c.stroke();
+      c.beginPath(); c.arc(R*0.55, -R*0.75, R*0.09, 0, Math.PI*2); c.stroke();
+      break;
+    }
+    case 'elixirdrop': {
+      const R = S*0.55;
+      const g = c.createRadialGradient(-R*0.25, -R*0.1, R*0.1, 0, R*0.1, R);
+      g.addColorStop(0, '#f3c9ff'); g.addColorStop(0.5, '#b552dc'); g.addColorStop(1, '#6b2a8a');
+      c.fillStyle = g; c.strokeStyle = '#4a1d61'; c.lineWidth = R*0.07;
+      c.beginPath(); c.moveTo(0, -R*1.0);
+      c.bezierCurveTo(R*0.2, -R*0.55, R*0.75, -R*0.1, R*0.75, R*0.3);
+      c.arc(0, R*0.3, R*0.75, 0, Math.PI);
+      c.bezierCurveTo(-R*0.75, -R*0.1, -R*0.2, -R*0.55, 0, -R*1.0);
+      c.fill(); c.stroke();
+      c.fillStyle = '#fff'; c.font = `900 ${Math.round(R*0.7)}px Nunito, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('+2', 0, R*0.32);
+      break;
+    }
+    case 'alarm': {
+      const R = S*0.55, ring = Math.sin(t*30)*0.15;
+      c.save(); c.rotate(ring);
+      c.fillStyle = '#f2c14e'; c.strokeStyle = '#8a6a1c'; c.lineWidth = R*0.08;
+      c.beginPath(); c.moveTo(-R*0.7, R*0.45);
+      c.quadraticCurveTo(-R*0.6, -R*0.75, 0, -R*0.8);
+      c.quadraticCurveTo(R*0.6, -R*0.75, R*0.7, R*0.45);
+      c.closePath(); c.fill(); c.stroke();
+      c.fillRect(-R*0.8, R*0.4, R*1.6, R*0.16);
+      circle(c, 0, R*0.68, R*0.16, '#8a6a1c');
+      circle(c, 0, -R*0.88, R*0.1, '#8a6a1c');
+      c.restore();
+      c.strokeStyle = '#f7ecd2'; c.lineWidth = R*0.08; c.lineCap = 'round';
+      c.beginPath(); c.arc(0, 0, R*1.05, -0.5, 0.3); c.stroke();
+      c.beginPath(); c.arc(0, 0, R*1.05, Math.PI-0.3, Math.PI+0.5); c.stroke();
+      break;
+    }
+    case 'meteor': {
+      const R = S*0.6;
+      c.fillStyle = 'rgba(255,110,40,.55)';
+      c.beginPath(); c.moveTo(-R*0.5, -R*0.7); c.lineTo(-R*1.5, -R*1.5); c.lineTo(-R*0.1, -R*0.95); c.fill();
+      const g = c.createRadialGradient(-R*0.3, -R*0.3, R*0.1, 0, 0, R);
+      g.addColorStop(0, '#ffcf8a'); g.addColorStop(0.35, '#a8452a'); g.addColorStop(1, '#3d1c14');
+      circle(c, 0, 0, R, g);
+      circle(c, R*0.3, R*0.2, R*0.18, 'rgba(0,0,0,.25)'); circle(c, -R*0.25, R*0.35, R*0.12, 'rgba(0,0,0,.25)');
+      break;
+    }
+    case 'fireball': {
+      const R = S*0.55;
+      const g = c.createRadialGradient(-R*0.3, -R*0.3, R*0.1, 0, 0, R);
+      g.addColorStop(0, '#fff3b0'); g.addColorStop(0.45, '#ff9a2e'); g.addColorStop(1, '#c2320f');
+      c.fillStyle = '#ff6a1a'; c.globalAlpha = 0.5;
+      c.beginPath(); c.moveTo(-R*0.6, -R*0.6); c.lineTo(-R*1.5, -R*1.3); c.lineTo(-R*0.2, -R*0.9); c.fill();
+      c.globalAlpha = 1; circle(c, 0, 0, R, g);
+      break;
+    }
+    case 'frost': {
+      const R = S*0.55;
+      circle(c, 0, 0, R, 'rgba(160,220,255,.25)', '#9fdcff', R*0.08);
+      c.strokeStyle = '#e8f7ff'; c.lineWidth = R*0.14; c.lineCap = 'round';
+      for (let i=0;i<3;i++){
+        c.save(); c.rotate(i*Math.PI/3);
+        c.beginPath(); c.moveTo(-R*0.8,0); c.lineTo(R*0.8,0);
+        c.moveTo(R*0.5,0); c.lineTo(R*0.72,-R*0.2); c.moveTo(R*0.5,0); c.lineTo(R*0.72,R*0.2);
+        c.moveTo(-R*0.5,0); c.lineTo(-R*0.72,-R*0.2); c.moveTo(-R*0.5,0); c.lineTo(-R*0.72,R*0.2);
+        c.stroke(); c.restore();
+      }
+      break;
+    }
+  }
+  c.restore();
+}
+function drawCardIcon(cv, key, team = 0){
+  const c = cv.getContext('2d'), w = cv.width, h = cv.height, k = CARDS[key];
+  c.clearRect(0,0,w,h);
+  const n = k.count || 1;
+  const baseR = k.type==='spell' ? 0.55 : (k.r || 0.5);
+  const S = (w*0.26) / baseR * (n>1 ? 0.72 : 1);
+  if (n === 1) drawFigure(c, key, team, w/2, h/2 + (key==='drake'?w*0.05:0), S, { t:0.2 });
+  else if (n === 2){ drawFigure(c, key, team, w*0.33, h*0.55, S); drawFigure(c, key, team, w*0.67, h*0.45, S); }
+  else { drawFigure(c, key, team, w*0.5, h*0.33, S); if (n > 3) drawFigure(c, key, team, w*0.5, h*0.66, S*0.9); drawFigure(c, key, team, w*0.3, h*0.66, S); drawFigure(c, key, team, w*0.7, h*0.66, S); }
+}
+
+function paintBg(){
+  bg.width = cvs.width; bg.height = cvs.height;
+  const b = bg.getContext('2d');
+  b.setTransform(DPR,0,0,DPR,0,0);
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const enemyHalf = y < 16;
+    b.fillStyle = (x+y)%2 ? (enemyHalf ? '#71a852' : '#6fa951') : (enemyHalf ? '#7ab45a' : '#78b659');
+    b.fillRect(x*S, y*S, S+1, S+1);
+  }
+  b.fillStyle = 'rgba(226,203,150,.55)';
+  for (const bx of BRIDGES){ rr(b, (bx-0.85)*S, 6.5*S, 1.7*S, 19*S, S*0.4); b.fill(); }
+  rr(b, 3.5*S, 5.9*S, 11*S, 1.2*S, S*0.4); b.fill();
+  rr(b, 3.5*S, 24.9*S, 11*S, 1.2*S, S*0.4); b.fill();
+  // river
+  b.fillStyle = '#3e6b2c'; b.fillRect(0, (RIVER_T-0.15)*S, W*S, (2.3)*S);
+  const rg = b.createLinearGradient(0, RIVER_T*S, 0, RIVER_B*S);
+  rg.addColorStop(0,'#2c7fbd'); rg.addColorStop(0.5,'#3b97d6'); rg.addColorStop(1,'#2c7fbd');
+  b.fillStyle = rg; b.fillRect(0, RIVER_T*S, W*S, 2*S);
+  // bridges
+  for (const bx of BRIDGES){
+    b.fillStyle = '#9c6c3c'; b.fillRect((bx-1)*S, (RIVER_T-0.35)*S, 2*S, 2.7*S);
+    b.strokeStyle = '#6f4724'; b.lineWidth = Math.max(1, S*0.05);
+    for (let yy=RIVER_T-0.35; yy<RIVER_B+0.35; yy+=0.34){ b.beginPath(); b.moveTo((bx-1)*S, yy*S); b.lineTo((bx+1)*S, yy*S); b.stroke(); }
+    b.fillStyle = '#5a3a1d'; b.fillRect((bx-1.08)*S, (RIVER_T-0.45)*S, 0.16*S, 2.9*S); b.fillRect((bx+0.92)*S, (RIVER_T-0.45)*S, 0.16*S, 2.9*S);
+  }
+  // edge vignette
+  const v = b.createLinearGradient(0,0,W*S,0);
+  v.addColorStop(0,'rgba(0,0,0,.18)'); v.addColorStop(0.08,'rgba(0,0,0,0)'); v.addColorStop(0.92,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.18)');
+  b.fillStyle = v; b.fillRect(0,0,W*S,H*S);
+}
+
+function hpBar(x, y, w, frac, team, h){
+  ctx.fillStyle = 'rgba(10,12,16,.75)'; rr(ctx, x-w/2-1, y-1, w+2, h+2, 2); ctx.fill();
+  ctx.fillStyle = TEAM[team].main; ctx.fillRect(x-w/2, y, w*clamp(frac,0,1), h);
+}
+function drawTower(e){
+  const x = e.x*S, y = e.y*S, r = e.r*S, T = TEAM[e.team];
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; rr(ctx, x-r+S*0.12, y-r+S*0.25, r*2, r*2, r*0.25); ctx.fill();
+  ctx.fillStyle = '#b3aa9a'; ctx.strokeStyle = '#6e675c'; ctx.lineWidth = S*0.08;
+  rr(ctx, x-r, y-r, r*2, r*2, r*0.25); ctx.fill(); ctx.stroke();
+  // stone courses
+  ctx.strokeStyle = 'rgba(90,82,70,.45)'; ctx.lineWidth = S*0.04;
+  for (let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(x-r, y-r+i*r/2); ctx.lineTo(x+r, y-r+i*r/2); ctx.stroke(); }
+  ctx.fillStyle = e.flash > 0 ? '#ffffff' : T.main;
+  rr(ctx, x-r*0.72, y-r*0.72, r*1.44, r*1.44, r*0.2); ctx.fill();
+  ctx.fillStyle = T.dark; rr(ctx, x-r*0.5, y-r*0.5, r, r, r*0.14); ctx.fill();
+  if (e.king){
+    ctx.fillStyle = '#f2c14e';
+    const cw = r*0.8, ch = r*0.55, cy = y - ch*0.4;
+    ctx.beginPath(); ctx.moveTo(x-cw/2, cy+ch/2); ctx.lineTo(x-cw/2, cy-ch/3); ctx.lineTo(x-cw/4, cy); ctx.lineTo(x, cy-ch/2); ctx.lineTo(x+cw/4, cy); ctx.lineTo(x+cw/2, cy-ch/3); ctx.lineTo(x+cw/2, cy+ch/2); ctx.closePath(); ctx.fill();
+    if (!e.active){ ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `${Math.round(S*0.5)}px Bungee, Impact, sans-serif`; ctx.textAlign = 'center'; ctx.fillText('z', x + r*0.95, y - r*0.9); ctx.fillText('z', x + r*1.25, y - r*1.25); }
+  } else {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(e.angle);
+    ctx.fillStyle = '#3b352c'; rr(ctx, 0, -S*0.12, r*0.8, S*0.24, S*0.06); ctx.fill();
+    ctx.restore();
+    circle(ctx, x, y, r*0.22, '#f2c14e');
+  }
+  const bw = r*2, by = e.team===1 ? y + r + S*0.2 : y - r - S*0.55;
+  hpBar(x, by, bw, e.hp/e.maxHp, e.team, S*0.3);
+  ctx.fillStyle = '#fff'; ctx.font = `${Math.max(9, Math.round(S*0.42))}px Nunito, system-ui, sans-serif`; ctx.textAlign = 'center';
+  ctx.font = `900 ${Math.max(9, Math.round(S*0.42))}px Nunito, system-ui, sans-serif`;
+  ctx.fillText(Math.ceil(e.hp), x, e.team===1 ? by + S*0.72 : by - S*0.12);
+}
+function drawUnit(e){
+  const hop = e.jumps && e.y > RIVER_T - 0.3 && e.y < RIVER_B + 0.3 ? Math.sin(clamp((RIVER_B + 0.3 - e.y)/(RIVER_B - RIVER_T + 0.6), 0, 1)*Math.PI)*1.2*S : 0;
+  const lift = e.air ? 0.8*S : hop;
+  const bob = e.kind==='unit' && !e.attacking && e.deploy <= 0 ? Math.sin(e.walk)*S*0.04 : 0;
+  const x = e.x*S, y = e.y*S;
+  ctx.fillStyle = 'rgba(0,0,0,.25)';
+  ctx.beginPath(); ctx.ellipse(x, y + e.r*S*0.35, e.r*S*(e.air?0.7:0.95), e.r*S*(e.air?0.35:0.5), 0, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = e.deploy > 0 ? 0.45 + 0.3*Math.sin(e.deploy*20) : 1;
+  drawFigure(ctx, e.key, e.team, x, y - lift + bob, S, { angle:e.angle, t:G.t + e.id, swing:e.swing });
+  if (e.flash > 0){ ctx.globalAlpha = 0.5; circle(ctx, x, y-lift, e.r*S, '#fff'); }
+  if (e.stun > 0){ ctx.globalAlpha = 0.45; circle(ctx, x, y-lift, e.r*S*1.05, '#a8e3ff'); }
+  ctx.globalAlpha = 1;
+  if (e.hp < e.maxHp || e.kind==='building'){
+    const w = Math.max(e.r*2, 0.9)*S;
+    hpBar(x, y - lift - e.r*S - S*0.35, w, e.hp/e.maxHp, e.team, S*0.14);
+  }
+}
+// A planted potato shows how far along it is only through how it looks: a dirt mound, a shoot,
+// a leafy plant, then a shake in the last two seconds. No countdown number, by design.
+function drawPlant(e){
+  const x = e.x*S, y = e.y*S, k = e.growT / e.grow, T = TEAM[e.team];
+  ctx.save();
+  const shake = e.grow - e.growT < 2 ? Math.sin(G.t*40) * S*0.06 : 0;
+  ctx.translate(x + shake, y);
+  ctx.fillStyle = '#6b4a2e'; ctx.beginPath(); ctx.ellipse(0, S*0.15, S*0.62, S*0.34, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#80583a'; ctx.beginPath(); ctx.ellipse(0, S*0.08, S*0.5, S*0.24, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = T.main; ctx.lineWidth = S*0.07; ctx.setLineDash([S*0.12, S*0.1]);
+  ctx.beginPath(); ctx.ellipse(0, S*0.15, S*0.72, S*0.42, 0, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+  if (k > 0.2){
+    const h = S*(0.25 + Math.min(1, (k-0.2)/0.5)*0.5);
+    ctx.strokeStyle = '#4f8f3a'; ctx.lineWidth = S*0.08; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -h); ctx.stroke();
+    ctx.fillStyle = '#6cbf4a';
+    const leaves = k > 0.7 ? 3 : k > 0.45 ? 2 : 1;
+    for (let i=0;i<leaves;i++){
+      const ly = -h*(0.45 + i*0.25), side = i%2 ? 1 : -1;
+      ctx.beginPath(); ctx.ellipse(side*S*0.2, ly, S*0.22, S*0.1, side*0.5, 0, Math.PI*2); ctx.fill();
+    }
+    if (k > 0.85){ circle(ctx, 0, -h - S*0.08, S*0.11, '#f3f0e6'); circle(ctx, 0, -h - S*0.08, S*0.05, '#f2c14e'); }
+  }
+  ctx.restore();
+}
+function drawProj(p){
+  const k = p.prog || 0;
+  const h = (p.h0 + (p.h1-p.h0)*k + (p.kind==='bomb' ? Math.sin(k*Math.PI)*1.5 : 0)) * S;
+  const x = p.x*S, y = p.y*S - h;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(p.ang || 0);
+  if (p.kind === 'fire'){ circle(ctx, 0, 0, S*0.22, '#ffb347'); circle(ctx, -S*0.12, 0, S*0.14, 'rgba(255,90,30,.7)'); }
+  else if (p.kind === 'bomb'){ circle(ctx, 0, 0, S*0.2, '#222'); circle(ctx, S*0.12, -S*0.12, S*0.06, '#ffcf3a'); }
+  else if (p.kind === 'bolt'){ ctx.fillStyle = '#2d2a26'; circle(ctx, 0, 0, S*0.16, '#2d2a26'); }
+  else { ctx.strokeStyle = '#f7ecd2'; ctx.lineWidth = Math.max(1.5, S*0.07); ctx.beginPath(); ctx.moveTo(-S*0.35, 0); ctx.lineTo(S*0.2, 0); ctx.stroke(); ctx.fillStyle = TEAM[p.team].light; ctx.fillRect(-S*0.38, -S*0.06, S*0.1, S*0.12); }
+  ctx.restore();
+}
+function drawFx(f){
+  const k = f.t/f.dur, x = f.x*S, y = f.y*S;
+  ctx.save();
+  if (f.kind === 'ring'){ ctx.globalAlpha = 1-k; ctx.strokeStyle = f.color; ctx.lineWidth = S*0.12; ctx.beginPath(); ctx.arc(x, y, (0.4+k)*f.r*S, 0, Math.PI*2); ctx.stroke(); }
+  else if (f.kind === 'burst'){ ctx.globalAlpha = (1-k)*0.8; circle(ctx, x, y, f.r*S*(0.5+0.5*k), f.color); ctx.globalAlpha = (1-k); circle(ctx, x, y, f.r*S*0.4*(1-k), '#fff3b0'); }
+  else if (f.kind === 'frost'){ ctx.globalAlpha = (1-k)*0.55; circle(ctx, x, y, f.r*S, '#bfeaff', '#ffffff', S*0.1); }
+  else if (f.kind === 'blast'){ ctx.globalAlpha = 1-k; circle(ctx, x, y, f.r*S*(0.4+0.8*k), '#ffcf6b'); circle(ctx, x, y, f.r*S*(0.3+0.5*k), '#6b5b4b'); }
+  else if (f.kind === 'puff'){ ctx.globalAlpha = (1-k)*0.7; circle(ctx, x, y - (f.air?0.8*S:0), f.r*S*(1+k), '#e9e4da'); }
+  else if (f.kind === 'dirt'){ ctx.globalAlpha = 1-k; for (let i=0;i<8;i++){ const a = i*0.785; circle(ctx, x + Math.cos(a)*f.r*S*k, y + Math.sin(a)*f.r*S*k*0.6, S*0.12, '#80583a'); } }
+  else if (f.kind === 'spark'){ ctx.globalAlpha = 1-k; circle(ctx, x, y, S*0.18*(1+k), '#fff6c9'); }
+  ctx.restore();
+}
+
+function draw(){
+  if (!cssW) return;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.drawImage(bg, 0, 0, cssW, cssH);
+  // river shimmer
+  ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = Math.max(1, S*0.05);
+  const tt = G ? G.t : performance.now()/1000;
+  for (let i=0;i<9;i++){
+    const xx = ((i*2.3 + tt*0.6) % (W+2)) - 1, yy = RIVER_T + 0.4 + (i%3)*0.6;
+    if (Math.abs(xx-BRIDGES[0])<1.3 || Math.abs(xx-BRIDGES[1])<1.3) continue;
+    ctx.beginPath(); ctx.moveTo(xx*S, yy*S); ctx.lineTo((xx+0.8)*S, yy*S); ctx.stroke();
+  }
+  if (!G) return;
+
+  // placement zones while a troop card is selected
+  const selKey = G.sel >= 0 ? G.deck[0].hand[G.sel] : null;
+  if (selKey && CARDS[selKey].type !== 'spell' && CARDS[selKey].type !== 'plant'){
+    ctx.fillStyle = 'rgba(200,40,40,.2)';
+    const pl = !princessAlive(1,0), pr = !princessAlive(1,1);
+    ctx.fillRect(0, 0, 9*S, (pl?10:RIVER_B+0.5)*S);
+    ctx.fillRect(9*S, 0, 9*S, (pr?10:RIVER_B+0.5)*S);
+    if (pl) ctx.fillRect(0, RIVER_T*S, 9*S, 2.5*S);
+    if (pr) ctx.fillRect(9*S, RIVER_T*S, 9*S, 2.5*S);
+  }
+
+  for (const r of G.ruins){
+    circle(ctx, r.x*S, r.y*S, r.r*S*0.95, '#5e574c');
+    circle(ctx, r.x*S - r.r*S*0.3, r.y*S, r.r*S*0.35, '#756d60');
+    circle(ctx, r.x*S + r.r*S*0.35, r.y*S + r.r*S*0.2, r.r*S*0.3, '#6a6256');
+  }
+  for (const z of G.zones){
+    const fade = Math.min(1, z.t/0.3, (z.dur - z.t)/0.6);
+    ctx.save(); ctx.globalAlpha = 0.35*fade;
+    circle(ctx, z.x*S, z.y*S, z.r*S, z.team === 0 ? '#7cc84e' : '#a6c43c', '#d9f5b8', S*0.06);
+    ctx.globalAlpha = 0.6*fade;
+    for (let i=0;i<10;i++){
+      const a = i*2.4 + z.t*0.4, rad = z.r*Math.sqrt((i+0.5)/10)*0.9;
+      const by = ((z.t*0.8 + i*0.37) % 1);
+      circle(ctx, (z.x + Math.cos(a)*rad)*S, (z.y + Math.sin(a)*rad - by*0.5)*S, S*0.12*(1-by), null, '#e4ffcc', S*0.04);
+    }
+    ctx.restore();
+  }
+  for (const e of G.ents) if (e.kind === 'plant') drawPlant(e);
+  const ground = G.ents.filter(e => !e.air && e.kind !== 'plant').sort((a,b) => a.y-b.y);
+  for (const e of ground) e.kind==='tower' ? drawTower(e) : drawUnit(e);
+  for (const p of G.projs) drawProj(p);
+  for (const e of G.ents) if (e.air) drawUnit(e);
+  for (const sp of G.spells){
+    if (sp.drop && sp.landed){
+      // ticking death bomb: blast radius pulses faster as the fuse runs down
+      const left = sp.fuse - sp.fuseT, rate = left < 1 ? 14 : 6, pulse = 0.5 + 0.5*Math.sin(sp.fuseT*rate);
+      ctx.save();
+      ctx.globalAlpha = 0.12 + 0.18*pulse;
+      circle(ctx, sp.x*S, sp.y*S, sp.r*S, '#ff5a3c');
+      ctx.globalAlpha = 0.7; ctx.setLineDash([S*0.25, S*0.18]);
+      circle(ctx, sp.x*S, sp.y*S, sp.r*S, null, '#ffb199', S*0.06); ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#ffcf3a'; ctx.lineWidth = S*0.1;
+      ctx.beginPath(); ctx.arc(sp.x*S, sp.y*S, S*0.45, -Math.PI/2, -Math.PI/2 + Math.PI*2*(left/sp.fuse)); ctx.stroke();
+      circle(ctx, sp.x*S, sp.y*S, S*0.3, '#222');
+      circle(ctx, sp.x*S + S*0.16, sp.y*S - S*0.22, S*(0.06 + 0.05*pulse), '#ffcf3a');
+      ctx.restore();
+      continue;
+    }
+    if (sp.drop){
+      const k = sp.t/sp.dur, h = (1-k)*(sp.small ? 0.6 : 0.8)*S;
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(sp.x*S, sp.y*S, S*0.3*(0.5+k), S*0.15*(0.5+k), 0, 0, Math.PI*2); ctx.fill();
+      circle(ctx, sp.x*S, sp.y*S - h, S*0.28, '#222'); circle(ctx, sp.x*S + S*0.15, sp.y*S - h - S*0.2, S*0.08, '#ffcf3a');
+      continue;
+    }
+    const sc = CARDS[sp.key];
+    if (sc.spell === 'rain'){
+      ctx.save(); ctx.strokeStyle = 'rgba(247,236,210,.85)'; ctx.lineWidth = Math.max(1.5, S*0.07);
+      const k = sp.t/sp.dur;
+      for (let i=0;i<16;i++){
+        const a = i*2.39, rad = sc.radius*Math.sqrt((i+0.5)/16);
+        const ax = sp.x + Math.cos(a)*rad, ay = sp.y + Math.sin(a)*rad - (1-k)*3;
+        ctx.beginPath(); ctx.moveTo(ax*S, (ay-0.5)*S); ctx.lineTo(ax*S, ay*S); ctx.stroke();
+      }
+      ctx.restore(); continue;
+    }
+    if (sc.spell !== 'lob') continue;
+    const k = sp.t/sp.dur, x = sp.sx + (sp.x-sp.sx)*k, y = sp.sy + (sp.y-sp.sy)*k;
+    const arc = Math.sin(k*Math.PI) * 2.5;
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x*S, y*S, S*0.5, S*0.25, 0, 0, Math.PI*2); ctx.fill();
+    drawFigure(ctx, sp.key, sp.team, x*S, (y-arc)*S, S*(sc.slow ? 1.5 : 1.1));
+  }
+  for (const f of G.fx) drawFx(f);
+
+  // potato no-plant zones
+  if (selKey && CARDS[selKey].type === 'plant' && !G.over){
+    ctx.save(); ctx.fillStyle = 'rgba(200,40,40,.16)'; ctx.strokeStyle = 'rgba(255,120,100,.5)'; ctx.lineWidth = S*0.05; ctx.setLineDash([S*0.2, S*0.15]);
+    for (const t of G.ents){
+      const rad = t.kind === 'tower' && alive(t) ? t.r + POTATO_TOWER_GAP : t.kind === 'plant' ? POTATO_GAP : 0;
+      if (!rad) continue;
+      ctx.beginPath(); ctx.arc(t.x*S, t.y*S, rad*S, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillRect(0, (RIVER_T-0.3)*S, W*S, 2.6*S);
+    ctx.restore();
+  }
+  // ghost
+  if (selKey && G.ghost && !G.over){
+    const c = CARDS[selKey];
+    const gx = c.type==='spell' ? G.ghost.x : snap(G.ghost.x), gy = c.type==='spell' ? G.ghost.y : snap(G.ghost.y);
+    const ok = canPlace(0, selKey, gx, gy);
+    ctx.save();
+    if (isUtility(selKey)){
+      ctx.globalAlpha = 0.75; drawFigure(ctx, selKey, 0, gx*S, gy*S, S*1.2, { t:G.t });
+    } else if (c.type === 'spell'){
+      circle(ctx, gx*S, gy*S, c.radius*S, ok ? 'rgba(255,255,255,.18)' : 'rgba(220,50,50,.25)', 'rgba(255,255,255,.8)', S*0.06);
+    } else {
+      if (c.range > 2 || c.type==='building'){ ctx.setLineDash([S*0.25, S*0.2]); circle(ctx, gx*S, gy*S, (c.range + c.r)*S, null, 'rgba(255,255,255,.45)', S*0.05); ctx.setLineDash([]); }
+      ctx.globalAlpha = 0.6;
+      drawFigure(ctx, selKey, 0, gx*S, gy*S - (c.air?0.8*S:0), S);
+      ctx.globalAlpha = 1;
+      circle(ctx, gx*S, gy*S, S*0.55, ok ? 'rgba(255,255,255,.12)' : 'rgba(220,50,50,.35)', ok ? 'rgba(255,255,255,.7)' : '#ff6a5a', S*0.05);
+    }
+    ctx.restore();
+  }
+
+  for (const t of G.texts){
+    const k = t.t/t.dur;
+    ctx.save();
+    ctx.globalAlpha = k > 0.75 ? (1-k)/0.25 : 1;
+    ctx.font = `${Math.round(S*t.size)}px Bungee, Impact, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const y = (t.y - k*0.8)*S;
+    ctx.lineWidth = S*0.18; ctx.strokeStyle = 'rgba(10,12,16,.85)'; ctx.strokeText(t.txt, t.x*S, y);
+    ctx.fillStyle = t.color; ctx.fillText(t.txt, t.x*S, y);
+    ctx.restore();
+  }
+}
+
+// ---------- HUD ----------
+const cardEls = [0,1,2,3].map(i => $('#card'+i));
+let lastHud = {};
+function renderHand(){
+  if (!G) return;
+  const d = G.deck[0];
+  cardEls.forEach((el, i) => {
+    const key = d.hand[i], c = CARDS[key];
+    el.querySelector('.cost').textContent = c.cost;
+    const nm = el.querySelector('.nm');
+    nm.textContent = c.name; nm.style.fontSize = '';
+    // Shrink a long name until its longest word fits the card, rather than splitting the word.
+    let fs = parseFloat(getComputedStyle(nm).fontSize);
+    while (nm.scrollWidth > nm.clientWidth + 0.5 && fs > 7){ fs -= 0.5; nm.style.fontSize = fs + 'px'; }
+    el.setAttribute('aria-label', `${c.name}, ${c.cost} elixir`);
+    drawCardIcon(el.querySelector('canvas'), key);
+  });
+  drawCardIcon($('#nextIcon'), d.queue[0]);
+}
+function fmt(s){ s = Math.max(0, Math.ceil(s)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+function updateHud(){
+  if (!G) return;
+  const time = fmt(G.clock);
+  if (lastHud.time !== time){ $('#time').textContent = time; lastHud.time = time; }
+  const lbl = G.ot ? `Sudden death ${G.otLevel}×` : G.clock <= 60 ? '2× elixir' : 'Time left';
+  if (lastHud.lbl !== lbl){ $('#clockLabel').textContent = lbl; $('#clock').className = 'clock' + (G.ot ? ' ot' : G.clock<=60 ? ' hot' : ''); lastHud.lbl = lbl; }
+  for (const team of [0,1]){
+    const key = 'c'+team;
+    if (lastHud[key] !== G.crowns[team]){
+      lastHud[key] = G.crowns[team];
+      $('#crowns'+team).querySelectorAll('.crown').forEach((c,i) => c.classList.toggle('on', i < G.crowns[team]));
+    }
+  }
+  const el = G.elixir[0];
+  $('#elixirFill').style.width = (el*10) + '%';
+  const n = Math.floor(el);
+  if (lastHud.el !== n){ $('#elixirNum').textContent = n; lastHud.el = n; }
+  const d = G.deck[0];
+  cardEls.forEach((c, i) => {
+    const cost = CARDS[d.hand[i]].cost;
+    c.classList.toggle('poor', el < cost);
+    c.classList.toggle('sel', G.sel === i);
+    c.querySelector('.fill').style.height = el >= cost ? '0%' : (el/cost*100).toFixed(1) + '%';
+  });
+}
+
+// ---------- Input ----------
+let drag = null;
+function toTile(cx, cy){
+  const r = cvs.getBoundingClientRect();
+  return { x:(cx-r.left)/r.width*W, y:(cy-r.top)/r.height*H, inside: cx>=r.left && cx<=r.right && cy>=r.top && cy<=r.bottom };
+}
+function select(i){ if (!G || G.over) return; G.sel = (G.sel === i && !drag) ? -1 : i; }
+function tryDeploy(x, y){
+  if (!G || G.over || G.paused || G.sel < 0) return false;
+  const key = G.deck[0].hand[G.sel], c = CARDS[key];
+  const px = c.type==='spell' ? x : snap(x), py = c.type==='spell' ? y : snap(y);
+  if (!canPlace(0, key, px, py)){ G.texts.push({ x:clamp(px,3,15), y:py, txt:'Not here', t:0, dur:0.8, color:'#ff9a8f', size:0.6 }); sfx.nope(); return false; }
+  if (G.elixir[0] < c.cost){ G.texts.push({ x:clamp(px,3,15), y:py, txt:'Need elixir', t:0, dur:0.8, color:'#e7a3ff', size:0.6 }); sfx.nope(); return false; }
+  // Always put the card back down once it has been played, even if something in deploy goes wrong.
+  let ok = false;
+  try { ok = deploy(0, G.sel, px, py); } finally { G.sel = -1; G.ghost = null; renderHand(); }
+  return ok;
+}
+cardEls.forEach((el, i) => {
+  el.addEventListener('pointerdown', ev => {
+    if (!G || G.over || G.paused) return;
+    ev.preventDefault(); initAudio();
+    const was = G.sel;
+    G.sel = i; drag = { i, onArena:false, toggle: was === i, x0:ev.clientX, y0:ev.clientY, moved:false };
+  });
+  el.addEventListener('click', ev => ev.preventDefault());
+  el.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); if (G && !G.over) G.sel = G.sel === i ? -1 : i; } });
+});
+window.addEventListener('pointermove', ev => {
+  if (!G) return;
+  const p = toTile(ev.clientX, ev.clientY);
+  G.ghost = p.inside ? p : null;
+  if (drag && p.inside) drag.onArena = true;
+  if (drag && Math.hypot(ev.clientX - drag.x0, ev.clientY - drag.y0) > 12) drag.moved = true;
+});
+window.addEventListener('pointerup', ev => {
+  if (!G) return;
+  const p = toTile(ev.clientX, ev.clientY);
+  if (drag){
+    const d = drag; drag = null;
+    if (p.inside) { const ok = tryDeploy(p.x, p.y); if (!ok && d.onArena && G) G.sel = -1; return; }
+    // A tap on a card selects it (tap the arena next to place it). Tapping it again, or dragging
+    // it anywhere other than the arena, puts it back down.
+    if ((d.toggle && !d.onArena) || d.moved) G.sel = -1;
+    if (ev.pointerType !== 'mouse') G.ghost = null;
+    return;
+  }
+  if (p.inside && ev.target === cvs){ initAudio(); tryDeploy(p.x, p.y); if (ev.pointerType !== 'mouse') G.ghost = null; return; }
+  // Tapping anywhere that is not the arena or a card puts the selected card back down.
+  if (G.sel >= 0 && !(ev.target.closest && ev.target.closest('.card'))) G.sel = -1;
+});
+window.addEventListener('pointercancel', () => { if (drag && drag.onArena && G) G.sel = -1; drag = null; if (G) G.ghost = null; });
+cvs.addEventListener('pointerleave', () => { if (G && !drag) G.ghost = null; });
+window.addEventListener('keydown', ev => {
+  if (!G || G.over) return;
+  if (ev.key >= '1' && ev.key <= '4'){ const i = +ev.key - 1; G.sel = G.sel === i ? -1 : i; }
+  else if (ev.key === 'Escape'){ if (G.sel >= 0) G.sel = -1; else setPaused(!G.paused); }
+  else if (ev.key === 'p' || ev.key === 'P') setPaused(!G.paused);
+});
+
+function setPaused(p){ if (!G || G.over) return; G.paused = p; $('#pauseScreen').hidden = !p; if (p) G.sel = -1; }
+$('#pauseBtn').addEventListener('click', () => setPaused(true));
+$('#resumeBtn').addEventListener('click', () => setPaused(false));
+$('#quitBtn').addEventListener('click', () => { $('#pauseScreen').hidden = true; G = null; showStart(); });
+function paintMute(){
+  $('#muteIcon').innerHTML = muted
+    ? '<path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11 6l4 4M15 6l-4 4" stroke="#f4efe4" stroke-width="1.5"/>'
+    : '<path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="#f4efe4" stroke-width="1.5"/>';
+  $('#muteBtn').setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+}
+$('#muteBtn').addEventListener('click', () => { muted = !muted; try { localStorage.setItem('bridgeburn-muted', muted?'1':'0'); } catch(e) {} initAudio(); paintMute(); musicSync(); });
+paintMute();
+
+// ---------- Screens & record ----------
+function getRecord(){ try { return JSON.parse(localStorage.getItem('bridgeburn-record')) || { w:0, l:0, d:0 }; } catch(e) { return { w:0, l:0, d:0 }; } }
+function saveRecord(res){ const r = getRecord(); if (res==='win') r.w++; else if (res==='lose') r.l++; else r.d++; try { localStorage.setItem('bridgeburn-record', JSON.stringify(r)); } catch(e) {} }
+function recordText(){ const r = getRecord(); return (r.w + r.l + r.d) ? `Your record: ${r.w} won · ${r.l} lost · ${r.d} drawn` : ''; }
+function showStart(){ paintDiff(); $('#record').textContent = recordText(); $('#startScreen').hidden = false; $('#endScreen').hidden = true; }
+function showEnd(){
+  if (!G) return;
+  const res = G.result;
+  $('#endTitle').textContent = res==='win' ? 'Victory' : res==='lose' ? 'Defeat' : 'Draw';
+  $('#endTitle').style.color = res==='win' ? 'var(--blue)' : res==='lose' ? 'var(--red)' : 'var(--gold)';
+  $('#endSub').textContent = `${diffKey[0].toUpperCase()+diffKey.slice(1)} rival` + (cloneMatch ? ' · clone match' : '');
+  $('#endYou').textContent = G.crowns[0];
+  $('#endRival').textContent = G.crowns[1];
+  const mins = Math.floor(G.t/60), secs = Math.round(G.t%60);
+  $('#endNote').textContent = `${mins}m ${secs}s of play. You played ${G.stats.played[0]} cards; the Rival played ${G.stats.played[1]}.`;
+  $('#record2').textContent = recordText();
+  $('#endScreen').hidden = false;
+}
+function start(d){
+  diffKey = d; initAudio();
+  $('#startScreen').hidden = true; $('#endScreen').hidden = true; $('#pauseScreen').hidden = true;
+  newGame();
+}
+try { const d = localStorage.getItem('bridgeburn-diff'); if (DIFF[d]) diffKey = d; } catch(e) {}
+function paintDiff(){ document.querySelectorAll('[data-diff]').forEach(b => b.setAttribute('aria-pressed', b.dataset.diff === diffKey ? 'true' : 'false')); }
+document.querySelectorAll('[data-diff]').forEach(b => b.addEventListener('click', () => {
+  diffKey = b.dataset.diff;
+  try { localStorage.setItem('bridgeburn-diff', diffKey); } catch(e) {}
+  paintDiff();
+}));
+$('#cloneToggle').checked = cloneMatch;
+$('#cloneToggle').addEventListener('change', ev => {
+  cloneMatch = ev.target.checked;
+  try { localStorage.setItem('bridgeburn-clone', cloneMatch ? '1' : '0'); } catch(e) {}
+});
+$('#startBtn').addEventListener('click', () => start(diffKey));
+$('#helpBtn').addEventListener('click', () => { $('#startScreen').hidden = true; $('#helpScreen').hidden = false; });
+$('#helpClose').addEventListener('click', () => { $('#helpScreen').hidden = true; $('#startScreen').hidden = false; });
+$('#againBtn').addEventListener('click', () => { if (randomDeck) rolled = rivalDeck(); start(diffKey); });
+$('#menuBtn').addEventListener('click', () => { G = null; showStart(); });
+
+// ---------- Deck: start-screen roster and builder ----------
+const avgCost = d => (d.reduce((s,k) => s + CARDS[k].cost, 0) / Math.max(1, d.length)).toFixed(1);
+function iconCanvas(key, px){ const cv = document.createElement('canvas'); cv.width = cv.height = px; drawCardIcon(cv, key); return cv; }
+function renderRoster(){
+  const roster = $('#roster'); roster.textContent = '';
+  const deck = startDeck();
+  $('#modeMine').setAttribute('aria-pressed', randomDeck ? 'false' : 'true');
+  $('#modeRandom').setAttribute('aria-pressed', randomDeck ? 'true' : 'false');
+  $('#modeRandom').textContent = randomDeck ? 'Random ↻' : 'Random';
+  $('#deckName').textContent = randomDeck ? 'Random deck' : 'Your deck';
+  for (const key of deck){
+    const c = CARDS[key], div = document.createElement('div');
+    const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
+    div.title = c.blurb || c.name;
+    div.append(cost, iconCanvas(key, 72), document.createTextNode(c.name));
+    roster.append(div);
+  }
+  $('#avgStart').textContent = avgCost(deck);
+}
+function statLine(c){
+  if (c.spell === 'elixir') return `Net +${c.gain - c.cost} elixir`;
+  if (c.spell === 'alarm') return `${c.selfDmg} damage to your king`;
+  if (c.spell === 'zone') return `${c.dmg} dmg over ${c.dur}s · radius ${c.radius}`;
+  if (c.type === 'spell') return `${c.dmg} dmg · radius ${c.radius}`;
+  if (c.type === 'plant'){ const u = CARDS[c.sprouts]; return `${c.grow}s · then ${u.hp} HP, ${u.dmg} dmg`; }
+  const bits = [`${c.hp} HP`];
+  if (c.dmg) bits.push(`${c.dmg} dmg`);
+  if (c.count > 1) bits.push(`×${c.count}`);
+  if (c.life) bits.push(`${c.life}s`);
+  return bits.join(' · ');
+}
+let draft = [];
+function renderBuilder(){
+  const slots = $('#deckSlots'); slots.textContent = '';
+  for (let i=0;i<8;i++){
+    const key = draft[i], b = document.createElement('button');
+    b.className = 'slot' + (key ? ' filled' : '');
+    if (key){
+      const c = CARDS[key];
+      const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
+      b.append(cost, iconCanvas(key, 96), document.createTextNode(c.name));
+      b.setAttribute('aria-label', `Remove ${c.name}`);
+      b.addEventListener('click', () => { draft.splice(i, 1); renderBuilder(); });
+    } else { b.textContent = 'Empty'; b.disabled = true; b.style.color = 'var(--muted)'; }
+    slots.append(b);
+  }
+  const col = $('#collection'); col.textContent = '';
+  const sorted = [...POOL].sort((a,b) => CARDS[a].cost - CARDS[b].cost || CARDS[a].name.localeCompare(CARDS[b].name));
+  for (const key of sorted){
+    const c = CARDS[key], inDeck = draft.includes(key);
+    const t = document.createElement('button');
+    t.className = 'tile' + (inDeck ? ' in' : '');
+    t.disabled = !inDeck && draft.length >= 8;
+    const cost = document.createElement('span'); cost.className = 'cost'; cost.textContent = c.cost;
+    const info = document.createElement('div');
+    const tags = [c.air ? 'Flies' : '', c.jumps ? 'Jumps river' : '', c.type==='building' ? 'Building' : '', c.type==='plant' ? 'Invincible · not near towers' : '', c.type==='spell' ? (c.spell==='zone' ? 'Spell · slows' : isUtility(key) ? 'Tap anywhere' : 'Spell') : '', c.hitsAir && c.type!=='spell' ? 'Hits air' : '', c.targets==='buildings' ? 'Towers only' : ''].filter(Boolean).join(' · ');
+    info.innerHTML = `<div class="t-name"></div><div class="t-blurb"></div><div class="t-stats"></div>`;
+    info.querySelector('.t-name').textContent = c.name;
+    info.querySelector('.t-blurb').textContent = tags || c.blurb;
+    info.querySelector('.t-stats').textContent = statLine(c);
+    t.title = c.blurb;
+    t.append(cost, iconCanvas(key, 80), info);
+    t.setAttribute('aria-pressed', inDeck ? 'true' : 'false');
+    t.addEventListener('click', () => {
+      if (inDeck) draft = draft.filter(k => k !== key);
+      else if (draft.length < 8) draft.push(key);
+      renderBuilder();
+    });
+    col.append(t);
+  }
+  $('#deckCount').textContent = draft.length;
+  $('#deckAvg').textContent = avgCost(draft);
+  $('#deckAir').textContent = draft.filter(antiAir).length + (draft.some(isSpell) ? ' + spells' : '');
+  const hint = $('#deckHint');
+  if (draft.length < 8) hint.textContent = `Add ${8 - draft.length} more card${draft.length === 7 ? '' : 's'} to save.`;
+  else if (!draft.some(antiAir)) hint.textContent = 'Nothing in this deck can hit flying troops except spells. You can still save it.';
+  else if (!draft.some(isWin)) hint.textContent = 'No tower-only attacker. You will need troops to push through on their own.';
+  else hint.textContent = 'Deck ready.';
+  $('#deckSave').disabled = draft.length !== 8;
+  $('#deckSave').style.opacity = draft.length === 8 ? 1 : 0.5;
+}
+function openBuilder(){ draft = [...playerDeck]; $('#startScreen').hidden = true; $('#deckScreen').hidden = false; renderBuilder(); }
+function closeBuilder(){ $('#deckScreen').hidden = true; renderRoster(); showStart(); }
+$('#editDeckBtn').addEventListener('click', openBuilder);
+function saveMode(){ try { localStorage.setItem('bridgeburn-randomdeck', randomDeck ? '1' : '0'); } catch(e) {} }
+$('#modeMine').addEventListener('click', () => { randomDeck = false; saveMode(); renderRoster(); });
+$('#modeRandom').addEventListener('click', () => { randomDeck = true; rolled = rivalDeck(); saveMode(); renderRoster(); });
+$('#deckCancel').addEventListener('click', closeBuilder);
+$('#deckSave').addEventListener('click', () => {
+  if (draft.length !== 8) return;
+  playerDeck = [...draft]; randomDeck = false; saveMode();
+  try { localStorage.setItem('bridgeburn-deck', JSON.stringify(playerDeck)); } catch(e) {}
+  closeBuilder();
+});
+$('#deckRandom').addEventListener('click', () => {
+  // Random but playable: same constraints the Rival uses.
+  draft = rivalDeck(); renderBuilder();
+});
+renderRoster();
+
+// ---------- Full screen ----------
+const fsRoot = document.documentElement;
+const fsReq = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;
+const fsExit = document.exitFullscreen || document.webkitExitFullscreen;
+const fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+const FS_ENTER = 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4', FS_EXIT = 'M6 2v4H2M10 2v4h4M14 10h-4v4M2 10h4v4';
+const fsBtns = document.querySelectorAll('.fs-toggle');
+let toastT = 0;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3200); }
+function paintFs(){
+  const on = fsOn();
+  fsBtns.forEach(b => {
+    b.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
+    const path = b.querySelector('path');
+    if (path) path.setAttribute('d', on ? FS_EXIT : FS_ENTER); else b.textContent = on ? 'Exit full screen' : 'Full screen';
+  });
+}
+function fsFail(){ toast('Full screen is blocked here. Open the link in Chrome instead of the Claude app and try again.'); }
+let autoFs = true;
+try { autoFs = localStorage.getItem('bridgeburn-autofs') !== '0'; } catch(e) {}
+function toggleFs(){
+  try { localStorage.setItem('bridgeburn-autofs', fsOn() ? '0' : '1'); } catch(e) {}
+  try {
+    const p = fsOn() ? fsExit.call(document) : fsReq.call(fsRoot);
+    if (p && p.catch) p.catch(fsFail);
+  } catch(e) { fsFail(); }
+}
+if (!fsReq) fsBtns.forEach(b => { b.hidden = true; });
+else {
+  fsBtns.forEach(b => b.addEventListener('click', toggleFs));
+  document.addEventListener('fullscreenchange', paintFs);
+  document.addEventListener('webkitfullscreenchange', paintFs);
+  // Browsers only allow full screen after a tap, so the first tap anywhere starts it. Leaving full
+  // screen with the button turns this off for next time.
+  if (autoFs){
+    let tried = false;
+    const first = ev => {
+      if (tried) return;
+      if (ev.target && ev.target.closest && ev.target.closest('.fs-toggle')) { tried = true; return; }
+      tried = true;
+      if (fsOn()) return;
+      try { const p = fsReq.call(fsRoot); if (p && p.catch) p.catch(() => {}); } catch(e) {}
+    };
+    ['click', 'pointerup', 'keydown'].forEach(n => document.addEventListener(n, first, true));
+  }
+}
+
+// ---------- Sizing & loop ----------
+function resize(){
+  const f = $('#field').getBoundingClientRect();
+  let w = f.width, h = w * H / W;
+  if (h > f.height){ h = f.height; w = h * W / H; }
+  w = Math.floor(w); h = Math.floor(w * H / W);
+  if (w < 10) return;
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  cssW = w; cssH = h; S = w / W;
+  cvs.style.width = w + 'px'; cvs.style.height = h + 'px';
+  cvs.width = Math.round(w*DPR); cvs.height = Math.round(h*DPR);
+  paintBg();
+}
+new ResizeObserver(resize).observe($('#field'));
+new ResizeObserver(() => renderHand()).observe($('.tray'));
+window.addEventListener('resize', resize);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (G) renderHand(); });
+
+let last = performance.now(), acc = 0;
+const DT = 1/60;
+function frame(now){
+  const el = Math.min(0.1, (now-last)/1000); last = now;
+  if (G && !G.paused && !G.demo){
+    acc += el;
+    let n = 0;
+    while (acc >= DT && n < 6){ step(DT); acc -= DT; n++; }
+  } else acc = 0;
+  draw(); updateHud();
+  requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden && G && !G.over) setPaused(true); });
+
+// Show a live arena behind the start screen.
+newGame(); G.demo = true;
+showStart();
+requestAnimationFrame(frame);
+window.__bbCanPlace = canPlace;
+window.__bb = { get G(){ return G; }, step, findSpot, deploy, rivalDeck, newDeck, start, renderHand };
+})();
+</script>
+</body>
+</html>
