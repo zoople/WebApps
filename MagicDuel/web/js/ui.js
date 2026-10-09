@@ -60,7 +60,9 @@ function costHTML_old(cost) {
   if (!cost) return '';
   return cost.replace(/[0-9]+|[WUBRGCX]/g, (m) => /\d|X/.test(m) ? `<b class="cn">${m}</b>` : `<span class="pip ${m}"></span>`);
 }
-const typeLine = (d) => [...d.types, ...(d.subtypes && d.subtypes.length ? ['—', ...d.subtypes] : [])].join(' ') + (d.basic ? '' : '');
+const TYPE_INFO = { creature: ['🐾', 'Creature'], instant: ['⚡', 'Instant'], sorcery: ['📜', 'Sorcery'], enchantment: ['🔮', 'Enchantment'], artifact: ['⚙️', 'Artifact'], land: ['🌍', 'Land'] };
+const kindOf = (d) => (d.types.includes('Instant') ? 'instant' : d.types.includes('Sorcery') ? 'sorcery' : d.types.includes('Creature') ? 'creature' : d.types.includes('Land') ? 'land' : d.types.includes('Artifact') ? 'artifact' : 'enchantment');
+const typeLine = (d) => TYPE_INFO[kindOf(d)][0] + ' ' + [...d.types, ...(d.subtypes && d.subtypes.length ? ['—', ...d.subtypes] : [])].join(' ');
 const faceClass = (d) => { if (d.types.includes('Land')) { const c = landCols(d); return 'L L' + (c.length === 1 ? c[0] : c.length ? 'M' : 'X'); } const cs = d.colors; if (cs.length === 0) return 'A'; if (cs.length > 1) return 'M'; return cs[0]; };
 
 // Keep `box` children equal to `els` in order, moving nodes only when needed (re-attaching a node cancels in-flight touches).
@@ -106,8 +108,9 @@ const UI = {
     const cols = d.types.includes('Land') ? landCols(d) : [];
     if (cols.length === 2) { f.style.setProperty('--f1', COLOR_HEX[cols[0]]); f.style.setProperty('--f2', COLOR_HEX[cols[1]]); }
     const pt = d.types.includes('Creature') ? `<div class="fpt">${d.power == null ? '*' : d.power}/${d.toughness}</div>` : '';
+    f.dataset.kind = kindOf(d); const ti = TYPE_INFO[f.dataset.kind]; const flash = d.kw && d.kw.includes('flash') && f.dataset.kind === 'creature' ? ' ⚡' : '';
     const nl = d.name.length; f.dataset.len = nl > 17 ? 'xl' : nl > 12 ? 'l' : 's';
-    f.innerHTML = `<div class="fh"><span class="fname">${esc(d.name)}</span><span class="fcost">${manaHTML(d.cost)}</span></div>` +
+    f.innerHTML = `<div class="ftag k-${f.dataset.kind}">${ti[0]} ${ti[1].toUpperCase()}${flash}</div><div class="fh"><span class="fname">${esc(d.name)}</span><span class="fcost">${manaHTML(d.cost)}</span></div>` +
       `<div class="fart">${artEmoji(d)}</div><div class="ftype">${esc(d.token ? 'Token ' + d.types.join(' ') : typeLine(d))}</div>` +
       `<div class="ftext">${esc(rulesText(d))}</div><div class="fkw">${kwIcons(d)}</div>${pt}`;
     return f;
@@ -228,7 +231,7 @@ const UI = {
     for (const it of g.stack.slice().reverse()) {
       const name = it.kind === 'spell' ? it.card.name : it.source.name;
       const tg = (it.targets || []).filter(Boolean).map((t) => t.isPlayer ? t.name : t.kind === 'spell' ? t.card.name : t.name);
-      const chip = el('div', 'sitem' + (it.controller === 0 ? '' : ' theirs') + (UI.mode === 'target' && UI.legalSet.has(it) ? ' legal' : ''), `<b>${it.kind === 'spell' ? '⚡' : '✦'} ${esc(name)}</b>${it.kind !== 'spell' ? `<span>${esc(it.text || '')}</span>` : ''}${tg.length ? `<span>→ ${esc(tg.join(', '))}</span>` : ''}`);
+      const chip = el('div', 'sitem' + (it.controller === 0 ? '' : ' theirs') + (UI.mode === 'target' && UI.legalSet.has(it) ? ' legal' : ''), `<b>${it.kind === 'spell' ? TYPE_INFO[kindOf(it.card.def)][0] : '✦'} ${esc(name)}</b>${it.kind !== 'spell' ? `<span>${esc(it.text || '')}</span>` : ''}${tg.length ? `<span>→ ${esc(tg.join(', '))}</span>` : ''}`);
       chip.onclick = () => { if (UI.mode === 'target' && UI.legalSet.has(it)) UI.pickTarget(it); else UI.inspect(it.card || it.source, {}); };
       box.append(chip);
     }
@@ -639,7 +642,7 @@ class HumanController {
 }
 MTG.HumanController = HumanController;
 
-UI.manaHTML = manaHTML; UI.emojiText = emojiText; UI.emojiCost = emojiCost;
+UI.manaHTML = manaHTML; UI.kindOf = kindOf; UI.TYPE_INFO = TYPE_INFO; UI.emojiText = emojiText; UI.emojiCost = emojiCost;
 UI.showScreenGame = () => { UI.showScreen('game'); };
 UI.bindGame = function (g) {
   UI.g = g; UI.cardEls.clear(); UI.landEls.clear(); UI.logLines = []; UI.coachNotes = []; UI.mode = 'idle'; UI.highlight = new Set(); UI.lastLife = [null, null]; UI.advCtx = null; UI.advice = null; UI.gameOver = false;
