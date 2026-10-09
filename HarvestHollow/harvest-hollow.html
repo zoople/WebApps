@@ -231,7 +231,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v8 · 9 Oct 2026';
+const VERSION='v9 · 9 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -704,7 +704,20 @@ BLD.forEach(b=>doorAt[b.door.join(',')]=b);doorAt[BOARD.door.join(',')]=BOARD;
 BOARD.kind='board';BOARD.name='Quest Board';
 const stn=id=>(S.stn=S.stn||{})[id]||(S.stn[id]={buf:0,out:0,prog:0});
 
-let worldOn=false,lastT=0,hintT=0;
+let worldOn=false,lastT=0,hintT=0,shake=0;
+const isForage=t=>t==='bush'||t==='wheat';
+function swingInfo(){
+  const nd=nodeAt[P.x+','+P.y];if(!(P.gather>0)||!nd||P.moving)return null;
+  const type=nd.type==='tree'?'chop':nd.type==='rock'?'mine':'pick',per=type==='pick'?.9:.62;
+  return{type,u:((P.swing||0)%per)/per};
+}
+function impactFx(nd){
+  const side=P.dir==='l'?-1:1,x=P.px+side*16,y=P.py+10;
+  burst(x,y,CHIP[nd.type],nd.type==='rock'?9:7,70,75,.55,3);
+  if(nd.type==='rock')burst(x,y-2,['#fff3b0','#ffd23a'],5,90,40,.3,2);
+  if(isForage(nd.type)){sfx.pick()}else sfx.chop();
+  shake=nd.type==='rock'?3.2:nd.type==='tree'?2.2:0;
+}
 function resize(){
   const r=cv.getBoundingClientRect();if(!r.width)return;
   DPR=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(r.width*DPR);cv.height=Math.round(r.height*DPR);
@@ -719,7 +732,7 @@ function tryStep(dx,dy){
   const nx=P.x+dx,ny=P.y+dy;
   if(dx)P.dir=dx>0?'r':'l';else P.dir=dy>0?'d':'u';
   if(isBlocked(nx,ny))return false;
-  P.tx=nx;P.ty=ny;P.moving=true;P.t=0;P.gather=0;
+  P.tx=nx;P.ty=ny;P.moving=true;P.t=0;P.gather=0;P.swing=0;P.lastImpact=-1;
   if(!doorAt[nx+','+ny])P.lastDoor=null;
   return true;
 }
@@ -867,13 +880,16 @@ function update(dt){
     const T=NODE_T[nd.type];
     if(carryN()>=S.cap){P.gather=0;if(!P.fullToast||performance.now()-P.fullToast>2500){P.fullToast=performance.now();toast('Bag full — drop it at the Barn 📦')}}
     else{
-      P.gather+=dt;
+      P.gather+=dt;P.swing=(P.swing||0)+dt;
+      {const per=isForage(nd.type)?.9:.62,c=Math.floor(P.swing/per),u=(P.swing%per)/per,hit=isForage(nd.type)?.25:.58;
+       if(u>=hit&&P.lastImpact!==c){P.lastImpact=c;impactFx(nd)}}
       if(P.gather>=gatherTime(nd.type)){
-        P.gather=0;nd.ch--;nd.t=0;S.carry[T.item]=(S.carry[T.item]||0)+1;burst(P.px,P.py+4,CHIP[nd.type],10,70,80);stat('g_'+T.item);sfx[T.sfx]();
+        P.gather=0;nd.ch--;nd.t=0;S.carry[T.item]=(S.carry[T.item]||0)+1;burst(P.px,P.py+4,CHIP[nd.type],10,70,80);stat('g_'+T.item);sfx.get();
         fl(P.x*TS+24,P.y*TS-14,`+1 ${ITEMS[T.item].e}`,'#fff');hud();checkQuestBadge();save();
       }
     }
-  }else P.gather=0;
+  }else{P.gather=0;P.swing=0;P.lastImpact=-1}
+  shake=Math.max(0,shake-dt*16);
   for(let i=floats.length-1;i>=0;i--){floats[i].t+=dt;if(floats[i].t>1.1)floats.splice(i,1)}
   for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.t+=dt;p.vy+=260*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.t>p.life)parts.splice(i,1)}
   // camera
@@ -971,7 +987,7 @@ function bubble(g,cx,y,text,sub){
 function render(time){
   const g=ctx;g.setTransform(DPR*Z,0,0,DPR*Z,0,0);
   g.fillStyle='#4d8a3a';g.fillRect(0,0,VW,VH);
-  g.translate(-Math.round(cam.x),-Math.round(cam.y));
+  g.translate(-Math.round(cam.x)+(shake?(Math.random()-.5)*shake*2:0),-Math.round(cam.y)+(shake?(Math.random()-.5)*shake*2:0));
   g.drawImage(groundC,0,0);
   const x0=Math.floor(cam.x/TS)-1,x1=Math.ceil((cam.x+VW)/TS)+1,y0=Math.floor(cam.y/TS)-1,y1=Math.ceil((cam.y+VH)/TS)+1;
   // water shimmer + mat pulse
@@ -982,7 +998,7 @@ function render(time){
     else if(t===3){const p=(Math.sin(time*3)+1)/2;g.strokeStyle=`rgba(255,235,150,${.35+.5*p})`;g.lineWidth=2.5;g.beginPath();g.roundRect(x*TS+3,y*TS+3,TS-6,TS-6,9);g.stroke()}
   }
   // entities + player depth-sorted
-  let drewP=false;const pby=P.py+TS/2-4;
+  let drewP=false;const pby=P.py+TS/2+2;
   for(const e of ents){
     if(!drewP&&e.by>pby){drawPlayer(g,time);drewP=true}
     const ex=e.node?e.node.x:e.deco?e.deco.x:e.bld?e.bld.x:e.npc?e.npc.x:BOARD.x,ey=e.node?e.node.y:e.deco?e.deco.y:e.bld?e.bld.y:e.npc?e.npc.y:BOARD.y;
@@ -1055,6 +1071,18 @@ function person(g,x,y,o){
   /* ground shadow */
   g.save();g.fillStyle=rg(g,x,y+1,1,x,y+1,17,[[0,'rgba(10,25,5,.45)'],[1,'rgba(10,25,5,0)']]);g.beginPath();g.ellipse(x,y+1,17,6.8,0,0,7);g.fill();g.restore();
 
+  /* action pose (chop / mine / pick): lean the whole body and swing a tool */
+  const act=o.act;let lean=0,aA=0;
+  const ease=t=>t*t*(3-2*t);
+  if(act){
+    const u=act.u;
+    if(act.type==='pick'){aA=.15+.55*Math.sin(u*6.283);lean=.1+.14*Math.sin(u*6.283)}
+    else if(u<.5){aA=-.2+(-2.3+.2)*ease(u/.5);lean=-.04*ease(u/.5)}
+    else if(u<.62){const k=(u-.5)/.12;aA=-2.3+2.9*k*k;lean=.04+.2*k}
+    else{const k=ease((u-.62)/.38);aA=.6+(-.2-.6)*k;lean=.24*(1-k)}
+  }
+  if(lean){g.save();g.translate(x,y);g.rotate(lean*sg);g.translate(-x,-y)}
+
   /* backpack */
   const fr=o.pack?Math.min(1,(o.carryN||0)/(o.cap||6)):0;
   const items=o.pack?Object.entries(o.carry||{}).filter(([,v])=>v>0).slice(0,3):[];
@@ -1103,7 +1131,29 @@ function person(g,x,y,o){
   };
   if(back){torso();if(o.pack)drawPack(false)}
   else torso();
-  if(side){arm(x,x+sw*7*sg,by-20+Math.abs(sw)*-1)}
+  const actArm=()=>{
+    const sx=x,sy=by-31,L=13,hx=sx+Math.sin(aA)*sg*L,hy=sy+Math.cos(aA)*L;
+    g.lineCap='round';
+    g.strokeStyle=OUT;g.lineWidth=7;g.beginPath();g.moveTo(sx,sy);g.lineTo(hx,hy);g.stroke();
+    g.strokeStyle=lg(g,sx,sy,hx,hy,[[0,T[0]],[1,T[1]]]);g.lineWidth=5;g.beginPath();g.moveTo(sx,sy);g.lineTo(hx,hy);g.stroke();
+    const dvx=Math.sin(aA)*sg,dvy=Math.cos(aA),pvx=Math.cos(aA)*sg,pvy=-Math.sin(aA);
+    if(act.type==='pick'){
+      g.fillStyle=lg(g,hx-6,hy,hx+6,hy+9,[[0,'#c99259'],[1,'#7a5330']]);g.strokeStyle=OUT;g.lineWidth=1.2;
+      g.beginPath();g.moveTo(hx-7,hy+1);g.lineTo(hx+7,hy+1);g.lineTo(hx+5,hy+9);g.lineTo(hx-5,hy+9);g.closePath();g.fill();g.stroke();
+      g.strokeStyle='rgba(60,35,15,.6)';g.lineWidth=1;for(let i=-3;i<=3;i+=3){g.beginPath();g.moveTo(hx+i,hy+2);g.lineTo(hx+i*.8,hy+8);g.stroke()}
+    }else{
+      const tx=hx+dvx*17,ty=hy+dvy*17;
+      g.strokeStyle=OUT;g.lineWidth=5;g.beginPath();g.moveTo(hx-dvx*3,hy-dvy*3);g.lineTo(tx,ty);g.stroke();
+      g.strokeStyle='#a8703a';g.lineWidth=3;g.beginPath();g.moveTo(hx-dvx*3,hy-dvy*3);g.lineTo(tx,ty);g.stroke();
+      g.fillStyle=lg(g,tx-8,ty-8,tx+8,ty+8,[[0,'#eef2f5'],[.5,'#aab4be'],[1,'#6b7680']]);g.strokeStyle=OUT;g.lineWidth=1.3;g.lineJoin='round';
+      g.beginPath();
+      if(act.type==='chop'){g.moveTo(tx-dvx*2,ty-dvy*2);g.lineTo(tx-dvx*2+pvx*11,ty-dvy*2+pvy*11);g.lineTo(tx+dvx*8+pvx*9,ty+dvy*8+pvy*9);g.lineTo(tx+dvx*8,ty+dvy*8);g.closePath()}
+      else{g.moveTo(tx-pvx*12,ty-pvy*12);g.quadraticCurveTo(tx+dvx*8,ty+dvy*8,tx+pvx*12,ty+pvy*12);g.quadraticCurveTo(tx+dvx*1,ty+dvy*1,tx-pvx*12,ty-pvy*12);g.closePath()}
+      g.fill();g.stroke();
+    }
+    g.fillStyle=lg(g,hx-3,hy-3,hx+3,hy+3,[[0,SK[0]],[1,SK[1]]]);g.beginPath();g.arc(hx,hy,3.3,0,7);g.fill();g.strokeStyle=OUT;g.lineWidth=1;g.stroke();
+  };
+  if(side){if(act)actArm();else arm(x,x+sw*7*sg,by-20+Math.abs(sw)*-1)}
   else{arm(x-tw-1,x-tw-2.5,by-19+sw*3);arm(x+tw+1,x+tw+2.5,by-19-sw*3)}
 
   /* head */
@@ -1151,11 +1201,13 @@ function person(g,x,y,o){
     if(o.goggles&&!back){g.fillStyle='#9fd9ec';g.strokeStyle='#2b2f33';g.lineWidth=1.6;[-4.5,4.5].forEach(dx=>{if(side&&dx*sg<0)return;g.beginPath();g.arc(x+dx,hy-9,3.4,0,7);g.fill();g.stroke()});g.fillStyle='#2b2f33';g.fillRect(x-hr,hy-9.8,hr*2,1.6)}
   }
   if(o.shawl&&!back){g.fillStyle=o.shawl;g.beginPath();g.moveTo(x-tw-1,by-34);g.quadraticCurveTo(x,by-24,x+tw+1,by-34);g.lineTo(x+tw-1,by-30);g.quadraticCurveTo(x,by-20,x-tw+1,by-30);g.closePath();g.fill();g.strokeStyle=OUT;g.lineWidth=1;g.stroke()}
+  if(lean)g.restore();
 }
 
 function drawPlayer(g,time){
   const x=P.px,y=P.py+TS/2-6;
-  person(g,x,y,{dir:P.dir,moving:P.moving,walk:P.walk,time,pack:true,carry:S.carry,carryN:carryN(),cap:S.cap,hat:'straw',
+  const sw_=swingInfo();
+  person(g,x,y,{dir:sw_?(P.dir==='l'?'l':'r'):P.dir,act:sw_,moving:P.moving,walk:P.walk,time,pack:true,carry:S.carry,carryN:carryN(),cap:S.cap,hat:'straw',
     hair:['#8a5a2f','#52311a'],tunic:['#5fc4d6','#3a93b0','#245f7a'],pants:['#7a62a8','#4d3d78'],seed:0});
   if(P.gather>0){const nd=nodeAt[P.x+','+P.y];if(nd){const tt=gatherTime(nd.type);g.lineCap='round';g.strokeStyle='rgba(0,0,0,.38)';g.lineWidth=6;g.beginPath();g.arc(x,y+8,16,0,7);g.stroke();
     g.strokeStyle='#ffe27a';g.beginPath();g.arc(x,y+8,16,-Math.PI/2,-Math.PI/2+6.283*P.gather/tt);g.stroke()}}
