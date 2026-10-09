@@ -388,6 +388,9 @@ select{background:var(--panel2);color:var(--text);border:1px solid var(--line);b
 .perms .face[data-kind="creature"] .ety{display:none}
 #hand .card .fart .e-f{font-size:1.6em}
 #hand .card .fart .e-x{font-size:.98em}
+#toast{pointer-events:none}
+#banner{pointer-events:none}
+.float{pointer-events:none}
 
 </style>
 </head>
@@ -3448,7 +3451,7 @@ const UI = {
   },
   async priority(g, p) {
     if (UI.autoPass(g, p)) { await sleep(g.pace ? 40 : 0); return { type: 'pass' }; }
-    UI.closeInspect(); UI.mode = 'priority'; UI.promptAt = Date.now();
+    UI.mode = 'priority'; UI.promptAt = Date.now();
     const isMain = g.active === 0 && g.isMain() && !g.stack.length;
     UI.setAdviceCtx(isMain ? 'main' : 'respond');
     if (g.stack.length && g.stack[g.stack.length - 1].controller !== 0 && Settings.hints) UI.toast(`Opponent cast ${g.stack[g.stack.length - 1].card ? g.stack[g.stack.length - 1].card.name : 'an ability'} — respond or pass.`, 2200);

@@ -539,7 +539,7 @@ const UI = {
   },
   async priority(g, p) {
     if (UI.autoPass(g, p)) { await sleep(g.pace ? 40 : 0); return { type: 'pass' }; }
-    UI.closeInspect(); UI.mode = 'priority'; UI.promptAt = Date.now();
+    UI.mode = 'priority'; UI.promptAt = Date.now();
     const isMain = g.active === 0 && g.isMain() && !g.stack.length;
     UI.setAdviceCtx(isMain ? 'main' : 'respond');
     if (g.stack.length && g.stack[g.stack.length - 1].controller !== 0 && Settings.hints) UI.toast(`Opponent cast ${g.stack[g.stack.length - 1].card ? g.stack[g.stack.length - 1].card.name : 'an ability'} — respond or pass.`, 2200);
