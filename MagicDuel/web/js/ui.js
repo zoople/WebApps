@@ -178,14 +178,14 @@ const UI = {
     for (const b of [...e.querySelectorAll('.badge,.zz,.tag,.sickbadge')]) b.remove();
     const onBf = c.zone === 'battlefield';
     e.classList.toggle('tapped', onBf && c.tapped);
-    e.classList.toggle('sick', onBf && c.controller === 0 && g.isCreature(c) && g.isSick(c));
+    e.classList.toggle('sick', onBf && g.isCreature(c) && g.isSick(c));
     e.classList.toggle('attached', onBf && !!c.attachedTo);
     if (onBf && g.isCreature(c)) {
       const ch = g.chars(c); const base = [d.power || 0, d.toughness || 0];
       const t = ch.toughness - c.damage;
       const b = el('div', 'badge pt' + (c.damage ? ' dmg' : ch.power > base[0] || ch.toughness > base[1] ? ' buff' : ch.power < base[0] || ch.toughness < base[1] ? ' nerf' : ''), `${ch.power}/${t}`);
       e.append(b);
-      if (g.isSick(c) && c.controller === 0) e.append(el('div', 'sickbadge', '💤'));
+      if (g.isSick(c)) e.append(el('div', 'sickbadge', '💤'));
       if (g.has(c, 'cantAttack') && g.has(c, 'cantBlock')) e.append(el('div', 'zz', '🚫'));
     }
     const cn = Object.entries(c.counters).filter(([, v]) => v);
@@ -450,7 +450,7 @@ const UI = {
     if (kwl.length) h += `<div class="kwlist">${kwl.map((k) => `<div>${KW_ICON[k] || ''} <b>${esc(KW_NAMES[k] || k)}</b> — ${esc(GL[k])}</div>`).join('')}</div>`;
     const st = [];
     if (c.zone === 'battlefield') {
-      if (c.tapped) st.push('Tapped'); if (g.isSick(c)) st.push('Summoning sick'); if (c.damage) st.push(c.damage + ' damage');
+      if (c.tapped) st.push('Tapped'); if (g.isSick(c)) st.push(c.controller === 0 ? 'Summoning sick: can\'t attack or tap until your next turn' : 'Summoning sick: can\'t attack until their next turn'); if (c.damage) st.push(c.damage + ' damage');
       for (const [k, v] of Object.entries(c.counters)) if (v) st.push((k === 'p1p1' ? '+1/+1' : '-1/-1') + ' counter ×' + v);
       if (c.attachedTo) st.push('Attached to ' + c.attachedTo.name);
       for (const a of c.attachments) st.push(a.name + ' attached');
