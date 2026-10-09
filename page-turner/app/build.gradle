@@ -1,0 +1,43 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.zoople.pageturner'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.zoople.pageturner'
+        minSdk 31
+        targetSdk 34
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int)
+        versionName "1.0." + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+    }
+
+    signingConfigs {
+        release {
+            // Personal sideload key, committed so every build installs over the last one.
+            storeFile file('pageturner.keystore')
+            storePassword 'pageturner'
+            keyAlias 'pageturner'
+            keyPassword 'pageturner'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

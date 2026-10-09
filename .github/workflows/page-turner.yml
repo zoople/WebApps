@@ -1,0 +1,54 @@
+name: Page Turner APK
+
+on:
+  push:
+    branches: [page-turner]
+    paths:
+      - 'page-turner/**'
+      - '.github/workflows/page-turner.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: page-turner
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build signed release APK
+        run: gradle --no-daemon :app:assembleRelease
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk PageTurner-${{ github.run_number }}.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PageTurner-${{ github.run_number }}
+          path: page-turner/PageTurner-${{ github.run_number }}.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "page-turner-${{ github.run_number }}" \
+            "PageTurner-${{ github.run_number }}.apk" \
+            --target "${{ github.sha }}" \
+            --title "Page Turner build ${{ github.run_number }}" \
+            --notes "Phone-as-Bluetooth-page-turner for the Xteink X3 (CrossPoint BLE beta). Install the APK on your phone." \
+            --latest=false
