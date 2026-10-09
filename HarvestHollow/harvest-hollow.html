@@ -36,6 +36,8 @@ button{font:inherit;cursor:pointer}
 #hud>*{pointer-events:auto}
 #hud .sp{flex:1;pointer-events:none}
 #bag{display:flex;gap:8px}
+#bGuide.off{opacity:.5;filter:grayscale(1)}
+#goal .tip{display:block;font-weight:600;font-size:13px;margin-top:2px}
 #goalrow{flex-basis:100%;order:10;pointer-events:none}
 #goal{pointer-events:auto;cursor:pointer;white-space:normal;max-width:min(640px,100%);background:linear-gradient(#fff3cf,#f0d58a);color:#3a2606;border:2px solid #b8851a;font-size:14px;line-height:1.3}
 .sec{font-weight:800;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:12px 0 2px}
@@ -189,6 +191,8 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
       <span class="sp"></span>
       <button class="btn small blue" id="bStore">🧺<span class="lbl"> Storage</span></button>
       <button class="btn small" id="bQuests">📜<span class="lbl"> Quests</span> <span class="badge hidden" id="qBadge">0</span></button>
+      <button class="btn small grey" id="bGuide" title="Guide arrows">🧭</button>
+      <button class="btn small grey" id="bHow" title="How to play">❓</button>
       <button class="btn small grey" id="bSound" title="Sound">🔊</button>
       <button class="btn small grey" id="bMenu">☰</button>
       <div id="goalrow"><span class="pill" id="goal"></span></div>
@@ -940,17 +944,19 @@ function render(time){
   }
   bubble(g,BOARD.x*TS+TS/2,BOARD.y*TS-62,'Quests');
   g.restore();
+  if(GUIDE)drawGuide(g,time);
   // floats
   for(const f of floats){g.globalAlpha=1-f.t/1.1;g.font='bold 17px "Trebuchet MS",sans-serif';g.textAlign='center';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.65)';g.strokeText(f.text,f.x,f.y-f.t*38);g.fillStyle=f.col;g.fillText(f.text,f.x,f.y-f.t*38);g.globalAlpha=1}
   // soft vignette (screen space)
   g.setTransform(DPR,0,0,DPR,0,0);
   const W=cv.width/DPR,H=cv.height/DPR;
   g.fillStyle=rg(g,W/2,H/2,Math.min(W,H)*.45,W/2,H/2,Math.max(W,H)*.75,[[0,'rgba(0,0,0,0)'],[1,'rgba(10,25,5,.35)']]);g.fillRect(0,0,W,H);
+  drawGuideEdge(g,W,H,time);
 }
 function frame(t){
   if(!worldOn)return;
   const now=t/1000,dt=Math.min(.05,now-lastT||0);lastT=now;
-  energyTick();update(dt);render(now);
+  energyTick();update(dt);guideT+=dt;if(guideT>.3){guideT=0;refreshGuide()}render(now);
   hudT+=dt;if(hudT>.5){hudT=0;hud()}
   requestAnimationFrame(frame);
 }
@@ -1119,11 +1125,13 @@ function openFreeSetup(game){
 function openMenu(){
   openModal(`<h2>☰ Menu</h2>
     <div class="row"><div class="grow"><b>Free Play</b><div class="muted">Play either mini-game without touching your progress.</div></div><button class="btn small blue" data-fp="bolt">⚙️ Bolts</button><button class="btn small blue" data-fp="card">🃏 Beans</button></div>
+    <div class="row"><div class="grow"><b>Guide arrows</b><div class="muted">Yellow arrows and a dotted trail to your next goal.</div></div><button class="btn small blue" id="mGuide">Toggle</button></div>
     <div class="row"><div class="grow"><b>Title screen</b></div><button class="btn small grey" id="mTitle">Go</button></div>
     <div class="row"><div class="grow"><b>Reset all progress</b><div class="muted">Starts a brand-new village.</div></div><button class="btn small" style="background:#e07a68" id="mReset">Reset</button></div>`);
   $('#modal').querySelectorAll('[data-fp]').forEach(b=>b.onclick=()=>{closeModal();openFreeSetup(b.dataset.fp)});
+  $('#mGuide').onclick=()=>{closeModal();toggleGuide()};
   $('#mTitle').onclick=()=>{closeModal();save(true);showTitle()};
-  $('#mReset').onclick=()=>{if(confirm('Really erase your village and start over?')){try{localStorage.removeItem(SAVE_KEY)}catch(e){}S=defState();nodes.forEach(n=>{n.ch=NODE_T[n.type].max});P.x=P.tx=17;P.y=P.ty=8;P.path=[];closeModal();hud()}};
+  $('#mReset').onclick=()=>{closeModal();askReset()};
 }
 /* =====================================================================
    STORY + GUIDANCE — three characters walk you through the game
@@ -1137,7 +1145,7 @@ const stored=k=>sget('st_'+k)>0||(S.store[k]||0)>0;
 const bothLv=()=>Math.min(S.bld.bolt,S.bld.card);
 const STORY=[
   {who:'granny',goal:'Chop 4 wood: walk onto a tree 🌳 and stand still',prog:()=>[sget('g_wood'),4],done:()=>sget('g_wood')>=4,r:{coins:5},
-   say:"Welcome home, dear! Your grandpa Alder left you Harvest Hollow, and the old place needs some love. Let's start with wood. Walk onto a tree (arrow keys / WASD, or just tap the ground) and stand there. You'll chop automatically while the ring fills. Your backpack holds 6 things."},
+   say:"Welcome home, dear! Your grandpa Alder left you Harvest Hollow, and the old place needs some love. Let's start with wood. Walk onto a tree (arrow keys / WASD, or just tap the ground) and stand there. You'll chop automatically while the ring fills. Your backpack holds 6 things. Follow the glowing yellow arrows 🧭 and dotted trail to see where to go, and tap ❓ any time for help."},
   {who:'granny',goal:'Drop your wood at the Barn: step on the red mat in front of it 📦',prog:()=>[sget('delivered'),4],done:()=>sget('delivered')>=4,r:{coins:5},
    say:"Lovely! Now carry it to the big red Barn and step on the glowing red mat. Everything in your backpack is stored there. Upgrades are paid from the Barn's storage, so stored goods really matter."},
   {who:'granny',goal:'Make 1 plank at the Sawmill, then store it in the Barn 🟫',done:()=>stored('plank'),r:{coins:5},
@@ -1174,7 +1182,8 @@ function updateGoal(){
   const g=$('#goal');if(!g)return;const st=curStep();
   if(!st){g.innerHTML='🏆 The Hollow is fully restored!';return}
   const p=st.prog?st.prog():null;
-  g.innerHTML=`📍 <b>${CAST[st.who].short}:</b> ${st.goal}${p?` <small>(${Math.min(p[0],p[1])}/${p[1]})</small>`:''}`;
+  const a=S.guide===false?null:(GUIDE&&GUIDE.a);
+  g.innerHTML=`📍 <b>${CAST[st.who].short}:</b> ${st.goal}${p?` <small>(${Math.min(p[0],p[1])}/${p[1]})</small>`:''}${a?`<span class="tip">👉 ${a.text}</span>`:''}`;
 }
 function showSay(who,text,opts={}){
   const c=CAST[who],st=curStep();
@@ -1237,6 +1246,138 @@ const RULES={
 };
 function openRules(game){openModal(RULES[game]+`<div style="text-align:right"><button class="btn green" onclick="closeModal()">Got it</button></div>`)}
 $('#goal').onclick=()=>{const st=curStep();held.length=0;if(st)showSay(st.who,st.say);else showSay('granny',END_SAY,{noGoal:true})};
+
+/* =====================================================================
+   GUIDE ARROWS — "what do I do right now, and where?"
+   ===================================================================== */
+const bldBy=id=>BLD.find(b=>b.id===id);
+const doorT=(b,icon,text)=>({text,t:{x:b.door[0],y:b.door[1],icon,label:b.name}});
+const barnT=text=>doorT(bldBy('barn'),'📦',text);
+function nearestNode(type){
+  let best=null,bd=1e9;
+  for(const n of nodes){if(n.type!==type||n.ch<=0)continue;const d=Math.abs(n.x-P.x)+Math.abs(n.y-P.y);if(d<bd){bd=d;best=n}}
+  return best||nodes.find(n=>n.type===type);
+}
+function gatherT(type){
+  const info={tree:['🌳','Tree','Walk onto a tree and stand still to chop wood'],rock:['⛰️','Rocks','Walk onto a rock and stand still to mine stone']}[type];
+  const n=nearestNode(type);
+  return{text:info[2],t:{x:n.x,y:n.y,icon:info[0],label:info[1]}};
+}
+function supply(item){
+  const cfg={plank:{b:'sawmill',raw:'wood',node:'tree'},brick:{b:'kiln',raw:'stone',node:'rock'}}[item];
+  const b=bldBy(cfg.b),s=stn(b.id),need=Object.values(b.in)[0],nm=ITEMS[item].n.toLowerCase();
+  if((S.carry[item]||0)>0)return barnT(`Drop your ${nm} at the Barn (step on the red mat)`);
+  if(s.out>0)return doorT(b,ITEMS[item].e,`Your ${nm} is ready! Step on the ${b.name} mat to collect it`);
+  if((S.carry[cfg.raw]||0)>=need)return doorT(b,ITEMS[cfg.raw].e,`Step on the ${b.name} mat to feed it ${ITEMS[cfg.raw].n.toLowerCase()}`);
+  if(s.buf>=need)return doorT(b,'⏳',`The ${b.name} is working. Wait a moment, then step on its mat`);
+  if(carryN()>=S.cap)return barnT('Your backpack is full. Drop it at the Barn first');
+  return gatherT(cfg.node);
+}
+function upgradeAction(game){
+  const lv=S.bld[game],b=bldBy(game);
+  if(lv>=MAXLV)return null;
+  const c=upCost(lv),icon=game==='bolt'?'⚙️':'🃏';
+  if(canPay(c))return doorT(b,icon,`You can afford it! Step on the mat and press ⬆ Upgrade`);
+  if(S.coins<c.coins)return doorT(b,icon,`You need ${c.coins}🪙 (you have ${S.coins}). Play here to earn coins`);
+  if((S.store.plank||0)<c.plank)return supply('plank');
+  return supply('brick');
+}
+function nextAction(){
+  const st=curStep();if(!st)return null;
+  switch(S.story){
+    case 0:return carryN()>=S.cap?barnT('Backpack full. Drop it at the Barn'):gatherT('tree');
+    case 1:return carryN()>0?barnT('Step on the red mat in front of the Barn to store your goods'):gatherT('tree');
+    case 2:return supply('plank');
+    case 3:return supply('brick');
+    case 4:return doorT(bldBy('bolt'),'⚙️','Step on the red mat under the Bolt Works, then press ▶ Play');
+    case 5:return upgradeAction('bolt');
+    case 6:return doorT(bldBy('card'),'🃏','Step on the red mat under the Card Barn, then press ▶ Play');
+    case 7:return upgradeAction('card');
+    default:return upgradeAction(S.bld.bolt<=S.bld.card?'bolt':'card');
+  }
+}
+let GUIDE=null,guideT=0;
+function refreshGuide(){
+  if(S.guide===false){GUIDE=null;return}
+  const a=nextAction();if(!a){GUIDE=null;return}
+  const fx=P.moving?P.tx:P.x,fy=P.moving?P.ty:P.y;
+  GUIDE={a,path:(fx===a.t.x&&fy===a.t.y)?null:bfs(fx,fy,a.t.x,a.t.y)};
+}
+function drawGuide(g,time){
+  if(!GUIDE)return;const{a,path}=GUIDE,t=a.t;
+  if(path&&path.length){
+    g.save();g.setLineDash([3,11]);g.lineDashOffset=-time*26;g.lineCap='round';g.lineJoin='round';
+    g.strokeStyle='rgba(30,20,0,.45)';g.lineWidth=7;g.beginPath();g.moveTo(P.px,P.py+8);path.forEach(([x,y])=>g.lineTo(x*TS+TS/2,y*TS+TS/2));g.stroke();
+    g.strokeStyle='#ffe27a';g.lineWidth=4;g.stroke();g.restore();
+  }
+  const x=t.x*TS+TS/2,y=t.y*TS,b=Math.sin(time*5)*5;
+  g.save();g.globalAlpha=.55+.35*Math.sin(time*4);g.strokeStyle='#ffe27a';g.lineWidth=4;g.beginPath();g.ellipse(x,t.y*TS+TS/2+8,22,11,0,0,7);g.stroke();g.restore();
+  g.fillStyle='#ffd23a';g.strokeStyle='#5a3a00';g.lineWidth=3;g.lineJoin='round';
+  g.beginPath();g.moveTo(x-12,y-34+b);g.lineTo(x+12,y-34+b);g.lineTo(x,y-14+b);g.closePath();g.stroke();g.fill();
+  g.font='bold 12px "Trebuchet MS",sans-serif';g.textAlign='center';g.textBaseline='middle';
+  const tw=g.measureText(t.label).width+22;
+  g.fillStyle='rgba(60,35,0,.85)';g.beginPath();g.roundRect(x-tw/2,y-58+b,tw,20,10);g.fill();g.fillStyle='#ffe9a8';g.fillText(`${t.icon} ${t.label}`,x,y-48+b);
+}
+function drawGuideEdge(g,W,H,time){
+  if(!GUIDE)return;const t=GUIDE.a.t;
+  const sx=(t.x*TS+TS/2-Math.round(cam.x))*Z,sy=(t.y*TS+TS/2-Math.round(cam.y))*Z;
+  const mx=44,mt=120,mb=64;
+  if(sx>mx&&sx<W-mx&&sy>mt&&sy<H-mb)return;
+  const cx=W/2,cy=(mt+H-mb)/2,dx=sx-cx,dy=sy-cy;
+  const k=Math.min((W/2-mx)/Math.max(1,Math.abs(dx)),((H-mb-mt)/2)/Math.max(1,Math.abs(dy)));
+  const px=cx+dx*k,py=cy+dy*k,ang=Math.atan2(dy,dx);
+  const dist=Math.max(1,Math.round(Math.hypot(t.x-P.x,t.y-P.y)));
+  g.save();g.translate(px,py);
+  const pulse=1+.08*Math.sin(time*5);g.scale(pulse,pulse);
+  g.save();g.rotate(ang);g.fillStyle='#ffd23a';g.strokeStyle='#5a3a00';g.lineWidth=3;g.lineJoin='round';
+  g.beginPath();g.moveTo(34,0);g.lineTo(18,-13);g.lineTo(18,13);g.closePath();g.stroke();g.fill();g.restore();
+  g.fillStyle=rg(g,-4,-4,2,0,0,24,[[0,'#fff6d0'],[1,'#e8b230']]);g.strokeStyle='#5a3a00';g.lineWidth=3;g.beginPath();g.arc(0,0,21,0,7);g.fill();g.stroke();
+  g.font='22px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#000';g.fillText(t.icon,0,1);
+  g.font='bold 11px "Trebuchet MS",sans-serif';const lab=`${t.label} · ${dist}`;const tw=g.measureText(lab).width+12;
+  g.fillStyle='rgba(60,35,0,.88)';g.beginPath();g.roundRect(-tw/2,24,tw,16,8);g.fill();g.fillStyle='#ffe9a8';g.fillText(lab,0,32);
+  g.restore();
+}
+function toggleGuide(on){
+  S.guide=on===undefined?S.guide===false:on;save(true);refreshGuide();
+  const b=$('#bGuide');if(b)b.classList.toggle('off',S.guide===false);
+  toast(S.guide===false?'🧭 Guide arrows off':'🧭 Guide arrows on');
+}
+
+/* ---- overview + reset ---- */
+function openHowTo(){
+  const st=curStep(),a=nextAction();
+  openModal(`<h2>❓ How Harvest Hollow works</h2>
+    ${st?`<div class="goalbox">📍 Right now: ${st.goal}${a?`<div style="font-weight:600;margin-top:3px">👉 ${a.text}</div>`:''}</div>`:''}
+    <ol class="perks" style="line-height:1.55">
+      <li><b>Gather</b> — stand on 🌳 trees, ⛰️ rocks, 🫐 bushes and 🌾 wheat. Your 🎒 backpack holds a few things.</li>
+      <li><b>Drop off</b> — step on the red mat in front of the 📦 Barn to store everything.</li>
+      <li><b>Craft</b> — feed goods into the Sawmill, Kiln, Jam Kitchen or Bakery by stepping on their mats. Step on again later to collect.</li>
+      <li><b>Play</b> — step on the red mat under the ⚙️ Bolt Works or 🃏 Card Barn and press ▶ Play (costs ⚡1) to earn 🪙 coins.</li>
+      <li><b>Upgrade</b> — spend coins plus planks and bricks from the Barn on workshop upgrades for better rewards.</li>
+      <li><b>Eat</b> — bread and jam (🧺 Storage) refill your ⚡ energy.</li></ol>
+    <div class="muted">Move: arrow keys / WASD, or tap the ground. Tap a character to talk to them.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn blue" id="hGuide">🧭 Guide arrows: ${S.guide===false?'OFF — turn on':'ON — turn off'}</button>
+      ${st?'<button class="btn grey" id="hSay">💬 Hear it again</button>':''}
+      <button class="btn green" onclick="closeModal()">Close</button></div>`);
+  $('#hGuide').onclick=()=>{toggleGuide();closeModal()};
+  const hs=$('#hSay');if(hs)hs.onclick=()=>{closeModal();showSay(st.who,st.say)};
+}
+function askReset(){
+  openModal(`<h2>🗑 Start over?</h2><p>This erases your whole village: coins, items, upgrades, quests and story progress. Free Play isn't affected.</p>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn green" onclick="closeModal()">Keep my village</button><button class="btn" style="background:linear-gradient(#f0a090,#d0543c);color:#fff" id="rsYes">Yes, erase everything</button></div>`);
+  $('#rsYes').onclick=resetGame;
+}
+function resetGame(){
+  try{localStorage.removeItem(SAVE_KEY)}catch(e){}
+  S=defState();
+  nodes.forEach(n=>{n.ch=NODE_T[n.type].max;n.t=0});
+  P.x=P.tx=17;P.y=P.ty=8;P.moving=false;P.path=[];P.lastDoor=null;held.length=0;
+  closeModal();save(true);toast('🌱 Fresh start!');
+  if(worldOn){hud()}else showTitle();
+}
+$('#bGuide').onclick=()=>toggleGuide();
+$('#bHow').onclick=()=>{held.length=0;openHowTo()};
 /* =====================================================================
    MINI-GAME 1: BOLT WORKS — nuts & bolts sorting
    Levels are random but verified solvable by a solver before they're dealt.
@@ -1332,6 +1473,7 @@ function startBolt(mode,opts){
     $('#bHelp').onclick=()=>openRules('bolt');$('#bUndo').onclick=boltUndo;$('#bHint').onclick=boltHint;$('#bReset').onclick=boltRestart;
     if($('#bNew'))$('#bNew').onclick=()=>startBolt('free',o);
     renderBolt();
+    if(!S.seen.rb){S.seen.rb=1;save();openRules('bolt')}
   },30);
 }
 function leaveMG(){const mg=$('#mg');mg.classList.add('hidden');mg.innerHTML='';B=null;C=null;if(!worldOn)return;hud()}
@@ -1471,6 +1613,7 @@ function startCards(mode,opts){
   $('#cBack').onclick=()=>{if(!C.done&&C.mode==='play'&&!confirm('Leave this game? The energy spent and any unbanked coins are lost.'))return;leaveMG()};
   $('#cHelp').onclick=()=>openRules('card');
   cardRound();
+  if(!S.seen.rc){S.seen.rc=1;save();openRules('card')}
 }
 function cardRound(){
   C.round++;
@@ -1615,7 +1758,7 @@ function cardEndRound(){
 function showTitle(){
   stopWorld();$('#world').classList.add('hidden');$('#mg').classList.add('hidden');
   const t=$('#title');t.classList.remove('hidden');
-  const has=S.st&&(Object.keys(S.st).length>0||S.coins!==25);
+  const has=S.story>0||(S.st&&(Object.keys(S.st).length>0||S.coins!==25));
   t.innerHTML=`<div style="font-size:54px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.4))">🌾⚙️🃏</div>
     <h1>Harvest Hollow</h1>
     <p>Gather wood, stone, berries and wheat. Craft goods. Then step into the workshops and play puzzles and card games to earn the coins that grow your village.</p>
@@ -1623,11 +1766,13 @@ function showTitle(){
       <button class="btn green" id="tPlay">${has?'▶ Continue village':'▶ Start village'}</button>
       <button class="btn blue" id="tFB">⚙️ Free Play — Bolt Sorting</button>
       <button class="btn blue" id="tFC">🃏 Free Play — Bean Harvest</button>
+      ${has?'<button class="btn grey" id="tReset" style="font-size:15px">🗑 Start over (erase my village)</button>':''}
     </div>
     <div class="sub">Free play never touches your progress · Progress saves in this browser</div>`;
   $('#tPlay').onclick=()=>{sfx.click();startWorld()};
   $('#tFB').onclick=()=>openFreeSetup('bolt');
   $('#tFC').onclick=()=>openFreeSetup('card');
+  const tr=$('#tReset');if(tr)tr.onclick=askReset;
 }
 // free play started from the title screen has no world behind it
 const _leave=leaveMG;
