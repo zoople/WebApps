@@ -45,11 +45,11 @@ button{font:inherit;cursor:pointer}
 #hud .sp{flex:1;pointer-events:none}
 #bag{display:flex;gap:8px}
 #bGuide.off{opacity:.5;filter:grayscale(1)}
-#goal.min{cursor:pointer;padding:5px 12px}#goal.min #goalMin{display:none}
+#goal.min{cursor:pointer;padding:6px 14px;border-radius:999px}#goal.min #goalMin{display:none}
 #goalMin{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid #b8851a;background:rgba(255,255,255,.55);color:#5b3a18;font-weight:900;line-height:1;padding:0}
 #goal .tip{display:block;font-weight:600;font-size:13px;margin-top:2px}
 #goalrow{flex-basis:100%;order:10;pointer-events:none}
-#goal{pointer-events:auto;white-space:normal;max-width:min(380px,100%);display:inline-flex;align-items:flex-start;gap:8px;background:linear-gradient(#fff3cf,#f0d58a);color:#3a2606;border:2px solid #b8851a;font-size:14px;line-height:1.3}
+#goal{border-radius:14px;padding:9px 12px;pointer-events:auto;white-space:normal;max-width:min(380px,100%);display:inline-flex;align-items:flex-start;gap:8px;background:linear-gradient(#fff3cf,#f0d58a);color:#3a2606;border:2px solid #b8851a;font-size:14px;line-height:1.3}
 .blt{margin:0;padding-left:20px}.blt li{margin:5px 0;line-height:1.4}
 .sec{font-weight:800;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:12px 0 2px}
 .row.ready{background:rgba(120,200,90,.25);border-radius:10px;padding:8px;border-bottom:0;margin:3px 0}
@@ -231,7 +231,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v9 · 9 Oct 2026';
+const VERSION='v10 · 10 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -1257,8 +1257,10 @@ function checkQuestBadge(){
   const n=claimable(),bd=$('#qBadge');bd.textContent=n;bd.classList.toggle('hidden',!n);
   if(!transferBusy())QUESTS.forEach(q=>{if(!S.claimed[q.id]&&!S.seen[q.id]&&qDone(q)){S.seen[q.id]=1;toast(`📜 Quest ready: ${q.t}`);sfx.win()}});
 }
+const energyTxt=()=>`⚡ ${S.energy}/${MAXE}`;
 function hud(){
   energyTick();
+  {const t=$('#mgEnergy');if(t)t.textContent=energyTxt();const c=$('#mgCoins');if(c)c.textContent='🪙 '+S.coins}
   $('#hCoins').innerHTML=`🪙 ${S.coins}`;
   const left=Math.max(0,Math.ceil((ERGEN-(Date.now()-S.eT))/1000));
   $('#hEnergy').innerHTML=`⚡ ${S.energy}/${MAXE}${S.energy<MAXE?` <small>+1 in ${left}s</small>`:''}`;
@@ -1304,7 +1306,7 @@ function openStorage(){
     const items=Object.keys(ITEMS).map(k=>`<div class="row"><span style="font-size:26px">${ITEMS[k].e}</span><div class="grow"><b>${ITEMS[k].n}</b></div><b style="font-size:20px">${S.store[k]||0}</b>
       ${k==='bread'?`<button class="btn small green" data-eat="bread" ${(S.store.bread||0)&&S.energy<MAXE?'':'disabled'}>Eat +2⚡</button>`:''}
       ${k==='jam'?`<button class="btn small green" data-eat="jam" ${(S.store.jam||0)&&S.energy<MAXE?'':'disabled'}>Eat +3⚡</button>`:''}</div>`).join('');
-    return `<h2>🧺 Barn Storage</h2><div class="muted">Everything you drop off at the Barn lives here. Upgrades are paid from it.</div>${items}
+    return `<h2>🧺 Barn Storage</h2><div class="muted">Everything you drop off at the Barn lives here. Upgrades are paid from it.</div><div style="margin:6px 0"><span class="cost">⚡ Energy ${S.energy}/${MAXE}</span><span class="cost">🪙 ${S.coins}</span></div>${items}
       <div style="margin-top:10px"><button class="btn" id="stUp">⬆ Upgrade backpack &amp; tools</button></div>`;
   };
   const wire=()=>{
@@ -1371,12 +1373,12 @@ function openBuilding(b){
       <b>Now:</b><ul class="perks">${cur.map(p=>`<li>${p}</li>`).join('')}</ul>
       ${max?'':`<b>Upgrade to Level ${lv+1}:</b><ul class="perks">${perks}</ul><div class="muted">Pay from your Barn storage (the number in brackets is what you have):</div><div>${costHTML(upCost(lv),true)}</div>`}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-        <button class="btn green" data-play ${S.energy<1?'disabled':''}>▶ Play · ⚡1</button>
+        <button class="btn green" data-play ${S.energy<1?'disabled':''}>▶ Play · costs ⚡1 <small>(you have ${S.energy})</small></button>
         <button class="btn blue" data-free>🎮 Free Play</button>
         <button class="btn grey" data-help>❓ How to play</button>
         ${max?'':`<button class="btn" data-up ${canPay(upCost(lv))?'':'disabled'}>⬆ Upgrade</button>`}
       </div>
-      <div class="muted" style="margin-top:6px">${S.energy<1?'Out of energy — eat bread or jam from Storage, or wait a minute.':'Playing earns 🪙 coins. Upgrade with coins, planks and bricks from your Barn.'}</div>`;
+      <div class="muted" style="margin-top:6px">⚡ Energy: <b>${S.energy}/${MAXE}</b> · 🪙 Coins: <b>${S.coins}</b>.${S.energy<1?' Out of energy — eat bread or jam from Storage, or wait a minute.':' Playing earns coins.'}</div>`;
   };
   const wire=()=>{
     const sh=$('#modal .sheet');
@@ -1755,7 +1757,7 @@ function startBolt(mode,opts){
   const mg=$('#mg');mg.className='screen';mg.id='mg';
   mg.innerHTML=`<div id="bolt" class="screen" style="display:flex;flex-direction:column">
     <div class="mgbar"><button class="btn small grey" id="bBack">← Village</button><h3>⚙️ Bolt Works</h3>
-      ${mode==='free'?'':`<span class="tag">Puzzle ${S.boltLvl+1}</span>`}${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span><button class="btn small grey" id="bHelp">❓</button><span class="tag" id="bMoves">Moves 0</span></div>
+      ${mode==='free'?'':`<span class="tag">Puzzle ${S.boltLvl+1}</span>`}${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span><span class="tag" id="mgCoins">🪙 ${S.coins}</span>`:''}<button class="btn small grey" id="bHelp">❓</button><span class="tag" id="bMoves">Moves 0</span></div>
     <div id="boltArea"><div id="boltBoard"></div></div>
     <div class="mgfoot"><button class="btn small blue" id="bUndo">↶ Undo</button><button class="btn small" id="bHint">💡 Hint</button><button class="btn small grey" id="bReset">⟲ Restart</button>${mode==='free'?'<button class="btn small green" id="bNew">🎲 New puzzle</button>':''}</div>
   </div>`;
@@ -1870,7 +1872,7 @@ function boltWin(){
     <div class="muted">${B.moves} moves · par ${B.par}</div>
     ${B.mode==='play'?`<div class="reward">🪙 +${coins}</div><div class="muted">Higher Bolt Works levels pay more per puzzle.</div>`:'<div class="reward" style="font-size:16px">Free play — no rewards</div>'}
     <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
-      ${B.mode==='play'?`<button class="btn green" id="wNext" ${S.energy<1?'disabled':''}>Next puzzle · ⚡1</button>`:`<button class="btn green" id="wNext">New puzzle</button>`}
+      ${B.mode==='play'?`<button class="btn green" id="wNext" ${S.energy<1?'disabled':''}>Next puzzle · costs ⚡1 <small>(you have ${S.energy})</small></button>`:`<button class="btn green" id="wNext">New puzzle</button>`}
       <button class="btn grey" id="wBack">Back to village</button></div></div></div>`);
   $('#bolt').appendChild(sh);
   $('#wBack').onclick=leaveMG;
@@ -1902,7 +1904,7 @@ function startCards(mode,opts){
   const mg=$('#mg');mg.className='screen';mg.id='mg';
   mg.innerHTML=`<div id="cards" class="screen" style="display:flex;flex-direction:column">
     <div class="mgbar"><button class="btn small grey" id="cBack">← Village</button><h3>🃏 Bean Harvest</h3>
-      ${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span><button class="btn small grey" id="cHelp">❓</button>
+      ${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span>`:''}<button class="btn small grey" id="cHelp">❓</button>
       <span class="tag" id="cRound"></span><span class="tag" id="cCoins"></span><span class="tag" id="cTrades"></span></div>
     <div class="tablewrap" id="cTable"></div>
     <div class="mgfoot" id="cFoot"></div></div>`;
@@ -1930,7 +1932,7 @@ function renderCards(flipIdx){
   if(!C)return;
   const cur=curCard();
   $('#cRound').textContent=`Round ${C.round}/${C.o.rounds}`;
-  $('#cCoins').textContent=`🪙 ${C.coins}`;
+  $('#cCoins').textContent=`Harvest 🪙 ${C.coins}`;
   $('#cTrades').textContent=`🔁 ${C.trades}`;
   const plots=C.fields.map((f,i)=>{
     if(i>=C.nFields)return `<div class="plot locked" data-lock="${i}"><div class="pl">🔒 Third field<br><small>costs 3🪙</small></div></div>`;
@@ -1943,7 +1945,7 @@ function renderCards(flipIdx){
       <button class="btn small green" data-h="${i}" ${f.t===null?'disabled':''}>Harvest${f.t!==null?` 🪙${payout(f.t,n)}`:''}</button></div>`;
   }).join('');
   const market=C.market.map((c,i)=>`<div class="mcol">${faceHTML(c.t,`big${C.sel===i&&C.phase==='market'?' cur':''}${flipIdx===i?' flip':''}`).replace('class="card','data-m="'+i+'" class="card')}
-      <button class="btn small blue" data-trade="${i}" ${C.trades>0?'':'disabled'}>Trade away</button></div>`).join('')
+      <button class="btn small blue" data-trade="${i}" ${C.trades>0?'':'disabled'}>Trade away <small>(${C.trades} left)</small></button></div>`).join('')
       ||`<div class="muted" style="color:#cfe9d5;font-size:13px;padding:34px 10px">${C.phase==='market'?'':'Flips after planting'}</div>`;
   const hand=C.hand.map((c,i)=>faceHTML(c.t,`big${i===0&&(C.phase==='plant1'||C.phase==='plant2'||C.phase==='final')?' cur':''}`)).join('');
   $('#cTable').innerHTML=`<div class="fields">${plots}</div>
@@ -1954,7 +1956,7 @@ function renderCards(flipIdx){
   const foot=[];
   if(C.phase==='plant2')foot.push(`<button class="btn small grey" id="cSkip">Skip 2nd card →</button>`);
   if(C.phase==='final')foot.push(`<button class="btn small green" id="cFinish">Finish round &amp; harvest ✔</button>`);
-  if(C.nFields<3)foot.push(`<button class="btn small" id="cBuy" ${C.coins>=3?'':'disabled'}>Buy 3rd field · 3🪙</button>`);
+  if(C.nFields<3)foot.push(`<button class="btn small" id="cBuy" ${C.coins>=3?'':'disabled'}>Buy 3rd field · 3🪙 <small>(you have ${C.coins})</small></button>`);
   $('#cFoot').innerHTML=foot.join('');
   // wire
   $('#cTable').querySelectorAll('[data-f]').forEach(p=>p.onclick=e=>{if(e.target.closest('[data-h]'))return;cardPlant(+p.dataset.f)});
@@ -2042,7 +2044,7 @@ function cardEndRound(){
     ${last?`<div class="muted">Total ${C.coins}🪙${mult>1?` × ${mult} Level-5 bonus`:''}</div>
       ${C.mode==='play'?`<div class="reward">+${reward} 🪙 banked</div>`:'<div class="reward" style="font-size:16px">Free play — no rewards</div>'}`:''}
     <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
-      ${last?(C.mode==='play'?`<button class="btn green" id="oAgain" ${S.energy<1?'disabled':''}>Play again · ⚡1</button>`:'<button class="btn green" id="oAgain">Play again</button>'):'<button class="btn green" id="oNext">Next round →</button>'}
+      ${last?(C.mode==='play'?`<button class="btn green" id="oAgain" ${S.energy<1?'disabled':''}>Play again · costs ⚡1 <small>(you have ${S.energy})</small></button>`:'<button class="btn green" id="oAgain">Play again</button>'):'<button class="btn green" id="oNext">Next round →</button>'}
       ${last?'<button class="btn grey" id="oBack">Back to village</button>':''}</div></div></div>`);
   $('#cards').appendChild(sh);
   if($('#oNext'))$('#oNext').onclick=()=>{sh.remove();cardRound()};
