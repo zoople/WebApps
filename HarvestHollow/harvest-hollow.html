@@ -228,6 +228,8 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 .steps{flex:none;display:flex;flex-direction:column;gap:3px}
 .steps .r{display:flex;align-items:center;gap:8px;padding:2px 10px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);font-size:13px;font-weight:800;color:#cfe9d5;opacity:.75;min-height:22px}
 .steps .r .ic{width:22px;text-align:center;font-size:15px}
+.steps .r .drew{margin-left:8px;padding:0 8px;border-radius:999px;background:rgba(0,0,0,.28);font-size:12px;font-weight:800}
+.steps .r.on .drew{background:rgba(58,38,6,.18)}
 .steps .r .sub{margin-left:auto;font-size:14px;font-weight:800;letter-spacing:1px}
 .steps .r.done{background:rgba(80,170,70,.4);border-color:rgba(160,240,140,.45);opacity:.95}
 .steps .r.on{background:#ffe27a;color:#3a2606;opacity:1;padding:7px 10px;font-size:17px;border-color:#fff3b0;box-shadow:0 0 12px rgba(255,226,122,.55)}
@@ -304,7 +306,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v15 · 11 Oct 2026';
+const VERSION='v16 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -2016,6 +2018,7 @@ function cardRound(){
   C.deck=shuffle(d);C.hand=[];C.market=[];C.trades=C.o.trades;C.roundCoins=0;C.discard=0;C.discardPile=[];
   C.fields=[0,1,2].map(()=>({t:null,n:0}));
   for(let i=0;i<5;i++)C.hand.push(C.deck.pop());
+  C.drew=5;
   C.phase='plant1';C.msg=`🌾 ${C.round}/${C.o.rounds} · 🂠 +5`;
   renderCards();
 }
@@ -2046,7 +2049,7 @@ function openPrices(){
   openModal(`<h2>📋 Bean prices</h2><div class="muted">Harvest a field to cash in. More beans of one crop pay more coins.</div><table class="ptable">${rows}</table>
     <div style="text-align:right;margin-top:10px"><button class="btn green" onclick="closeModal()">Got it</button></div>`);
 }
-const STEPS=[['plant1','🌱','Plant'],['plant2','🌱','Plant 2nd (optional)'],['market','🏪','Market'],['draw','🂠','Draw 3']];
+const STEPS=[['plant1','🌱','Plant'],['plant2','🌱','Plant 2nd (optional)'],['market','🏪','Market']];
 function stepsHTML(){
   const cur=curCard(),e=cur?CROPS[cur.t].e:'';
   if(C.phase==='final')return `<div class="steps"><div class="r final"><span class="ic">🏁</span>Final turn<span class="sub">${e}👇 · ✔</span></div></div>`;
@@ -2055,7 +2058,8 @@ function stepsHTML(){
   return `<div class="steps">`+STEPS.map((s,i)=>{
     const st=i<idx?'done':i===idx?'on':'';
     const title=i===2?`Market${idx===2?` ${3-C.market.length}/2`:''}`:s[2];
-    return `<div class="r ${st}"><span class="ic">${i<idx?'✅':s[1]}</span>${title}${i===idx?`<span class="sub">${subs[s[0]]}</span>`:''}</div>`;
+    const drew=i===0&&C.drew?`<span class="drew">🂠 +${C.drew}</span>`:'';
+    return `<div class="r ${st}"><span class="ic">${i<idx?'✅':s[1]}</span>${title}${drew}${i===idx?`<span class="sub">${subs[s[0]]}</span>`:''}</div>`;
   }).join('')+`</div>`;
 }
 function renderCards(flipIdx){
@@ -2189,7 +2193,7 @@ function cardTrade(i){
 function cardAfterMarket(){
   if(C.market.length){C.msg+=` Now the other card.`;renderCards();return}
   // draw three to the back of the hand
-  for(let k=0;k<3;k++){const c=drawCard();if(c)C.hand.push(c)}
+  C.drew=0;for(let k=0;k<3;k++){const c=drawCard();if(c){C.hand.push(c);C.drew++}}
   C.turn++;if(C.classic)C.trades=C.o.trades;
   if(!C.hand.length&&!C.deck.length&&!(C.classic&&C.pass<C.o.rounds&&C.discardPile.length)){cardEndRound();return}
   C.phase='plant1';
