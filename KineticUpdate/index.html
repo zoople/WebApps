@@ -336,6 +336,26 @@
   .all-list li.c { color: var(--ink); font-weight: 700; }
   #dealt-card .kcard { display: flex; flex-direction: column; }
 
+  #u-hunger, #u-makeloop { display: flex; flex-direction: column; gap: 12px;
+    height: calc(100vh - 88px - env(safe-area-inset-bottom, 0px)); height: calc(100dvh - 88px - env(safe-area-inset-bottom, 0px)); }
+  #u-hunger[hidden], #u-makeloop[hidden] { display: none; }
+  .hq-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: clamp(6px, 1.2vh, 10px); }
+  .hq { flex: 1 1 0; max-height: 92px; min-height: 52px; display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 12px; text-align: left; padding: 8px 14px; border-radius: 16px; }
+  .hq .he { font-size: clamp(1.8rem, 5vh, 2.4rem); line-height: 1; }
+  .hq b { font-family: var(--display); font-size: 1.15rem; display: block; }
+  .hq span.sub { font-size: 0.84rem; color: var(--muted); font-weight: 400; }
+  .hq.real { border-color: var(--warn); }
+  .mk-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .mk-prog { font-size: 0.8rem; color: var(--muted); font-weight: 700; }
+  .mk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .mk-grid .ltile { min-height: 58px; flex-direction: row; align-items: center; gap: 8px; padding: 8px 12px; }
+  .mk-grid .ltile .le { font-size: 1.5rem; }
+  .mk-grid .ltile .ln { font-size: 0.95rem; }
+  .home-loops .empty { padding: 14px; }
+  .big-home .ltile { min-height: clamp(86px, 16vh, 140px) !important; justify-content: center; gap: 6px; }
+  .big-home .ltile .le { font-size: clamp(1.8rem, 5vh, 2.6rem) !important; }
+  .big-home .ltile .ln { font-size: 1.02rem; }
+
   .loop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .ltile { position: relative; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 12px 12px;
     min-height: 118px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 400; overflow: hidden; }
@@ -402,22 +422,26 @@
     <!-- Step: check-in -->
     <div id="u-checkin">
       <p id="ios-hint" class="small muted" hidden>📱 Full screen on iPhone: Share → Add to Home Screen.</p>
-      <button id="quick-btn" class="quick"><span class="q-top">⚡ Quick draw</span><span class="q-sub" id="quick-sub"></span></button>
-      <div class="or-line"><span>or choose</span><span id="default-ctl"></span></div>
-      <div class="home-loops">
-        <div id="loop-chips" class="loop-grid compact-home"></div>
-        <div id="home-status"></div>
+      <button id="quick-btn" class="quick"><span class="q-top">⚡ Quick draw</span><span class="q-sub">One tap. No setup.</span></button>
+      <div class="or-line"><span id="pick-title">Or pick what's pulling you</span></div>
+      <div class="home-loops"><div id="loop-chips" class="loop-grid big-home"></div></div>
+      <div class="spread home-meta">
+        <button id="already-btn" class="btn-quiet">I already ate it</button>
+        <span class="row" style="gap:4px"><span class="ver-tag mono" id="ver-home"></span><button id="fs-btn" class="btn-quiet" hidden aria-label="Full screen">⛶</button></span>
       </div>
-      <div class="home-foot">
-        <div id="hunger-seg" class="hunger" role="group" aria-label="How hungry is your body, 1 to 5"></div>
-        <p id="hunger-hint" class="small" hidden></p>
-        <button id="deal-btn" class="btn-ink btn-block">Deal my card</button>
-        <div class="spread home-meta">
-          <button id="already-btn" class="btn-quiet">I already ate it</button>
-          <span class="row" style="gap:4px"><span class="ver-tag mono" id="ver-home"></span><button id="fs-btn" class="btn-quiet" hidden aria-label="Full screen">⛶</button></span>
-        </div>
-        <div id="upd-home"></div>
-      </div>
+      <div id="upd-home"></div>
+    </div>
+
+    <!-- Step: how hungry -->
+    <div id="u-hunger" hidden>
+      <div class="stack" style="gap:2px"><span id="hq-loop" class="eyebrow"></span><h2>How hungry is your body?</h2></div>
+      <div id="hq-list" class="hq-list"></div>
+      <button class="btn-quiet u-cancel">↶ Back</button>
+    </div>
+
+    <!-- Step: make a loop from a quick draw -->
+    <div id="u-makeloop" hidden>
+      <div id="mk-body" class="mk-body"></div>
     </div>
 
     <!-- Step: run the card -->
@@ -683,7 +707,7 @@
   const OUT = Object.fromEntries(OUTCOMES.map(o => [o.id, o]));
 
   const HUNGER = [
-    { v: 1, e: "😌", l: "not" }, { v: 2, e: "🙂", l: "a bit" }, { v: 3, e: "😐", l: "some" }, { v: 4, e: "😋", l: "hungry" }, { v: 5, e: "😫", l: "starving" }
+    { v: 1, e: "😌", l: "not hungry" }, { v: 2, e: "🙂", l: "a bit" }, { v: 3, e: "😐", l: "some" }, { v: 4, e: "😋", l: "hungry" }, { v: 5, e: "😫", l: "starving" }
   ];
 
   // ---------- State ----------
@@ -991,8 +1015,9 @@
   // ---------- Urge flow ----------
   const flow = { loopId: "", hunger: 0, test: null, endAt: 0, total: 0, tick: null, wake: null, alerted: false };
   const $ = id => document.getElementById(id);
-  const steps = ["u-checkin", "u-card", "u-outcome", "u-result"];
-  function showStep(id) { steps.forEach(s => { $(s).hidden = s !== id; }); document.body.classList.toggle("running", id === "u-card" || id === "u-checkin"); window.scrollTo(0, 0); }
+  const steps = ["u-checkin", "u-hunger", "u-card", "u-outcome", "u-result", "u-makeloop"];
+  const FIT = ["u-checkin", "u-hunger", "u-card", "u-makeloop"];
+  function showStep(id) { steps.forEach(s => { $(s).hidden = s !== id; }); document.body.classList.toggle("running", FIT.includes(id)); window.scrollTo(0, 0); }
 
   function pickLoop() {
     if (loopById(state.defaultLoopId)) return state.defaultLoopId;
@@ -1001,37 +1026,24 @@
   }
 
   function renderCheckin() {
-    if (!flow.loopId || !loopById(flow.loopId)) flow.loopId = pickLoop();
-    $("loop-chips").innerHTML = state.loops.map(l => {
-      const k = K[l.test.k];
-      return '<button class="ltile" data-loop="' + l.id + '" aria-pressed="' + (l.id === flow.loopId) + '">' +
-        (l.id === state.defaultLoopId ? '<span class="star" title="Default loop">★</span>' : "") +
-        '<span class="le" aria-hidden="true">' + esc(l.emoji || "🍪") + '</span><span class="ln">' + esc(l.name) + '</span><span class="lk">' + k.emoji + " " + k.name + "</span></button>";
-    }).join("") + '<button class="add-slim" data-addloop="1">＋ Add a loop</button>';
-    const sel = loopById(flow.loopId);
-    $("default-ctl").innerHTML = !sel || sel.id === state.defaultLoopId ? ""
-      : '<button class="btn-quiet" data-setdefault="' + sel.id + '">☆ Make default</button>';
-    const q = loopById(pickLoop());
-    $("quick-sub").textContent = q ? (q.emoji || "") + " " + q.name + " · " + K[q.test.k].emoji + " " + K[q.test.k].name : "Add a loop first";
-    $("quick-btn").disabled = !q;
-    $("hunger-seg").innerHTML = HUNGER.map(h => '<button data-h="' + h.v + '" aria-pressed="' + (flow.hunger === h.v) + '"><span class="he" aria-hidden="true">' + h.e + "</span><small>" + h.l + "</small></button>").join("");
-    const hungry = flow.hunger >= 4;
-    const hints = { 1: "👍 That's the loop, not hunger.", 2: "👍 That's mostly the loop.", 3: "➕ Adds a snack step at the end.", 4: "🍎 You'll get a proper-snack card.", 5: "🍎 You'll get a proper-snack card." };
-    $("hunger-hint").hidden = !flow.hunger;
-    $("hunger-hint").textContent = hints[flow.hunger] || "";
-    $("deal-btn").textContent = hungry ? "🍎 Deal a proper-snack card" : "Deal my card";
-    $("deal-btn").disabled = !sel;
-    renderHomeStatus();
+    const miss = flow.mode === "miss";
+    $("pick-title").textContent = miss ? "Which loop was it?" : "Or pick what's pulling you";
+    $("quick-btn").hidden = miss;
+    $("already-btn").textContent = miss ? "↶ Back" : "I already ate it";
+    $("loop-chips").innerHTML = state.loops.length ? state.loops.map(l =>
+      '<button class="ltile" data-loop="' + l.id + '"><span class="le" aria-hidden="true">' + esc(l.emoji || "🍪") + '</span><span class="ln">' + esc(l.name) + "</span></button>"
+    ).join("") + (miss ? '<button class="ltile" data-loop="quick"><span class="le" aria-hidden="true">⚡</span><span class="ln">Not sure</span></button>' : "")
+      : '<div class="empty small">No loops yet. Use ⚡ Quick draw, then save it as a loop, or add one in the Loops tab.</div>';
   }
+  function renderHomeStatus() {}
 
-  function renderHomeStatus() {
-    const loop = loopById(flow.loopId);
-    const box = $("home-status");
-    if (!loop) { box.innerHTML = ""; return; }
-    const c = classify(loop);
-    box.innerHTML = '<details class="more"><summary>How ' + esc(loop.name) + ' is going</summary><div class="more-body">' +
-      '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + "</span>" + dotsHTML(loop, 8) + "</div>" +
-      '<p class="small">' + esc(c.advice) + "</p></div></details>";
+  const HUNGER_EFFECT = { 1: "Run the card", 2: "Run the card", 3: "Card + a planned snack at the end", 4: "Eat a proper snack, on purpose", 5: "Eat a proper snack, on purpose" };
+  function showHunger() {
+    const loop = loopById(flow.loopId); if (!loop) return;
+    $("hq-loop").textContent = (loop.emoji || "") + " " + loop.name;
+    $("hq-list").innerHTML = HUNGER.map(h => '<button class="hq' + (h.v >= 4 ? " real" : "") + '" data-hq="' + h.v + '"><span class="he" aria-hidden="true">' + h.e +
+      "</span><span><b>" + h.l.charAt(0).toUpperCase() + h.l.slice(1) + '</b><span class="sub">' + HUNGER_EFFECT[h.v] + "</span></span></button>").join("");
+    showStep("u-hunger");
   }
 
   // The step that carries the card's timer: the first one about waiting or breathing, else the first action.
@@ -1052,13 +1064,19 @@
     return i;
   }
 
+  // Quick draw: the strongest general card for a craving, no loop needed.
+  const QUICK_TEST = () => ({ k: "temporal", mods: [], action: K.temporal.plays[0], secs: K.temporal.secs, gen: 1 });
+
   function dealCard(randomise) {
-    const loop = loopById(flow.loopId); if (!loop) return;
+    const loop = flow.quick ? null : loopById(flow.loopId);
+    if (!loop && !flow.quick) return;
     stopTimer();
     if (randomise) {
       const pool = KOGNEMS.filter(k => k.id !== (flow.test && flow.test.k));
       const k = pool[Math.floor(Math.random() * pool.length)];
       flow.test = { k: k.id, mods: [], action: k.plays[Math.floor(Math.random() * k.plays.length)], secs: k.secs, gen: 1, wild: true };
+    } else if (flow.quick) {
+      flow.test = QUICK_TEST();
     } else if (flow.hunger >= 4) {
       // Real hunger: eat on purpose instead of running the loop's card. Logged as hunger, outside the loop's Ψ.
       flow.test = Object.assign(clone(loop.test), { mods: [], secs: 300, hunger: true,
@@ -1069,7 +1087,8 @@
     }
     flow.steps = stepsFor(flow.test);
     // The loop's trigger is the first thing to confirm: catch the moment, then run the card.
-    if (loop.closure && !flow.test.hunger) flow.steps.unshift({ text: "Stop at the moment: " + loop.closure.replace(/[.\s]+$/, "") + ".", trig: true });
+    if (loop && loop.closure && !flow.test.hunger) flow.steps.unshift({ text: "Stop at the moment: " + loop.closure.replace(/[.\s]+$/, "") + ".", trig: true });
+    else if (!loop) flow.steps.unshift({ text: "Stop. Notice the urge.", trig: true });
     flow.timedIdx = timedIndex(flow.steps);
     flow.cur = 0; flow.endAt = 0; flow.alerted = false; flow.showAll = false;
     renderRun();
@@ -1181,12 +1200,29 @@
   }
 
   function logOutcome(out) {
-    const loop = loopById(flow.loopId); if (!loop) return;
-    const test = flow.test || loop.test;
-    state.logs.push({ id: uid("log"), t: Date.now(), loopId: loop.id, hunger: flow.hunger || 0, k: test.k, mods: (test.mods || []).slice(),
-      gen: test.gen || 1, key: testKey(test.k, test.mods, test.gen), outcome: out, note: $("outcome-note").value.trim() });
-    state.lastLoopId = loop.id;
+    const loop = flow.quick ? null : loopById(flow.loopId);
+    if (!loop && !flow.quick) return;
+    const test = flow.test || (loop ? loop.test : QUICK_TEST());
+    const entry = { id: uid("log"), t: Date.now(), loopId: loop ? loop.id : "", quick: !loop, hunger: flow.hunger || 0, k: test.k, mods: (test.mods || []).slice(),
+      gen: test.gen || 1, key: testKey(test.k, test.mods, test.gen), outcome: out, note: $("outcome-note").value.trim() };
+    state.logs.push(entry);
+    if (loop) state.lastLoopId = loop.id;
     save();
+    if (!loop) {
+      // Quick draw: offer to turn this moment into a loop.
+      const o = OUT[out];
+      const heads = { new: "Nice. A new habit ran.", old: "Logged. The old habit won this one.", hun: "Real hunger, handled on purpose." };
+      $("result-body").innerHTML = '<span class="eyebrow">⚡ Quick draw</span><h2>' + o.emoji + " " + heads[o.cls] + "</h2>" +
+        "<p>Does this moment keep coming back? Save it as a loop and its card will be ready next time.</p>";
+      mk.logId = entry.id; mk.test = clone(test); delete mk.test.wild;
+      $("result-actions").innerHTML = '<button class="btn-primary btn-block" data-makeloop="1">➕ Make it a loop (3 quick questions)</button>';
+      $("result-home-btn").textContent = "No thanks";
+      flow.test = null; flow.hunger = 0; flow.quick = false;
+      showStep("u-result");
+      renderAll();
+      return;
+    }
+    $("result-home-btn").textContent = "Done";
     const c = classify(loop);
     const o = OUT[out];
     const heads = { new: "Nice. A new habit ran.", old: "Logged. The old habit won this one.", hun: "Real hunger, handled on purpose." };
@@ -1208,7 +1244,62 @@
     renderAll();
   }
 
-  $("result-actions").addEventListener("click", e => { const b = e.target.closest("[data-mutate]"); if (b) openMutate(b.dataset.mutate, true); });
+  $("result-actions").addEventListener("click", e => {
+    if (e.target.closest("[data-makeloop]")) return startMakeLoop();
+    const b = e.target.closest("[data-mutate]"); if (b) openMutate(b.dataset.mutate, true);
+  });
+
+  // ---------- Make a loop from a quick draw ----------
+  const MK_Q = [
+    { key: "trig", q: "What set it off?", opts: [["🥱", "Bored", "feeling bored"], ["😤", "Stressed", "feeling stressed"], ["🔋", "Tired", "feeling tired"], ["👀", "Saw food", "seeing food"],
+      ["🍽️", "After a meal", "just after a meal"], ["☕", "Taking a break", "taking a break"], ["📺", "TV or phone", "watching TV or my phone"]] },
+    { key: "place", q: "Where were you?", opts: [["💻", "At my desk", "at my desk"], ["🍳", "In the kitchen", "in the kitchen"], ["🛋️", "On the sofa", "on the sofa"],
+      ["🛏️", "In bed", "in bed"], ["🚗", "Out and about", "out and about"]] },
+    { key: "food", q: "What were you going for?", opts: [["🍫", "Chocolate or sweets", "chocolate or sweets"], ["🥔", "Crisps", "crisps"], ["🍪", "Biscuits", "biscuits"],
+      ["🍞", "Bread or leftovers", "bread or leftovers"], ["🍦", "Ice cream", "ice cream"], ["🧀", "Cheese", "cheese"]] }
+  ];
+  const mk = { i: 0, ans: {}, logId: "", test: null, other: false };
+  function startMakeLoop() { mk.i = 0; mk.ans = {}; mk.other = false; renderMakeLoop(); showStep("u-makeloop"); }
+  function renderMakeLoop() {
+    let h = '<div class="spread"><span class="mk-prog">Question ' + Math.min(mk.i + 1, 4) + " of 4</span><button class=\"btn-quiet\" data-mkskip=\"1\">Skip</button></div>";
+    if (mk.i < MK_Q.length) {
+      const q = MK_Q[mk.i];
+      h += "<h2>" + q.q + '</h2><div class="mk-grid">' + q.opts.map((o, j) => '<button class="ltile" data-mkopt="' + j + '"><span class="le" aria-hidden="true">' + o[0] + '</span><span class="ln">' + o[1] + "</span></button>").join("") +
+        '<button class="ltile" data-mkother="1"><span class="le" aria-hidden="true">✏️</span><span class="ln">Something else</span></button></div>';
+      if (mk.other) h += '<label class="f" for="mk-other">In a few words<input id="mk-other" placeholder="e.g. lonely, in the car"></label><button class="btn-primary" data-mknext="1">Next</button>';
+    } else {
+      const a = mk.ans;
+      h += '<h2>Name this loop</h2><label class="f" for="mk-name">Name<input id="mk-name" value="' + esc(a.trig.label + " " + a.place.label.toLowerCase()) + '"></label>' +
+        '<p class="small muted">When ' + esc(a.trig.phrase + " " + a.place.phrase) + ", I go for " + esc(a.food.phrase) + ".</p>" +
+        '<button class="btn-primary btn-block" data-mksave="1">Save loop</button>';
+    }
+    if (mk.i > 0) h += '<button class="btn-quiet" data-mkback="1">↶ Back</button>';
+    $("mk-body").innerHTML = h;
+    const other = document.getElementById("mk-other"); if (other) other.focus();
+  }
+  function mkAnswer(emoji, label, phrase) { mk.ans[MK_Q[mk.i].key] = { emoji, label, phrase }; mk.i++; mk.other = false; renderMakeLoop(); }
+  $("mk-body").addEventListener("click", e => {
+    if (e.target.closest("[data-mkskip]")) { showStep("u-checkin"); renderCheckin(); return; }
+    if (e.target.closest("[data-mkback]")) { mk.i = Math.max(0, mk.i - 1); mk.other = false; renderMakeLoop(); return; }
+    const o = e.target.closest("[data-mkopt]");
+    if (o) { const x = MK_Q[mk.i].opts[Number(o.dataset.mkopt)]; return mkAnswer(x[0], x[1], x[2]); }
+    if (e.target.closest("[data-mkother]")) { mk.other = true; renderMakeLoop(); return; }
+    if (e.target.closest("[data-mknext]")) {
+      const v = (document.getElementById("mk-other").value || "").trim(); if (!v) return toast("Type a few words first");
+      return mkAnswer(mk.i === 0 ? "🍪" : "✏️", v.charAt(0).toUpperCase() + v.slice(1), mk.i === 1 && !/^(at|in|on|out)\b/i.test(v) ? "at " + v : v);
+    }
+    if (e.target.closest("[data-mksave]")) {
+      const a = mk.ans;
+      const loop = { id: uid("loop"), emoji: a.trig.emoji, name: (document.getElementById("mk-name").value || "").trim() || a.trig.label,
+        cue: a.trig.phrase + " " + a.place.phrase, auto: "go for " + a.food.phrase, payoff: "", closure: "reaching for the " + a.food.phrase,
+        history: [], test: mk.test || QUICK_TEST() };
+      state.loops.push(loop);
+      const lg = state.logs.find(l => l.id === mk.logId);
+      if (lg) { lg.loopId = loop.id; lg.quick = false; lg.key = testKey(loop.test.k, loop.test.mods, loop.test.gen); }
+      save(); showStep("u-checkin"); renderAll();
+      toast(loop.emoji + " " + loop.name + " saved");
+    }
+  });
 
   // ---------- Mutation ----------
   // A mutation changes exactly one thing about a loop's card and starts the next generation.
@@ -1370,34 +1461,36 @@
     toast(loop.emoji + " " + loop.name + " added");
   });
 
-  function cancelFlow() { stopTimer(); flow.test = null; showStep("u-checkin"); renderCheckin(); }
+  function cancelFlow() { stopTimer(); flow.test = null; flow.quick = false; flow.mode = ""; showStep("u-checkin"); renderCheckin(); }
 
   $("loop-chips").addEventListener("click", e => {
-    if (e.target.closest("[data-addloop]")) return openAddLoop();
     const b = e.target.closest("[data-loop]"); if (!b) return;
-    flow.loopId = b.dataset.loop; renderCheckin();
+    goFullscreenOnce();
+    if (flow.mode === "miss") {
+      flow.mode = "";
+      flow.quick = b.dataset.loop === "quick";
+      flow.loopId = flow.quick ? "" : b.dataset.loop;
+      flow.test = flow.quick ? QUICK_TEST() : clone(loopById(flow.loopId).test);
+      flow.hunger = 0;
+      showOutcome(true);
+      return;
+    }
+    flow.quick = false; flow.loopId = b.dataset.loop; flow.hunger = 0;
+    showHunger();
   });
-  $("default-ctl").addEventListener("click", e => {
-    const b = e.target.closest("[data-setdefault]"); if (!b) return;
-    state.defaultLoopId = b.dataset.setdefault; save(); renderAll(); toast("★ This loop is now your default");
-  });
-  $("hunger-seg").addEventListener("click", e => {
-    const b = e.target.closest("[data-h]"); if (!b) return;
-    const v = Number(b.dataset.h); flow.hunger = flow.hunger === v ? 0 : v; renderCheckin();
+  $("hq-list").addEventListener("click", e => {
+    const b = e.target.closest("[data-hq]"); if (!b) return;
+    flow.hunger = Number(b.dataset.hq);
+    dealCard(false);
   });
   $("quick-btn").addEventListener("click", () => {
     goFullscreenOnce();
-    const id = pickLoop(); if (!id) return;
-    flow.loopId = id; flow.hunger = 0;
-    dealCard(false);
-  });
-  $("deal-btn").addEventListener("click", () => {
-    goFullscreenOnce();
+    flow.quick = true; flow.loopId = ""; flow.hunger = 0;
     dealCard(false);
   });
   $("already-btn").addEventListener("click", () => {
-    const loop = loopById(flow.loopId); if (!loop) return;
-    flow.test = clone(loop.test); showOutcome(true);
+    flow.mode = flow.mode === "miss" ? "" : "miss";
+    renderCheckin();
   });
   $("redraw-btn").addEventListener("click", () => dealCard(true));
   $("run-log-btn").addEventListener("click", () => { if (flow.test && flow.test.hunger) { stopTimer(); $("outcome-note").value = ""; logOutcome("hungry"); } else showOutcome(); });
@@ -1407,7 +1500,7 @@
     if (e.target.closest("[data-toggle-all]")) { flow.showAll = !flow.showAll; renderRun(); }
   });
   $("outcome-list").addEventListener("click", e => { const b = e.target.closest("[data-out]"); if (b) logOutcome(b.dataset.out); });
-  $("result-home-btn").addEventListener("click", () => { flow.loopId = ""; showStep("u-checkin"); renderCheckin(); });
+  $("result-home-btn").addEventListener("click", () => { flow.loopId = ""; flow.quick = false; showStep("u-checkin"); renderCheckin(); });
   document.querySelectorAll(".u-cancel").forEach(b => b.addEventListener("click", cancelFlow));
 
   // ---------- Loops tab ----------
@@ -1439,7 +1532,6 @@
     html += f("ed-name", "Loop name", loop.name, "e.g. Afternoon desk slump");
     html += '<span class="f">Emoji</span><div class="emoji-row" id="ed-emoji-row">' + LOOP_EMOJIS.map(em => '<button type="button" data-emoji="' + em + '" aria-pressed="' + (em === loop.emoji) + '">' + em + "</button>").join("") + "</div>";
     html += '<input type="hidden" id="ed-emoji" value="' + esc(loop.emoji || "🍪") + '">';
-    html += '<label class="check" for="ed-default"><input type="checkbox" id="ed-default"' + (loop.id === state.defaultLoopId ? " checked" : "") + '> ★ Default loop (the Urge screen opens on this one)</label>';
     html += f("ed-cue", "When (cue and context)", loop.cue, "e.g. 3 to 4pm, energy dips at my desk");
     html += f("ed-auto", "I automatically…", loop.auto, "e.g. walk to the kitchen and grab biscuits");
     html += f("ed-payoff", "It gives me (payoff)", loop.payoff, "e.g. a break, a sugar hit");
@@ -1518,8 +1610,6 @@
     }
     loop.name = v("ed-name") || "Untitled loop";
     loop.emoji = v("ed-emoji") || "🍪";
-    if (form.querySelector("#ed-default").checked) state.defaultLoopId = loop.id;
-    else if (state.defaultLoopId === loop.id) state.defaultLoopId = "";
     loop.cue = v("ed-cue"); loop.auto = v("ed-auto"); loop.payoff = v("ed-payoff"); loop.closure = v("ed-closure");
     loop.test = nextTest;
     delete loop.example;
@@ -1625,7 +1715,7 @@
       const loop = loopById(l.loopId), o = OUT[l.outcome], k = K[l.k];
       const d = new Date(l.t);
       const when = d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      return '<li><span class="dot ' + outClass(l.outcome) + '"></span><div><b>' + esc(o ? o.label : l.outcome) + '</b> <span class="muted">· ' + esc(loop ? loop.name : "deleted loop") + "</span>" +
+      return '<li><span class="dot ' + outClass(l.outcome) + '"></span><div><b>' + esc(o ? o.label : l.outcome) + '</b> <span class="muted">· ' + esc(loop ? loop.name : l.quick ? "⚡ Quick draw" : "deleted loop") + "</span>" +
         '<div class="small muted">' + (k ? k.name : "") + ((l.mods || []).length ? " + " + l.mods.map(m => MODS[m] ? MODS[m].name : m).join(", ") : "") + (l.hunger ? " · hunger " + l.hunger : "") + "</div>" +
         (l.note ? '<div class="small">' + esc(l.note) + "</div>" : "") + '</div><span class="small muted mono">' + (l.imported ? "import" : when) + "</span></li>";
     }).join("") : '<li class="empty" style="display:block">Nothing logged yet. When the next snack urge hits, open the Urge tab.</li>';
@@ -1652,7 +1742,7 @@
   });
 
   // ---------- Version, full screen, self-update ----------
-  const VERSION = "v2 · 11 Oct 2026";
+  const VERSION = "v3 · 11 Oct 2026";
   const inClaude = !!(window.claude && typeof window.claude.use === "function");
   const topLevel = (() => { try { return window.self === window.top; } catch (e) { return false; } })();
   const fsRoot = document.documentElement;
@@ -1695,7 +1785,7 @@
   function setTab(name) {
     document.querySelectorAll("nav.tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
     ["urge", "loops", "deck", "log"].forEach(t => { $("tab-" + t).hidden = t !== name; });
-    document.body.classList.toggle("running", name === "urge" && (!$("u-card").hidden || !$("u-checkin").hidden));
+    document.body.classList.toggle("running", name === "urge" && FIT.some(id => !$(id).hidden));
     try { sessionStorage.setItem("ksd_tab", name); } catch (e) {}
     window.scrollTo(0, 0);
   }
