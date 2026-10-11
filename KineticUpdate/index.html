@@ -336,6 +336,21 @@
   .all-list li.c { color: var(--ink); font-weight: 700; }
   #dealt-card .kcard { display: flex; flex-direction: column; }
 
+  .deck-head { flex: none; display: flex; align-items: center; gap: 12px; }
+  .deck-art { width: clamp(52px, 9vh, 72px); height: clamp(52px, 9vh, 72px); flex: none; display: grid; place-items: center; font-size: clamp(2rem, 6vh, 2.8rem); }
+  .deck-art.emoji { background: var(--accent-soft); border-radius: 50%; }
+  @media (prefers-reduced-motion: no-preference) { .deck-art svg { animation: wobble 4s ease-in-out infinite; transform-origin: 50% 60%; } @keyframes wobble { 0%, 86%, 100% { transform: rotate(0); } 90% { transform: rotate(-8deg); } 95% { transform: rotate(6deg); } } }
+  .deck-titles { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+  .deck-titles h1 { font-size: clamp(1.6rem, 4.6vh, 2.2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .deck-switch { min-height: 30px; padding: 2px 10px; font-size: 0.8rem; border-radius: 999px; background: var(--surface); }
+  .grp { flex: none; border-radius: 20px; }
+  .grp-quick .quick { border-radius: 20px; }
+  .grp-loops { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--accent-soft); border: 1.5px solid var(--accent); }
+  .grp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .grp-head #pick-title { font-family: var(--display); font-weight: 800; font-size: 1.15rem; }
+  .grp-loops .home-loops { padding: 0; }
+  .grp-loops .ltile { background: var(--surface); }
+
   #u-hunger, #u-makeloop { display: flex; flex-direction: column; gap: 12px;
     height: calc(100vh - 88px - env(safe-area-inset-bottom, 0px)); height: calc(100dvh - 88px - env(safe-area-inset-bottom, 0px)); }
   #u-hunger[hidden], #u-makeloop[hidden] { display: none; }
@@ -351,7 +366,7 @@
   .mk-grid .ltile { min-height: 58px; flex-direction: row; align-items: center; gap: 8px; padding: 8px 12px; }
   .mk-grid .ltile .le { font-size: 1.5rem; }
   .mk-grid .ltile .ln { font-size: 0.95rem; }
-  .home-loops .empty { padding: 14px; }
+  .home-loops .empty { padding: 14px; grid-column: 1 / -1; background: var(--surface); }
   .big-home .ltile { min-height: clamp(86px, 16vh, 140px) !important; justify-content: center; gap: 6px; }
   .big-home .ltile .le { font-size: clamp(1.8rem, 5vh, 2.6rem) !important; }
   .big-home .ltile .ln { font-size: 1.02rem; }
@@ -422,9 +437,17 @@
     <!-- Step: check-in -->
     <div id="u-checkin">
       <p id="ios-hint" class="small muted" hidden>📱 Full screen on iPhone: Share → Add to Home Screen.</p>
-      <button id="quick-btn" class="quick"><span class="q-top">⚡ Quick draw</span><span class="q-sub">One tap. No setup.</span></button>
-      <div class="or-line"><span id="pick-title">Or pick what's pulling you</span></div>
-      <div class="home-loops"><div id="loop-chips" class="loop-grid big-home"></div></div>
+      <div class="deck-head">
+        <div class="deck-art" id="deck-art"></div>
+        <div class="deck-titles"><h1 id="deck-title">Snack attack?</h1><button id="deck-switch" class="deck-switch">🗂 Switch deck ▾</button></div>
+      </div>
+      <section class="grp grp-quick">
+        <button id="quick-btn" class="quick"><span class="q-top">⚡ Quick draw</span><span class="q-sub">One tap. No setup.</span></button>
+      </section>
+      <section class="grp grp-loops">
+        <div class="grp-head"><span id="pick-title">🔁 Your loops</span><span class="small muted" id="pick-sub">tap what's pulling you</span></div>
+        <div class="home-loops"><div id="loop-chips" class="loop-grid big-home"></div></div>
+      </section>
       <div class="spread home-meta">
         <button id="already-btn" class="btn-quiet">I already ate it</button>
         <span class="row" style="gap:4px"><span class="ver-tag mono" id="ver-home"></span><button id="fs-btn" class="btn-quiet" hidden aria-label="Full screen">⛶</button></span>
@@ -480,7 +503,7 @@
   <section id="tab-loops" class="stack" hidden style="gap:14px">
     <div class="spread">
       <div class="stack" style="gap:2px">
-        <h2>Your snack loops</h2>
+        <h2 id="loops-title">Your loops</h2>
       </div>
       <button id="new-loop-btn" class="btn-primary" style="min-height:40px">+ Loop</button>
     </div>
@@ -572,6 +595,18 @@
     <div class="spread"><h2 id="add-title">Add a loop</h2><button class="btn-quiet" data-aclose="1">Close</button></div>
     <p class="small muted">Pick the moment that sounds like you. You can change the details later.</p>
     <div id="add-grid" class="loop-grid compact"></div>
+  </div>
+</div>
+<div id="decks" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="decks-title">
+  <div class="sheet-inner">
+    <div class="spread"><h2 id="decks-title">Your decks</h2><button class="btn-quiet" data-dclose="1">Close</button></div>
+    <div id="deck-list" class="loop-grid"></div>
+    <div class="stack" style="gap:8px; border-top:1px dashed var(--line); padding-top:12px">
+      <span class="eyebrow">New deck</span>
+      <label class="f" for="nd-name">What's it for?<input id="nd-name" placeholder="e.g. Phone scrolling"></label>
+      <div class="emoji-row" id="nd-emoji"></div>
+      <button class="btn-primary" id="nd-create">Create deck</button>
+    </div>
   </div>
 </div>
 <div id="mutate" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="mut-title">
@@ -758,7 +793,14 @@
   const EXAMPLE_LOOPS = ["desk", "bored", "stress", "walk"].map(tid => loopFromTemplate(TPL[tid], "ex-" + tid));
   const LOOP_EMOJIS = ["🥱", "💻", "😤", "🚶", "🍫", "🌙", "🍩", "🔋", "📺", "😔", "🎉", "📱", "🚗", "☕", "🍪", "🧀"];
 
-  let state = { v: 2, loops: [], logs: [], lastLoopId: "" };
+  let state = { v: 2, loops: [], logs: [], lastLoopId: "", decks: [], deckId: "snacks" };
+  // Decks group loops by problem. Snack attack is the built-in one; others are added by the user.
+  const SNACK_DECK = { id: "snacks", name: "Snack attack?", emoji: "🍪", kind: "snacks" };
+  const COOKIE_SVG = '<svg viewBox="0 0 96 96" width="100%" height="100%" aria-hidden="true"><defs><mask id="bite"><rect width="96" height="96" fill="#fff"/><circle cx="84" cy="22" r="17" fill="#000"/><circle cx="70" cy="9" r="9" fill="#000"/><circle cx="92" cy="40" r="9" fill="#000"/></mask></defs><g mask="url(#bite)"><circle cx="46" cy="50" r="38" fill="#C98B4B"/><circle cx="46" cy="50" r="38" fill="none" stroke="#A86C33" stroke-width="3"/><g fill="#5A3418"><ellipse cx="32" cy="36" rx="5" ry="4"/><ellipse cx="52" cy="30" rx="4" ry="3.5"/><ellipse cx="28" cy="58" rx="4.5" ry="4"/><ellipse cx="48" cy="52" rx="5" ry="4.5"/><ellipse cx="64" cy="62" rx="4.5" ry="4"/><ellipse cx="44" cy="74" rx="4" ry="3.5"/><ellipse cx="66" cy="44" rx="3.5" ry="3"/></g></g><g fill="#C98B4B"><circle cx="86" cy="58" r="3"/><circle cx="80" cy="70" r="2.2"/><circle cx="90" cy="76" r="1.6"/></g></svg>';
+  function DECK() { return state.decks.find(d => d.id === state.deckId) || state.decks[0]; }
+  function deckLoops() { return state.loops.filter(l => l.deckId === state.deckId); }
+  function deckLogs() { return state.logs.filter(l => l.deckId === state.deckId); }
+  function addLoop(loop) { loop.deckId = state.deckId; state.loops.push(loop); }
 
   function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function safeSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
@@ -773,7 +815,7 @@
       try { const s = JSON.parse(raw); if (s && Array.isArray(s.loops) && Array.isArray(s.logs)) { state = s; ok = true; } } catch (e) {}
     }
     if (!ok) {
-      state = { v: 2, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" };
+      state = { v: 2, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "", decks: [clone(SNACK_DECK)], deckId: "snacks" };
       migrateOld();
     }
     normalize();
@@ -783,6 +825,10 @@
   // Bring older data up to the generation-aware shape.
   function normalize() {
     state.v = 2;
+    if (!Array.isArray(state.decks) || !state.decks.length) state.decks = [clone(SNACK_DECK)];
+    if (!state.decks.some(d => d.id === state.deckId)) state.deckId = state.decks[0].id;
+    state.loops.forEach(l => { if (!l.deckId) l.deckId = "snacks"; });
+    state.logs.forEach(l => { if (!l.deckId) { const lp = state.loops.find(x => x.id === l.loopId); l.deckId = lp ? lp.deckId : "snacks"; } });
     // The TV example was swapped for a general boredom loop. Replace it if it was never touched.
     const tvIdx = state.loops.findIndex(l => l.id === "ex-tv" && l.example && !state.logs.some(x => x.loopId === "ex-tv"));
     if (tvIdx >= 0 && !state.loops.some(l => l.id === "ex-bored")) state.loops.splice(tvIdx, 1, loopFromTemplate(TPL.bored, "ex-bored"));
@@ -819,7 +865,7 @@
     el.dataset.s = status;
   }
   function docsFromState() {
-    const docs = { "deck/state": { v: 2, loops: state.loops, lastLoopId: state.lastLoopId || "", defaultLoopId: state.defaultLoopId || "" } };
+    const docs = { "deck/state": { v: 2, loops: state.loops, lastLoopId: state.lastLoopId || "", decks: state.decks, deckId: state.deckId } };
     const months = {};
     sync.months.forEach(m => { months[m] = []; });
     state.logs.forEach(l => { const m = monthKey(l.t); (months[m] = months[m] || []).push(l); });
@@ -861,7 +907,7 @@
         sync.written["deck/state"] = JSON.stringify(b);
         state.loops = clone(b.loops || []);
         state.lastLoopId = b.lastLoopId || "";
-        state.defaultLoopId = b.defaultLoopId || "";
+        if (Array.isArray(b.decks)) { state.decks = clone(b.decks); state.deckId = b.deckId || state.deckId; }
         state.logs = logsFromDocs(logs.docs);
         normalize();
         safeSet(STORE, JSON.stringify(state));
@@ -877,7 +923,8 @@
         if (j === sync.written["deck/state"]) return;
         sync.written["deck/state"] = j;
         const b = s.data();
-        state.loops = clone(b.loops || []); state.lastLoopId = b.lastLoopId || ""; state.defaultLoopId = b.defaultLoopId || "";
+        state.loops = clone(b.loops || []); state.lastLoopId = b.lastLoopId || "";
+        if (Array.isArray(b.decks)) { state.decks = clone(b.decks); state.deckId = b.deckId || state.deckId; }
         normalize(); safeSet(STORE, JSON.stringify(state)); renderAll(true);
       }, () => setSync("error"));
       db.collection("logs").onSnapshot(q => {
@@ -1027,13 +1074,19 @@
 
   function renderCheckin() {
     const miss = flow.mode === "miss";
-    $("pick-title").textContent = miss ? "Which loop was it?" : "Or pick what's pulling you";
-    $("quick-btn").hidden = miss;
+    const d = DECK();
+    $("deck-title").textContent = d.name;
+    $("deck-art").className = "deck-art" + (d.kind === "snacks" ? "" : " emoji");
+    $("deck-art").innerHTML = d.kind === "snacks" ? COOKIE_SVG : esc(d.emoji || "🃏");
+    $("pick-title").textContent = miss ? "Which loop was it?" : "🔁 Your loops";
+    $("pick-sub").textContent = miss ? "" : "tap what's pulling you";
+    $("quick-btn").closest(".grp").hidden = miss;
     $("already-btn").textContent = miss ? "↶ Back" : "I already ate it";
-    $("loop-chips").innerHTML = state.loops.length ? state.loops.map(l =>
+    const loops = deckLoops();
+    $("loop-chips").innerHTML = loops.length ? loops.map(l =>
       '<button class="ltile" data-loop="' + l.id + '"><span class="le" aria-hidden="true">' + esc(l.emoji || "🍪") + '</span><span class="ln">' + esc(l.name) + "</span></button>"
     ).join("") + (miss ? '<button class="ltile" data-loop="quick"><span class="le" aria-hidden="true">⚡</span><span class="ln">Not sure</span></button>' : "")
-      : '<div class="empty small">No loops yet. Use ⚡ Quick draw, then save it as a loop, or add one in the Loops tab.</div>';
+      : '<div class="empty small">No loops yet. Use ⚡ Quick draw and save it as a loop afterwards, or add one in the Loops tab.</div>';
   }
   function renderHomeStatus() {}
 
@@ -1065,7 +1118,9 @@
   }
 
   // Quick draw: the strongest general card for a craving, no loop needed.
-  const QUICK_TEST = () => ({ k: "temporal", mods: [], action: K.temporal.plays[0], secs: K.temporal.secs, gen: 1 });
+  const QUICK_TEST = () => DECK().kind === "snacks"
+    ? { k: "temporal", mods: [], action: K.temporal.plays[0], secs: K.temporal.secs, gen: 1 }
+    : { k: "pause", mods: [], action: "Breathe slowly five times. Ask yourself what you actually need right now. Then decide.", secs: 60, gen: 1 };
 
   function dealCard(randomise) {
     const loop = flow.quick ? null : loopById(flow.loopId);
@@ -1203,7 +1258,7 @@
     const loop = flow.quick ? null : loopById(flow.loopId);
     if (!loop && !flow.quick) return;
     const test = flow.test || (loop ? loop.test : QUICK_TEST());
-    const entry = { id: uid("log"), t: Date.now(), loopId: loop ? loop.id : "", quick: !loop, hunger: flow.hunger || 0, k: test.k, mods: (test.mods || []).slice(),
+    const entry = { id: uid("log"), t: Date.now(), deckId: state.deckId, loopId: loop ? loop.id : "", quick: !loop, hunger: flow.hunger || 0, k: test.k, mods: (test.mods || []).slice(),
       gen: test.gen || 1, key: testKey(test.k, test.mods, test.gen), outcome: out, note: $("outcome-note").value.trim() };
     state.logs.push(entry);
     if (loop) state.lastLoopId = loop.id;
@@ -1250,7 +1305,7 @@
   });
 
   // ---------- Make a loop from a quick draw ----------
-  const MK_Q = [
+  const MK_Q_SNACK = [
     { key: "trig", q: "What set it off?", opts: [["🥱", "Bored", "feeling bored"], ["😤", "Stressed", "feeling stressed"], ["🔋", "Tired", "feeling tired"], ["👀", "Saw food", "seeing food"],
       ["🍽️", "After a meal", "just after a meal"], ["☕", "Taking a break", "taking a break"], ["📺", "TV or phone", "watching TV or my phone"]] },
     { key: "place", q: "Where were you?", opts: [["💻", "At my desk", "at my desk"], ["🍳", "In the kitchen", "in the kitchen"], ["🛋️", "On the sofa", "on the sofa"],
@@ -1258,31 +1313,39 @@
     { key: "food", q: "What were you going for?", opts: [["🍫", "Chocolate or sweets", "chocolate or sweets"], ["🥔", "Crisps", "crisps"], ["🍪", "Biscuits", "biscuits"],
       ["🍞", "Bread or leftovers", "bread or leftovers"], ["🍦", "Ice cream", "ice cream"], ["🧀", "Cheese", "cheese"]] }
   ];
+  const MK_Q_ANY = [
+    { key: "trig", q: "What set it off?", opts: [["🥱", "Bored", "feeling bored"], ["😤", "Stressed", "feeling stressed"], ["🔋", "Tired", "feeling tired"], ["😔", "Low or lonely", "feeling low"],
+      ["🙈", "Avoiding something", "avoiding something"], ["🔔", "A notification", "getting a notification"]] },
+    MK_Q_SNACK[1],
+    { key: "food", q: "What were you about to do?", opts: [["📱", "Scroll my phone", "scroll my phone"], ["⏳", "Put it off", "put it off"], ["🍷", "Have a drink", "have a drink"],
+      ["🛒", "Buy something", "buy something"], ["😠", "Snap at someone", "snap at someone"]] }
+  ];
+  function mkQ() { return DECK().kind === "snacks" ? MK_Q_SNACK : MK_Q_ANY; }
   const mk = { i: 0, ans: {}, logId: "", test: null, other: false };
   function startMakeLoop() { mk.i = 0; mk.ans = {}; mk.other = false; renderMakeLoop(); showStep("u-makeloop"); }
   function renderMakeLoop() {
     let h = '<div class="spread"><span class="mk-prog">Question ' + Math.min(mk.i + 1, 4) + " of 4</span><button class=\"btn-quiet\" data-mkskip=\"1\">Skip</button></div>";
-    if (mk.i < MK_Q.length) {
-      const q = MK_Q[mk.i];
+    if (mk.i < mkQ().length) {
+      const q = mkQ()[mk.i];
       h += "<h2>" + q.q + '</h2><div class="mk-grid">' + q.opts.map((o, j) => '<button class="ltile" data-mkopt="' + j + '"><span class="le" aria-hidden="true">' + o[0] + '</span><span class="ln">' + o[1] + "</span></button>").join("") +
         '<button class="ltile" data-mkother="1"><span class="le" aria-hidden="true">✏️</span><span class="ln">Something else</span></button></div>';
       if (mk.other) h += '<label class="f" for="mk-other">In a few words<input id="mk-other" placeholder="e.g. lonely, in the car"></label><button class="btn-primary" data-mknext="1">Next</button>';
     } else {
       const a = mk.ans;
       h += '<h2>Name this loop</h2><label class="f" for="mk-name">Name<input id="mk-name" value="' + esc(a.trig.label + " " + a.place.label.toLowerCase()) + '"></label>' +
-        '<p class="small muted">When ' + esc(a.trig.phrase + " " + a.place.phrase) + ", I go for " + esc(a.food.phrase) + ".</p>" +
+        '<p class="small muted">When ' + esc(a.trig.phrase + " " + a.place.phrase) + ", I " + (DECK().kind === "snacks" ? "go for " : "") + esc(a.food.phrase) + ".</p>" +
         '<button class="btn-primary btn-block" data-mksave="1">Save loop</button>';
     }
     if (mk.i > 0) h += '<button class="btn-quiet" data-mkback="1">↶ Back</button>';
     $("mk-body").innerHTML = h;
     const other = document.getElementById("mk-other"); if (other) other.focus();
   }
-  function mkAnswer(emoji, label, phrase) { mk.ans[MK_Q[mk.i].key] = { emoji, label, phrase }; mk.i++; mk.other = false; renderMakeLoop(); }
+  function mkAnswer(emoji, label, phrase) { mk.ans[mkQ()[mk.i].key] = { emoji, label, phrase }; mk.i++; mk.other = false; renderMakeLoop(); }
   $("mk-body").addEventListener("click", e => {
     if (e.target.closest("[data-mkskip]")) { showStep("u-checkin"); renderCheckin(); return; }
     if (e.target.closest("[data-mkback]")) { mk.i = Math.max(0, mk.i - 1); mk.other = false; renderMakeLoop(); return; }
     const o = e.target.closest("[data-mkopt]");
-    if (o) { const x = MK_Q[mk.i].opts[Number(o.dataset.mkopt)]; return mkAnswer(x[0], x[1], x[2]); }
+    if (o) { const x = mkQ()[mk.i].opts[Number(o.dataset.mkopt)]; return mkAnswer(x[0], x[1], x[2]); }
     if (e.target.closest("[data-mkother]")) { mk.other = true; renderMakeLoop(); return; }
     if (e.target.closest("[data-mknext]")) {
       const v = (document.getElementById("mk-other").value || "").trim(); if (!v) return toast("Type a few words first");
@@ -1291,9 +1354,11 @@
     if (e.target.closest("[data-mksave]")) {
       const a = mk.ans;
       const loop = { id: uid("loop"), emoji: a.trig.emoji, name: (document.getElementById("mk-name").value || "").trim() || a.trig.label,
-        cue: a.trig.phrase + " " + a.place.phrase, auto: "go for " + a.food.phrase, payoff: "", closure: "reaching for the " + a.food.phrase,
+        cue: a.trig.phrase + " " + a.place.phrase, payoff: "",
+        auto: DECK().kind === "snacks" ? "go for " + a.food.phrase : a.food.phrase,
+        closure: DECK().kind === "snacks" ? "reaching for the " + a.food.phrase : "starting to " + a.food.phrase,
         history: [], test: mk.test || QUICK_TEST() };
-      state.loops.push(loop);
+      addLoop(loop);
       const lg = state.logs.find(l => l.id === mk.logId);
       if (lg) { lg.loopId = loop.id; lg.quick = false; lg.key = testKey(loop.test.k, loop.test.mods, loop.test.gen); }
       save(); showStep("u-checkin"); renderAll();
@@ -1438,8 +1503,8 @@
   }
 
   function openAddLoop() {
-    const have = new Set(state.loops.map(l => l.name.trim().toLowerCase()));
-    $("add-grid").innerHTML = TEMPLATES.filter(t => !have.has(t.name.toLowerCase())).map(t => {
+    const have = new Set(deckLoops().map(l => l.name.trim().toLowerCase()));
+    $("add-grid").innerHTML = (DECK().kind === "snacks" ? TEMPLATES : []).filter(t => !have.has(t.name.toLowerCase())).map(t => {
       const k = K[t.test.k];
       return '<button class="ltile" data-tpl="' + t.tid + '"><span class="le" aria-hidden="true">' + t.emoji + '</span><span class="ln">' + esc(t.name) + '</span><span class="lk">' + k.emoji + " " + k.name + "</span></button>";
     }).join("") + '<button class="ltile add" data-tpl="blank"><span class="le" aria-hidden="true">✏️</span><span class="ln">Write my own</span></button>';
@@ -1450,15 +1515,41 @@
     if (e.target === $("addloop") || e.target.closest("[data-aclose]")) return closeAddLoop();
     const b = e.target.closest("[data-tpl]"); if (!b) return;
     if (b.dataset.tpl === "blank") {
-      const loop = { id: uid("loop"), emoji: "🍪", name: "New loop", cue: "", auto: "", payoff: "", closure: "", history: [],
+      const loop = { id: uid("loop"), emoji: DECK().emoji || "🍪", name: "New loop", cue: "", auto: "", payoff: "", closure: "", history: [],
         test: { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs, gen: 1 } };
-      state.loops.push(loop); openLoopId = loop.id; draftMods = null; save(); closeAddLoop(); renderAll(); setTab("loops");
+      addLoop(loop); openLoopId = loop.id; draftMods = null; save(); closeAddLoop(); renderAll(); setTab("loops");
       setTimeout(() => { const el = document.getElementById("ed-name"); el && (el.select(), el.scrollIntoView({ block: "center" })); }, 30);
       return;
     }
     const loop = loopFromTemplate(TPL[b.dataset.tpl]);
-    state.loops.push(loop); flow.loopId = loop.id; save(); closeAddLoop(); renderAll();
+    addLoop(loop); flow.loopId = loop.id; save(); closeAddLoop(); renderAll();
     toast(loop.emoji + " " + loop.name + " added");
+  });
+
+  const DECK_EMOJIS = ["📱", "⏳", "🍷", "🛒", "😠", "💸", "🛋️", "🧠", "🚬", "🎮"];
+  let ndEmoji = DECK_EMOJIS[0];
+  function openDecks() {
+    $("deck-list").innerHTML = state.decks.map(d => {
+      const n = state.loops.filter(l => l.deckId === d.id).length;
+      return '<button class="ltile" data-deck="' + d.id + '" aria-pressed="' + (d.id === state.deckId) + '"><span class="le" aria-hidden="true">' + esc(d.emoji || "🃏") + '</span><span class="ln">' + esc(d.name) + '</span><span class="lk">' + n + " loop" + (n === 1 ? "" : "s") + "</span></button>";
+    }).join("");
+    $("nd-emoji").innerHTML = DECK_EMOJIS.map(e => '<button type="button" data-ndemoji="' + e + '" aria-pressed="' + (e === ndEmoji) + '">' + e + "</button>").join("");
+    $("decks").hidden = false; document.body.style.overflow = "hidden";
+  }
+  function closeDecks() { $("decks").hidden = true; document.body.style.overflow = ""; }
+  function switchDeck(id) { state.deckId = id; flow.loopId = ""; flow.mode = ""; openLoopId = ""; save(); closeDecks(); showStep("u-checkin"); renderAll(); }
+  $("deck-switch").addEventListener("click", openDecks);
+  $("decks").addEventListener("click", e => {
+    if (e.target === $("decks") || e.target.closest("[data-dclose]")) return closeDecks();
+    const d = e.target.closest("[data-deck]"); if (d) return switchDeck(d.dataset.deck);
+    const em = e.target.closest("[data-ndemoji]");
+    if (em) { ndEmoji = em.dataset.ndemoji; $("nd-emoji").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === em)); }
+  });
+  $("nd-create").addEventListener("click", () => {
+    const name = $("nd-name").value.trim(); if (!name) return toast("Name the deck first");
+    const deck = { id: uid("deck"), name, emoji: ndEmoji, kind: "custom" };
+    state.decks.push(deck); $("nd-name").value = "";
+    switchDeck(deck.id); toast(deck.emoji + " " + deck.name + " deck created");
   });
 
   function cancelFlow() { stopTimer(); flow.test = null; flow.quick = false; flow.mode = ""; showStep("u-checkin"); renderCheckin(); }
@@ -1476,7 +1567,7 @@
       return;
     }
     flow.quick = false; flow.loopId = b.dataset.loop; flow.hunger = 0;
-    showHunger();
+    if (DECK().kind === "snacks") showHunger(); else dealCard(false);
   });
   $("hq-list").addEventListener("click", e => {
     const b = e.target.closest("[data-hq]"); if (!b) return;
@@ -1507,8 +1598,10 @@
   let openLoopId = "";
   function renderLoops() {
     const box = $("loops-list");
-    if (!state.loops.length) { box.innerHTML = '<div class="empty">No loops yet. Add the snack moment that happens most often.</div>'; return; }
-    box.innerHTML = state.loops.map(loop => {
+    $("loops-title").textContent = (DECK().emoji || "") + " " + DECK().name.replace(/\?$/, "") + " loops";
+    const loops = deckLoops();
+    if (!loops.length) { box.innerHTML = '<div class="empty">No loops in this deck yet. Tap + Loop to add one.</div>'; return; }
+    box.innerHTML = loops.map(loop => {
       const c = classify(loop);
       const open = openLoopId === loop.id;
       let html = '<div class="panel" data-loopcard="' + loop.id + '">';
@@ -1619,7 +1712,7 @@
 
   // ---------- Deck tab ----------
   function renderDeck() {
-    $("deck-mine").innerHTML = state.loops.length ? state.loops.map(loop => {
+    $("deck-mine").innerHTML = deckLoops().length ? deckLoops().map(loop => {
       const c = classify(loop);
       const hist = (loop.history || []).slice().reverse();
       let h = '<div class="panel"><div class="spread"><h3>' + esc(loop.emoji || "") + " " + esc(loop.name) + '</h3><span class="psi ' + c.cls + '">' + c.label + "</span></div>";
@@ -1653,7 +1746,7 @@
   // ---------- Log tab ----------
   function cardStats() {
     const s = {};
-    state.logs.forEach(l => {
+    deckLogs().forEach(l => {
       if (l.outcome === "hungry" || l.imported) return;
       s[l.k] = s[l.k] || { n: 0, win: 0 };
       s[l.k].n++; if (outClass(l.outcome) === "new") s[l.k].win++;
@@ -1663,7 +1756,7 @@
   }
 
   function renderLog() {
-    const logs = state.logs.filter(l => !l.imported);
+    const logs = deckLogs().filter(l => !l.imported);
     const since = Date.now() - 14 * 864e5;
     const recent = logs.filter(l => l.t >= since && l.outcome !== "hungry");
     const newRate = recent.length ? Math.round(100 * recent.filter(l => outClass(l.outcome) === "new").length / recent.length) : null;
@@ -1710,7 +1803,7 @@
       : '<div class="empty">No runs yet. Cards are ranked here by how often a new rule ran.</div>';
 
     // History
-    const hist = state.logs.slice(-60).reverse();
+    const hist = deckLogs().slice(-60).reverse();
     $("history").innerHTML = hist.length ? hist.map(l => {
       const loop = loopById(l.loopId), o = OUT[l.outcome], k = K[l.k];
       const d = new Date(l.t);
@@ -1737,12 +1830,12 @@
   });
   $("reset-btn").addEventListener("click", () => { $("reset-btn").hidden = true; $("reset-confirm-btn").hidden = false; setTimeout(() => { $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; }, 5000); });
   $("reset-confirm-btn").addEventListener("click", () => {
-    state = { v: 2, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" }; normalize(); save(); flow.loopId = ""; renderAll();
+    state = { v: 2, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "", decks: [clone(SNACK_DECK)], deckId: "snacks" }; normalize(); save(); flow.loopId = ""; renderAll();
     $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; toast("Reset to example loops");
   });
 
   // ---------- Version, full screen, self-update ----------
-  const VERSION = "v3 · 11 Oct 2026";
+  const VERSION = "v4 · 11 Oct 2026";
   const inClaude = !!(window.claude && typeof window.claude.use === "function");
   const topLevel = (() => { try { return window.self === window.top; } catch (e) { return false; } })();
   const fsRoot = document.documentElement;
@@ -1800,7 +1893,7 @@
     $("sync-note").textContent = sync.status === "cloud" ? "Your loops and logs are saved to your account. A backup is still handy before big changes." : "Copy a backup now and then. Paste it back here to restore it or move it to another device.";
   }
   $("deck-mine").addEventListener("click", e => { const b = e.target.closest("[data-mutate]"); if (b) openMutate(b.dataset.mutate); });
-  document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (!$("mutate").hidden) closeMutate(); if (!$("addloop").hidden) closeAddLoop(); });
+  document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (!$("mutate").hidden) closeMutate(); if (!$("addloop").hidden) closeAddLoop(); if (!$("decks").hidden) closeDecks(); });
 
   load();
   renderCheckin();
