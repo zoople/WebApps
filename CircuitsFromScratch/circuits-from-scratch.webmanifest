@@ -1,0 +1,13 @@
+{
+  "name": "Circuits from Scratch",
+  "short_name": "Circuits",
+  "start_url": "circuits-from-scratch.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0E1317",
+  "theme_color": "#0E1317",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
