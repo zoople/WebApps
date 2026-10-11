@@ -213,6 +213,11 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 /* action bar (only things that are tappable pulse) */
 .abar{flex:none;display:flex;gap:8px;justify-content:center;align-items:center;min-height:42px;flex-wrap:wrap}
 .abar .btn{padding:9px 16px;font-size:14px;animation:bp 1.1s infinite}
+.reply{width:100%;display:flex;flex-direction:column;gap:4px}
+.reply .rh{font-size:14px;font-weight:800;color:#fff3cf;text-align:center}
+.reply .rrow{display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.32);border:1px solid rgba(255,230,160,.25);border-radius:10px;padding:4px 8px;color:#fff;font-size:14px;font-weight:700}
+.reply .rrow .what{flex:1}.reply .rrow>span:first-child{min-width:46px;color:#ffe27a}.reply .rrow .noo{flex:1;font-size:13px}
+.reply .rrow .btn{animation:bp 1.1s infinite;padding:5px 12px}
 .abar .hint{font-size:13px;color:#cfe9d5;font-weight:700}
 @keyframes bp{50%{transform:scale(1.05);filter:brightness(1.12)}}
 /* fields = the only interactive area, bottom of the screen */
@@ -328,7 +333,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v21 · 11 Oct 2026';
+const VERSION='v22 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -1708,7 +1713,11 @@ const RULES={
     <li>When the deck runs out you get a final planting turn, then every field is harvested.</li>
     <li>You can buy a <b>3rd field</b> for 3🪙 during the game.</li>
     <li><b>Tap and hold</b> any card to see its full bean table.</li>
-    <li><b>Classic (free play):</b> you play against 2 computer players. Each turn you <b>must</b> flip 2 cards and plant every one you don't trade. 🤖 chips under a market card are real offers: 🎁 takes it off your hands, ⇄ swaps it for a card you can plant. Chips in the bar offer swaps for cards in your hand. On their turns they may offer you cards too.</li>
+    <li><b>Classic (free play):</b> you play against 2 computer players.</li>
+    <li><b>Your turn:</b> plant your first card (you may plant the 2nd), then <b>2 cards flip from the deck</b>.</li>
+    <li><b>Trade:</b> tap any flipped card <i>or any card in your hand</i> to offer it. Each bot answers: a <b>swap</b> (you get a named card) or <b>takes it</b> (nothing back) or <b>no thanks</b>. Tap Accept on one you like.</li>
+    <li>You must plant every flipped card you don't trade away, and every card you receive.</li>
+    <li>On their own turns the bots may offer you a free card — accept or decline.</li>
     <li>A field with only 1 bean can't be harvested while another field has 2+, and the deck is reshuffled for extra passes.</li></ul>`
 };
 function openRules(game){openModal(RULES[game]+`<div style="text-align:right"><button class="btn green" onclick="closeModal()">Got it</button></div>`)}
@@ -2378,16 +2387,17 @@ function stepsHTML(){
   if(C.phase==='ai')return `<div class="steps"><div class="r final"><span class="ic">⏳</span>Bots are playing…</div></div>`;
   if(C.phase==='final')return `<div class="steps"><div class="r final"><span class="ic">🏁</span>Final turn<span class="sub">${e}👇 · ✔</span></div></div>`;
   const idx=C.phase==='plant1'?0:C.phase==='plant2'?1:2;
-  const subs={plant1:`${e} 👇`,plant2:`${e} 👇 · ⏭`,market:C.classic?`Plant each card — or tap a bot's offer to trade it away`:`👆 · 👇 · 🔁`};
+  const subs={plant1:`${e} 👇`,plant2:`${e} 👇 · ⏭`,market:C.classic?`Flipped from the deck. Tap a card to offer it, or plant it`:`👆 · 👇 · 🔁`};
   return `<div class="steps">`+STEPS.map((s,i)=>{
     const st=i<idx?'done':i===idx?'on':'';
-    const title=i===2?`Market${idx===2?` ${C.mTotal-C.market.length+1}/${C.mTotal}`:''}`:s[2];
+    const title=i===2?`${C.classic?'Trade':'Market'}${idx===2?` ${C.mTotal-C.market.length+1}/${C.mTotal}`:''}`:s[2];
     const drew=i===0&&C.drew?`<span class="drew">🂠 +${C.drew}</span>`:'';
     return `<div class="r ${st}"><span class="ic">${i<idx?'✅':s[1]}</span>${title}${drew}${i===idx?`<span class="sub">${subs[s[0]]}</span>`:''}</div>`;
   }).join('')+`</div>`;
 }
 function renderCards(flipIdx){
   if(!C)return;
+  if(C.phase!=='market')C.offerHand=null;
   const cur=curCard(),inPlant=C.phase==='plant1'||C.phase==='plant2'||C.phase==='final';
   $('#cRound').textContent=`🔄 ${C.round}/${C.o.rounds} · ⏱ ${C.turn+1}`;$('#cRound').title=C.classic?'Pass through the deck · Turn':'Round · Turn';
   $('#cCoins').textContent=`🪙 +${C.coins}`;$('#cCoins').title='Coins harvested this game';
@@ -2409,8 +2419,7 @@ function renderCards(flipIdx){
   if(C.phase==='market'){
     tHead='🏪 👆';
     table=C.market.map((c,i)=>{
-      const offs=offersFor(c);
-      const chips=C.classic?(c.locked?'<span class="noo">Traded</span>':offs.length?offs.map(o=>`<button class="chip ofr" data-ofr="${i}:${o.k}"><b>Bot ${o.k+1}</b><br>${o.h?`swaps for ${CROPS[o.h.t].e}`:'takes it'}</button>`).join(''):'<span class="noo">No offers</span>'):'';
+      const chips=C.classic&&c.locked?'<span class="noo">Received</span>':'';
       return `<div class="mslot">${faceHTML(c.t,`tbl tap${C.sel===i?' sel':''}${flipIdx===i?' flip':''}${c.locked?' got':''}`).replace('class="card','data-m="'+i+'" class="card')}<div class="chips">${chips}</div></div>`;
     }).join('');
   }else if(C.phase==='ai'||C.phase==='aigift'){
@@ -2421,11 +2430,12 @@ function renderCards(flipIdx){
     table=faceHTML(cur.t,'tbl');
   }else{tHead='🃏';table='<span class="none">—</span>'}
   const queue=inPlant?C.hand.slice(1):C.hand;
-  const qHTML=queue.map(c=>faceHTML(c.t,'q')).join('')||'<span class="none">—</span>';
+  const hTap=C.phase==='market'&&C.classic;
+  const qHTML=queue.map((c,i)=>hTap?faceHTML(c.t,'q'+(C.offerHand===i?' sel':'')).replace('class="card','data-q="'+i+'" class="card'):faceHTML(c.t,'q')).join('')||'<span class="none">—</span>';
   const bar=[];
   if(C.phase==='plant2')bar.push(`<button class="btn grey" id="cSkip">⏭ Skip</button>`);
   if(C.phase==='market'&&!C.classic)bar.push(`<button class="btn blue" data-trade="${C.sel}" ${C.trades>0?'':'disabled'}>🔁 Trade ·${C.trades}</button>`);
-  if(C.phase==='market'&&C.classic)handOffers().forEach(o=>bar.push(`<button class="chip ofr" data-hofr="${o.j}:${o.k}"><b>Bot ${o.k+1}</b><br>swaps ${CROPS[o.h.t].e} for your ${CROPS[o.t].e}</button>`));
+  if(C.phase==='market'&&C.classic)bar.push(replyHTML());
   if(C.phase==='aigift'&&C.gift)bar.push(`<button class="btn green" data-gift="1">Accept ${CROPS[C.gift.c.t].e} (you plant it)</button><button class="btn grey" data-gift="0">No thanks</button>`);
   if(C.phase==='final')bar.push(`<button class="btn green" id="cFinish">✔ Finish</button>`);
   $('#cTable').innerHTML=`<div class="fbk">${C.msg?`⏪ ${C.msg}`:''}</div>
@@ -2438,10 +2448,11 @@ function renderCards(flipIdx){
   // wire
   $('#cTable').querySelectorAll('[data-f]').forEach(p=>p.onclick=e=>{if(e.target.closest('[data-h]'))return;cardPlant(+p.dataset.f)});
   $('#cTable').querySelectorAll('[data-h]').forEach(b=>b.onclick=e=>{e.stopPropagation();cardHarvest(+b.dataset.h,true);renderCards()});
-  $('#cTable').querySelectorAll('[data-m]').forEach(m=>m.onclick=()=>{if(C.phase==='market'){C.sel=+m.dataset.m;sfx.pick();renderCards()}});
+  $('#cTable').querySelectorAll('[data-m]').forEach(m=>m.onclick=()=>{if(C.phase==='market'){C.sel=+m.dataset.m;C.offerHand=null;sfx.pick();renderCards()}});
+  $('#cTable').querySelectorAll('[data-q]').forEach(m=>m.onclick=()=>{if(C.phase==='market'&&C.classic){const q=+m.dataset.q;C.offerHand=C.offerHand===q?null:q;sfx.pick();renderCards()}});
   $('#cTable').querySelectorAll('[data-trade]').forEach(b=>b.onclick=()=>cardTrade(+b.dataset.trade));
   $('#cTable').querySelectorAll('[data-ofr]').forEach(b=>b.onclick=e=>{e.stopPropagation();const[i,k]=b.dataset.ofr.split(':').map(Number);acceptOffer(i,k)});
-  $('#cTable').querySelectorAll('[data-hofr]').forEach(b=>b.onclick=()=>{const[j,k]=b.dataset.hofr.split(':').map(Number);acceptHandOffer(j,k)});
+  $('#cTable').querySelectorAll('[data-hofr]').forEach(b=>b.onclick=e=>{e.stopPropagation();const[j,k]=b.dataset.hofr.split(':').map(Number);acceptHandOffer(j,k)});
   $('#cTable').querySelectorAll('[data-gift]').forEach(b=>b.onclick=()=>answerGift(b.dataset.gift==='1'));
   $('#cTable').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{if(C.coins<3)return;C.coins-=3;C.nFields=3;sfx.coin();C.msg='🔓 ＋🌱';renderCards()});
   const fin=$('#cFinish');if(fin)fin.onclick=()=>cardEndRound();
@@ -2581,32 +2592,40 @@ function offersFor(c){
   });
   return out;
 }
-// swaps for cards from MY HAND (as in the real game you may trade any card in your hand)
-function handOffers(){
-  if(!C.classic||C.phase!=='market')return[];
-  const out=[],seen=new Set();
-  C.hand.forEach((c,j)=>{
-    C.ai.forEach((a,k)=>{
-      if(aiWant(a,c.t)>=2&&aiFits(a,c.t)){
-        const h=a.hand.find((x,ix)=>ix>0&&aiWant(a,x.t)===0&&humanFits(x.t)&&x.t!==c.t);
-        const key=c.t+':'+k;
-        if(h&&!seen.has(key)){seen.add(key);out.push({j,k,h,t:c.t})}
-      }
-    });
+// how each computer player answers when I offer a card of type t
+function botReplies(t){
+  return C.ai.map((a,k)=>{
+    const w=aiWant(a,t);
+    if(w>=1&&aiFits(a,t)){
+      const h=a.hand.find((x,ix)=>ix>0&&aiWant(a,x.t)===0&&humanFits(x.t)&&x.t!==t);
+      if(h||w>=2)return{k,ok:true,h};
+    }
+    return{k,ok:false};
   });
-  return out.slice(0,4);
+}
+function replyHTML(){
+  const hand=C.offerHand!=null?C.hand[C.offerHand]:null,mc=C.market[C.sel];
+  const card=hand||(mc&&!mc.locked?mc:null);
+  if(!card)return `<div class="reply"><div class="rh">${mc&&mc.locked?'You got this card in a trade — plant it.':'Tap a card to offer it to the bots.'}</div></div>`;
+  const e=CROPS[card.t].e,rows=botReplies(card.t).map(o=>{
+    if(!o.ok)return `<div class="rrow"><span>Bot ${o.k+1}</span><span class="noo">No thanks</span></div>`;
+    const attr=hand?`data-hofr="${C.offerHand}:${o.k}"`:`data-ofr="${C.sel}:${o.k}"`;
+    return `<div class="rrow"><span>Bot ${o.k+1}</span><span class="what">${o.h?`gives you ${CROPS[o.h.t].e}`:'takes it, gives nothing'}</span><button class="btn small green" ${attr}>Accept</button></div>`;
+  }).join('');
+  return `<div class="reply"><div class="rh">You offer ${e} ${hand?'(from your hand)':'(from the table)'}:</div>${rows}</div>`;
 }
 function acceptHandOffer(j,k){
-  const o=handOffers().find(x=>x.j===j&&x.k===k);if(!o)return;
-  const a=C.ai[k],c=C.hand[j];
-  C.hand.splice(j,1);aiPlant(a,c);
-  a.hand.splice(a.hand.indexOf(o.h),1);
-  C.market.push({t:o.h.t,locked:true});C.mTotal++;C.sel=C.market.length-1;
-  C.msg=`Bot ${k+1} took your ${CROPS[c.t].e} and gave you ${CROPS[o.h.t].e}`;sfx.coin();renderCards();
+  const c=C.hand[j];if(!c)return;
+  const o=botReplies(c.t)[k];if(!o||!o.ok)return;
+  const a=C.ai[k];
+  C.hand.splice(j,1);aiPlant(a,c);C.offerHand=null;
+  if(o.h){a.hand.splice(a.hand.indexOf(o.h),1);C.market.push({t:o.h.t,locked:true});C.mTotal++;C.sel=C.market.length-1;C.msg=`Bot ${k+1} took your ${CROPS[c.t].e} and gave you ${CROPS[o.h.t].e}`}
+  else C.msg=`Bot ${k+1} took your ${CROPS[c.t].e}`;
+  sfx.coin();renderCards();
 }
 function acceptOffer(idx,k){
   const c=C.market[idx];if(!c)return;
-  const o=offersFor(c).find(x=>x.k===k);if(!o)return;
+  const o=botReplies(c.t)[k];if(!o||!o.ok)return;C.offerHand=null;
   const a=C.ai[k];
   C.market.splice(idx,1);aiPlant(a,c);
   if(o.h){a.hand.splice(a.hand.indexOf(o.h),1);C.market.splice(idx,0,{t:o.h.t,locked:true});C.msg=`Bot ${k+1} swapped ${CROPS[o.h.t].e} for your ${CROPS[c.t].e}`}
