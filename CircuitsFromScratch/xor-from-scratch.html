@@ -175,6 +175,19 @@ svg text{font-family:var(--mono)}
 }
 </style>
 
+<style>
+.dots button{height:28px;background:none;outline:0;position:relative;flex:1 1 0;min-width:4px}
+.dots button::after{content:"";position:absolute;left:0;right:0;top:10px;height:8px;border-radius:2px;background:var(--line)}
+.dots button.done::after{background:var(--mid)}
+.dots button.quiz::after{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.dots button.quiz.done::after{background:var(--mid);box-shadow:none}
+.dots button.cur::after{background:var(--accent);box-shadow:none}
+.dots{flex-wrap:nowrap;gap:3px}
+.fsb{font:600 15px var(--mono);border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 11px;cursor:pointer;min-height:40px}
+@media (pointer:coarse){.tog,.btn,.opt,.fsb{min-height:44px}}
+@media (max-width:700px){.brand h1{font-size:18px}header.top{padding-block:8px 4px;gap:4px}main.step{padding:16px;gap:14px}h2{font-size:21px}}
+@media (max-height:520px){header.top{position:static}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -741,5 +754,16 @@ render(false);
 })();
 </script>
 
+<script>
+(function(){var r=document.documentElement,req=r.requestFullscreen||r.webkitRequestFullscreen,ex=document.exitFullscreen||document.webkitExitFullscreen;
+var sa=window.navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: fullscreen)").matches);if(sa)return;
+function on(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
+var b=document.createElement("button");b.className="fsb";b.id="fsBtn";b.setAttribute("aria-label","Full screen");
+function lab(){b.textContent=on()?"⤡":"⛶";}lab();
+var hint=document.createElement("div");hint.className="hint";hint.hidden=true;hint.textContent="iPhone: tap Share → Add to Home Screen, then open it from the new icon to run full screen.";
+b.onclick=function(){if(!req){hint.hidden=!hint.hidden;return;}try{var p=on()?ex.call(document):req.call(r,{navigationUI:"hide"});if(p&&p.catch)p.catch(function(){});}catch(e){}};
+document.addEventListener("fullscreenchange",lab);document.addEventListener("webkitfullscreenchange",lab);
+var c=document.getElementById("count");c.parentNode.appendChild(b);document.querySelector("header.top").appendChild(hint);})();
+</script>
 </body>
 </html>

@@ -59,15 +59,16 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .brand h1 span{color:var(--hi)}
 .brand .crumb{font:600 15px var(--display);color:var(--muted)}
 .count{font:500 13px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
-.dots{display:flex;gap:4px;flex-wrap:wrap}
-.dots button{flex:1 1 14px;min-width:14px;height:8px;border:0;border-radius:2px;background:var(--line);cursor:pointer;padding:0}
-.dots button.done{background:var(--mid)}
-.dots button.quiz{background:transparent;outline:1.5px solid var(--line);outline-offset:-1.5px}
-.dots button.quiz.done{background:var(--mid);outline-color:var(--mid)}
-.dots button.mist{background:var(--bad-bg);outline:1.5px solid var(--bad);outline-offset:-1.5px}
-.dots button.mist.done{background:var(--bad)}
-.dots button.cur{background:var(--accent);outline-color:var(--accent)}
-.dots button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dots{display:flex;gap:3px;flex-wrap:nowrap}
+.dots button{flex:1 1 0;min-width:4px;height:28px;border:0;background:none;padding:0;cursor:pointer;position:relative}
+.dots button::after{content:"";position:absolute;left:0;right:0;top:10px;height:8px;border-radius:2px;background:var(--line)}
+.dots button.done::after{background:var(--mid)}
+.dots button.quiz::after{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.dots button.quiz.done::after{background:var(--mid);box-shadow:none}
+.dots button.mist::after{background:var(--bad-bg);box-shadow:inset 0 0 0 1.5px var(--bad)}
+.dots button.mist.done::after{background:var(--bad)}
+.dots button.cur::after{background:var(--accent);box-shadow:none}
+.dots button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 main.step{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:22px;display:grid;gap:18px}
 main.step.enter{animation:enter .35s ease-out}
 @keyframes enter{from{opacity:.001;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -136,7 +137,7 @@ table.tt{border-collapse:collapse;font:500 14px var(--mono);font-variant-numeric
 table.tt th,table.tt td{padding:4px 12px;text-align:center;border-bottom:1px solid var(--line)}
 table.tt th{font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.05em}
 table.tt tr.on td{background:var(--good-bg);color:var(--good);font-weight:600}
-table.cmp{border-collapse:collapse;font-size:14px;margin-bottom:12px;width:100%}
+table.cmp{border-collapse:collapse;font-size:14px;margin-bottom:12px;width:100%;display:block;overflow-x:auto}
 table.cmp td,table.cmp th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 table.cmp th{font:600 12px var(--mono);color:var(--muted)}
 .ttwrap{overflow-x:auto}
@@ -208,6 +209,22 @@ svg text{font-family:var(--mono)}
 .trace{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .t1{stroke:var(--s1)} .t2{stroke:var(--s2)} .f1{fill:var(--s1)} .f2{fill:var(--s2)}
 .cross{stroke:var(--ink);stroke-width:1;opacity:.5}
+/* phones: compact header, big tap targets, diagrams fit the width (tap to zoom) */
+.zoomhint{display:none}
+@media (pointer:coarse){.tog,.seg button,.btn,.hold,.opt,.mbtn{min-height:44px}.seg{flex-wrap:wrap}.seg button{padding:8px 13px}.rng input{min-height:36px}}
+@media (max-width:700px){
+  .brand h1{font-size:18px}
+  header.top{padding-block:8px 4px;gap:4px}
+  .crumb{font-size:13px}
+  main.step{padding:16px;gap:14px}
+  h2{font-size:21px}
+  .canvas svg.wide{min-width:0}
+  .canvas.zoom svg.wide{min-width:600px}
+  .lab:has(svg.wide) .zoomhint{display:block}
+}
+main.step>*,.cols>*,.lab>*{min-width:0}
+@media (max-width:420px){.brand h1 span{display:none}.rng{flex-wrap:wrap;gap:4px 10px}.rng input{flex:1 1 100%;order:3}.rng output{min-width:0}}
+@media (max-height:520px){header.top{position:static}}
 @media (prefers-reduced-motion:reduce){
   .float{animation:none} main.step.enter{animation:none}
   .tog .knob,.tog .knob::after{transition:none}
@@ -1051,7 +1068,7 @@ steps:[
 <p class="hint">Real coils react in thousandths of a second, so this simulation runs 1000× slower than real life. The scope's time axis shows real time.</p>`},
 
 {title:"The time constant: L ÷ R",part:"Part 1 · Coils",init:{sw:false,i:0,vl:0,L:0.1,R:100,win:0.008},sim:coilSim,timeScale:0.001,
- onChange:function(s){s.sw=false;s.i=0;hclear(s);s.win=clamp(6*s.L/(s.R+10),0.004,0.04);},
+ onChange:function(s,k){if(k==="sw")return;s.sw=false;s.i=0;hclear(s);s.win=clamp(6*s.L/(s.R+10),0.004,0.04);},
  diag:function(s){var tau=s.L/(s.R+10);return {svg:coilDiag(s),meters:[["τ = L ÷ R",fT(tau),true],["Final current",fI(3.1/(s.R+10)),true],["Coil current",fI(s.i),s.i>1e-4]],now:"A bigger coil (L) or a smaller resistance (R) means a slower rise. After 1 τ the current reaches 63% of its final value, and after 5 τ it's basically there: the same rule as the capacitor."};},
  ctl:[{k:"sw",type:"tog",label:"Switch"},{k:"R",type:"seg",label:"R",opts:[[47,"47 Ω"],[100,"100 Ω"],[220,"220 Ω"]]},{k:"L",type:"seg",label:"L",opts:[[0.1,"100 mH"],[0.47,"470 mH"]]}],
  scope:function(s){return {panels:coilPanels(s,70),win:s.win||0.008};},
@@ -2260,7 +2277,7 @@ function renderStep(anim){
     h+='<div class="text">'+st.text+(st.final?'<div class="why"><span class="k">Your quiz score for this module</span><span class="score">'+sc[0]+' / '+sc[1]+'</span></div>':'')+'</div>';
   }else{
     var s=S(cur);
-    h+='<div class="cols"><div class="lab"><div class="canvas" id="cv"></div><div class="controls" id="ctl">'+ctlHTML(st,s)+'</div>'+legend(st)+'<div class="meters" id="mt"></div><div class="now" id="now"></div><div id="sc"></div><div id="tb"></div></div><div class="text">'+st.text+'</div></div>';
+    h+='<div class="cols"><div class="lab"><div class="canvas" id="cv"></div><div class="hint zoomhint">Tap the diagram to zoom in or out.</div><div class="controls" id="ctl">'+ctlHTML(st,s)+'</div>'+legend(st)+'<div class="meters" id="mt"></div><div class="now" id="now"></div><div id="sc"></div><div id="tb"></div></div><div class="text">'+st.text+'</div></div>';
   }
   var canNext=!st.quiz||quizDone(cur),last=cur===MOD.steps.length-1;
   h+='<nav class="foot"><button class="btn" id="prev">'+(cur===0?"← All modules":"← Back")+'</button><span class="hint">Use <kbd>←</kbd> <kbd>→</kbd> keys</span>'+
@@ -2286,6 +2303,7 @@ function go(i){if(i<0){renderHome();return;}if(i>=MOD.steps.length)return;cur=i;
 
 /* ---------- events ---------- */
 document.addEventListener("click",function(e){
+  var cvz=e.target.closest&&e.target.closest("#cv");if(cvz&&cvz.querySelector("svg.wide")){cvz.classList.toggle("zoom");return;}
   var t=e.target.closest("button,a");if(!t)return;
   if(t.id==="home"){renderHome();return;}
   if(t.dataset.mod){openMod(t.dataset.mod);return;}
@@ -2331,7 +2349,7 @@ function loop(ts){
 var v0=load("view",null);if(v0&&modById(v0))openMod(v0);else renderHome();
 requestAnimationFrame(loop);
 /* ======================= GitHub Pages extras: version, menu, full screen, self-update ======================= */
-const VERSION='v1 · 11 Oct 2026';
+const VERSION='v2 · 11 Oct 2026';
 XOR_URL="xor-from-scratch.html";
 (function(){
   var css=document.createElement("style");
@@ -2351,15 +2369,20 @@ XOR_URL="xor-from-scratch.html";
   /* header: menu button */
   var brand=document.querySelector(".brand"),cnt=document.getElementById("count"),bar=document.createElement("div");bar.className="pbar";
   brand.insertBefore(bar,cnt);bar.appendChild(cnt);
+  var fb=document.createElement("button");fb.className="mbtn";fb.id="fsBtn";fb.setAttribute("aria-label","Full screen");if(!standalone)bar.appendChild(fb);
   var mb=document.createElement("button");mb.className="mbtn";mb.textContent="☰";mb.setAttribute("aria-label","Menu");bar.appendChild(mb);
+  function fsLabel(){fb.textContent=isFs()?"⤡":"⛶";fb.title=isFs()?"Exit full screen":"Full screen";var hb=document.getElementById("homeFs");if(hb)hb.textContent=isFs()?"Exit full screen":"⛶ Full screen";}
+  function fsTap(){if(fsReq)toggleFs();else{var t=document.createElement("div");t.className="menu";t.innerHTML='<div class="sheet"><h2>⛶ Full screen</h2><div>iPhone Safari can\'t go full screen from a web page.</div><ul style="margin:0;padding-left:20px"><li>Tap <b>Share</b> (the square with an arrow)</li><li>Choose <b>Add to Home Screen</b></li><li>Open Circuits from the new icon: it runs full screen</li></ul><button class="btn primary" id="tClose">OK</button></div>';document.body.appendChild(t);t.addEventListener("click",function(e){if(e.target===t||e.target.id==="tClose")t.remove();});}}
+  fb.addEventListener("click",fsTap);
+  document.addEventListener("fullscreenchange",fsLabel);document.addEventListener("webkitfullscreenchange",fsLabel);fsLabel();
   mb.addEventListener("click",openMenu);
   function openMenu(){
     var m=document.createElement("div");m.className="menu";
     m.innerHTML='<div class="sheet" role="dialog" aria-label="Menu"><h2>☰ Menu</h2><div class="ver">Circuits from Scratch · version '+VERSION+'</div>'+
-      (fsReq?'<button class="btn primary" id="mFs">'+(isFs()?"Exit full screen":"Full screen")+'</button>':'<div class="hint">Full screen: Share → Add to Home Screen.</div>')+
+      '<button class="btn primary" id="mFs">'+(isFs()?"Exit full screen":"⛶ Full screen")+'</button>'+
       '<button class="btn" id="mHome">All modules</button><button class="btn" id="mUpd">Check for updates</button><button class="btn" id="mClose">Close</button><div class="hint" id="mMsg"></div></div>';
     document.body.appendChild(m);
-    m.addEventListener("click",function(e){var t=e.target;if(t===m||t.id==="mClose")m.remove();else if(t.id==="mFs"){toggleFs();m.remove();}else if(t.id==="mHome"){m.remove();renderHome();}
+    m.addEventListener("click",function(e){var t=e.target;if(t===m||t.id==="mClose")m.remove();else if(t.id==="mFs"){m.remove();fsTap();}else if(t.id==="mHome"){m.remove();renderHome();}
       else if(t.id==="mUpd"){document.getElementById("mMsg").textContent="Checking…";check().then(function(){document.getElementById("mMsg").textContent=newVersion?"Version "+newVersion+" is available.":"You're on the latest version.";});}});
   }
   /* full screen on the first module tap */
@@ -2369,10 +2392,10 @@ XOR_URL="xor-from-scratch.html";
   var _home=renderHome;
   renderHome=function(){_home();var box=document.querySelector(".home .intro");if(!box)return;
     var d=document.createElement("div");d.style.cssText="display:grid;gap:8px;margin-top:10px";
-    d.innerHTML='<div class="ver">Version '+VERSION+'</div>'+(isIOS&&!standalone?'<div class="ios">📱 Full screen on iPhone/iPad: Share → Add to Home Screen.</div>':"")+'<div id="updBox"></div>';
-    box.appendChild(d);if(newVersion)banner();};
+    d.innerHTML='<div class="ver">Version '+VERSION+'</div>'+(standalone?"":'<div><button class="btn primary" id="homeFs">⛶ Full screen</button></div>')+(isIOS&&!standalone?'<div class="ios">📱 Full screen on iPhone/iPad: Share → Add to Home Screen.</div>':"")+'<div id="updBox"></div>';
+    box.appendChild(d);fsLabel();if(newVersion)banner();};
   function banner(){var b=document.getElementById("updBox");if(b)b.innerHTML='<div class="upd">🔄 A newer version is available ('+newVersion+') <button class="btn primary" id="updGo">Update now</button></div>';}
-  document.addEventListener("click",function(e){if(e.target.id==="updGo")location.href=location.pathname+"?v="+encodeURIComponent((newVersion||"").split(" ")[0]);});
+  document.addEventListener("click",function(e){if(e.target.id==="homeFs"){fsTap();return;}if(e.target.id==="updGo")location.href=location.pathname+"?v="+encodeURIComponent((newVersion||"").split(" ")[0]);});
   function check(){return fetch(location.pathname+"?_="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():"";}).then(function(t){var m=t.match(/const VERSION='([^']+)'/);if(m&&m[1]!==VERSION){newVersion=m[1];banner();}}).catch(function(){});}
   check();setInterval(check,4*60*1000);
   if(!MOD)renderHome();
