@@ -333,7 +333,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v23 · 11 Oct 2026';
+const VERSION='v24 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -403,9 +403,9 @@ const ITEMS={
   wood:{n:'Wood',e:'🪵'},stone:{n:'Stone',e:'🪨'},berries:{n:'Berries',e:'🫐'},wheat:{n:'Wheat',e:'🌾'},
   plank:{n:'Planks',e:'🟫'},brick:{n:'Bricks',e:'🧱'},jam:{n:'Jam',e:'🍯'},bread:{n:'Bread',e:'🍞'}
 };
-const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1,lights:1,match:1},boltLvl:0,lightLvl:0,matchLvl:0,st:{},claimed:{},seen:{},story:0,say:1,tools:{axe:1,pick:1,basket:1}});
+const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1,lights:1,match:1,watch:1},boltLvl:0,lightLvl:0,matchLvl:0,st:{},claimed:{},seen:{},story:0,say:1,tools:{axe:1,pick:1,basket:1}});
 let S=defState();
-function load(){try{const j=JSON.parse(localStorage.getItem(SAVE_KEY));if(j&&j.v===1){S=Object.assign(defState(),j);S.bld=Object.assign({bolt:1,card:1,lights:1,match:1},S.bld);return true}}catch(e){}return false}
+function load(){try{const j=JSON.parse(localStorage.getItem(SAVE_KEY));if(j&&j.v===1){S=Object.assign(defState(),j);S.bld=Object.assign({bolt:1,card:1,lights:1,match:1,watch:1},S.bld);return true}}catch(e){}return false}
 let saveT=0;
 function save(force){const n=Date.now();if(!force&&n-saveT<1500)return;saveT=n;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
 const stat=(k,n=1)=>{S.st[k]=(S.st[k]||0)+n};
@@ -520,6 +520,7 @@ const BLD=[
   {id:'card',name:'Card Barn',x:28,y:3,kind:'game',game:'card',icon:'🃏',wall:'wood',wh:108,roof:[285,34,36]},
   {id:'lights',name:'Lantern Loft',x:5,y:9,kind:'game',game:'lights',icon:'💡',wall:'stone',wh:46,roof:[44,62,38]},
   {id:'match',name:'Match Hall',x:25,y:9,kind:'game',game:'match',icon:'🎴',wall:'wood',wh:168,roof:[172,42,32]},
+  {id:'watch',name:'The Watch',x:29,y:9,kind:'game',game:'watch',icon:'🛡️',wall:'stone',wh:8,roof:[2,55,34]},
   {id:'jam',name:'Jam Kitchen',x:11,y:9,kind:'craft',icon:'🍓',wall:'wood',wh:345,roof:[340,50,42],in:{berries:3},out:'jam',time:4},
   {id:'bakery',name:'Bakery',x:19,y:9,kind:'craft',icon:'🥖',wall:'wood',wh:40,roof:[205,45,38],in:{wheat:2},out:'bread',time:4}
 ];
@@ -546,7 +547,7 @@ function buildMap(){
   for(let y=0;y<MH;y++){grid[y]=new Array(MW).fill(0)}
   const hl=(x0,x1,y)=>{for(let x=x0;x<=x1;x++)grid[y][x]=1};
   const vl=(x,y0,y1)=>{for(let y=y0;y<=y1;y++)grid[y][x]=1};
-  hl(4,31,6);vl(17,6,14);hl(12,22,12);hl(6,28,14);vl(6,14,17);vl(26,14,17);vl(14,12,14);hl(6,26,12);vl(6,12,14);
+  hl(4,31,6);vl(17,6,14);hl(12,22,12);hl(6,28,14);vl(6,14,17);vl(26,14,17);vl(14,12,14);hl(6,31,12);vl(6,12,14);
   // water
   const lake=(cx,cy,rx,ry)=>{for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){const d=((x-cx)/rx)**2+((y-cy)/ry)**2;if(d<1+(hash(x,y,3)-.5)*.35)grid[y][x]=2}};
   lake(31,21,4.2,3.2);lake(3.5,22,3.3,2.3);
@@ -589,6 +590,7 @@ const NPCS=[
   {id:'granny',name:'Granny Marigold',x:16,y:11,col:'#8e5aa8',hair:'#e6e6e6'},
   {id:'tess',name:'Tinker Tess',x:24,y:7,col:'#d9822b',hair:'#5a2a12'},
   {id:'bram',name:'Farmer Bram',x:30,y:7,col:'#4a7a3a',hair:'#7a4a22'},
+  {id:'rowan',name:'Captain Rowan',x:28,y:9,col:'#b03a2e',hair:'#4a4a4a'},
   {id:'lena',name:'Lamplighter Lena',x:8,y:11,col:'#e0b030',hair:'#2a1a10'},
   {id:'mabel',name:'Matchmaker Mabel',x:28,y:11,col:'#2f9a8e',hair:'#b04a2a'}
 ];
@@ -1323,6 +1325,7 @@ function drawPlayer(g,time){
 const NPC_LOOK={
   granny:{hair:['#eeeeee','#b9b9b9'],tunic:['#b57fd0','#8e5aa8','#64407e'],pants:['#6a4a82','#463058'],bun:true,glasses:true,apron:true,shawl:'#e9d6f2'},
   tess:{hair:['#6b3a1c','#40210d'],tunic:['#f0a04b','#d9822b','#a85a14'],pants:['#4a6a8e','#2f4a66'],hat:'cap',capCol:'#e8b230',goggles:true,overalls:'#3c6aa6'},
+  rowan:{hair:['#8a8a8a','#5a5a5a'],tunic:['#d9503e','#b03a2e','#7a2218'],pants:['#3a4a5a','#26323e'],hat:'cap',capCol:'#8a8f96',beard:'#7a7a7a',overalls:'#5a6a7a'},
   lena:{hair:['#3a2418','#20120a'],tunic:['#f4cf5a','#e0b030','#a8801a'],pants:['#5a4a6e','#3a2e4c'],hat:'cap',capCol:'#7a4aa8',overalls:'#6a4aa6'},
   mabel:{hair:['#c0562e','#8a3a1c'],tunic:['#4fbcae','#2f9a8e','#1f6e66'],pants:['#6a4a3a','#44301f'],bun:true,glasses:true},
   bram:{hair:['#8a5a2b','#573510'],tunic:['#7fbf62','#4a7a3a','#2f5226'],pants:['#7a5b3a','#523a22'],hat:'straw',beard:'#7b4f26',overalls:'#4a6aa6',skin:['#f2cba2','#d49c6c']}
@@ -1362,6 +1365,9 @@ const QUESTS=[
   {id:'q25',t:'Clear 6 Lantern Loft puzzles',g:()=>[sget('lightWins'),6],r:{coins:50,energy:2}},
   {id:'q26',t:'Win 6 Match Hall games',g:()=>[sget('matchWins'),6],r:{coins:50,energy:2}},
   {id:'q27',t:'Get 3 ⭐ in any mini-game 5 times',g:()=>[sget('threeStars'),5],r:{coins:70,energy:2}},
+  {id:'q28',t:'Hold the line at The Watch',g:()=>[sget('siegeWins'),1],r:{coins:40,plank:2}},
+  {id:'q29',t:'Upgrade The Watch',g:()=>[sget('up_watch'),1],r:{coins:30,brick:2}},
+  {id:'q30',t:'Beat 5 Gloom waves',g:()=>[sget('siegeWaves'),5],r:{coins:50,energy:2}},
   {id:'q16',t:'Stitch a bigger backpack',g:()=>[sget('packUp'),1],r:{coins:40,jam:2}},
   {id:'q19',t:'Sharpen a tool (axe, pickaxe or basket)',g:()=>[sget('toolUp'),1],r:{coins:30}},
   {id:'q20',t:'Upgrade your tools 4 times',g:()=>[sget('toolUp'),4],r:{coins:80,energy:2}},
@@ -1480,11 +1486,13 @@ GAMES.lights={name:'Lantern Loft',icon:'💡',desc:'Tap a lamp to flip it and it
   perks:lv=>[`${3+2*(lv-1)} undos per puzzle`,`${lv} hint${lv>1?'s':''} per puzzle`,lv>=3?'Hints show 2 lamps':null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
 GAMES.match={name:'Match Hall',icon:'🎴',desc:'Flip cards to find sets of 3 matching fruit. Fewer tries earns more stars.',
   perks:lv=>[`Peek at all cards for ${matchPeek(lv).toFixed(1)}s`,matchFree(lv)?`${matchFree(lv)} forgiven miss${matchFree(lv)>1?'es':''}`:null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
+GAMES.watch={name:'The Watch',icon:'🛡️',desc:'Defend the Barn from the Gloom. Build with what you gathered, craft fast, hold every wave.',
+  perks:lv=>[`Barn strength ${10+2*lv}`,`${2+lv} free fences per battle`,lv>=3?'Archers shoot faster':null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
 const matchPeek=lv=>.8+.6*(lv-1),matchFree=lv=>Math.floor(lv/2);
 const cardTrades=lv=>1+Math.floor((lv-1)/2);
 const MAXLV=5;
 const upCost=lv=>({coins:[40,80,140,220][lv-1],plank:[2,4,6,8][lv-1],brick:[1,3,5,7][lv-1]});
-const START={bolt:m=>startBolt(m),card:m=>startCards(m),lights:m=>startLights(m),match:m=>startMatch(m)};
+const START={bolt:m=>startBolt(m),card:m=>startCards(m),lights:m=>startLights(m),match:m=>startMatch(m),watch:m=>startWatch(m)};
 function openBuilding(b){
   const gm=GAMES[b.game];
   const draw=()=>{
@@ -1537,6 +1545,12 @@ function openFreeSetup(game){
     $('#modal').querySelectorAll('[data-md]').forEach(b=>b.onclick=()=>openFreeSetup('lights',b.dataset.md));
     if(!full)$('#o1').oninput=()=>{$('#o1v').textContent=$('#o1').value};
     $('#go').onclick=()=>{const o={full,scramble:full?0:+$('#o1').value};closeModal();startLights('free',o)};
+  }else if(game==='watch'){
+    openModal(`<h2>🛡️ The Watch — Free Play</h2><div class="muted">Practice with a spare kit: nothing of yours is used, no rewards, no progress.</div>
+      <div class="field"><label>Waves <span id="o1v">5</span></label><input type="range" id="o1" min="2" max="10" value="5"></div>
+      <div style="margin-top:10px"><button class="btn green" id="go">▶ Start</button></div>`);
+    $('#o1').oninput=()=>{$('#o1v').textContent=$('#o1').value};
+    $('#go').onclick=()=>{const o={waves:+$('#o1').value};closeModal();startWatch('free',o)};
   }else if(game==='match'){
     openModal(`<h2>🎴 Match Hall — Free Play</h2><div class="muted">Practice only: no energy used, no rewards, no progress.</div>
       <div class="field"><label>Sets of 3 <span id="o1v">6</span></label><input type="range" id="o1" min="3" max="10" value="6"></div>
@@ -1561,7 +1575,7 @@ function openFreeSetup(game){
 }
 function openMenu(){
   openModal(`<h2>☰ Menu</h2><div class="muted">Harvest Hollow · version ${VERSION}</div>
-    <div class="row" style="flex-wrap:wrap"><div class="grow"><b>Free Play</b><div class="muted">Play any mini-game without touching your progress.</div></div><button class="btn small blue" data-fp="bolt">⚙️ Bolts</button><button class="btn small blue" data-fp="card">🃏 Beans</button><button class="btn small blue" data-fp="lights">💡 Lamps</button><button class="btn small blue" data-fp="match">🎴 Match</button></div>
+    <div class="row" style="flex-wrap:wrap"><div class="grow"><b>Free Play</b><div class="muted">Play any mini-game without touching your progress.</div></div><button class="btn small blue" data-fp="bolt">⚙️ Bolts</button><button class="btn small blue" data-fp="card">🃏 Beans</button><button class="btn small blue" data-fp="lights">💡 Lamps</button><button class="btn small blue" data-fp="match">🎴 Match</button><button class="btn small blue" data-fp="watch">🛡️ Watch</button></div>
     <div class="row" style="flex-wrap:wrap"><div class="grow"><b>Thumbstick sensitivity</b><div class="muted">Higher = a smaller push moves you.</div></div>
       <div style="width:100%"><input type="range" id="mSens" min="1" max="5" step="1" value="${S.stickSens||3}" style="width:100%;accent-color:#b8851a"><div class="muted" style="display:flex;justify-content:space-between"><span>Low</span><span>High</span></div></div></div>
     <div class="row"><div class="grow"><b>Guide arrows</b><div class="muted">Yellow arrows pointing to your next goal.</div></div><button class="btn small blue" id="mGuide">Toggle</button></div>
@@ -1583,32 +1597,37 @@ const CAST={
   tess:{name:'Tinker Tess',short:'Tess',face:'👩‍🔧',role:'Runs the Bolt Works'},
   bram:{name:'Farmer Bram',short:'Bram',face:'👨‍🌾',role:'Runs the Card Barn'},
   lena:{name:'Lamplighter Lena',short:'Lena',face:'🧑‍🔧',role:'Runs the Lantern Loft'},
-  mabel:{name:'Matchmaker Mabel',short:'Mabel',face:'👩‍🎤',role:'Runs the Match Hall'}
+  mabel:{name:'Matchmaker Mabel',short:'Mabel',face:'👩‍🎤',role:'Runs the Match Hall'},
+  rowan:{name:'Captain Rowan',short:'Rowan',face:'💂',role:'Captain of The Watch'}
 };
 const stored=k=>sget('st_'+k)>0||(S.store[k]||0)>0;
 const bothLv=()=>Math.min(S.bld.bolt,S.bld.card,S.bld.lights,S.bld.match);
-const GWHO={bolt:'tess',card:'bram',lights:'lena',match:'mabel'},GPLAYS={bolt:'boltWins',card:'cardGames',lights:'lightWins',match:'matchWins'};
+const GWHO={bolt:'tess',card:'bram',lights:'lena',match:'mabel',watch:'rowan'},GPLAYS={bolt:'boltWins',card:'cardGames',lights:'lightWins',match:'matchWins',watch:'siegeWins'};
 const STORY=[
   {who:'granny',goal:'Chop 4 wood: walk onto a tree 🌳 and stand still',prog:()=>[sget('g_wood'),4],done:()=>sget('g_wood')>=4,r:{coins:5},
-   say:["Welcome home! Grandpa Alder left you Harvest Hollow, and it needs some love.", "Walk onto a 🌳 tree and stand still to chop wood.", "Your 🎒 backpack holds 6 things.", "Follow the yellow 🧭 arrow. Tap ❓ for help any time."]},
+   say:["Welcome home! Grandpa Alder left you Harvest Hollow.", "But the <b>Gloom</b> is creeping in from the Wilds, and the old Barn is falling apart.", "We need <b>wood</b> to patch it up.", "Walk onto a 🌳 tree and stand still to chop. Follow the yellow 🧭 arrow."]},
   {who:'granny',goal:'Drop your wood at the Barn: step on the red mat in front of it 📦',prog:()=>[sget('delivered'),4],done:()=>sget('delivered')>=4,r:{coins:5},
-   say:["Carry your wood to the 📦 Barn.", "Step on the red mat in front of it to store everything.", "Upgrades are paid from the Barn's storage."]},
+   say:["The 📦 Barn is the heart of the Hollow.", "Your 🎒 backpack is small. Anything in the Barn is safe and ready to use.", "Step on the red mat in front of it to store everything."]},
   {who:'granny',goal:'Make 1 plank at the Sawmill, then store it in the Barn 🟫',done:()=>stored('plank'),r:{coins:5},
-   say:["The Sawmill turns 2 wood into 1 plank.", "Step on its mat to feed it, wait a few seconds, then step on again to collect.", "A ❗ over a building means goods are ready.", "Store the plank in the Barn."]},
+   say:["Planks mend roofs and build the defences we'll need soon.", "The Sawmill turns 2 wood into 1 plank.", "Step on its mat to feed it, wait a few seconds, then step on again to collect.", "Store the plank in the Barn."]},
   {who:'granny',goal:'Make 1 brick at the Brick Kiln (needs 2 stone ⛏️), then store it 🧱',done:()=>stored('brick'),r:{coins:10},
-   say:["Mine 2 stone from the grey rocks out east.", "Feed the Brick Kiln, then collect the brick.", "Store it in the Barn. Planks and bricks pay for upgrades.", "The Quest Board by my cottage has bounties too."]},
+   say:["Bricks make walls the Gloom can't chew through.", "Mine 2 stone from the grey rocks out east, feed the Brick Kiln, then collect.", "Store it in the Barn.", "The Quest Board by my cottage has bounties too."]},
   {who:'tess',goal:'Solve a puzzle at the Bolt Works ⚙️ (the blue building)',prog:()=>[sget('boltWins'),1],done:()=>sget('boltWins')>=1,r:{coins:10},
-   say:["I'm Tess! My Bolt Works needs sorting out.", "Step on the red mat under the blue workshop, then press ▶ Play (costs ⚡1).", "Sort the nuts so each rod holds one colour.", "I pay coins for every puzzle you solve."]},
+   say:["I'm Tess! The Gloom jammed my machines.", "The workshops are how the Hollow earns <b>coins</b> — and coins buy what we can't make.", "Step on the red mat under the blue workshop, then press ▶ Play (costs ⚡1).", "Sort the nuts so each rod holds one colour. I pay for every puzzle!"]},
   {who:'tess',goal:'Upgrade the Bolt Works ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_bolt')>=1,r:{coins:10},
-   say:["Coins build upgrades.", "An upgrade costs coins + planks + bricks from your Barn.", "You get more undos, hints, a spare rod and bigger payouts.", "Open the Bolt Works and press ⬆ Upgrade."]},
+   say:["A better workshop pays more coins per puzzle.", "An upgrade costs coins + planks + bricks from your Barn.", "You also get more undos, hints and a spare rod.", "Open the Bolt Works and press ⬆ Upgrade."]},
   {who:'bram',goal:'Finish a Bean Harvest game at the Card Barn 🃏 (purple roof)',prog:()=>[sget('cardGames'),1],done:()=>sget('cardGames')>=1,r:{coins:10},
-   say:["Bram here! At the Card Barn we play Bean Harvest.", "Plant crops from your hand, then harvest them for coins.", "Step on the red mat under my barn and press ▶ Play.", "Tap ❓ in the game for the rules."]},
+   say:["Bram here! The Gloom spoils crops, so we trade beans to stay fed.", "At the Card Barn we play Bean Harvest: plant crops, harvest them for coins.", "Step on the red mat under my barn and press ▶ Play.", "Tap ❓ in the game for the rules."]},
   {who:'bram',goal:'Upgrade the Card Barn ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_card')>=1,r:{coins:15,energy:2},
    say:["More levels mean more rounds, more trades and bigger harvests.", "Open the Card Barn and press ⬆ Upgrade when you have the goods."]},
   {who:'granny',goal:'Raise all four workshops to Level 3 🏗️',prog:()=>[bothLv(),3],done:()=>bothLv()>=3,r:{coins:30},
-   say:["Look at the Hollow now! Grandpa would be proud.", "The Quest Board has plenty of bounties.", "All four workshops can reach Level 5.", "Free Play (☰ menu) never touches your progress."]},
+   say:["Look at the Hollow now! Grandpa would be proud.", "The 💡 Lantern Loft and 🎴 Match Hall need love too.", "Lena's lamps keep the Gloom back at night. Mabel's hall keeps spirits up.", "Bring all four to Level 3."]},
   {who:'granny',goal:'Raise all four workshops to Level 5 🏆',prog:()=>[bothLv(),5],done:()=>bothLv()>=5,r:{coins:100,energy:3},
-   say:["Level 3 already!", "One more push makes every workshop the finest in the valley."]}
+   say:["Level 3 already!", "One more push makes every workshop the finest in the valley."]},
+  {who:'rowan',goal:'Hold the line at The Watch 🛡️ (east side, red roof). Stock the Barn first!',prog:()=>[sget('siegeWins'),1],done:()=>sget('siegeWins')>=1,r:{coins:40,energy:2},
+   say:["Captain Rowan. The Gloom is on the ridge — they come at dusk.", "<b>Everything in your Barn is your arsenal:</b> 🪵 fences, 🟫 archers, 🧱 walls, 🍯 traps, 🪨 boulders, 🍞 repairs.", "In the fight you can craft fast: wood ➜ planks, stone ➜ bricks and more.", "Step on the red mat under The Watch and press ▶ Play (costs ⚡1)."]},
+  {who:'rowan',goal:'Upgrade The Watch ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_watch')>=1,r:{coins:30,energy:2},
+   say:["A stronger Watch means a tougher Barn and free fences.", "It also pays more coins for every siege you win.", "Open The Watch and press ⬆ Upgrade."]}
 ];
 const END_SAY=["Harvest Hollow is thriving, thanks to you!","The workshops are humming and the Barn is full.","Free Play and the Quest Board are always open.","Thank you, dear!"];
 
@@ -1655,8 +1674,9 @@ function talkTo(id){
     granny:["I keep the Quest Board.","Finished quests pay coins, energy, even planks and bricks."],
     tess:["The Bolt Works is open for business.","Sort the nuts, pocket the coins, spend them on upgrades."],
     bram:["Nothing beats a good harvest.","Plant like crops together and harvest big piles."],
-    lena:["The Lantern Loft keeps the village bright.","Tap a lamp to flip it and its neighbours. Lights out wins!"],
-    mabel:["The Match Hall is all about memory.","Find 3 matching fruit. Fewer tries, more stars."]
+    lena:["My lamps keep the Gloom back at night.","Tap a lamp to flip it and its neighbours. Lights out wins — and I pay coins for it!"],
+    mabel:["The Match Hall keeps spirits up while the Gloom looms.","Find 3 matching fruit. Fewer tries, more stars, more coins."],
+    rowan:["The Watch guards the Barn.","Stock up on wood, planks, bricks and jam first — then defend."]
   }[id];
   showSay(id,st?chat.concat([`<i>Your next step is with ${CAST[st.who].name}.</i>`]):chat);
 }
@@ -1666,7 +1686,11 @@ function buildingBlurb(game){
   const who=GWHO[game],c=CAST[who];
   const plays=sget(GPLAYS[game]),ups=sget('up_'+game);
   let t;
-  if(game==='lights'){
+  if(game==='watch'){
+    t=plays===0?["Press <b>▶ Play</b> (costs ⚡1) to defend the Barn.","What you spend comes from your <b>Barn storage</b> — stock up first!","Place fences, archers and walls, and craft on the fly.","Win waves to earn <b>coins</b>."]
+      :ups===0?["Coins + planks + bricks from your Barn <b>upgrade</b> The Watch.","Each level: a tougher Barn, free fences, bigger payouts."]
+      :["Higher levels give a tougher Barn, free fences and bigger payouts."];
+  }else if(game==='lights'){
     t=plays===0?["Press <b>▶ Play</b> (costs ⚡1) to start a puzzle.","Tap a lamp to flip it and the 4 beside it.","Switch every lamp <b>off</b>.","You earn <b>coins</b> for each puzzle."]
       :ups===0?["Coins + planks + bricks from your Barn <b>upgrade</b> this loft.","Each level: more undos and hints, bigger payouts."]
       :["Each upgrade level adds undos, hints and bigger payouts."];
@@ -1693,6 +1717,13 @@ const RULES={
     <li><b>Grey “?” nuts</b> hide their colour until the nuts above them are moved away.</li>
     <li><b>Undo</b> takes back a move, <b>Hint</b> shows a good next move (green = from, blue = to), <b>Restart</b> resets the puzzle.</li>
     <li>Every puzzle is guaranteed solvable. Fewer moves earns more stars and coins.</li></ul>`,
+  watch:`<h2>🛡️ How to play The Watch</h2><ul class="perks">
+    <li><b>Goal:</b> stop the Gloom reaching your 🏚 Barn (left side) for every wave.</li>
+    <li><b>Pick a tool</b> in the bottom bar, then <b>tap a square</b> to build. Items come from your Barn storage.</li>
+    <li>🪵 <b>Fence</b> and 🧱 <b>Wall</b> block and soak up damage. 🏹 <b>Archer</b> shoots down its lane. 🍯 <b>Trap</b> slows foes. 🪨 <b>Boulder</b> (tap a lane) crushes everything in it. 🍞 <b>Mend</b> (tap a defence) repairs it.</li>
+    <li><b>Craft fast</b> with the green buttons: 🪵🪵➜🟫 · 🪨🪨➜🧱 · 🫐🫐🫐➜🍯 · 🌾🌾➜🍞.</li>
+    <li>You can build and craft during a wave. Between waves defences heal a bit and villagers bring 🪵2 🪨1.</li>
+    <li>What you spend is gone. Gather more at the Barn. Free Play uses a spare kit.</li></ul>`,
   lights:`<h2>💡 How to play Lantern Loft</h2><ul class="perks">
     <li><b>Goal:</b> switch every lamp <b>off</b>.</li>
     <li><b>Tap a lamp</b> to flip it and the lamps above, below, left and right of it.</li>
@@ -1769,6 +1800,8 @@ function nextAction(){
     case 5:return upgradeAction('bolt');
     case 6:return doorT(bldBy('card'),'🃏','Step on the red mat under the Card Barn, then press ▶ Play');
     case 7:return upgradeAction('card');
+    case 10:return doorT(bldBy('watch'),'🛡️','Stock your Barn, then step on the red mat under The Watch and press ▶ Play');
+    case 11:return upgradeAction('watch');
     default:return upgradeAction(['bolt','card','lights','match'].sort((a,b)=>S.bld[a]-S.bld[b])[0]);
   }
 }
@@ -1822,7 +1855,7 @@ function openHowTo(){
       <li><b>Gather</b> — stand on 🌳 trees, ⛰️ rocks, 🫐 bushes and 🌾 wheat. Your 🎒 backpack holds a few things.</li>
       <li><b>Drop off</b> — step on the red mat in front of the 📦 Barn to store everything.</li>
       <li><b>Craft</b> — feed goods into the Sawmill, Kiln, Jam Kitchen or Bakery by stepping on their mats. Step on again later to collect.</li>
-      <li><b>Play</b> — step on the red mat under a workshop (⚙️ 🃏 💡 🎴) and press ▶ Play (costs ⚡1) to earn 🪙 coins.</li>
+      <li><b>Play</b> — step on the red mat under a workshop (⚙️ 🃏 💡 🎴 🛡️) and press ▶ Play (costs ⚡1) to earn 🪙 coins.</li>
       <li><b>Upgrade</b> — spend coins and goods from the Barn on workshop levels, and on the ⬆ Upgrades screen for a bigger 🎒 backpack and a faster 🪓 axe, ⛏️ pickaxe and 🧺 forage basket.</li>
       <li><b>Eat</b> — bread and jam (🧺 Storage) refill your ⚡ energy.</li></ol>
     <div class="muted">Move: arrow keys / WASD, or the thumbstick. Walk up to a character and press 💬 Talk.</div>
@@ -1949,7 +1982,7 @@ function startBolt(mode,opts){
     if(!S.seen.rb){S.seen.rb=1;save();openRules('bolt')}
   },30);
 }
-function leaveMG(){const mg=$('#mg');mg.classList.add('hidden');mg.innerHTML='';B=null;C=null;L=null;M=null;if(!worldOn)return;hud()}
+function leaveMG(){const mg=$('#mg');mg.classList.add('hidden');mg.innerHTML='';B=null;C=null;L=null;M=null;if(typeof W!=='undefined'&&W)cancelAnimationFrame(W.raf);W=null;if(!worldOn)return;hud()}
 const topOf=a=>a[a.length-1];
 function pegDone(a){return a.length===B.cap&&a.every(x=>x===a[0])}
 function renderBolt(anim){
@@ -2291,6 +2324,261 @@ function matchWin(){
     $('#wBack').onclick=leaveMG;
     $('#wNext').onclick=()=>{if(M.mode==='play'){if(S.energy<1)return;spendEnergy();startMatch('play')}else startMatch('free',M.opts)};
   },700);
+}
+/* =====================================================================
+   MINI-GAME 5: THE WATCH — defend the Barn from the Gloom
+   Real-time lane defence. You spend what you gathered and crafted.
+   ===================================================================== */
+document.head.appendChild(Object.assign(document.createElement('style'),{textContent:`
+#watch{background:radial-gradient(ellipse at 50% 0%,rgba(255,200,120,.2),transparent 65%),var(--tex-bench),#2e3a2a;display:flex;flex-direction:column}
+#wInv{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:0 8px 4px}
+#wInv .it{padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.4);color:#fff3cf;font-weight:800;font-size:13px;border:1px solid rgba(255,230,160,.25)}
+#wArea{flex:1;position:relative;overflow:hidden;display:flex;justify-content:center;align-items:center;touch-action:none}
+#wCv{display:block;touch-action:none}
+#wTools{display:flex;gap:6px;overflow-x:auto;padding:6px 8px;justify-content:safe center;-webkit-overflow-scrolling:touch}
+.wt{flex:none;min-width:62px;border:2px solid rgba(255,230,160,.35);border-radius:12px;background:rgba(0,0,0,.4);color:#fff3cf;padding:4px 6px;text-align:center;font-weight:800;font-size:12px;line-height:1.15}
+.wt .e{font-size:24px;display:block}
+.wt.on{background:linear-gradient(#ffe9a0,#e3a935);color:#3a2606;border-color:#fff3cf;box-shadow:0 0 12px rgba(255,220,120,.8)}
+.wt.no{opacity:.45}
+#wBench{display:flex;gap:6px;justify-content:center;padding:0 8px;flex-wrap:wrap}
+.wc{position:relative;overflow:hidden;border:0;border-radius:10px;padding:6px 10px;font-weight:800;font-size:14px;color:#3a2606;background:linear-gradient(#cfe9d5,#7fbf8a);box-shadow:0 2px 0 #3c6a46}
+.wc.no{opacity:.45}
+.wc i{position:absolute;left:0;bottom:0;height:100%;background:rgba(0,0,0,.35);width:calc(var(--cd,0)*100%);pointer-events:none}
+#wGo{margin:6px auto 0;display:block}
+`}));
+let W=null;
+const WCOLS=7,WROWS=5;
+const WDEF={
+  bar:{n:'Fence',e:'🪵',cost:{wood:2},hp:14,block:1},
+  arc:{n:'Archer',e:'🏹',cost:{plank:2},hp:5},
+  wall:{n:'Wall',e:'🧱',cost:{brick:2},hp:30,block:1},
+  trap:{n:'Jam trap',e:'🍯',cost:{jam:1},hp:15,trap:1},
+  boulder:{n:'Boulder',e:'🪨',cost:{stone:2},act:1},
+  heal:{n:'Mend',e:'🍞',cost:{bread:1},act:1}
+};
+const WRECIPE={plank:{wood:2},brick:{stone:2},jam:{berries:3},bread:{wheat:2}};
+const WFOE={imp:{e:'👺',hp:3,sp:.55,dps:.9,bd:1},brute:{e:'🧌',hp:11,sp:.28,dps:2.2,bd:3},bat:{e:'🦇',hp:2,sp:1.0,dps:.6,bd:1}};
+const wInv=()=>W.mode==='play'?S.store:W.inv;
+const wHave=k=>wInv()[k]||0;
+const wAfford=c=>Object.entries(c).every(([k,v])=>wHave(k)>=v);
+const wPay=c=>{const iv=wInv();for(const[k,v]of Object.entries(c))iv[k]=(iv[k]||0)-v};
+function wavePlan(w){
+  const q=[];const n=2+2*w;
+  for(let i=0;i<n;i++)q.push(w>=3&&i%4===3?'bat':'imp');
+  for(let i=0;i<Math.floor((w-1)/2);i++)q.push('brute');
+  shuffle(q);
+  let t=1;return q.map(k=>({k,at:(t+=.9+Math.random()*.9)}));
+}
+function startWatch(mode,opts){
+  const lv=S.bld.watch;
+  const waves=mode==='free'?opts.waves:clamp(3+Math.floor(sget('siegeWins')/2),3,8);
+  const mg=$('#mg');mg.className='screen';mg.id='mg';
+  mg.innerHTML=`<div id="watch" class="screen">
+    <div class="mgbar"><button class="btn small grey" id="wBackB">←<span class="lbl"> Village</span></button><h3>🛡️ The Watch</h3>
+      ${mode==='free'?'<span class="tag free">FREE PLAY</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span><span class="tag" id="mgCoins">🪙 ${S.coins}</span>`:''}<button class="btn small grey" id="wHelp">❓</button><span class="tag" id="wWave"></span><span class="tag" id="wHp"></span></div>
+    <div id="wInv"></div>
+    <div id="wArea"><canvas id="wCv"></canvas></div>
+    <div id="wTools"></div><div id="wBench"></div>
+    <div class="mgfoot"><button class="btn green" id="wGo">▶ Start wave</button></div>
+  </div>`;
+  mg.classList.remove('hidden');
+  const inv=mode==='free'?{wood:12,stone:8,berries:6,wheat:6,plank:4,brick:4,jam:3,bread:3}:null;
+  const hp=mode==='free'?10:10+2*lv;
+  W={mode,lv,opts,waves,wave:0,state:'prep',prepT:mode==='free'?60:30,hp,maxhp:hp,def:[],foes:[],q:[],t:0,fx:[],tool:'bar',free:mode==='free'?0:2+lv,inv,cd:{},over:false,cleared:0,last:performance.now(),sel:null,raf:0};
+  $('#wBackB').onclick=()=>{if(!W.over&&W.wave>0&&mode==='play'&&!confirm('Leave the battle? The energy and goods you spent are lost.'))return;stopWatch();leaveMG()};
+  $('#wHelp').onclick=()=>openRules('watch');
+  $('#wGo').onclick=()=>{if(W.state==='prep')watchBegin()};
+  const cv=$('#wCv');cv.addEventListener('pointerdown',wTap);
+  watchFit();wRenderUI();
+  if(!S.seen.rw){S.seen.rw=1;save();openRules('watch')}
+  W.raf=requestAnimationFrame(wLoop);
+}
+function stopWatch(){if(W)cancelAnimationFrame(W.raf);W=null}
+let wGeo={cs:40,ox:0,oy:0};
+function watchFit(){
+  if(!W)return;
+  const area=$('#wArea'),cv=$('#wCv');if(!area||!cv)return;
+  const aw=area.clientWidth-8,ah=area.clientHeight-4;
+  const cs=Math.floor(Math.max(30,Math.min(aw/(WCOLS+1),ah/WROWS,90)));
+  const w=Math.floor(cs*(WCOLS+1)),h=cs*WROWS,d=Math.min(2,devicePixelRatio||1);
+  cv.width=w*d;cv.height=h*d;cv.style.width=w+'px';cv.style.height=h+'px';
+  wGeo={cs,ox:cs,oy:0,d,w,h};
+}
+addEventListener('resize',()=>{if(W)watchFit()});
+function wRenderUI(){
+  if(!W)return;
+  $('#wWave').textContent=W.state==='prep'?`Wave ${W.wave+1}/${W.waves} · ${Math.ceil(W.prepT)}s`:`Wave ${W.wave}/${W.waves}`;
+  $('#wHp').textContent=`📦 ${Math.max(0,Math.ceil(W.hp))}/${W.maxhp}`;
+  $('#wInv').innerHTML=Object.keys(ITEMS).map(k=>`<span class="it">${ITEMS[k].e} ${wHave(k)}</span>`).join('');
+  $('#wTools').innerHTML=Object.entries(WDEF).map(([k,d])=>{
+    const free=k==='bar'&&W.free>0,ok=free||wAfford(d.cost);
+    const cost=free?`<b>free ×${W.free}</b>`:Object.entries(d.cost).map(([i,v])=>`${ITEMS[i].e}${v}`).join(' ');
+    return `<button class="wt${W.tool===k?' on':''}${ok?'':' no'}" data-t="${k}"><span class="e">${d.e}</span>${d.n}<br>${cost}</button>`;
+  }).join('');
+  $('#wBench').innerHTML=Object.entries(WRECIPE).map(([k,c])=>{
+    const ok=wAfford(c);
+    return `<button class="wc${ok?'':' no'}" data-c="${k}" style="--cd:${(W.cd[k]||0)/1.2}"><i></i>${Object.entries(c).map(([i,v])=>ITEMS[i].e.repeat(v)).join('')} ➜ ${ITEMS[k].e}</button>`;
+  }).join('');
+  $('#wTools').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{W.tool=b.dataset.t;sfx.click();wRenderUI()});
+  $('#wBench').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>wCraft(b.dataset.c));
+  $('#wGo').style.display=W.state==='prep'?'block':'none';
+}
+function wCraft(k){
+  if(!W||W.over||(W.cd[k]||0)>0)return;
+  const c=WRECIPE[k];if(!wAfford(c)){sfx.bad();return}
+  wPay(c);const iv=wInv();iv[k]=(iv[k]||0)+1;W.cd[k]=1.2;sfx.get();
+  if(W.mode==='play'){stat('craft_'+k);save()}
+  wRenderUI();
+}
+function wTap(e){
+  if(!W||W.over)return;
+  const r=e.target.getBoundingClientRect(),x=(e.clientX-r.left)/wGeo.cs-1,y=(e.clientY-r.top)/wGeo.cs;
+  const col=Math.floor(x),row=Math.floor(y);
+  if(row<0||row>=WROWS)return;
+  const d=WDEF[W.tool];
+  if(W.tool==='boulder'){
+    if(!wAfford(d.cost)){sfx.bad();return}
+    wPay(d.cost);sfx.drop();W.fx.push({k:'boulder',row,x:WCOLS,t:0,hit:new Set()});wRenderUI();return;
+  }
+  if(col<0||col>=WCOLS)return;
+  const here=W.def.find(q=>q.row===row&&q.col===col);
+  if(W.tool==='heal'){
+    if(!here||here.hp>=here.max||!wAfford(d.cost)){sfx.bad();return}
+    wPay(d.cost);here.hp=here.max;sfx.get();W.fx.push({k:'puff',x:col+.5,y:row+.5,t:0,e:'💚'});wRenderUI();return;
+  }
+  if(here){sfx.bad();return}
+  const free=W.tool==='bar'&&W.free>0;
+  if(!free&&!wAfford(d.cost)){sfx.bad();toast(`Need ${Object.entries(d.cost).map(([i,v])=>ITEMS[i].e+v).join(' ')} — gather or craft more!`);return}
+  if(free)W.free--;else wPay(d.cost);
+  W.def.push({k:W.tool,row,col,hp:d.hp,max:d.hp,cd:Math.random()*.6,age:0});
+  sfx.chop();W.fx.push({k:'puff',x:col+.5,y:row+.5,t:0,e:'✨'});
+  if(W.mode==='play')save();
+  wRenderUI();
+}
+function watchBegin(){
+  if(!W||W.state!=='prep')return;
+  W.wave++;W.state='fight';W.q=wavePlan(W.wave);W.t=0;sfx.pick();wRenderUI();
+}
+function wLoop(now){
+  if(!W)return;
+  const dt=Math.min(.05,(now-W.last)/1000);W.last=now;
+  wUpdate(dt);wDraw();
+  W.raf=requestAnimationFrame(wLoop);
+}
+function wUpdate(dt){
+  if(W.over)return;
+  Object.keys(W.cd).forEach(k=>{if(W.cd[k]>0){W.cd[k]=Math.max(0,W.cd[k]-dt);}});
+  if((W.uiT=(W.uiT||0)+dt)>.2){W.uiT=0;if(Object.values(W.cd).some(v=>v>0)||W.cdWas){wRenderUI();W.cdWas=Object.values(W.cd).some(v=>v>0)}}
+  if(W.state==='prep'){
+    W.prepT-=dt;if((W.pu=(W.pu||0)+dt)>.5){W.pu=0;$('#wWave').textContent=`Wave ${W.wave+1}/${W.waves} · ${Math.max(0,Math.ceil(W.prepT))}s`}
+    if(W.prepT<=0)watchBegin();
+    return;
+  }
+  W.t+=dt;
+  while(W.q.length&&W.q[0].at<=W.t){const s=W.q.shift(),F=WFOE[s.k];W.foes.push({k:s.k,row:rint(0,WROWS-1),x:WCOLS+.4,hp:F.hp,max:F.hp,hit:0,wob:Math.random()*6})}
+  const lvSpd=1+.0;
+  for(const f of W.foes){
+    const F=WFOE[f.k];f.hit=Math.max(0,f.hit-dt);f.wob+=dt*6;
+    let sp=F.sp*lvSpd,blocked=null;
+    for(const d of W.def){
+      if(d.row!==f.row)continue;const D=WDEF[d.k];
+      if(D.trap&&f.x>=d.col&&f.x<d.col+1){sp*=.4;d.hp-=dt*(1)}
+      if(D.block&&f.x>d.col+.55&&f.x<=d.col+1.05)blocked=d;
+    }
+    if(blocked){f.x=Math.max(f.x,blocked.col+1.0);blocked.hp-=F.dps*dt;f.atk=(f.atk||0)+dt;if(f.atk>.5){f.atk=0;sfx.chop()}}
+    else f.x-=sp*dt;
+    if(f.x<=0){W.hp-=F.bd;f.dead=1;f.reached=1;sfx.bad();W.fx.push({k:'puff',x:.3,y:f.row+.5,t:0,e:'💥'});}
+  }
+  // archers
+  for(const d of W.def){
+    d.age+=dt;if(d.k!=='arc')continue;
+    d.cd-=dt;
+    if(d.cd<=0){
+      let tgt=null;for(const f of W.foes)if(f.row===d.row&&!f.dead&&f.x>d.col+.3&&f.x<WCOLS+.2&&(!tgt||f.x<tgt.x))tgt=f;
+      if(tgt){tgt.hp-=2;tgt.hit=.15;d.cd=W.lv>=3?.85:1.1;sfx.pick();W.fx.push({k:'arrow',row:d.row,x0:d.col+.8,x1:tgt.x,t:0})}
+    }
+  }
+  // boulders roll across lane
+  for(const fx of W.fx)if(fx.k==='boulder'){
+    const nx=fx.x-dt*9;
+    for(const f of W.foes)if(f.row===fx.row&&!f.dead&&f.x<=fx.x&&f.x>nx&&!fx.hit.has(f)){fx.hit.add(f);f.hp-=7;f.hit=.2;sfx.chop()}
+    fx.x=nx;fx.t+=dt;if(fx.x<-1)fx.done=1;
+  }
+  W.fx.forEach(fx=>{if(fx.k!=='boulder')fx.t+=dt;if(fx.k==='puff'&&fx.t>.5)fx.done=1;if(fx.k==='arrow'&&fx.t>.15)fx.done=1});
+  W.fx=W.fx.filter(f=>!f.done);
+  for(const f of W.foes)if(f.hp<=0&&!f.dead){f.dead=1;W.fx.push({k:'puff',x:f.x,y:f.row+.5,t:0,e:'💨'});sfx.coin()}
+  W.foes=W.foes.filter(f=>!f.dead);
+  W.def=W.def.filter(d=>d.hp>0||(sfx.bad(),false));
+  if(W.hp!==W.lastHp){W.lastHp=W.hp;$('#wHp').textContent=`📦 ${Math.max(0,Math.ceil(W.hp))}/${W.maxhp}`}
+  if(W.hp<=0){watchEnd(false);return}
+  if(!W.q.length&&!W.foes.length){
+    W.cleared=W.wave;sfx.get();
+    if(W.wave>=W.waves){watchEnd(true);return}
+    W.def.forEach(d=>d.hp=Math.min(d.max,d.hp+d.max*.35));{const iv=wInv();iv.wood=(iv.wood||0)+2;iv.stone=(iv.stone||0)+1}
+    W.state='prep';W.prepT=W.mode==='free'?60:25;toast(`🌟 Wave ${W.wave} held! Villagers brought 🪵2 🪨1. Craft and prepare.`);wRenderUI();
+  }
+}
+function wDraw(){
+  const cv=$('#wCv');if(!cv||!W)return;
+  const g=cv.getContext('2d'),{cs,d}=wGeo;g.setTransform(d,0,0,d,0,0);
+  const w=cs*(WCOLS+1),h=cs*WROWS;
+  g.clearRect(0,0,w,h);
+  // lanes
+  for(let r=0;r<WROWS;r++){
+    g.fillStyle=r%2?'#4f8a3a':'#5a9a44';g.fillRect(cs,r*cs,cs*WCOLS,cs);
+    g.fillStyle='rgba(0,0,0,.07)';for(let c=0;c<WCOLS;c++)if((c+r)%2)g.fillRect(cs+c*cs,r*cs,cs,cs);
+  }
+  // barn zone
+  g.fillStyle=W.hp<W.maxhp*.35?'#7a3a2a':'#8a5a2b';g.fillRect(0,0,cs,h);
+  g.fillStyle='rgba(255,230,160,.25)';g.fillRect(cs-4,0,4,h);
+  g.font=`${cs*.6}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;g.textAlign='center';g.textBaseline='middle';
+  for(let r=0;r<WROWS;r++)g.fillText('📦',cs*.5,r*cs+cs*.5);
+  // placement hints
+  if(WDEF[W.tool]&&!WDEF[W.tool].act){
+    const a=.1+.08*Math.sin(performance.now()/250);g.fillStyle=`rgba(255,240,160,${a+.06})`;
+    for(let r=0;r<WROWS;r++)for(let c=0;c<WCOLS;c++)if(!W.def.some(q=>q.row===r&&q.col===c))g.fillRect(cs+c*cs+2,r*cs+2,cs-4,cs-4);
+  }
+  const em=(t,x,y,sz)=>{g.font=`${sz}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;g.fillText(t,x,y)};
+  for(const q of W.def){
+    const D=WDEF[q.k],x=cs+q.col*cs,y=q.row*cs;
+    if(q.k==='bar'){g.fillStyle='#8a5a2b';g.fillRect(x+cs*.18,y+cs*.12,cs*.64,cs*.76);g.strokeStyle='#4a2c12';g.lineWidth=2;g.strokeRect(x+cs*.18,y+cs*.12,cs*.64,cs*.76);g.fillStyle='#a8703a';for(let k=0;k<3;k++)g.fillRect(x+cs*.22,y+cs*(.2+k*.22),cs*.56,cs*.1)}
+    else if(q.k==='wall'){g.fillStyle='#9aa3ab';g.fillRect(x+cs*.12,y+cs*.1,cs*.76,cs*.8);g.strokeStyle='#4a5058';g.lineWidth=2;g.strokeRect(x+cs*.12,y+cs*.1,cs*.76,cs*.8);g.fillStyle='#6c737a';for(let k=0;k<4;k++)g.fillRect(x+cs*.12,y+cs*(.1+k*.2),cs*.76,2)}
+    else if(q.k==='arc'){g.fillStyle='#6b4a2c';g.fillRect(x+cs*.2,y+cs*.55,cs*.6,cs*.3);em('🏹',x+cs*.5,y+cs*.42,cs*.55)}
+    else if(q.k==='trap'){g.fillStyle='rgba(200,110,30,.55)';g.beginPath();g.ellipse(x+cs*.5,y+cs*.6,cs*.42,cs*.26,0,0,7);g.fill();em('🍯',x+cs*.5,y+cs*.55,cs*.4)}
+    if(q.hp<q.max){g.fillStyle='rgba(0,0,0,.5)';g.fillRect(x+cs*.15,y+cs*.02,cs*.7,5);g.fillStyle=q.hp/q.max>.4?'#7ee37a':'#ff7a5a';g.fillRect(x+cs*.15,y+cs*.02,cs*.7*Math.max(0,q.hp/q.max),5)}
+  }
+  for(const f of W.foes){
+    const F=WFOE[f.k],x=cs+f.x*cs,y=f.row*cs+cs*.5+Math.sin(f.wob)*cs*.04;
+    g.save();if(f.hit>0)g.globalAlpha=.55;em(F.e,x,y,cs*(f.k==='brute'?.8:.6));g.restore();
+    if(f.hp<f.max){g.fillStyle='rgba(0,0,0,.5)';g.fillRect(x-cs*.25,y-cs*.45,cs*.5,4);g.fillStyle='#ff7a5a';g.fillRect(x-cs*.25,y-cs*.45,cs*.5*Math.max(0,f.hp/f.max),4)}
+  }
+  for(const fx of W.fx){
+    if(fx.k==='arrow'){g.strokeStyle='#fff3cf';g.lineWidth=2;const a=fx.t/.15;const xx=cs+(fx.x0+(fx.x1-fx.x0)*a)*cs;g.beginPath();g.moveTo(xx-cs*.25,fx.row*cs+cs*.5);g.lineTo(xx,fx.row*cs+cs*.5);g.stroke()}
+    else if(fx.k==='boulder')em('🪨',cs+fx.x*cs,fx.row*cs+cs*.55,cs*.7);
+    else if(fx.k==='puff'){g.globalAlpha=1-fx.t/.5;em(fx.e,cs+fx.x*cs,fx.y*cs-fx.t*20,cs*.5);g.globalAlpha=1}
+  }
+  if(W.state==='prep'){g.fillStyle='rgba(0,0,0,.35)';g.fillRect(cs,0,cs*WCOLS,28);g.fillStyle='#ffe9a0';g.font='bold 14px sans-serif';g.fillText('Place defences and craft — then ▶ Start wave',cs+cs*WCOLS/2,15)}
+}
+function watchEnd(win){
+  W.over=true;
+  const cl=W.cleared,ratio=W.hp/W.maxhp,stars=win?(ratio>=.8?3:ratio>=.4?2:1):0;
+  let coins=0;
+  if(W.mode==='play'){
+    coins=win?Math.round((10*W.waves+Math.ceil(W.hp)*2)*(1+.15*(W.lv-1))):Math.round(4*cl*(1+.15*(W.lv-1)));
+    S.coins+=coins;stat('earned',coins);stat('siegeWaves',cl);if(win){stat('siegeWins');if(stars===3)stat('threeStars')}save(true);hud();
+  }
+  win?sfx.win():sfx.bad();
+  const sh=el(`<div class="overlay"><div class="sheet"><h2>${win?'🛡️ The Hollow holds!':'💥 The Barn fell!'}</h2>
+    ${win?`<div class="stars">${[1,2,3].map(i=>`<span class="${i<=stars?'':'off'}">⭐</span>`).join('')}</div>`:''}
+    <div class="muted">${win?`All ${W.waves} waves beaten · Barn ${Math.max(0,Math.ceil(W.hp))}/${W.maxhp}`:`You held ${cl} of ${W.waves} waves`}</div>
+    ${W.mode==='play'?`<div class="reward">🪙 +${coins}</div><div class="muted">What you spent is gone — gather and craft more at the Barn.</div>`:'<div class="reward" style="font-size:16px">Free play — nothing used, no rewards</div>'}
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+      ${W.mode==='play'?`<button class="btn green" id="wNext" ${S.energy<1?'disabled':''}>Defend again · costs ⚡1 <small>(you have ${S.energy})</small></button>`:`<button class="btn green" id="wNext">Again</button>`}
+      <button class="btn grey" id="wBack">Back to village</button></div></div></div>`);
+  $('#watch').appendChild(sh);
+  const opts=W.opts,mode=W.mode;
+  $('#wBack').onclick=()=>{stopWatch();leaveMG()};
+  $('#wNext').onclick=()=>{stopWatch();if(mode==='play'){if(S.energy<1)return;spendEnergy();startWatch('play')}else startWatch('free',opts)};
 }
 /* =====================================================================
    MINI-GAME 2: BEAN HARVEST — a short solo take on bean-planting card games
@@ -2737,6 +3025,7 @@ function showTitle(){
     <p>Gather wood, stone, berries and wheat. Craft goods. Then step into the workshops and play puzzles and card games to earn the coins that grow your village.</p>
     <div class="menu">
       <button class="btn green" id="tPlay">${has?'▶ Continue village':'▶ Start village'}</button>
+      <button class="btn blue" id="tFW">🛡️ Free Play — The Watch</button>
       <button class="btn blue" id="tFL">💡 Free Play — Lights Out</button>
       <button class="btn blue" id="tFM">🎴 Free Play — Triple Match</button>
       <button class="btn blue" id="tFB">⚙️ Free Play — Bolt Sorting</button>
@@ -2748,6 +3037,7 @@ function showTitle(){
     ${iosHint()}<div id="updBox"></div>`;
   $('#tPlay').onclick=()=>{sfx.click();goFull();startWorld()};
   $('#tFB').onclick=()=>{goFull();openFreeSetup('bolt')};
+  $('#tFW').onclick=()=>{goFull();openFreeSetup('watch')};
   $('#tFL').onclick=()=>{goFull();openFreeSetup('lights')};
   $('#tFM').onclick=()=>{goFull();openFreeSetup('match')};
   $('#tFC').onclick=()=>{goFull();openFreeSetup('card')};
