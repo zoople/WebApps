@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="snack-deck.webmanifest">
+<meta name="theme-color" content="#7A2E5C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Snack Deck">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 <title>Kognetik Snack Deck</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -250,6 +260,10 @@
   .home-foot .hunger button .he { font-size: clamp(1.2rem, 3.2vh, 1.5rem); }
   .home-foot #deal-btn { min-height: clamp(50px, 7.5vh, 64px); font-size: 1.12rem; font-family: var(--display); margin-top: 4px; }
   .home-foot #already-btn { min-height: 36px; padding: 4px; }
+  .home-meta #fs-btn { min-height: 36px; padding: 2px 8px; font-size: 1.1rem; }
+  .ver-tag { font-size: 0.72rem; color: var(--muted); }
+  .upd { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--accent); font-size: 0.86rem; font-weight: 700; }
+  .upd button { min-height: 36px; padding: 4px 12px; }
   .home-foot #hunger-hint { line-height: 1.3; }
 
   #u-card { display: flex; flex-direction: column; gap: 10px;
@@ -353,6 +367,7 @@
     <!-- Step: check-in -->
     <div id="u-checkin">
       <div class="spread"><span class="eyebrow">What's pulling you?</span><span id="default-ctl"></span></div>
+      <p id="ios-hint" class="small muted" hidden>📱 Full screen on iPhone: Share → Add to Home Screen.</p>
       <div class="home-loops">
         <div id="loop-chips" class="loop-grid"></div>
         <div id="home-status"></div>
@@ -362,7 +377,11 @@
         <div id="hunger-seg" class="hunger" role="group" aria-label="Body hunger 1 to 5"></div>
         <p id="hunger-hint" class="small" hidden></p>
         <button id="deal-btn" class="btn-primary btn-block">Deal my card</button>
-        <button id="already-btn" class="btn-quiet btn-block">I already ate it</button>
+        <div class="spread home-meta">
+          <button id="already-btn" class="btn-quiet">I already ate it</button>
+          <span class="row" style="gap:4px"><span class="ver-tag mono" id="ver-home"></span><button id="fs-btn" class="btn-quiet" hidden aria-label="Full screen">⛶</button></span>
+        </div>
+        <div id="upd-home"></div>
       </div>
     </div>
 
@@ -459,7 +478,11 @@
       <h3>History</h3>
       <ul id="history" class="hist"></ul>
     </div>
-    <details class="more panel"><summary>Account &amp; data</summary><div class="more-body">
+    <details class="more panel"><summary>Menu &amp; data</summary><div class="more-body">
+      <p class="small"><b>Kognetik Snack Deck</b> · version <span id="ver-menu" class="mono"></span></p>
+      <button id="fs-menu-btn" hidden>Full screen</button>
+      <p id="ios-hint-menu" class="small muted" hidden>Full screen on iPhone: Share → Add to Home Screen.</p>
+      <div id="upd-menu"></div>
       <span id="sync-status" class="sync" data-s="local">Saved on this device only</span>
       <p id="sync-note" class="small muted">Copy a backup now and then. Paste it back here to restore it or move it to another device.</p>
       <div class="row">
@@ -1299,6 +1322,7 @@
     const v = Number(b.dataset.h); flow.hunger = flow.hunger === v ? 0 : v; renderCheckin();
   });
   $("deal-btn").addEventListener("click", () => {
+    goFullscreenOnce();
     dealCard(false);
   });
   $("already-btn").addEventListener("click", () => {
@@ -1556,6 +1580,43 @@
     $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; toast("Reset to example loops");
   });
 
+  // ---------- Version, full screen, self-update ----------
+  const VERSION = "v1 · 11 Oct 2026";
+  const inClaude = !!(window.claude && typeof window.claude.use === "function");
+  const topLevel = (() => { try { return window.self === window.top; } catch (e) { return false; } })();
+  const fsRoot = document.documentElement;
+  const fsReq = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;
+  const fsExit = document.exitFullscreen || document.webkitExitFullscreen;
+  const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const standalone = !!(window.navigator.standalone || (window.matchMedia && (matchMedia("(display-mode: fullscreen)").matches || matchMedia("(display-mode: standalone)").matches)));
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  let fsAsked = false;
+  function enterFs() { try { const r = fsReq.call(fsRoot, { navigationUI: "hide" }); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+  function toggleFs() { if (isFs()) { try { fsExit.call(document); } catch (e) {} } else enterFs(); }
+  function goFullscreenOnce() { if (fsAsked || !fsReq || !topLevel || inClaude || standalone || isFs()) return; fsAsked = true; enterFs(); }
+  function initShell() {
+    $("ver-home").textContent = VERSION.split(" ·")[0];
+    $("ver-menu").textContent = VERSION;
+    const canFs = !!fsReq && topLevel && !inClaude;
+    $("fs-btn").hidden = !canFs; $("fs-menu-btn").hidden = !canFs;
+    $("fs-btn").addEventListener("click", toggleFs); $("fs-menu-btn").addEventListener("click", toggleFs);
+    const sync = () => { $("fs-menu-btn").textContent = isFs() ? "Exit full screen" : "Full screen"; };
+    document.addEventListener("fullscreenchange", sync); document.addEventListener("webkitfullscreenchange", sync); sync();
+    const iosHint = isIOS && !standalone && topLevel && !inClaude;
+    $("ios-hint").hidden = !iosHint; $("ios-hint-menu").hidden = !iosHint;
+    // The hosted copy is often cached: check for a newer published version on load and every few minutes.
+    if (inClaude || !/^https?:$/.test(location.protocol)) return;
+    const check = () => fetch(location.pathname + "?_=" + Date.now(), { cache: "no-store" })
+      .then(r => r.ok ? r.text() : "").then(t => {
+        const m = t.match(/const VERSION = "([^"]+)"/);
+        if (!m || m[1] === VERSION) return;
+        const html = '<div class="upd">🔄 New version ' + esc(m[1].split(" ·")[0]) + ' <button class="btn-primary" data-upd="' + esc(m[1].split(" ·")[0]) + '">Update now</button></div>';
+        $("upd-home").innerHTML = html; $("upd-menu").innerHTML = html;
+      }).catch(() => {});
+    document.addEventListener("click", e => { const b = e.target.closest("[data-upd]"); if (b) location.replace(location.pathname + "?v=" + encodeURIComponent(b.dataset.upd)); });
+    check(); setInterval(check, 4 * 60 * 1000);
+  }
+
   // ---------- Shell ----------
   let toastT = null;
   function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
@@ -1588,6 +1649,7 @@
   try { const s = sessionStorage.getItem("ksd_tab"); if (!hashTab && s) startTab = s; } catch (e) {}
   setTab(startTab);
   connectDb();
+  initShell();
 })();
 </script>
 </body>
