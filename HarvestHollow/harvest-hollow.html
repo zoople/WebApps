@@ -267,7 +267,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 /* v17: market offers from the computer players */
 .mslot{display:flex;flex-direction:column;align-items:center;gap:4px}
 .mslot .chips{display:flex;flex-direction:column;gap:3px;align-items:center;min-height:22px}
-.chip.ofr{font-size:12px;padding:3px 9px;background:linear-gradient(#ffe9a0,#e3a935);color:#3a2606;box-shadow:0 2px 0 #9a6a0e;animation:bp 1.1s infinite}
+.chip.ofr{font-size:11px;line-height:1.2;text-align:center;white-space:normal;max-width:calc(var(--cw)*1.15);padding:2px 6px;min-width:calc(var(--cw)*.8);background:linear-gradient(#ffe9a0,#e3a935);color:#3a2606;box-shadow:0 2px 0 #9a6a0e;animation:bp 1.1s infinite}
 .noo{font-size:12px;color:#cfe9d5;opacity:.8}
 .card.got::after{content:"🤝";position:absolute;left:-8px;top:-8px;width:24px;height:24px;border-radius:50%;background:#fff3cf;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,.5)}
 .grp.tbl.two .mslot .card{--w:calc(var(--cw)*.86)}
@@ -328,7 +328,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v19 · 11 Oct 2026';
+const VERSION='v20 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -2374,10 +2374,10 @@ function openPrices(){
 const STEPS=[['plant1','🌱','Plant'],['plant2','🌱','Plant 2nd (optional)'],['market','🏪','Market']];
 function stepsHTML(){
   const cur=curCard(),e=cur?CROPS[cur.t].e:'';
-  if(C.phase==='ai'||C.phase==='aigift')return `<div class="steps"><div class="r final"><span class="ic">🤖</span>${(C.activeAI||0)+1}<span class="sub">${(C.aiMarket||[]).map(c=>CROPS[c.t].e).join(' ')}</span></div></div>`;
+  if(C.phase==='ai'||C.phase==='aigift')return `<div class="steps"><div class="r final"><span class="ic">🤖</span>${C.phase==='aigift'?'Bot '+((C.gift&&C.gift.k||0)+1)+' offers you a card':'Bot '+((C.activeAI||0)+1)+' is playing'}<span class="sub">${(C.aiMarket||[]).map(c=>CROPS[c.t].e).join(' ')}</span></div></div>`;
   if(C.phase==='final')return `<div class="steps"><div class="r final"><span class="ic">🏁</span>Final turn<span class="sub">${e}👇 · ✔</span></div></div>`;
   const idx=C.phase==='plant1'?0:C.phase==='plant2'?1:2;
-  const subs={plant1:`${e} 👇`,plant2:`${e} 👇 · ⏭`,market:C.classic?`👆 · 🤝 · 👇`:`👆 · 👇 · 🔁`};
+  const subs={plant1:`${e} 👇`,plant2:`${e} 👇 · ⏭`,market:C.classic?`Tap a card to plant it. <b>Free</b> = a bot takes it. <b>Swap</b> = you get that card`:`👆 · 👇 · 🔁`};
   return `<div class="steps">`+STEPS.map((s,i)=>{
     const st=i<idx?'done':i===idx?'on':'';
     const title=i===2?`Market${idx===2?` ${C.mTotal-C.market.length+1}/${C.mTotal}`:''}`:s[2];
@@ -2409,11 +2409,11 @@ function renderCards(flipIdx){
     tHead='🏪 👆';
     table=C.market.map((c,i)=>{
       const offs=offersFor(c);
-      const chips=C.classic?(c.locked?'<span class="noo">🤝</span>':offs.length?offs.map(o=>`<button class="chip ofr" data-ofr="${i}:${o.k}">🤖${o.k+1} ${o.h?'⇄ '+CROPS[o.h.t].e:'🎁'}</button>`).join(''):'<span class="noo">🤖 ✖</span>'):'';
+      const chips=C.classic?(c.locked?'<span class="noo">Traded</span>':offs.length?offs.map(o=>`<button class="chip ofr" data-ofr="${i}:${o.k}"><b>Bot ${o.k+1}</b><br>${o.h?'Swap '+CROPS[o.h.t].e:'Free'}</button>`).join(''):'<span class="noo">No offers</span>'):'';
       return `<div class="mslot">${faceHTML(c.t,`tbl tap${C.sel===i?' sel':''}${flipIdx===i?' flip':''}${c.locked?' got':''}`).replace('class="card','data-m="'+i+'" class="card')}<div class="chips">${chips}</div></div>`;
     }).join('');
   }else if(C.phase==='ai'||C.phase==='aigift'){
-    tHead=`🤖${(C.activeAI||0)+1}`;
+    tHead=`Bot ${(C.activeAI||0)+1}`;
     table=(C.aiMarket||[]).map(c=>faceHTML(c.t,'tbl')).join('')||'<span class="none">🤔</span>';
   }else if(cur){
     tHead=C.phase==='plant2'?'🌱 ?':C.phase==='final'?'🏁':'🌱';
@@ -2424,8 +2424,8 @@ function renderCards(flipIdx){
   const bar=[];
   if(C.phase==='plant2')bar.push(`<button class="btn grey" id="cSkip">⏭ Skip</button>`);
   if(C.phase==='market'&&!C.classic)bar.push(`<button class="btn blue" data-trade="${C.sel}" ${C.trades>0?'':'disabled'}>🔁 Trade ·${C.trades}</button>`);
-  if(C.phase==='market'&&C.classic)handOffers().forEach(o=>bar.push(`<button class="chip ofr" data-hofr="${o.j}:${o.k}">🃏${CROPS[o.t].e} ⇄ 🤖${o.k+1} ${CROPS[o.h.t].e}</button>`));
-  if(C.phase==='aigift'&&C.gift)bar.push(`<button class="btn green" data-gift="1">✔ 🎁 ${CROPS[C.gift.c.t].e}</button><button class="btn grey" data-gift="0">✖</button>`);
+  if(C.phase==='market'&&C.classic)handOffers().forEach(o=>bar.push(`<button class="chip ofr" data-hofr="${o.j}:${o.k}"><b>Bot ${o.k+1}</b> offers ${CROPS[o.h.t].e} for your ${CROPS[o.t].e}</button>`));
+  if(C.phase==='aigift'&&C.gift)bar.push(`<button class="btn green" data-gift="1">Take free ${CROPS[C.gift.c.t].e}</button><button class="btn grey" data-gift="0">No thanks</button>`);
   if(C.phase==='final')bar.push(`<button class="btn green" id="cFinish">✔ Finish</button>`);
   $('#cTable').innerHTML=`<div class="fbk">${C.msg?`⏪ ${C.msg}`:''}</div>
     ${stepsHTML()}
@@ -2601,34 +2601,34 @@ function acceptHandOffer(j,k){
   C.hand.splice(j,1);aiPlant(a,c);
   a.hand.splice(a.hand.indexOf(o.h),1);
   C.market.push({t:o.h.t,locked:true});C.mTotal++;C.sel=C.market.length-1;
-  C.msg=`🤝 🤖${k+1} 🃏${CROPS[c.t].e} ⇄ ${CROPS[o.h.t].e}`;sfx.coin();renderCards();
+  C.msg=`Bot ${k+1} took your ${CROPS[c.t].e} and gave you ${CROPS[o.h.t].e}`;sfx.coin();renderCards();
 }
 function acceptOffer(idx,k){
   const c=C.market[idx];if(!c)return;
   const o=offersFor(c).find(x=>x.k===k);if(!o)return;
   const a=C.ai[k];
   C.market.splice(idx,1);aiPlant(a,c);
-  if(o.h){a.hand.splice(a.hand.indexOf(o.h),1);C.market.splice(idx,0,{t:o.h.t,locked:true});C.msg=`🤝 🤖${k+1} ${CROPS[c.t].e} ⇄ ${CROPS[o.h.t].e}`}
-  else C.msg=`🎁 🤖${k+1} ${CROPS[c.t].e}`;
+  if(o.h){a.hand.splice(a.hand.indexOf(o.h),1);C.market.splice(idx,0,{t:o.h.t,locked:true});C.msg=`Bot ${k+1} swapped ${CROPS[o.h.t].e} for your ${CROPS[c.t].e}`}
+  else C.msg=`Bot ${k+1} took the ${CROPS[c.t].e}`;
   C.sel=clamp(C.sel,0,Math.max(0,C.market.length-1));sfx.coin();
   if(!C.market.length){cardAfterMarket();return}
   renderCards();
 }
 function askGift(k,c){
-  return new Promise(res=>{C.phase='aigift';C.gift={k,c,res};C.aiMarket=[c];C.msg=`🤖${k+1} 🎁 ${CROPS[c.t].e}`;renderCards()});
+  return new Promise(res=>{C.phase='aigift';C.gift={k,c,res};C.aiMarket=[c];C.msg=`Bot ${k+1} offers you a free ${CROPS[c.t].e}`;renderCards()});
 }
 function answerGift(take){
   const g=C.gift;if(!g)return;C.gift=null;C.aiMarket=[];
-  if(take){C.market=[{t:g.c.t,locked:true}];C.sel=0;C.mTotal=1;C.giftRes=()=>g.res(true);C.phase='market';C.msg=`🎁 🤖${g.k+1} ➜ ${CROPS[g.c.t].e}`;renderCards()}
+  if(take){C.market=[{t:g.c.t,locked:true}];C.sel=0;C.mTotal=1;C.giftRes=()=>g.res(true);C.phase='market';C.msg=`Bot ${g.k+1} gave you a ${CROPS[g.c.t].e}`;renderCards()}
   else{C.phase='ai';g.res(false)}
 }
 async function runAIs(){
   const G=C;
   for(let k=0;k<2;k++){
     const a=G.ai[k];
-    G.phase='ai';G.activeAI=k;G.aiMarket=[];G.msg=`🤖${k+1} 🤔`;renderCards();
+    G.phase='ai';G.activeAI=k;G.aiMarket=[];G.msg=`Bot ${k+1} is thinking…`;renderCards();
     await sleep(450);if(C!==G)return;
-    const flips=aiPre(a);G.aiMarket=flips.slice();G.msg=`🤖${k+1} 🂠 ➜ ${flips.map(c=>CROPS[c.t].e).join(' ')}`;renderCards();
+    const flips=aiPre(a);G.aiMarket=flips.slice();G.msg=`Bot ${k+1} flipped ${flips.map(c=>CROPS[c.t].e).join(' ')}`;renderCards();
     await sleep(900);if(C!==G)return;
     for(const c of flips){
       if(aiWant(a,c.t)>=2){aiPlant(a,c);continue}
@@ -2640,7 +2640,7 @@ async function runAIs(){
     G.aiMarket=[];aiPost(a);
     await sleep(200);if(C!==G)return;
   }
-  G.phase='plant1';G.activeAI=-1;G.msg='🤖🤖 ✔';
+  G.phase='plant1';G.activeAI=-1;G.msg='Bots are done';
   if(!G.hand.length&&!G.deck.length&&!(G.classic&&G.pass<G.o.rounds&&G.discardPile.length)){cardEndRound();return}
   renderCards();
 }
