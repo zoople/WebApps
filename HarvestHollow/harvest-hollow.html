@@ -153,8 +153,8 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 .stars .off{opacity:.25;filter:grayscale(1)}
 .reward{display:inline-flex;gap:8px;align-items:center;font-size:26px;font-weight:800;margin:6px 0}
 
-/* ---------- card game: cards on top, fields (where you act) at the bottom ---------- */
-#cards{--cw:min(21vw,calc((100vh - 450px)/3.4),96px);--hw:calc(var(--cw)*.56);--pw:calc(var(--cw)*.92);background:radial-gradient(ellipse at 50% 40%,rgba(120,220,140,.18),transparent 65%),radial-gradient(ellipse at 50% 120%,rgba(0,0,0,.6),transparent 60%),var(--tex-felt),#2f6b48;color:#fff;overflow:hidden}
+/* ---------- card game: ONE card row on top, tappable fields at the bottom ---------- */
+#cards{--cw:min(17.5vw,calc((var(--vh,1vh)*100 - 410px)/3),84px);--hw:calc(var(--cw)*.62);--pw:calc(var(--cw)*.95);background:radial-gradient(ellipse at 50% 40%,rgba(120,220,140,.18),transparent 65%),radial-gradient(ellipse at 50% 120%,rgba(0,0,0,.6),transparent 60%),var(--tex-felt),#2f6b48;color:#fff;overflow:hidden}
 #cards .mgbar{padding-bottom:4px;gap:5px}
 #cards .mgbar h3{display:none}
 @media (min-width:600px){#cards .mgbar h3{display:block}}
@@ -162,66 +162,74 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 #cards .tag{font-size:12px;padding:3px 8px}
 .cg{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:0 8px 2px}
 /* step tracker */
-.stp{flex:none;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:nowrap;font-size:12px;font-weight:800;color:#cfe9d5}
-.stp .turn{padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.4);margin-right:4px;white-space:nowrap}
+.stp{flex:none;display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:800;color:#cfe9d5}
 .stp .st{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.15);white-space:nowrap;opacity:.7}
 .stp .st b{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.18);font-size:11px}
-.stp .st.on{opacity:1;background:#ffe27a;color:#3a2606;border-color:#fff3b0;box-shadow:0 0 12px rgba(255,226,122,.7)}
+.stp .st.on{opacity:1;background:#ffe27a;color:#3a2606;border-color:#fff3b0}
 .stp .st.on b{background:#3a2606;color:#ffe27a}
 .stp .st.done{opacity:.9;background:rgba(80,170,70,.45);border-color:rgba(160,240,140,.5)}
-.stp i{font-style:normal;opacity:.5}
-.stp em{font-style:normal}
+.stp i{font-style:normal;opacity:.5}.stp em{font-style:normal}
 @media (max-width:480px){.stp .st:not(.on) em{display:none}.stp .st:not(.on){padding:3px 6px}#cards .tag{font-size:11px;padding:3px 7px}}
-@media (max-height:760px){.say2 .s{display:none}.say2{padding:4px 10px}.say2 .h{font-size:16px}}
 .stp.final{justify-content:center;font-size:14px;color:#ffe27a}
 /* instruction */
 .say2{flex:none;text-align:center;padding:6px 10px;border-radius:12px;background:rgba(0,0,0,.4);border:1px solid rgba(255,230,160,.35)}
 .say2 .h{font-size:17px;font-weight:900;color:#fff3cf;line-height:1.2}
 .say2 .s{font-size:13px;color:#d6ecd9;margin-top:1px}
 .say2 .fb{font-size:12px;color:#ffe27a;margin-top:2px;min-height:1.2em}
-/* action area: the card(s) being played */
-.act{flex:none;display:flex;gap:10px;align-items:center;justify-content:center;background:rgba(0,0,0,.26);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:8px 10px 6px;min-height:calc(var(--cw)*1.4 + 40px)}
-.slot{display:flex;flex-direction:column;align-items:center;gap:4px}
-.slot .lab{font-size:11px;font-weight:900;letter-spacing:1px;color:#3a2606;background:#ffe27a;border-radius:999px;padding:1px 10px}
-.mkt{display:flex;gap:14px;align-items:flex-start}
-.side{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:calc(var(--cw)*.9)}
-.chip{border:0;border-radius:999px;padding:4px 12px;font-weight:800;font-size:12px;color:#0b2440;background:linear-gradient(#bfe0fb,#5a95cf);box-shadow:0 2px 0 #2b5886}
-.chip:disabled{filter:grayscale(.9) brightness(.8)}
-.sidebtn{padding:8px 12px;font-size:13px;white-space:nowrap}
-.deckbox{display:flex;flex-direction:column;align-items:center;gap:3px}
-.deckbox h4,.handbox h4{margin:0;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#cfe9d5;font-weight:700}
-.deck{position:relative;width:calc(var(--cw)*.8);height:calc(var(--cw)*1.1);border-radius:8px;background:repeating-linear-gradient(45deg,#7a3b2a 0 6px,#8f4a35 6px 12px);border:3px solid #f6e7c3;box-shadow:1px 1px 0 #5a2a1c,3px 3px 0 #f6e7c3,4px 4px 0 #5a2a1c,5px 5px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:calc(var(--cw)*.34);font-weight:800;color:#fbe9bd;text-shadow:0 2px 2px rgba(0,0,0,.6)}
-/* hand queue */
-.handbox{flex:none;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:3px 8px 5px}
-.hand{display:flex;gap:4px;height:calc(var(--hw)*1.4 + 4px);align-items:center;overflow:hidden;justify-content:center}
-.hand .card{--w:var(--hw);flex:none;cursor:default}
-.hand .card .mt{display:none}
-.hand .card:first-child::after{content:"NEXT";position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;background:#ffe27a;color:#3a2606;border-radius:6px;padding:0 5px}
-.hand .none{color:#cfe9d5;font-size:12px}
-/* fields = the interactive part, bottom of the screen */
-.fields{flex:1 1 auto;min-height:calc(var(--pw)*1.4 + 130px);display:flex;gap:6px;justify-content:center}
-.plot{position:relative;flex:1;max-width:240px;min-width:0;border-radius:12px;border:3px solid #4a2d15;padding:5px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
+@media (max-height:760px){.say2 .s{display:none}.say2{padding:4px 10px}.say2 .h{font-size:16px}}
+/* THE card row: table cards | divider | hand */
+.crow{flex:none;display:flex;align-items:stretch;gap:8px;background:rgba(0,0,0,.26);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:6px 8px 6px}
+.grp{display:flex;flex-direction:column;gap:3px;min-width:0}
+.grp h4{margin:0;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#cfe9d5;font-weight:800;white-space:nowrap}
+.grp.tbl h4{color:#ffe27a}
+.grp .cards{display:flex;gap:6px;align-items:flex-start;flex:1}
+.grp.tbl.two .card{--w:calc(var(--cw)*.86)}
+.vdiv{align-self:stretch;width:2px;border-radius:2px;background:linear-gradient(transparent,rgba(255,255,255,.4),transparent);flex:none;margin:0 2px}
+.grp.q{flex:1}
+.grp.q .cards{gap:3px;overflow:hidden}
+.card.tbl{box-shadow:0 3px 7px rgba(0,0,0,.5),inset 0 0 0 1px hsl(var(--h) 50% 40% / .5)}
+.card.tap{cursor:pointer;animation:tapp 1.1s infinite}
+.card.sel{border-color:#ffe27a;box-shadow:0 0 0 3px #ffe27a,0 4px 10px rgba(0,0,0,.5);animation:none}
+@keyframes tapp{50%{transform:translateY(-4px);box-shadow:0 8px 12px rgba(0,0,0,.5),0 0 0 2px rgba(255,255,255,.7)}}
+.crow .card.q{--w:var(--hw);flex:none;cursor:default}
+.crow .card.q .mt{display:none}
+.crow .card.q:first-child::after{content:"NEXT";position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;background:#cfe9d5;color:#16361f;border-radius:6px;padding:0 5px}
+.none{color:#cfe9d5;font-size:12px;align-self:center}
+/* action bar (only things that are tappable pulse) */
+.abar{flex:none;display:flex;gap:8px;justify-content:center;align-items:center;min-height:42px}
+.abar .btn{padding:9px 16px;font-size:14px;animation:bp 1.1s infinite}
+.abar .hint{font-size:13px;color:#cfe9d5;font-weight:700}
+@keyframes bp{50%{transform:scale(1.05);filter:brightness(1.12)}}
+/* fields = the only interactive area, bottom of the screen */
+.fields{flex:1 1 auto;min-height:0;display:flex;gap:6px;justify-content:center}
+.plot{position:relative;flex:1;max-width:240px;min-width:0;border-radius:12px;border:3px solid #4a2d15;padding:5px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;
   background:linear-gradient(rgba(0,0,0,.1),rgba(0,0,0,.35)),var(--tex-soil),#5b3a22;box-shadow:inset 0 4px 14px rgba(0,0,0,.6),0 3px 8px rgba(0,0,0,.4);transition:box-shadow .15s}
-.plot.ok{box-shadow:inset 0 4px 14px rgba(0,0,0,.5),0 0 0 3px #86e66f,0 0 16px rgba(134,230,111,.65);animation:okp 1.2s infinite}
-.plot.swap{box-shadow:inset 0 4px 14px rgba(0,0,0,.5),0 0 0 3px #ffb347,0 0 14px rgba(255,179,71,.55)}
-@keyframes okp{50%{box-shadow:inset 0 4px 14px rgba(0,0,0,.5),0 0 0 3px #bdf5ac,0 0 6px rgba(134,230,111,.3)}}
-.plot .pl{flex:none;font-size:calc(var(--cw)*.17);font-weight:700;color:#ffe9c0;text-align:center;line-height:1.2}
+.plot.ok{box-shadow:inset 0 4px 14px rgba(0,0,0,.5),0 0 0 3px #86e66f,0 0 16px rgba(134,230,111,.65);animation:okp 1.1s infinite}
+.plot.swap{box-shadow:inset 0 4px 14px rgba(0,0,0,.5),0 0 0 3px #ffb347,0 0 14px rgba(255,179,71,.55);animation:swp 1.1s infinite}
+@keyframes okp{50%{box-shadow:inset 0 4px 14px rgba(0,0,0,.5),0 0 0 3px #d2f9c4,0 0 4px rgba(134,230,111,.2)}}
+@keyframes swp{50%{box-shadow:inset 0 4px 14px rgba(0,0,0,.5),0 0 0 3px #ffd9a0,0 0 4px rgba(255,179,71,.2)}}
+.plot>.btn{flex:none;padding:7px 8px;font-size:calc(var(--cw)*.2);border-radius:9px;white-space:nowrap;width:94%}
+.plot .pl{flex:none;font-size:calc(var(--cw)*.18);font-weight:700;color:#ffe9c0;text-align:center;line-height:1.2}
 .plot .pl small{font-weight:600;opacity:.85}
-.plot .tg{flex:none;font-size:calc(var(--cw)*.15);font-weight:800;padding:1px 8px;border-radius:999px;background:rgba(0,0,0,.45);color:#cfe9d5;min-height:1.3em;white-space:nowrap}
+.pile{position:relative;flex:1;width:100%;display:flex;flex-direction:column;align-items:center;min-height:0}
+.pile.empty{justify-content:center}
+.pcards{position:relative;width:var(--pw)}
+.pcards .pc{position:absolute;left:0;width:var(--pw);height:calc(var(--pw)*1.4)}
+.pcards .card{--w:var(--pw);animation:pop .22s ease-out}
+.cta{text-align:center;font-weight:900;font-size:calc(var(--cw)*.2);color:#d9c9a8;line-height:1.2;opacity:.8}
+.cta b{display:block;font-size:2.2em;line-height:1}
+.plot.ok .cta{color:#bdf5ac;opacity:1;animation:ctap 1.1s infinite}
+@keyframes ctap{50%{transform:scale(1.1)}}
+.plot .tg{flex:none;font-size:calc(var(--cw)*.16);font-weight:800;padding:2px 9px;border-radius:999px;background:rgba(0,0,0,.45);color:#cfe9d5;white-space:nowrap;margin-top:4px}
 .plot.ok .tg{background:#2f7a22;color:#eaffd9}.plot.swap .tg{background:#a8651a;color:#fff0d6}
-.pile{position:relative;flex:1;width:var(--pw);min-height:calc(var(--pw)*1.4)}
-.pile .pc{position:absolute;left:0;width:var(--pw);height:calc(var(--pw)*1.4)}
-.pile .card{--w:var(--pw);animation:pop .22s ease-out}
-.plot .btn{flex:none;padding:7px 8px;font-size:calc(var(--cw)*.19);border-radius:9px;white-space:nowrap;width:92%}
 .plot.locked{align-items:center;justify-content:center;border-style:dashed;background:rgba(0,0,0,.25);box-shadow:none;animation:none}
 /* cards */
 .card{position:relative;--w:var(--cw);width:var(--w);height:calc(var(--w)*1.4);font-size:calc(var(--w)*.16);border-radius:calc(var(--w)*.12);border:3px solid #fff3d0;color:#2b2118;--h:30;
   background:var(--tex-paper),linear-gradient(160deg,hsl(var(--h) 85% 88%),hsl(var(--h) 70% 72%));background-blend-mode:multiply,normal;
-  box-shadow:0 3px 7px rgba(0,0,0,.5),inset 0 0 0 1px hsl(var(--h) 50% 40% / .5);display:flex;flex-direction:column;align-items:center;padding:2px 1px;transition:transform .15s,box-shadow .15s;overflow:visible}
+  box-shadow:0 3px 7px rgba(0,0,0,.5),inset 0 0 0 1px hsl(var(--h) 50% 40% / .5);display:flex;flex-direction:column;align-items:center;padding:2px 1px;transition:transform .15s,box-shadow .15s;overflow:visible;flex:none}
 .card .em{font-size:2.3em;line-height:1.25;filter:drop-shadow(0 3px 2px rgba(0,0,0,.35))}
 .card .nm{font-size:.62em;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:hsl(var(--h) 60% 22%);margin-top:1px}
 .card .mt{font-size:.6em;line-height:1.15;margin-top:auto;color:hsl(var(--h) 55% 22%);font-weight:700;text-align:center;padding-bottom:1px}
-.card.cur{box-shadow:0 0 0 3px #ffe27a,0 0 18px 4px rgba(255,226,122,.85),0 6px 10px rgba(0,0,0,.5)}
 .card.flip{animation:flip .35s}
 @keyframes flip{from{transform:rotateY(90deg) scale(.8)}}
 @keyframes pop{from{transform:scale(.7);opacity:.3}}
@@ -231,10 +239,10 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 .ptable{width:100%;border-collapse:collapse;font-size:14px}.ptable td{padding:6px 4px;border-bottom:1px dashed rgba(90,60,25,.35);vertical-align:middle}
 /* wide screens: cards + steps on the left, fields on the right */
 @media (min-width:760px) and (min-aspect-ratio:13/10){
-  #cards{--cw:min(9vw,calc((100vh - 330px)/1.9),92px)}
-  .cg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);grid-template-rows:auto auto auto 1fr;gap:8px 12px;align-content:start}
-  .cg>.stp,.cg>.say2,.cg>.act,.cg>.handbox{grid-column:1}
-  .cg>.fields{grid-column:2;grid-row:1/5;min-height:0}
+  #cards{--cw:min(9vw,calc((var(--vh,1vh)*100 - 300px)/1.9),92px)}
+  .cg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);grid-template-rows:auto auto auto auto 1fr;gap:8px 12px;align-content:start}
+  .cg>.stp,.cg>.say2,.cg>.crow,.cg>.abar{grid-column:1}
+  .cg>.fields{grid-column:2;grid-row:1/6;min-height:0}
 }
 </style>
 </head>
@@ -272,7 +280,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v12 · 10 Oct 2026';
+const VERSION='v13 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -442,6 +450,8 @@ function installTextures(){
   set('--tex-felt',feltCanvas());set('--tex-soil',soilCanvas());set('--tex-metal',metalCanvas());set('--tex-paper',paperCanvas());
 }
 installTextures();
+function setVh(){document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px')}
+setVh();addEventListener('resize',setVh);addEventListener('orientationchange',setVh);
 /* =====================================================================
    WORLD — tile village, sprites, movement, gathering, stations
    ===================================================================== */
@@ -1798,7 +1808,7 @@ function startBolt(mode,opts){
   const mg=$('#mg');mg.className='screen';mg.id='mg';
   mg.innerHTML=`<div id="bolt" class="screen" style="display:flex;flex-direction:column">
     <div class="mgbar"><button class="btn small grey" id="bBack">←<span class="lbl"> Village</span></button><h3>⚙️ Bolt Works</h3>
-      ${mode==='free'?'':`<span class="tag">Puzzle ${S.boltLvl+1}</span>`}${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span><span class="tag" id="mgCoins">🪙 ${S.coins}</span>`:''}<button class="btn small grey" id="bHelp">❓</button><span class="tag" id="bMoves">Moves 0</span></div>
+      ${mode==='free'?'':`<span class="tag">Puzzle ${S.boltLvl+1}</span>`}${mode==='free'?'<span class="tag free">FREE PLAY</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span><span class="tag" id="mgCoins">🪙 ${S.coins}</span>`:''}<button class="btn small grey" id="bHelp">❓</button><span class="tag" id="bMoves">Moves 0</span></div>
     <div id="boltArea"><div id="boltBoard"></div></div>
     <div class="mgfoot"><button class="btn small blue" id="bUndo">↶ Undo</button><button class="btn small" id="bHint">💡 Hint</button><button class="btn small grey" id="bReset">⟲ Restart</button>${mode==='free'?'<button class="btn small green" id="bNew">🎲 New puzzle</button>':''}</div>
   </div>`;
@@ -1945,8 +1955,8 @@ function startCards(mode,opts){
   const mg=$('#mg');mg.className='screen';mg.id='mg';
   mg.innerHTML=`<div id="cards" class="screen" style="display:flex;flex-direction:column">
     <div class="mgbar"><button class="btn small grey" id="cBack">←<span class="lbl"> Village</span></button><h3>🃏 Bean Harvest</h3>
-      ${mode==='free'?'<span class="tag free">FREE PLAY · no rewards</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span>`:''}<button class="btn small grey" id="cHelp">❓</button>
-      <span class="tag" id="cRound"></span><span class="tag" id="cCoins"></span><span class="tag" id="cTrades"></span></div>
+      ${mode==='free'?'<span class="tag free">FREE PLAY</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span>`:''}<button class="btn small grey" id="cHelp">❓</button>
+      <span class="tag" id="cDeck"></span><span class="tag" id="cRound"></span><span class="tag" id="cCoins"></span><span class="tag" id="cTrades"></span></div>
     <div class="cg" id="cTable"></div>
     <div class="mgfoot" id="cFoot"></div></div>`;
   mg.classList.remove('hidden');
@@ -1977,9 +1987,9 @@ function openPrices(){
 function phaseText(){
   const cur=curCard(),nm=cur?`${CROPS[cur.t].e} ${CROPS[cur.t].n}`:'';
   switch(C.phase){
-    case 'plant1':return['Step 1 · Plant this card',`You must plant ${nm}. Tap a field below.`];
-    case 'plant2':return['Step 2 · Plant this one too? (optional)',`Tap a field to plant ${nm}, or press Skip.`];
-    case 'market':return[`Step 3 · Market card ${3-C.market.length} of 2`,`Select a card, then tap a field to plant it — or trade it away.`];
+    case 'plant1':return['Step 1 · Plant the first card',`You must plant ${nm}. Tap a pulsing field below.`];
+    case 'plant2':return['Step 2 · Plant the next card too?',`Optional: tap a pulsing field for ${nm}, or press Skip.`];
+    case 'market':return[`Step 3 · Market card ${3-C.market.length} of 2`,`Pick a market card, then tap a pulsing field — or trade it away.`];
     case 'final':return['Final turn · plant what you can',`Plant ${nm} or press Finish to harvest everything.`];
     default:return['',''];
   }
@@ -1996,35 +2006,42 @@ function renderCards(flipIdx){
   $('#cRound').textContent=innerWidth<480?`R${C.round}/${C.o.rounds} · T${C.turn+1}`:`Round ${C.round}/${C.o.rounds} · Turn ${C.turn+1}`;
   $('#cCoins').textContent=`🪙 +${C.coins}`;$('#cCoins').title='Coins harvested this game';
   $('#cTrades').textContent=`🔁 ${C.trades}`;$('#cTrades').title='Trades left this round';
+  $('#cDeck').textContent=`🂠 ${C.deck.length}`;$('#cDeck').title='Cards left in the deck';
   const plots=C.fields.map((f,i)=>{
     if(i>=C.nFields)return `<div class="plot locked" data-lock="${i}"><div class="pl">🔒 Third field<br><small>costs 3🪙</small></div></div>`;
     const ok=cur&&(f.t===null||f.t===cur.t),swap=cur&&f.t!==null&&f.t!==cur.t;
     const n=f.n,off=n>6?7:n>4?11:15;
-    const pile=f.t===null?'':Array.from({length:n},(_,k)=>`<div class="pc" style="top:${k*off}px;z-index:${k}">${faceHTML(f.t)}</div>`).join('');
     const nx=f.t!==null?nextStep(f.t,n):null;
     const label=f.t===null?'Empty field':`<b>${CROPS[f.t].n} ×${n}</b><br>pays 🪙${payout(f.t,n)}<br><small>${nx?`${nx[0]-n} more → 🪙${nx[1]}`:'max payout'}</small>`;
-    const tg=ok?(f.t===null?'＋ plant here':'＋ add to field'):swap?'harvest & replant':'';
-    return `<div class="plot${ok?' ok':''}${swap?' swap':''}" data-f="${i}"><div class="pl">${label}</div><div class="tg">${tg}</div>
-      <div class="pile" style="min-height:calc(var(--pw)*1.4 + ${Math.max(0,n-1)*off}px)">${pile}</div>
-      <button class="btn small green" data-h="${i}" ${f.t===null?'disabled':''}>Harvest${f.t!==null?` 🪙${payout(f.t,n)}`:''}</button></div>`;
+    const pile=f.t===null
+      ?`<div class="pile empty"><div class="cta"><b>＋</b>${cur?'plant here':'empty'}</div></div>`
+      :`<div class="pile"><div class="pcards" style="height:calc(var(--pw)*1.4 + ${Math.max(0,n-1)*off}px)">${Array.from({length:n},(_,k)=>`<div class="pc" style="top:${k*off}px;z-index:${k}">${faceHTML(f.t)}</div>`).join('')}</div>${ok?'<div class="tg">＋ add to field</div>':swap?'<div class="tg">harvest & replant</div>':''}</div>`;
+    return `<div class="plot${ok?' ok':''}${swap?' swap':''}" data-f="${i}">
+      <button class="btn small green" data-h="${i}" ${f.t===null?'disabled':''}>Harvest${f.t!==null?` 🪙${payout(f.t,n)}`:''}</button>
+      <div class="pl">${label}</div>${pile}</div>`;
   }).join('');
-  let main='',side='';
+  // ---- ONE row: table cards | hand ----
+  let table='',tHead='';
   if(C.phase==='market'){
-    main=`<div class="mkt">`+C.market.map((c,i)=>`<div class="slot">${faceHTML(c.t,`${C.sel===i?'cur':''}${flipIdx===i?' flip':''}`).replace('class="card','data-m="'+i+'" class="card')}
-      <button class="chip" data-trade="${i}" ${C.trades>0?'':'disabled'}>↗ Trade (${C.trades} left)</button></div>`).join('')+`</div>`;
+    tHead='Market · tap to choose';
+    table=C.market.map((c,i)=>faceHTML(c.t,`tbl tap${C.sel===i?' sel':''}${flipIdx===i?' flip':''}`).replace('class="card','data-m="'+i+'" class="card')).join('');
   }else if(cur){
-    main=`<div class="slot">${faceHTML(cur.t,'cur')}<span class="lab">${C.phase==='plant2'?'OPTIONAL':C.phase==='final'?'LAST CARDS':'PLANT THIS'}</span></div>`;
-    if(C.phase==='plant2')side+=`<button class="btn sidebtn grey" id="cSkip">Skip →</button>`;
-  }else main=`<div class="hand none">Hand empty</div>`;
-  if(C.phase==='final')side+=`<button class="btn sidebtn green" id="cFinish">Finish &amp; harvest ✔</button>`;
-  const [h1,h2]=phaseText();
+    tHead=C.phase==='plant2'?'Optional':C.phase==='final'?'Last cards':'Plant this';
+    table=faceHTML(cur.t,'tbl');
+  }else{tHead='On the table';table='<span class="none">nothing</span>'}
   const queue=inPlant?C.hand.slice(1):C.hand;
-  const hand=queue.map(c=>faceHTML(c.t)).join('')||'<span class="none">no more cards in hand</span>';
+  const qHTML=queue.map(c=>faceHTML(c.t,'q')).join('')||'<span class="none">no more cards</span>';
+  const bar=[];
+  if(C.phase==='plant2')bar.push(`<button class="btn grey" id="cSkip">Skip →</button>`);
+  if(C.phase==='market')bar.push(`<button class="btn blue" data-trade="${C.sel}" ${C.trades>0?'':'disabled'}>↗ Trade this card away (${C.trades} left)</button>`);
+  if(C.phase==='final')bar.push(`<button class="btn green" id="cFinish">Finish &amp; harvest ✔</button>`);
+  if(!bar.length)bar.push(`<span class="hint">👇 Tap a pulsing field</span>`);
+  const [h1,h2]=phaseText();
   $('#cTable').innerHTML=`${stepper()}
     <div class="say2"><div class="h">${h1}</div><div class="s">${h2}</div><div class="fb">${C.msg||''}</div></div>
-    <div class="act"><div class="slotwrap" style="display:flex;gap:10px;align-items:center">${main}</div>
-      <div class="side"><div class="deckbox"><h4>Deck</h4><div class="deck">${C.deck.length}</div></div>${side}</div></div>
-    <div class="handbox"><h4>${inPlant?'Up next in your hand':'Your hand'} · played in order, left to right</h4><div class="hand">${hand}</div></div>
+    <div class="crow"><div class="grp tbl${C.phase==='market'&&C.market.length>1?' two':''}"><h4>${tHead}</h4><div class="cards">${table}</div></div><div class="vdiv"></div>
+      <div class="grp q"><h4>${inPlant?'Then · your hand, in order':'Your hand · in order'}</h4><div class="cards">${qHTML}</div></div></div>
+    <div class="abar">${bar.join('')}</div>
     <div class="fields">${plots}</div>`;
   const foot=[`<button class="btn small grey" id="cPrices">📋 Prices</button>`];
   if(C.nFields<3)foot.push(`<button class="btn small" id="cBuy" ${C.coins>=3?'':'disabled'}>＋ 3rd field · 3🪙 <small>(you have ${C.coins})</small></button>`);
@@ -2036,9 +2053,10 @@ function renderCards(flipIdx){
   $('#cTable').querySelectorAll('[data-trade]').forEach(b=>b.onclick=()=>cardTrade(+b.dataset.trade));
   const fin=$('#cFinish');if(fin)fin.onclick=()=>cardEndRound();
   const pr=$('#cPrices');if(pr)pr.onclick=openPrices;
-  const hd=$('#cTable .hand');if(hd&&queue.length){
-    const first=hd.querySelector('.card'),cw=first?first.offsetWidth:40,n=queue.length,avail=hd.clientWidth-6;
-    if(n*(cw+4)>avail){const ov=clamp((n*cw-avail)/(n-1)+4,4,cw-14);hd.style.gap='0';hd.querySelectorAll('.card').forEach((c,i)=>{if(i)c.style.marginLeft='-'+ov+'px'})}
+  // overlap the hand queue only if it doesn't fit
+  const qc=$('#cTable .grp.q .cards');if(qc&&queue.length){
+    const cards=[...qc.querySelectorAll('.card')],cw=cards[0].offsetWidth,n=cards.length,avail=qc.clientWidth;
+    if(n*(cw+3)>avail){const ov=clamp((n*cw-avail)/(n-1),3,cw-12);qc.style.gap='0';cards.forEach((c,i)=>{if(i)c.style.marginLeft='-'+ov+'px'})}
   }
   const sk=$('#cSkip');if(sk)sk.onclick=()=>{sfx.click();cardFlip()};
   const bu=$('#cBuy');if(bu)bu.onclick=()=>{if(C.coins<3)return;C.coins-=3;C.nFields=3;sfx.coin();C.msg='You bought a third field!';renderCards()};
