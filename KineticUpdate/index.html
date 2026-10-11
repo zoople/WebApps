@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="snack-deck.webmanifest">
+<meta name="theme-color" content="#7A2E5C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Snack Deck">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Kognetik Snack Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root {
+    --paper: #EDF0EA;
+    --surface: #FFFFFF;
+    --surface-2: #E1E7DF;
+    --ink: #17242A;
+    --muted: #56686C;
+    --line: #C8D2CB;
+    --accent: #7A2E5C;
+    --accent-soft: #F1E2EB;
+    --accent-ink: #FFFFFF;
+    --good: #1E7548;
+    --good-soft: #DDEFE3;
+    --bad: #A93E2B;
+    --bad-soft: #F6E0DA;
+    --warn: #8F5E00;
+    --warn-soft: #F5EBD2;
+    --shadow: 0 1px 0 rgba(23,36,42,.06), 0 8px 24px -12px rgba(23,36,42,.25);
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #10191C; --surface: #172226; --surface-2: #1F2D32; --ink: #E6EDE9; --muted: #93A6A7;
+      --line: #2C3C41; --accent: #DE93BF; --accent-soft: #3A2231; --accent-ink: #2A0E1F;
+      --good: #62C997; --good-soft: #173328; --bad: #EC8A73; --bad-soft: #3A221C; --warn: #E3B559; --warn-soft: #362C16;
+      --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 26px -14px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #10191C; --surface: #172226; --surface-2: #1F2D32; --ink: #E6EDE9; --muted: #93A6A7;
+    --line: #2C3C41; --accent: #DE93BF; --accent-soft: #3A2231; --accent-ink: #2A0E1F;
+    --good: #62C997; --good-soft: #173328; --bad: #EC8A73; --bad-soft: #3A221C; --warn: #E3B559; --warn-soft: #362C16;
+    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 26px -14px rgba(0,0,0,.8);
+  }
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--body); font-size: 16px; line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 14px 110px; display: flex; flex-direction: column; gap: 18px; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.15; }
+  h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.01em; }
+  h2 { font-size: 1.2rem; font-weight: 700; }
+  h3 { font-size: 1.02rem; font-weight: 700; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.86rem; }
+  .eyebrow { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 700; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .spread { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+  header.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  header.top .psi-mark { font-family: var(--mono); color: var(--accent); font-size: 0.85rem; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  button, .btn {
+    font: inherit; font-weight: 700; cursor: pointer; border-radius: 10px; min-height: 46px; padding: 10px 16px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    transition: transform .08s, background .15s, border-color .15s;
+  }
+  button:active { transform: scale(0.98); }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn-ghost { background: transparent; }
+  .btn-quiet { background: transparent; border-color: transparent; color: var(--muted); min-height: 38px; padding: 6px 10px; font-weight: 700; }
+  .btn-danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+  .btn-block { width: 100%; }
+  .btn-big { min-height: 64px; font-size: 1.15rem; font-family: var(--display); letter-spacing: 0.01em; }
+
+  .chip {
+    min-height: 40px; padding: 7px 13px; border-radius: 999px; font-weight: 700; font-size: 0.92rem;
+    background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .chip .ct { font-family: var(--mono); font-size: 0.75rem; opacity: .7; margin-left: 4px; }
+
+  .seg { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+  .seg button { border: 0; border-radius: 0; min-height: 50px; padding: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-family: var(--mono); font-size: 1.05rem; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button small { font-family: var(--body); font-size: 0.62rem; font-weight: 400; color: var(--muted); line-height: 1.1; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button[aria-pressed="true"] small { color: var(--accent-ink); }
+
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--muted); font-weight: 700; }
+  input, select, textarea {
+    font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); border: 1px solid var(--line);
+    border-radius: 9px; padding: 10px 12px; width: 100%;
+  }
+  textarea { min-height: 90px; font-family: var(--mono); font-size: 13px; }
+
+  /* Playing-card look for kognems */
+  .kcard {
+    position: relative; background: var(--surface); border: 1.5px solid var(--ink); border-radius: 16px;
+    padding: 18px 18px 16px 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+  }
+  .kcard .corner { display: flex; align-items: center; gap: 10px; }
+  .kcard .glyph {
+    width: 46px; height: 46px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--accent);
+    display: grid; place-items: center; font-size: 1.5rem; flex: none; line-height: 1;
+  }
+  .kcard .kname { font-family: var(--display); font-weight: 800; font-size: 1.5rem; line-height: 1.05; letter-spacing: -0.015em; }
+  .kcard .code { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; }
+  .kcard .action { font-size: 1.18rem; line-height: 1.4; font-weight: 700; }
+  .kcard .bg-glyph { position: absolute; right: -10px; bottom: -34px; font-size: 9rem; line-height: 1; color: var(--ink); opacity: 0.05; pointer-events: none; font-family: var(--mono); }
+  .kcard.small-card { padding: 14px; border-width: 1px; border-color: var(--line); box-shadow: none; }
+  .kcard.small-card .kname { font-size: 1.2rem; }
+  .kcard.small-card .glyph { width: 36px; height: 36px; font-size: 1.15rem; }
+
+  .mod { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--ink); border: 1px dashed var(--accent); border-radius: 8px; padding: 4px 9px; font-size: 0.86rem; font-weight: 700; }
+  .mod .mg { font-family: var(--mono); color: var(--accent); }
+
+  .insert-at { border-top: 1px dashed var(--line); padding-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 0.9rem; }
+  .insert-at dt { color: var(--muted); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .06em; padding-top: 2px; }
+  .insert-at dd { margin: 0; }
+
+  /* Timer */
+  .timer { display: grid; place-items: center; position: relative; margin: 4px auto; width: min(260px, 70vw); aspect-ratio: 1; max-width: 100%; }
+  .timer svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer .t-num { font-family: var(--mono); font-weight: 700; font-size: 3.2rem; font-variant-numeric: tabular-nums; }
+  .timer .t-sub { font-size: 0.8rem; color: var(--muted); text-align: center; }
+
+  /* Outcomes */
+  .outcomes { display: grid; gap: 8px; }
+  .outcomes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .outcome { text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; min-height: clamp(64px, 11vh, 92px); border-radius: 14px; position: relative; overflow: hidden; }
+  .outcome .oe { font-size: 1.6rem; line-height: 1; }
+  .outcome .sw { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; }
+  .outcome .ol { font-weight: 700; }
+  .outcome .od { grid-column: 2; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+  .sw.new { background: var(--good); } .sw.old { background: var(--bad); } .sw.hun { background: var(--warn); }
+
+  /* Psi status */
+  .psi { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-weight: 700; font-size: 0.8rem; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .psi.mut { background: var(--good-soft); color: var(--good); }
+  .psi.zero { background: var(--bad-soft); color: var(--bad); }
+  .psi.drift { background: var(--warn-soft); color: var(--warn); }
+  .psi.undef { background: var(--surface-2); color: var(--muted); }
+  .dots { display: flex; gap: 5px; align-items: center; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--surface-2); border: 1.5px solid transparent; }
+  .dot.new { background: var(--good); } .dot.old { background: var(--bad); } .dot.hun { background: var(--warn); }
+  .dot.other { opacity: .35; }
+  .advice { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; }
+
+  /* Loops */
+  .loop-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .rule-line { font-size: 0.92rem; }
+  .rule-line b { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); letter-spacing: .05em; margin-right: 4px; }
+  .example-tag { font-size: 0.7rem; font-weight: 700; color: var(--warn); border: 1px solid var(--warn); border-radius: 5px; padding: 0 5px; margin-left: 6px; vertical-align: middle; }
+  .modgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .modtoggle { text-align: left; font-weight: 400; font-size: 0.85rem; padding: 8px 10px; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
+  .modtoggle b { font-size: 0.9rem; }
+  .modtoggle[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .modtoggle:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* Deck */
+  .steps { display: grid; gap: 10px; counter-reset: s; }
+  .steps li { list-style: none; display: grid; grid-template-columns: 30px 1fr; gap: 10px; }
+  .steps li::before { counter-increment: s; content: counter(s); font-family: var(--mono); font-weight: 700; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center; font-size: 0.85rem; }
+  .steps { padding: 0; margin: 0; }
+  .plays { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.92rem; }
+  .deck-grid { display: grid; gap: 12px; }
+  details.kd summary { cursor: pointer; list-style: none; }
+  details.kd summary::-webkit-details-marker { display: none; }
+  details.kd[open] .more-hint { display: none; }
+
+  /* Log */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .stat .v { font-family: var(--mono); font-weight: 700; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 0.74rem; color: var(--muted); line-height: 1.25; }
+  .chart { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--c); }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
+  th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  th.n { text-align: right; }
+  .bar { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; min-width: 60px; }
+  .bar i { display: block; height: 100%; background: var(--good); }
+  .hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .hist li { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 0.88rem; }
+  .hist .dot { margin-top: 3px; }
+  .empty { padding: 18px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
+
+  /* Bottom tabs */
+  nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  }
+  nav.tabs button { border: 0; background: transparent; min-height: 52px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 0.78rem; color: var(--muted); padding: 4px; border-radius: 10px; }
+  nav.tabs button .ti { font-family: var(--mono); font-size: 1.15rem; line-height: 1.2; }
+  nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); }
+
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 10px; font-weight: 700; z-index: 20; max-width: calc(100% - 32px); }
+
+  details.more > summary { list-style: none; cursor: pointer; font-size: 0.82rem; font-weight: 700; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; }
+  details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary::before { content: "›"; font-family: var(--mono); display: inline-block; transition: transform .15s; }
+  details.more[open] > summary::before { transform: rotate(90deg); }
+  details.more > .more-body { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; font-size: 0.9rem; }
+
+  .do-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: d; }
+  .do-list li { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
+  .do-list li::before { counter-increment: d; content: counter(d); width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--paper);
+    display: grid; place-items: center; font-family: var(--mono); font-size: 0.85rem; margin-top: 1px; }
+  .do-list li.mod-step::before { background: var(--accent); color: var(--accent-ink); }
+  .small-card .do-list { gap: 4px; }
+  .small-card .do-list li { font-size: 0.95rem; grid-template-columns: 22px 1fr; gap: 8px; }
+  .small-card .do-list li::before { width: 20px; height: 20px; font-size: 0.7rem; }
+  .card-when { font-size: 0.85rem; color: var(--muted); }
+  .card-when b { color: var(--ink); font-weight: 700; }
+  .add-slim { grid-column: 1 / -1; min-height: 40px; padding: 6px 12px; border: 1.5px dashed var(--line); background: transparent; color: var(--muted); font-size: 0.9rem; border-radius: 12px; }
+  .loop-grid.compact .ltile { min-height: 0; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; }
+  .loop-grid.compact .ltile .le { font-size: 1.5rem; }
+  .loop-grid.compact .ltile .ln { font-size: 0.92rem; }
+  .loop-grid.compact .ltile .lk { display: none; }
+  /* Run screen: the card and its button always fit one screen */
+  body.running header.top { display: none; }
+  body.running .wrap { padding-block: 12px 0; }
+  /* Home: everything fits one screen; only the loop grid scrolls if there are many loops */
+  #u-checkin { display: flex; flex-direction: column; gap: 8px;
+    height: calc(100vh - 88px - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 88px - env(safe-area-inset-bottom, 0px)); }
+  #u-checkin[hidden] { display: none; }
+  .home-loops { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+  .home-loops .ltile { min-height: clamp(78px, 13vh, 118px); padding: clamp(8px, 1.6vh, 14px) 12px; }
+  .home-loops .ltile .le { font-size: clamp(1.4rem, 4vh, 2rem); }
+  .home-foot { flex: none; display: flex; flex-direction: column; gap: 6px; }
+  .home-foot .hunger button { min-height: clamp(48px, 7.5vh, 64px); }
+  .home-foot .hunger button .he { font-size: clamp(1.2rem, 3.2vh, 1.5rem); }
+  .home-foot #deal-btn { min-height: clamp(50px, 7.5vh, 64px); font-size: 1.12rem; font-family: var(--display); margin-top: 4px; }
+  .home-foot #already-btn { min-height: 36px; padding: 4px; }
+  .home-meta #fs-btn { min-height: 36px; padding: 2px 8px; font-size: 1.1rem; }
+  .ver-tag { font-size: 0.72rem; color: var(--muted); }
+  .upd { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--accent); font-size: 0.86rem; font-weight: 700; }
+  .upd button { min-height: 36px; padding: 4px 12px; }
+  .home-foot #hunger-hint { line-height: 1.3; }
+
+  #u-card { display: flex; flex-direction: column; gap: 10px;
+    height: calc(100vh - 88px - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 88px - env(safe-area-inset-bottom, 0px)); }
+  #u-card[hidden] { display: none; }
+  #dealt-card { flex: 1 1 auto; min-height: 0; display: flex; }
+  #dealt-card .kcard { flex: 1; min-height: 0; overflow-y: auto; gap: clamp(6px, 1.4vh, 12px); padding: clamp(12px, 2.2vh, 18px); }
+  #dealt-card .kcard .kname { font-size: clamp(1.1rem, 2.8vh, 1.5rem); }
+  #dealt-card .kcard .glyph { width: clamp(34px, 5vh, 46px); height: clamp(34px, 5vh, 46px); font-size: clamp(1.1rem, 3vh, 1.5rem); }
+  .run-foot { flex: none; display: flex; flex-direction: column; gap: 2px; }
+  .run-foot .btn-primary { min-height: clamp(48px, 7vh, 60px); font-size: 1.08rem; font-family: var(--display); }
+  .run-hint { font-size: 0.82rem; color: var(--muted); }
+
+  .run-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: clamp(4px, 1vh, 8px); }
+  .run-list li button { width: 100%; text-align: left; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start;
+    padding: clamp(6px, 1.2vh, 10px) 10px; border-radius: 12px; border: 1.5px solid transparent; background: transparent; min-height: 0;
+    font-weight: 700; font-size: clamp(1rem, 2.3vh, 1.2rem); line-height: 1.3; color: var(--ink); }
+  .run-list .tick { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center;
+    font-family: var(--mono); font-size: 0.85rem; margin-top: 1px; }
+  .run-list li.ismod .tick { border-color: var(--accent); color: var(--accent); }
+  .run-list li.todo button { opacity: 0.42; }
+  .run-list li.cur button { border-color: var(--accent); background: var(--accent-soft); }
+  .run-list li.cur .tick { background: var(--surface); }
+  .run-list li.done button { color: var(--muted); }
+  .run-list li.done .txt { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .run-list li.done .tick { background: var(--good); border-color: var(--good); color: var(--paper); }
+  .run-list .dur { font-family: var(--mono); font-size: 0.78rem; font-weight: 500; color: var(--muted); margin-left: 6px; white-space: nowrap; }
+  .run-list .tap { display: block; font-size: 0.78rem; font-weight: 400; color: var(--accent); margin-top: 2px; }
+  .st-timer { grid-column: 2; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .st-timer .num { font-family: var(--mono); font-weight: 700; font-size: clamp(2rem, 6vh, 3rem); line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .st-timer .tbar { height: 8px; border-radius: 4px; background: var(--surface); overflow: hidden; }
+  .st-timer .tbar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
+  .st-timer .sub { font-size: 0.8rem; font-weight: 400; color: var(--muted); }
+  .st-start { grid-column: 2; margin-top: 6px; min-height: 40px; padding: 6px 14px; justify-self: start; }
+  @media (prefers-reduced-motion: no-preference) { .run-list li.cur.timeup button { animation: pulse 1s ease-in-out infinite; } @keyframes pulse { 50% { background: var(--good-soft); border-color: var(--good); } } }
+
+  .loop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .ltile { position: relative; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 12px 12px;
+    min-height: 118px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 400; overflow: hidden; }
+  .ltile .le { font-size: 2rem; line-height: 1; }
+  .ltile .ln { font-family: var(--display); font-weight: 700; font-size: 1.02rem; line-height: 1.15; }
+  .ltile .lk { font-size: 0.76rem; color: var(--muted); }
+  .ltile .star { position: absolute; top: 8px; right: 10px; font-size: 0.9rem; color: var(--accent); }
+  .ltile[aria-pressed="true"] { border-color: var(--ink); box-shadow: var(--shadow); background: var(--surface); }
+  .ltile[aria-pressed="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--accent); }
+  .ltile.add { border-style: dashed; align-items: center; justify-content: center; color: var(--muted); background: transparent; }
+  .ltile.add .le { font-size: 1.6rem; }
+  .hunger { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .hunger button { min-height: 64px; padding: 6px 2px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-weight: 400; }
+  .hunger button .he { font-size: 1.5rem; line-height: 1; }
+  .hunger button small { font-size: 0.7rem; color: var(--muted); }
+  .hunger button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .emoji-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .emoji-row button { min-height: 40px; min-width: 44px; padding: 4px; font-size: 1.3rem; border-radius: 10px; }
+  .emoji-row button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .check { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 0.92rem; }
+  .check input { width: 22px; height: 22px; accent-color: var(--accent); }
+
+  .sync { font-size: 0.74rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .sync[data-s="cloud"]::before { background: var(--good); }
+  .sync[data-s="error"]::before { background: var(--bad); }
+  .sync[data-s="syncing"]::before { background: var(--warn); }
+  .gen { font-family: var(--mono); font-size: 0.72rem; font-weight: 700; color: var(--accent-ink); background: var(--accent); border-radius: 5px; padding: 1px 6px; }
+
+  .sheet { position: fixed; inset: 0; z-index: 30; background: rgba(10,18,21,.55); display: flex; align-items: flex-end; justify-content: center; }
+  .sheet-inner { background: var(--paper); width: 100%; max-width: 640px; max-height: 92%; overflow-y: auto; border-radius: 18px 18px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+  .sheet-inner > *, .mut-body > * { flex-shrink: 0; }
+  .mut-opt { text-align: left; display: grid; grid-template-columns: 34px 1fr; gap: 2px 10px; padding: 11px 12px; font-weight: 400; }
+  .mut-opt .mi { grid-row: span 2; width: 30px; height: 30px; border-radius: 8px; background: var(--surface-2); display: grid; place-items: center; font-family: var(--mono); font-weight: 700; color: var(--accent); }
+  .mut-opt b { font-weight: 700; }
+  .mut-opt .md { font-size: 0.84rem; color: var(--muted); }
+  .mut-opt.rec { border-color: var(--accent); }
+  .mut-opt.rec b::after { content: "suggested"; margin-left: 8px; font-size: 0.68rem; font-family: var(--mono); color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
+  .mut-opt[aria-expanded="true"] { border-color: var(--ink); background: var(--surface); }
+  .mut-body { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 8px; }
+  .lineage { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 8px; }
+  .lineage li { position: relative; font-size: 0.86rem; }
+  .lineage li::before { content: ""; position: absolute; left: -21px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); }
+  .lineage li.now::before { background: var(--accent); border-color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .deal { animation: deal .35s cubic-bezier(.2,.8,.2,1); }
+    @keyframes deal { from { transform: translateY(18px) rotate(-2deg); opacity: .4; } to { transform: none; opacity: 1; } }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Kognetik Snack Deck</h1>
+    <span class="psi-mark">Ψ = ∂S/∂R</span>
+  </header>
+
+  <!-- URGE TAB -->
+  <section id="tab-urge" class="stack" style="gap:16px">
+    <!-- Step: check-in -->
+    <div id="u-checkin">
+      <div class="spread"><span class="eyebrow">What's pulling you?</span><span id="default-ctl"></span></div>
+      <p id="ios-hint" class="small muted" hidden>📱 Full screen on iPhone: Share → Add to Home Screen.</p>
+      <div class="home-loops">
+        <div id="loop-chips" class="loop-grid"></div>
+        <div id="home-status"></div>
+      </div>
+      <div class="home-foot">
+        <span class="eyebrow">How hungry is your body?</span>
+        <div id="hunger-seg" class="hunger" role="group" aria-label="Body hunger 1 to 5"></div>
+        <p id="hunger-hint" class="small" hidden></p>
+        <button id="deal-btn" class="btn-primary btn-block">Deal my card</button>
+        <div class="spread home-meta">
+          <button id="already-btn" class="btn-quiet">I already ate it</button>
+          <span class="row" style="gap:4px"><span class="ver-tag mono" id="ver-home"></span><button id="fs-btn" class="btn-quiet" hidden aria-label="Full screen">⛶</button></span>
+        </div>
+        <div id="upd-home"></div>
+      </div>
+    </div>
+
+    <!-- Step: run the card -->
+    <div id="u-card" hidden>
+      <div id="dealt-card"></div>
+      <div class="run-foot">
+        <button id="run-log-btn" class="btn-primary btn-block">Log what happened</button>
+        <div class="row" style="justify-content:space-between">
+          <button id="redraw-btn" class="btn-quiet">Draw a different card</button>
+          <button class="btn-quiet u-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step: outcome -->
+    <div id="u-outcome" class="stack" hidden style="gap:12px">
+      <div class="stack" style="gap:4px">
+        <h2>What happened?</h2>
+      </div>
+      <div id="outcome-list" class="outcomes"></div>
+      <label class="f" for="outcome-note">Note (optional)
+        <input id="outcome-note" type="text" placeholder="e.g. had tea instead, urge gone in 4 min">
+      </label>
+      <button class="btn-quiet u-cancel">Cancel, don't log</button>
+    </div>
+
+    <!-- Step: result -->
+    <div id="u-result" class="stack" hidden style="gap:14px">
+      <div id="result-body" class="panel"></div>
+      <div id="result-actions" class="stack"></div>
+      <button id="result-home-btn" class="btn-primary btn-block">Done</button>
+    </div>
+  </section>
+
+  <!-- LOOPS TAB -->
+  <section id="tab-loops" class="stack" hidden style="gap:14px">
+    <div class="spread">
+      <div class="stack" style="gap:2px">
+        <h2>Your snack loops</h2>
+      </div>
+      <button id="new-loop-btn" class="btn-primary" style="min-height:40px">+ Loop</button>
+    </div>
+    <div id="loops-list" class="stack" style="gap:12px"></div>
+  </section>
+
+  <!-- DECK TAB -->
+  <section id="tab-deck" class="stack" hidden style="gap:18px">
+    <div class="stack" style="gap:10px">
+      <div class="spread"><h2>Your deck</h2><span class="small muted">cards evolve by mutation</span></div>
+      <details class="more"><summary>More info</summary><div class="more-body muted">Each loop holds one live card. When the old rule keeps winning, you mutate the card: change one thing and it becomes the next generation. The lineage shows what you tried and how each generation did.</div></details>
+      <div id="deck-mine" class="stack" style="gap:12px"></div>
+    </div>
+
+    <div class="stack" style="gap:10px">
+      <div class="spread"><h2>Kognem cards</h2><span class="small muted mono">7 operators</span></div>
+      <div id="deck-kognems" class="deck-grid"></div>
+    </div>
+
+    <div class="stack" style="gap:10px">
+      <div class="spread"><h2>Modifiers</h2><span class="small muted mono">max 2 per card</span></div>
+      <details class="more"><summary>More info</summary><div class="more-body muted">A modifier changes how a kognem is delivered without changing the kognem itself. Adding or removing one counts as a new test.</div></details>
+      <div id="deck-mods" class="stack" style="gap:14px"></div>
+    </div>
+    <details class="more panel"><summary>How the method works</summary><div class="more-body">
+      <ol class="steps">
+        <li><div><b>Spot the recurring case.</b> <span class="muted">The same kind of situation keeps coming back: 3pm at the desk, the TV going on, walking past the kitchen.</span></div></li>
+        <li><div><b>Declare the rule.</b> <span class="muted">When [cue], I [automatic step], and it gives me [payoff]. Name the closure point, the last moment before the step completes, such as a hand on the cupboard door.</span></div></li>
+        <li><div><b>Test one change.</b> <span class="muted">Insert one kognem at the closure point. You can add up to two modifiers. Keep it the same for at least five runs.</span></div></li>
+        <li><div><b>Classify the result.</b> <span class="muted">Over comparable runs, did the old rule still reconstruct (Ψ = 0), is a different rule now running reliably (Ψ ≠ 0), or is there not enough evidence yet (Ψ undefined)?</span></div></li>
+        <li><div><b>Mutate and repeat.</b> <span class="muted">If Ψ = 0, change one thing about the card, such as an earlier insertion point, a new action or one modifier, and test the new generation. If Ψ ≠ 0 holds, keep it and move on to the next loop.</span></div></li>
+      </ol>
+      <p class="small muted">A kognem doesn't fight the craving or depend on willpower. It changes the order of steps at the point where the automatic loop closes. One good run is a state change. A mutation is a new rule that keeps showing up across runs.</p>
+    </div></details>
+  </section>
+
+  <!-- LOG TAB -->
+  <section id="tab-log" class="stack" hidden style="gap:16px">
+    <div class="stats" id="log-stats"></div>
+    <div class="panel">
+      <div class="spread"><h3>When urges hit</h3><span class="small muted">by hour of day</span></div>
+      <div id="hour-chart"></div>
+      <div class="legend">
+        <span style="--c: var(--good)">new rule ran</span>
+        <span style="--c: var(--bad)">old rule ran</span>
+        <span style="--c: var(--warn)">real hunger</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Which cards work for you</h3>
+      <div id="card-table" class="tbl-wrap"></div>
+    </div>
+    <div class="stack" style="gap:8px">
+      <h3>History</h3>
+      <ul id="history" class="hist"></ul>
+    </div>
+    <details class="more panel"><summary>Menu &amp; data</summary><div class="more-body">
+      <p class="small"><b>Kognetik Snack Deck</b> · version <span id="ver-menu" class="mono"></span></p>
+      <button id="fs-menu-btn" hidden>Full screen</button>
+      <p id="ios-hint-menu" class="small muted" hidden>Full screen on iPhone: Share → Add to Home Screen.</p>
+      <div id="upd-menu"></div>
+      <span id="sync-status" class="sync" data-s="local">Saved on this device only</span>
+      <p id="sync-note" class="small muted">Copy a backup now and then. Paste it back here to restore it or move it to another device.</p>
+      <div class="row">
+        <button id="export-btn">Copy backup</button>
+        <button id="import-toggle-btn" class="btn-ghost">Restore from backup</button>
+      </div>
+      <div id="import-box" class="stack" hidden>
+        <textarea id="import-text" placeholder="Paste backup JSON here"></textarea>
+        <button id="import-btn" class="btn-primary">Replace my data with this backup</button>
+      </div>
+      <textarea id="export-fallback" readonly hidden></textarea>
+      <div class="row" style="justify-content:flex-end">
+        <button id="reset-btn" class="btn-danger" style="min-height:38px">Reset everything</button>
+        <button id="reset-confirm-btn" class="btn-danger" hidden style="min-height:38px">Tap again to erase all loops and logs</button>
+      </div>
+    </div></details>
+  </section>
+</div>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="urge" aria-selected="true"><span class="ti">◉</span>Urge</button>
+  <button role="tab" data-tab="loops" aria-selected="false"><span class="ti">↻</span>Loops</button>
+  <button role="tab" data-tab="deck" aria-selected="false"><span class="ti">▤</span>Deck</button>
+  <button role="tab" data-tab="log" aria-selected="false"><span class="ti">Ψ</span>Log</button>
+</nav>
+<div id="addloop" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="add-title">
+  <div class="sheet-inner">
+    <div class="spread"><h2 id="add-title">Add a loop</h2><button class="btn-quiet" data-aclose="1">Close</button></div>
+    <p class="small muted">Pick the moment that sounds like you. You can change the details later.</p>
+    <div id="add-grid" class="loop-grid compact"></div>
+  </div>
+</div>
+<div id="mutate" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="mut-title">
+  <div class="sheet-inner" id="mutate-inner"></div>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- The deck ----------
+  // The seven operators of the Kognem Operator System, each with snack-specific plays.
+  const KOGNEMS = [
+    { id: "pause", code: "K1", glyph: "‖", name: "Pause",
+      what: "Put a gap between the cue and the automatic step. The loop needs momentum to close, and a gap takes it away.",
+      snack: "Best at the physical closure point, with your hand on the cupboard, fridge or wrapper.",
+      secs: 30,
+      plays: [
+        "Take your hand off the handle. Breathe slowly five times.",
+        "Go to the tap. Pour a full glass of water. Drink all of it. Then decide.",
+        "Put the snack on the counter. Step back until the timer ends.",
+        "Sit down. Put your feet flat on the floor. Breathe out slowly three times."
+      ],
+      fail: "The snack was eaten before the pause started." },
+    { id: "inversion", code: "K2", glyph: "⇄", name: "Inversion",
+      what: "Run the opposite of the automatic step. If the loop moves toward food, move away from it.",
+      snack: "Works well on walk-past and boredom loops that start with movement.",
+      secs: 60,
+      plays: [
+        "Turn around. Walk to a different room.",
+        "Close the cupboard. Put one thing away instead.",
+        "Go to the bathroom. Brush your teeth.",
+        "Stand up. Stretch for the whole timer."
+      ],
+      fail: "The usual reach happened instead of the opposite move." },
+    { id: "scaling", code: "K3", glyph: "↕", name: "Scaling",
+      what: "Keep the step but change its size. Shrink the portion, slow the speed, or exaggerate the urge until it looks silly.",
+      snack: "Use it when you'll eat something either way. It turns autopilot eating into a deliberate, smaller act.",
+      secs: 45,
+      plays: [
+        "Take one piece. Put the pack away before the first bite.",
+        "Get a small plate. Put one portion on it. Sit down at a table to eat it.",
+        "Get a plate. Put the snack on it. Sit down. Eat the first three bites slowly. Put it down between bites.",
+        "Picture the craving ten times bigger. Make your movement tiny."
+      ],
+      fail: "Ate the full usual amount at the usual speed." },
+    { id: "index", code: "K4", glyph: "➚", name: "Index-Shift",
+      what: "Keep the reach but change what it points at. The loop runs and lands on a different target.",
+      snack: "Good when the payoff is the break or the texture, not the food itself.",
+      secs: 60,
+      plays: [
+        "Go to the tap or kettle. Make water or tea instead.",
+        "Get gum or a mint. Chew it.",
+        "Go to the fruit bowl. Pick one piece of fruit. Sit down to eat it.",
+        "Pick a two-minute job: a text, a plant or a stretch. Go and do it."
+      ],
+      fail: "Attention stayed locked on the snack." },
+    { id: "frame", code: "K5", glyph: "❝", name: "Frame-Exposure",
+      what: "Say the rule out loud while it runs. A rule you can see is no longer fully automatic.",
+      snack: "Strong for stress and 'I deserve it' loops, where the rule hides behind a feeling.",
+      secs: 20,
+      plays: [
+        "Say out loud: \"This is the loop, not hunger.\"",
+        "Say your hunger out loud, 1 to 5.",
+        "Say what you really want: \"a break, not biscuits.\"",
+        "Get a pen or open your notes. Write: when ___, I ___."
+      ],
+      fail: "Didn't name the rule before acting." },
+    { id: "temporal", code: "K6", glyph: "◷", name: "Temporal Decoupling",
+      what: "Pull the cue and the response apart in time. The urge fires now, and the answer comes later.",
+      snack: "The strongest card for cravings. Most urges fade within 10 to 15 minutes if the loop can't close.",
+      secs: 600,
+      plays: [
+        "Say: \"Not now.\" Walk away from the food. Wait 10 minutes. Still want it? Go back to the kitchen. Get a small plate. Put one portion on it. Sit down to eat it.",
+        "Open your notes or calendar. Write down your next snack time.",
+        "Walk away from the food. Sit down. Watch the craving rise and fall.",
+        "Walk away from the food. Finish one small task. Then decide."
+      ],
+      fail: "Ate before the delay ran out." },
+    { id: "rewrite", code: "K7", glyph: "↻", name: "Iterative Rewrite",
+      what: "Replace the automatic step with a planned substitute, and improve it a little after each run.",
+      snack: "Use it once you know the loop's payoff. Match the substitute to that payoff: crunch, sweet, warmth or a break.",
+      secs: 120,
+      plays: [
+        "Go to the kitchen. Slice an apple onto a plate. Add a spoon of peanut butter. Sit down to eat it.",
+        "Go to the kitchen. Put the kettle on. Stand at the window while it brews.",
+        "Go to the fridge. Take out a yogurt or a boiled egg. Sit down to eat it.",
+        "Go to the fridge. Get carrots or cucumber for the crunch. Sit down to eat them."
+      ],
+      fail: "Went back to the old snack instead of the substitute." }
+  ];
+  const K = Object.fromEntries(KOGNEMS.map(k => [k.id, k]));
+  KOGNEMS.forEach(k => { k.plays = k.plays.map(p => p.replace(/ {2}/g, " ")); });
+  const OLD_PLAYS_2 = {"Drink a full glass of water. Then decide.": "Go to the tap. Pour a full glass of water. Drink all of it. Then decide.", "Brush your teeth.": "Go to the bathroom. Brush your teeth.", "Put it on a plate. Sit down to eat it.": "Get a small plate. Put one portion on it. Sit down at a table to eat it.", "Reach for water or tea instead.": "Go to the tap or kettle. Make water or tea instead.", "Chew gum or have a mint.": "Get gum or a mint. Chew it.", "Go to the fruit bowl.": "Go to the fruit bowl. Pick one piece of fruit.", "Write it down: when ___, I ___.": "Get a pen or open your notes. Write: when ___, I ___.", "Pick your next snack time. Write it down.": "Open your notes or calendar. Write down your next snack time.", "Have apple and peanut butter, on a plate.": "Go to the kitchen. Slice an apple onto a plate. Add a spoon of peanut butter.", "Put the kettle on. Stand at the window while it brews.": "Go to the kitchen. Put the kettle on. Stand at the window while it brews.", "Have yogurt or a boiled egg instead.": "Go to the fridge. Take out a yogurt or a boiled egg.", "Have carrots or cucumber for the crunch.": "Go to the fridge. Get carrots or cucumber for the crunch."};
+  // Earlier wording of the plays, mapped to the current one-instruction-per-sentence wording.
+  const OLD_PLAYS = {"Hands off the handle. Five slow breaths before you open anything.": "Take your hand off the handle. Breathe slowly five times.", "Drink a full glass of water, then decide.": "Drink a full glass of water. Then decide.", "Put the snack on the counter, step back, and wait for the timer.": "Put the snack on the counter. Step back until the timer ends.", "Feet flat, shoulders down, three breaths out longer than in.": "Put your feet flat on the floor. Breathe out slowly three times.", "Turn round and leave the kitchen. Walk to a different room.": "Turn around. Walk to a different room.", "Close the cupboard and put something away instead of taking something out.": "Close the cupboard. Put one thing away instead.", "Brush your teeth. It closes the eating window.": "Brush your teeth.", "Stand up and stretch instead of reaching down for the bag.": "Stand up. Stretch for the whole timer.", "Take one piece and put the pack back before the first bite.": "Take one piece. Put the pack away before the first bite.", "Plate it and sit down. Never eat straight from the bag.": "Put it on a plate. Sit down to eat it.", "Eat the first three bites at half speed and put it down between bites.": "Eat the first three bites slowly. Put it down between bites.", "Picture the urge at ten times the size, then make your actual movement tiny.": "Picture the craving ten times bigger. Make your movement tiny.", "Hand goes to the water bottle, tea or sparkling water instead.": "Reach for water or tea instead.", "Chew gum or have a mint. Same mouth action, different target.": "Chew gum or have a mint.", "Go to the fruit bowl, which you set up in advance.": "Go to the fruit bowl.", "Shift the break to a two-minute task: a text, a plant, a stretch.": "Do a two-minute task instead. Send a text, water a plant or stretch.", "Say it: \"This is the 3pm boredom loop, not hunger.\"": "Say out loud: \"This is the loop, not hunger.\"", "Rate your hunger 1 to 5 out loud before touching anything.": "Say your hunger out loud, 1 to 5.", "Name the payoff: \"I want a break, not biscuits.\"": "Say what you really want: \"a break, not biscuits.\"", "Write the rule on a sticky note: When ___, I ___.": "Write it down: when ___, I ___.", "Not now. If I still want it in 10 minutes, I'll have it plated.": "Say: \"Not now.\" Wait 10 minutes. Still want it? Plate it.", "Move it to the next planned snack time and write the time down.": "Pick your next snack time. Write it down.", "Let the urge rise and fall like a wave, noticing its peak.": "Notice the craving rise. Watch it fall.", "Finish one small task first, then decide.": "Finish one small task. Then decide.", "Planned swap: apple and peanut butter, plated.": "Have apple and peanut butter, on a plate.", "Tea ritual: kettle on, stand at the window while it brews.": "Put the kettle on. Stand at the window while it brews.", "Protein swap: yogurt or a boiled egg from the fridge.": "Have yogurt or a boiled egg instead.", "Crunch swap: carrots or cucumber, prepped in advance.": "Have carrots or cucumber for the crunch."};
+  Object.assign(OLD_PLAYS, OLD_PLAYS_2, {"Put your feet flat on the floor. Breathe out slowly three times.": "Sit down. Put your feet flat on the floor. Breathe out slowly three times.", "Eat the first three bites slowly. Put it down between bites.": "Put it on a plate. Sit down. Eat the first three bites slowly. Put it down between bites.", "Go to the fruit bowl. Pick one piece of fruit.": "Go to the fruit bowl. Pick one piece of fruit. Sit down to eat it.", "Do a two-minute task instead. Send a text, water a plant or stretch.": "Pick a two-minute job: a text, a plant or a stretch. Go and do it.", "Say: \"Not now.\" Wait 10 minutes. Still want it? Plate it.": "Say: \"Not now.\" Walk away from the food. Wait 10 minutes. Still want it? Get a small plate. Put one portion on it and sit down.", "Notice the craving rise. Watch it fall.": "Walk away from the food. Sit down. Watch the craving rise and fall.", "Finish one small task. Then decide.": "Walk away from the food. Finish one small task. Then decide.", "Go to the kitchen. Slice an apple onto a plate. Add a spoon of peanut butter.": "Go to the kitchen. Slice an apple onto a plate. Add a spoon of peanut butter. Sit down to eat it.", "Go to the fridge. Take out a yogurt or a boiled egg.": "Go to the fridge. Take out a yogurt or a boiled egg. Sit down to eat it.", "Go to the fridge. Get carrots or cucumber for the crunch.": "Go to the fridge. Get carrots or cucumber for the crunch. Sit down to eat them."});
+  Object.assign(OLD_PLAYS, {"Say: \"Not now.\" Walk away from the food. Wait 10 minutes. Still want it? Get a small plate. Put one portion on it and sit down.": "Say: \"Not now.\" Walk away from the food. Wait 10 minutes. Still want it? Go back to the kitchen. Get a small plate. Put one portion on it. Sit down to eat it.", "Put it on a plate. Sit down. Eat the first three bites slowly. Put it down between bites.": "Get a plate. Put the snack on it. Sit down. Eat the first three bites slowly. Put it down between bites."});
+  const K_EMOJI = { pause: "⏸️", inversion: "↩️", scaling: "📏", index: "🎯", frame: "🗣️", temporal: "⏳", rewrite: "✏️" };
+  KOGNEMS.forEach(k => { k.emoji = K_EMOJI[k.id]; });
+
+  const MOD_GROUPS = [
+    { name: "Voice", mods: [
+      { id: "aloud", when: "after", step: "Say what you are doing out loud.", glyph: "“", name: "Out loud", text: "Say the action out loud as you do it." },
+      { id: "written", when: "before", step: "Get a pen or open your notes. Write one line: what set this off.", glyph: "✎", name: "Written", text: "Write one line in your notes first: the cue and what you're doing." } ] },
+    { name: "Body", mods: [
+      { id: "anchor", when: "before", step: "Hand on your chest for one breath.", glyph: "◆", name: "Anchor gesture", text: "Start with the same gesture every time, such as a hand on your chest or a thumb press." },
+      { id: "water", when: "before", step: "Get a glass of water. Drink it.", glyph: "≈", name: "Water first", text: "Drink a glass of water before the card starts." } ] },
+    { name: "Place", mods: [
+      { id: "leave", when: "before", step: "Go to a different room.", glyph: "⇥", name: "Change room", text: "Run the card somewhere other than the kitchen." },
+      { id: "seated", when: "after", step: "If you eat anything, get a plate and sit down at a table.", glyph: "▭", name: "Plate & seat", text: "If you eat anything, plate it and sit at a table with no screen." } ] },
+    { name: "Time", mods: [
+      { id: "double", when: "none", step: "", glyph: "×2", name: "Double time", text: "The timer runs twice as long.", mult: 2 },
+      { id: "repeat", when: "after", step: "Still want it? Run the card again.", glyph: "+1", name: "Second round", text: "If the urge is still there when the timer ends, run the card once more." } ] },
+    { name: "Social", mods: [
+      { id: "witness", when: "before", step: "Get your phone. Text someone: \"Snack urge, running my card.\"", glyph: "◎", name: "Witness", text: "Text someone: \"Snack urge, running my card.\"" } ] },
+    { name: "Setup", mods: [
+      { id: "hidden", when: "setup", step: "Keep trigger snacks out of sight.", glyph: "▢", name: "Out of sight", text: "The trigger snack is kept in an opaque box or on a high shelf." },
+      { id: "cue", when: "setup", step: "Put a sticky note where the habit starts.", glyph: "!", name: "Cue note", text: "A sticky note at the closure point, such as the cupboard door, names the card." } ] }
+  ];
+  const MODS = {};
+  MOD_GROUPS.forEach(g => g.mods.forEach(m => { MODS[m.id] = Object.assign({ group: g.name }, m); }));
+
+  const OUTCOMES = [
+    { id: "skip", emoji: "✅", cls: "new", label: "No snack", desc: "The urge passed and nothing was eaten." },
+    { id: "swap", emoji: "🔄", cls: "new", label: "Swapped", desc: "Had the planned substitute or something else instead." },
+    { id: "small", emoji: "🍽️", cls: "new", label: "Ate less, on purpose", desc: "A deliberate smaller portion, plated. Not autopilot." },
+    { id: "old", emoji: "🍪", cls: "old", label: "Old loop ran", desc: "Did the card, then ate the usual thing the usual way." },
+    { id: "missed", emoji: "⏰", cls: "old", label: "Missed the moment", desc: "It was eaten before I remembered the card." },
+    { id: "hungry", emoji: "🍎", cls: "hun", label: "Real hunger", desc: "Body hunger, not the loop. Doesn't count against the test." }
+  ];
+  const OUT = Object.fromEntries(OUTCOMES.map(o => [o.id, o]));
+
+  const HUNGER = [
+    { v: 1, e: "😌", l: "not" }, { v: 2, e: "🙂", l: "a bit" }, { v: 3, e: "😐", l: "some" }, { v: 4, e: "😋", l: "hungry" }, { v: 5, e: "😫", l: "starving" }
+  ];
+
+  // ---------- State ----------
+  const STORE = "kognetik_snack_deck_v1";
+  // Ready-made loops. The first four seed a new deck; all of them appear under "Add a loop".
+  const TEMPLATES = [
+    { tid: "desk", emoji: "💻", name: "Afternoon desk slump",
+      cue: "3 to 4pm, energy dips at my desk", auto: "walk to the kitchen and grab biscuits",
+      payoff: "a break and a sugar hit", closure: "standing up from the desk",
+      test: { k: "temporal", mods: ["water"], action: K.temporal.plays[0], secs: 600 } },
+    { tid: "bored", emoji: "🥱", name: "Boredom",
+      cue: "nothing grabbing me, restless or putting something off", auto: "go looking in the cupboard for something to eat",
+      payoff: "stimulation, something to do", closure: "opening the cupboard or fridge",
+      test: { k: "index", mods: [], action: K.index.plays[3], secs: 60 } },
+    { tid: "stress", emoji: "😤", name: "Work stress spike",
+      cue: "a tense meeting or message", auto: "go straight for something sweet",
+      payoff: "calm down, a reward", closure: "hand reaching for the snack drawer",
+      test: { k: "frame", mods: ["aloud"], action: K.frame.plays[2], secs: 20 } },
+    { tid: "walk", emoji: "🚶", name: "Kitchen walk-past",
+      cue: "passing the kitchen and seeing food out", auto: "grab a handful without thinking",
+      payoff: "none really, it's automatic", closure: "hand going into the bag or tub",
+      test: { k: "inversion", mods: ["hidden"], action: K.inversion.plays[0], secs: 60 } },
+    { tid: "sweet", emoji: "🍫", name: "After-dinner sweet tooth",
+      cue: "finishing dinner", auto: "reach for chocolate or dessert",
+      payoff: "a sweet end to the meal", closure: "getting up from the table",
+      test: { k: "rewrite", mods: [], action: K.rewrite.plays[1], secs: 120 } },
+    { tid: "night", emoji: "🌙", name: "Late-night grazing",
+      cue: "late evening, tired but still up", auto: "graze in the kitchen",
+      payoff: "winding down, comfort", closure: "walking into the kitchen",
+      test: { k: "inversion", mods: [], action: K.inversion.plays[2], secs: 60 } },
+    { tid: "office", emoji: "🍩", name: "Office treats",
+      cue: "cakes or biscuits out at work", auto: "take one because they're there",
+      payoff: "joining in, it's free", closure: "reaching for the plate",
+      test: { k: "frame", mods: [], action: K.frame.plays[1], secs: 20 } },
+    { tid: "tired", emoji: "🔋", name: "Low energy",
+      cue: "tired and flat", auto: "reach for sugar for a lift",
+      payoff: "a quick energy boost", closure: "opening the snack drawer",
+      test: { k: "pause", mods: [], action: K.pause.plays[1], secs: 30 } },
+    { tid: "tv", emoji: "📺", name: "TV snacking",
+      cue: "sitting down in front of the TV", auto: "open crisps or chocolate and eat from the pack",
+      payoff: "something to do with my hands, comfort", closure: "opening the snack cupboard",
+      test: { k: "scaling", mods: ["seated"], action: K.scaling.plays[1], secs: 45 } }
+  ];
+  const TPL = Object.fromEntries(TEMPLATES.map(t => [t.tid, t]));
+  function loopFromTemplate(t, id) {
+    const l = clone(t); delete l.tid; l.id = id || uid("loop"); l.example = true; l.history = []; l.test.gen = 1; return l;
+  }
+  const EXAMPLE_LOOPS = ["desk", "bored", "stress", "walk"].map(tid => loopFromTemplate(TPL[tid], "ex-" + tid));
+  const LOOP_EMOJIS = ["🥱", "💻", "😤", "🚶", "🍫", "🌙", "🍩", "🔋", "📺", "😔", "🎉", "📱", "🚗", "☕", "🍪", "🧀"];
+
+  let state = { v: 2, loops: [], logs: [], lastLoopId: "" };
+
+  function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function safeSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+  function save() { safeSet(STORE, JSON.stringify(state)); scheduleSync(); }
+  function uid(p) { return p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function load() {
+    const raw = safeGet(STORE);
+    let ok = false;
+    if (raw) {
+      try { const s = JSON.parse(raw); if (s && Array.isArray(s.loops) && Array.isArray(s.logs)) { state = s; ok = true; } } catch (e) {}
+    }
+    if (!ok) {
+      state = { v: 2, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" };
+      migrateOld();
+    }
+    normalize();
+    safeSet(STORE, JSON.stringify(state));
+  }
+
+  // Bring older data up to the generation-aware shape.
+  function normalize() {
+    state.v = 2;
+    // The TV example was swapped for a general boredom loop. Replace it if it was never touched.
+    const tvIdx = state.loops.findIndex(l => l.id === "ex-tv" && l.example && !state.logs.some(x => x.loopId === "ex-tv"));
+    if (tvIdx >= 0 && !state.loops.some(l => l.id === "ex-bored")) state.loops.splice(tvIdx, 1, loopFromTemplate(TPL.bored, "ex-bored"));
+    const emojiById = { "ex-desk": "💻", "ex-tv": "📺", "ex-stress": "😤", "ex-walk": "🚶", "ex-bored": "🥱" };
+    state.loops.forEach(l => {
+      if (!l.emoji) l.emoji = emojiById[l.id] || "🍪";
+      for (let n = 0; l.test && OLD_PLAYS[l.test.action] && n < 5; n++) l.test.action = OLD_PLAYS[l.test.action];
+    });
+    if (state.defaultLoopId && !state.loops.some(l => l.id === state.defaultLoopId)) state.defaultLoopId = "";
+    state.loops.forEach(l => {
+      l.test = l.test || { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs };
+      if (!K[l.test.k]) l.test.k = "pause";
+      l.test.mods = l.test.mods || [];
+      l.test.gen = l.test.gen || 1;
+      l.history = l.history || [];
+    });
+    state.logs.forEach(l => {
+      l.gen = l.gen || 1;
+      if (l.key && !/\|g\d+$/.test(l.key)) l.key += "|g1";
+      if (!l.key) l.key = testKey(l.k, l.mods, l.gen);
+    });
+  }
+
+  // ---------- Account sync (db capability) ----------
+  // Inside Claude the deck is kept in the artifact's private store, so it follows you across
+  // devices and Claude can read it in a later session. Hosted anywhere else it stays in this browser.
+  const sync = { db: null, status: "local", written: {}, months: new Set(), chain: Promise.resolve(), timer: null };
+  function monthKey(t) { const d = new Date(t); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+  function setSync(status) {
+    sync.status = status;
+    const el = document.getElementById("sync-status"); if (!el) return;
+    const text = { local: "Saved on this device only", syncing: "Connecting to your account…", cloud: "Saved to your Claude account. It follows you across devices.", error: "Couldn't save to your account. Kept on this device for now." };
+    el.textContent = text[status] || "";
+    el.dataset.s = status;
+  }
+  function docsFromState() {
+    const docs = { "deck/state": { v: 2, loops: state.loops, lastLoopId: state.lastLoopId || "", defaultLoopId: state.defaultLoopId || "" } };
+    const months = {};
+    sync.months.forEach(m => { months[m] = []; });
+    state.logs.forEach(l => { const m = monthKey(l.t); (months[m] = months[m] || []).push(l); });
+    Object.keys(months).forEach(m => { sync.months.add(m); docs["logs/" + m] = { month: m, entries: months[m] }; });
+    return docs;
+  }
+  function scheduleSync() { if (!sync.db) return; clearTimeout(sync.timer); sync.timer = setTimeout(flushSync, 400); }
+  function flushSync() {
+    const docs = docsFromState();
+    Object.keys(docs).forEach(path => {
+      const body = clone(docs[path]), j = JSON.stringify(body);
+      if (sync.written[path] === j) return;
+      sync.written[path] = j;
+      sync.chain = sync.chain
+        .then(() => sync.db.doc(path).set(body))
+        .then(() => setSync("cloud"), e => {
+          if (sync.written[path] === j) delete sync.written[path];
+          setSync("error");
+          if (e && e.code === "quota_exceeded") toast("Your account storage for this deck is full. Copy a backup from the Log tab.");
+        });
+    });
+  }
+  function logsFromDocs(docs) {
+    const out = [];
+    docs.forEach(d => { sync.months.add(d.id); const b = d.data() || {}; sync.written["logs/" + d.id] = JSON.stringify(b); (b.entries || []).forEach(e => out.push(clone(e))); });
+    return out.sort((a, b) => a.t - b.t);
+  }
+  async function connectDb() {
+    if (!window.claude || typeof window.claude.use !== "function") return;
+    let db = null;
+    try { db = await window.claude.use("db"); } catch (e) { db = null; }
+    if (!db) return;
+    setSync("syncing");
+    try {
+      const [deck, logs] = await Promise.all([db.doc("deck/state").get(), db.collection("logs").get()]);
+      sync.db = db;
+      if (deck.exists) {
+        const b = deck.data() || {};
+        sync.written["deck/state"] = JSON.stringify(b);
+        state.loops = clone(b.loops || []);
+        state.lastLoopId = b.lastLoopId || "";
+        state.defaultLoopId = b.defaultLoopId || "";
+        state.logs = logsFromDocs(logs.docs);
+        normalize();
+        safeSet(STORE, JSON.stringify(state));
+        flow.loopId = "";
+        renderAll();
+        setSync("cloud");
+      } else {
+        flushSync(); // first run in this account: upload what this browser has
+      }
+      db.doc("deck/state").onSnapshot(s => {
+        if (!s.exists || s.metadata.hasPendingWrites) return;
+        const j = JSON.stringify(s.data());
+        if (j === sync.written["deck/state"]) return;
+        sync.written["deck/state"] = j;
+        const b = s.data();
+        state.loops = clone(b.loops || []); state.lastLoopId = b.lastLoopId || ""; state.defaultLoopId = b.defaultLoopId || "";
+        normalize(); safeSet(STORE, JSON.stringify(state)); renderAll(true);
+      }, () => setSync("error"));
+      db.collection("logs").onSnapshot(q => {
+        if (q.metadata.hasPendingWrites) return;
+        const changed = q.docs.some(d => JSON.stringify(d.data()) !== sync.written["logs/" + d.id]);
+        if (!changed) return;
+        state.logs = logsFromDocs(q.docs);
+        normalize(); safeSet(STORE, JSON.stringify(state)); renderAll(true);
+      }, () => setSync("error"));
+    } catch (e) {
+      sync.db = null;
+      setSync("error");
+    }
+  }
+
+  // Bring scenarios and history across from the earlier simulator, if this browser has them.
+  function migrateOld() {
+    const raw = safeGet("kognetik_state_v11");
+    if (!raw) return;
+    let old; try { old = JSON.parse(raw); } catch (e) { return; }
+    if (!old || !Array.isArray(old.scenarios)) return;
+    const map = { "Pause": "pause", "Inversion": "inversion", "Scaling": "scaling", "Index-Shift": "index",
+      "Frame-Exposure": "frame", "Iterative Rewrite": "rewrite" };
+    const toK = s => { const name = String(s || "").split(" ").slice(1).join(" "); return map[name] || "pause"; };
+    const byTrigger = {};
+    old.scenarios.forEach(sc => {
+      const m = (sc.mutations && sc.mutations[0]) || {};
+      const k = toK(m.kognem);
+      const loop = { id: uid("loop"), name: sc.trigger || "Imported loop", cue: sc.trigger || "", auto: "", payoff: "", closure: "",
+        test: { k, mods: [], action: m.action || K[k].plays[0], secs: Math.max(5, parseInt(m.duration, 10) || K[k].secs) } };
+      state.loops.push(loop); byTrigger[sc.trigger] = loop;
+    });
+    (old.logs || []).forEach(l => {
+      const loop = byTrigger[l.trigger]; if (!loop) return;
+      state.logs.push({ id: uid("log"), t: Date.now(), loopId: loop.id, hunger: 0, k: loop.test.k, mods: [],
+         key: testKey(loop.test.k, [], 1), gen: 1, outcome: l.status === "failed" ? "old" : "skip",
+        note: "Imported from the old simulator" + (l.reason ? ": " + l.reason : ""), imported: true });
+    });
+  }
+
+  function testKey(k, mods, gen) { return k + "|" + (mods || []).slice().sort().join(",") + "|g" + (gen || 1); }
+  function loopById(id) { return state.loops.find(l => l.id === id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  function fmtSecs(s) { s = Math.max(0, Math.ceil(s)); const m = Math.floor(s / 60); return m + ":" + String(s % 60).padStart(2, "0"); }
+  function effSecs(test) { let s = Number(test.secs) || K[test.k].secs; (test.mods || []).forEach(id => { if (MODS[id] && MODS[id].mult) s *= MODS[id].mult; }); return s; }
+  function outClass(o) { return OUT[o] ? OUT[o].cls : "old"; }
+
+  // ---------- Classification (Ψ) ----------
+  const WINDOW = 5;
+  function classify(loop) {
+    const missing = [];
+    if (!loop.cue) missing.push("the cue");
+    if (!loop.auto) missing.push("the automatic step");
+    if (!loop.closure) missing.push("the closure point");
+    const key = testKey(loop.test.k, loop.test.mods, loop.test.gen);
+    const runs = state.logs.filter(l => l.loopId === loop.id && l.key === key && l.outcome !== "hungry");
+    const recent = runs.slice(-WINDOW);
+    const nNew = recent.filter(l => outClass(l.outcome) === "new").length;
+    const nMissed = recent.filter(l => l.outcome === "missed").length;
+    const base = { runs: runs.length, recent, nNew, nMissed };
+    if (missing.length) return Object.assign(base, { cls: "undef", label: "Ψ undefined",
+      advice: "The rule isn't fully declared yet. Add " + missing.join(", ") + ", or there's nothing to compare the runs against." });
+    if (recent.length < WINDOW) return Object.assign(base, { cls: "undef", label: "Ψ undefined",
+      advice: recent.length + " of " + WINDOW + " runs logged with this card. Keep the card the same until there are " + WINDOW + ", or the result won't tell you anything." });
+    if (nNew >= 4) return Object.assign(base, { cls: "mut", label: "Ψ ≠ 0",
+      advice: runs.length >= 10
+        ? "The new rule is holding across " + runs.length + " runs. That's a mutation. Try dropping a modifier, or start work on your next loop."
+        : "A different rule is reconstructing: " + nNew + " of the last " + WINDOW + ". Keep this card unchanged and see whether it holds to 10 runs." });
+    if (nNew <= 1) {
+      let advice = "The old rule still reconstructs (" + (WINDOW - nNew) + " of " + WINDOW + "). Mutate the card and change one thing. ";
+      if (nMissed >= 3) advice += "Most runs missed the closure point, so the card fires too late. Insert it earlier, or add Cue note or Out of sight.";
+      else if ((loop.test.mods || []).length < 2) advice += "Try adding one modifier, or rewriting the action. If this operator has had two or three generations, switch to " + suggestNext(loop.test.k) + ".";
+      else advice += "Try dropping a modifier, or switch to " + suggestNext(loop.test.k) + ".";
+      return Object.assign(base, { cls: "zero", label: "Ψ = 0", advice });
+    }
+    return Object.assign(base, { cls: "drift", label: "Drift", advice: "The loop is moving but not stable yet (" + nNew + " of " + WINDOW + " new). Don't change anything yet. Five more runs with the same card will show whether it settles." });
+  }
+  function suggestNext(k) {
+    // Rough order from gentlest to strongest for snacking loops.
+    const order = ["frame", "pause", "index", "scaling", "inversion", "rewrite", "temporal"];
+    const i = order.indexOf(k);
+    return K[order[(i + 1) % order.length]].name;
+  }
+
+  function dotsHTML(loop, n) {
+    const key = testKey(loop.test.k, loop.test.mods, loop.test.gen);
+    const recent = state.logs.filter(l => l.loopId === loop.id).slice(-(n || 8));
+    let html = "";
+    for (let i = 0; i < (n || 8) - recent.length; i++) html += '<span class="dot" title="no run yet"></span>';
+    recent.forEach(l => {
+      const o = OUT[l.outcome];
+      html += '<span class="dot ' + outClass(l.outcome) + (l.key !== key ? " other" : "") + '" title="' + esc((o ? o.label : l.outcome) + (l.key !== key ? " (different card)" : "")) + '"></span>';
+    });
+    return '<span class="dots" aria-label="recent runs">' + html + "</span>";
+  }
+
+  // ---------- Card rendering ----------
+  // One instruction per line: modifiers that come first, then the action split into sentences, then follow-ups.
+  function splitLines(t) { return String(t || "").split(/(?<=[.!]["”]?)\s+(?=[A-Z"“])/).map(x => x.trim()).filter(Boolean); }
+  function stepsFor(test) {
+    const mods = (test.mods || []).map(id => MODS[id]).filter(Boolean);
+    const out = [];
+    mods.filter(m => m.when === "before").forEach(m => splitLines(m.step).forEach(t => out.push({ text: t, mod: true })));
+    splitLines(test.action || K[test.k].plays[0]).forEach(t => out.push({ text: t }));
+    mods.filter(m => m.when === "after").forEach(m => out.push({ text: m.step, mod: true }));
+    (test.extra || []).forEach(t => out.push({ text: t, mod: true }));
+    return out;
+  }
+  function stepsHTML(test) {
+    return '<ol class="do-list">' + stepsFor(test).map(st => '<li' + (st.mod ? ' class="mod-step"' : "") + ">" + esc(st.text) + "</li>").join("") + "</ol>";
+  }
+
+  function cardHTML(test, loop, opts) {
+    const k = K[test.k];
+    const mods = (test.mods || []).map(id => MODS[id]).filter(Boolean);
+    const small = opts && opts.small;
+    let html = '<div class="kcard' + (small ? " small-card" : "") + (opts && opts.deal ? " deal" : "") + '">';
+    html += '<span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>";
+    if (test.hunger) html += '<div class="corner"><span class="glyph" aria-hidden="true">🍎</span><div><div class="code">REAL HUNGER · ' + fmtSecs(effSecs(test)) + '</div><div class="kname">Proper snack</div></div></div>';
+    else html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
+    if (loop && !small && loop.closure && !test.hunger && !(opts && opts.run)) html += '<p class="card-when">Triggered by: <b>' + esc(loop.closure) + "</b></p>";
+    if (opts && opts.run) html += '<p class="run-hint">' + (flow.hunger ? HUNGER[flow.hunger - 1].e + " Hunger " + flow.hunger + ". " : "") + 'Tap each step when it\'s done.</p>' + runStepsHTML();
+    else html += stepsHTML(test);
+    if (!small && !test.hunger && (mods.length || (loop && (loop.cue || loop.payoff)))) {
+      html += '<details class="more"><summary>More info</summary><div class="more-body">';
+      mods.forEach(m => { html += "<p><b>" + esc(m.name) + (m.when === "setup" ? " (set up beforehand)" : "") + ":</b> " + esc(m.when === "setup" ? m.step : m.text) + "</p>"; });
+      if (loop && (loop.cue || loop.auto)) html += '<p><b>Old habit:</b> when ' + esc(loop.cue || "…") + ", I " + esc(loop.auto || "…") + "</p>";
+      if (loop && loop.payoff) html += "<p><b>It wants:</b> " + esc(loop.payoff) + "</p>";
+      html += '<p class="muted">' + esc(k.what) + "</p></div></details>";
+    }
+    html += "</div>";
+    return html;
+  }
+
+  // ---------- Urge flow ----------
+  const flow = { loopId: "", hunger: 0, test: null, endAt: 0, total: 0, tick: null, wake: null, alerted: false };
+  const $ = id => document.getElementById(id);
+  const steps = ["u-checkin", "u-card", "u-outcome", "u-result"];
+  function showStep(id) { steps.forEach(s => { $(s).hidden = s !== id; }); document.body.classList.toggle("running", id === "u-card" || id === "u-checkin"); window.scrollTo(0, 0); }
+
+  function pickLoop() {
+    if (loopById(state.defaultLoopId)) return state.defaultLoopId;
+    if (loopById(state.lastLoopId)) return state.lastLoopId;
+    return state.loops.length ? state.loops[0].id : "";
+  }
+
+  function renderCheckin() {
+    if (!flow.loopId || !loopById(flow.loopId)) flow.loopId = pickLoop();
+    $("loop-chips").innerHTML = state.loops.map(l => {
+      const k = K[l.test.k];
+      return '<button class="ltile" data-loop="' + l.id + '" aria-pressed="' + (l.id === flow.loopId) + '">' +
+        (l.id === state.defaultLoopId ? '<span class="star" title="Default loop">★</span>' : "") +
+        '<span class="le" aria-hidden="true">' + esc(l.emoji || "🍪") + '</span><span class="ln">' + esc(l.name) + '</span><span class="lk">' + k.emoji + " " + k.name + "</span></button>";
+    }).join("") + '<button class="add-slim" data-addloop="1">＋ Add a loop</button>';
+    const sel = loopById(flow.loopId);
+    $("default-ctl").innerHTML = !sel ? "" : sel.id === state.defaultLoopId
+      ? '<span class="small muted">★ default</span>'
+      : '<button class="btn-quiet" data-setdefault="' + sel.id + '" style="min-height:32px;padding:2px 4px">☆ Make default</button>';
+    $("hunger-seg").innerHTML = HUNGER.map(h => '<button data-h="' + h.v + '" aria-pressed="' + (flow.hunger === h.v) + '"><span class="he" aria-hidden="true">' + h.e + "</span><small>" + h.l + "</small></button>").join("");
+    const hungry = flow.hunger >= 4;
+    const hints = { 1: "Not hungry. This is the loop talking, and your card will handle it.", 2: "Barely hungry. This is mostly the loop, so run your card.",
+      3: "A bit hungry. Your card gets a planned-snack step at the end.", 4: "Real hunger. You'll get a proper-snack card instead.", 5: "Real hunger. You'll get a proper-snack card instead." };
+    $("hunger-hint").hidden = !flow.hunger;
+    $("hunger-hint").textContent = hints[flow.hunger] || "";
+    $("deal-btn").textContent = hungry ? "🍎 Deal a proper-snack card" : "Deal my card";
+    $("deal-btn").disabled = !sel;
+    renderHomeStatus();
+  }
+
+  function renderHomeStatus() {
+    const loop = loopById(flow.loopId);
+    const box = $("home-status");
+    if (!loop) { box.innerHTML = ""; return; }
+    const c = classify(loop);
+    box.innerHTML = '<details class="more"><summary>How ' + esc(loop.name) + ' is going</summary><div class="more-body">' +
+      '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + "</span>" + dotsHTML(loop, 8) + "</div>" +
+      '<p class="small">' + esc(c.advice) + "</p></div></details>";
+  }
+
+  // The step that carries the card's timer: the first one about waiting or breathing, else the first action.
+  function timedIndex(steps) {
+    let i = steps.findIndex(st => !st.mod && !st.trig && /\b(wait|minutes?|timer|breath|breathe|brews?|until|task|craving)\b/i.test(st.text));
+    if (i < 0) for (let j = steps.length - 1; j >= 0; j--) { if (!steps[j].mod && !steps[j].trig) { i = j; break; } }
+    return i;
+  }
+
+  function dealCard(randomise) {
+    const loop = loopById(flow.loopId); if (!loop) return;
+    stopTimer();
+    if (randomise) {
+      const pool = KOGNEMS.filter(k => k.id !== (flow.test && flow.test.k));
+      const k = pool[Math.floor(Math.random() * pool.length)];
+      flow.test = { k: k.id, mods: [], action: k.plays[Math.floor(Math.random() * k.plays.length)], secs: k.secs, gen: 1, wild: true };
+    } else if (flow.hunger >= 4) {
+      // Real hunger: eat on purpose instead of running the loop's card. Logged as hunger, outside the loop's Ψ.
+      flow.test = Object.assign(clone(loop.test), { mods: [], secs: 300, hunger: true,
+        action: "Go to the kitchen. Get a plate. Put a proper snack on it: fruit, yogurt or something with protein. Sit down at a table. Eat it slowly." });
+    } else {
+      flow.test = clone(loop.test);
+      if (flow.hunger === 3 && !/\b(eat it|eat them|portion)\b/i.test(flow.test.action)) flow.test.extra = ["Still hungry? Go to the kitchen.", "Get a plate and put a planned snack on it.", "Sit down to eat it."];
+    }
+    flow.steps = stepsFor(flow.test);
+    // The loop's trigger is the first thing to confirm: catch the moment, then run the card.
+    if (loop.closure && !flow.test.hunger) flow.steps.unshift({ text: "Stop at the moment: " + loop.closure.replace(/[.\s]+$/, "") + ".", trig: true });
+    flow.timedIdx = timedIndex(flow.steps);
+    flow.cur = 0; flow.endAt = 0; flow.alerted = false;
+    renderRun();
+    showStep("u-card");
+  }
+
+  function runStepsHTML() {
+    const total = effSecs(flow.test);
+    return '<ol class="run-list">' + flow.steps.map((st, i) => {
+      const state = i < flow.cur ? "done" : i === flow.cur ? "cur" : "todo";
+      const timed = i === flow.timedIdx;
+      let inner = '<span class="tick" aria-hidden="true">' + (state === "done" ? "✓" : i + 1) + '</span><span class="txt">' + esc(st.text) +
+        (timed && state !== "cur" ? '<span class="dur">⏱ ' + fmtSecs(total) + "</span>" : "") +
+        (state === "cur" && !(timed && flow.endAt) && !(timed && i === 0) ? '<span class="tap">Tap when done</span>' : "") + "</span>";
+      if (state === "cur" && timed && flow.endAt) {
+        inner += '<span class="st-timer"><span class="num" id="run-num">' + fmtSecs(total) + '</span><span class="tbar"><i id="run-bar"></i></span><span class="sub" id="run-sub">Stay with it. Tap when done.</span></span>';
+      }
+      const li = '<li class="' + state + (st.mod ? " ismod" : "") + (state === "cur" && flow.alerted ? " timeup" : "") + '">' +
+        '<button type="button" data-step="' + i + '"' + (state !== "cur" ? ' tabindex="-1"' : "") + ">" + inner + "</button>";
+      const startBtn = state === "cur" && timed && !flow.endAt && i === 0
+        ? '<button type="button" class="btn-primary st-start" data-start="1">▶ Start ' + fmtSecs(total) + " timer</button>" : "";
+      return li + startBtn + "</li>";
+    }).join("") + "</ol>";
+  }
+
+  function renderRun() {
+    const loop = loopById(flow.loopId);
+    $("dealt-card").innerHTML = cardHTML(flow.test, loop, { run: true });
+    $("redraw-btn").hidden = flow.cur > 0;
+    if (flow.endAt) updateTimer();
+  }
+
+  function tickStep(i) {
+    if (i !== flow.cur) return;
+    if (i === flow.timedIdx) stopTimer();
+    flow.cur++;
+    if (flow.cur >= flow.steps.length) { renderRun(); setTimeout(() => { if ($("u-card").hidden) return; if (flow.test.hunger) { $("outcome-note").value = ""; logOutcome("hungry"); } else showOutcome(); }, 450); return; }
+    if (flow.cur === flow.timedIdx) startTimer(); else renderRun();
+    const cur = document.querySelector(".run-list li.cur");
+    if (cur) cur.scrollIntoView({ block: "nearest" });
+  }
+
+  let audioCtx = null;
+  function beep(freq, dur) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.12, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function startTimer() {
+    flow.total = effSecs(flow.test);
+    flow.endAt = Date.now() + flow.total * 1000;
+    flow.alerted = false;
+    beep(660, 0.15);
+    try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(w => { flow.wake = w; }).catch(() => {}); } catch (e) {}
+    renderRun();
+    clearInterval(flow.tick);
+    flow.tick = setInterval(updateTimer, 200);
+    updateTimer();
+  }
+  function updateTimer() {
+    const num = document.getElementById("run-num"); if (!num) return;
+    const left = Math.max(0, (flow.endAt - Date.now()) / 1000);
+    num.textContent = fmtSecs(left);
+    document.getElementById("run-bar").style.width = (100 * (1 - left / flow.total)).toFixed(1) + "%";
+    const frac = left / flow.total;
+    document.getElementById("run-sub").textContent = left <= 0 ? "Time's up. Tap to tick it off." : frac > 0.66 ? "The urge is peaking. Stay with it." : frac > 0.33 ? "Stay with it." : "Almost there.";
+    if (left <= 0 && !flow.alerted) {
+      flow.alerted = true; clearInterval(flow.tick);
+      beep(880, 0.35); setTimeout(() => beep(1175, 0.4), 250);
+      try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch (e) {}
+      releaseWake();
+      const cur = document.querySelector(".run-list li.cur"); if (cur) cur.classList.add("timeup");
+    }
+  }
+  function releaseWake() { try { flow.wake && flow.wake.release(); } catch (e) {} flow.wake = null; }
+  function stopTimer() { clearInterval(flow.tick); releaseWake(); }
+
+  function showOutcome(onlyMissed) {
+    stopTimer();
+    const k = flow.test ? K[flow.test.k] : null;
+    const list = onlyMissed ? OUTCOMES.filter(o => o.id === "missed" || o.id === "hungry") : OUTCOMES;
+    $("outcome-list").innerHTML = list.map(o =>
+      '<button class="outcome" data-out="' + o.id + '" title="' + esc(o.desc) + '"><span class="oe" aria-hidden="true">' + o.emoji + '</span><span class="ol">' + o.label + '</span><span class="sw ' + o.cls + '"></span></button>'
+    ).join("");
+    $("outcome-note").value = "";
+    showStep("u-outcome");
+  }
+
+  function logOutcome(out) {
+    const loop = loopById(flow.loopId); if (!loop) return;
+    const test = flow.test || loop.test;
+    state.logs.push({ id: uid("log"), t: Date.now(), loopId: loop.id, hunger: flow.hunger || 0, k: test.k, mods: (test.mods || []).slice(),
+      gen: test.gen || 1, key: testKey(test.k, test.mods, test.gen), outcome: out, note: $("outcome-note").value.trim() });
+    state.lastLoopId = loop.id;
+    save();
+    const c = classify(loop);
+    const o = OUT[out];
+    const heads = { new: "Nice. A new habit ran.", old: "Logged. The old habit won this one.", hun: "Real hunger, handled on purpose." };
+    $("result-body").innerHTML =
+      '<span class="eyebrow">' + esc(loop.emoji || "") + " " + esc(loop.name) + "</span>" +
+      "<h2>" + o.emoji + " " + heads[o.cls] + "</h2>" +
+      '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + "</span>" + dotsHTML(loop, 8) + "</div>" +
+      '<details class="more"><summary>More info</summary><div class="more-body"><p>' + esc(c.advice) + '</p><p class="muted">' + (o.cls === "old"
+        ? "One run doesn't decide anything. What matters is whether the old habit keeps winning across runs."
+        : o.cls === "new" ? "One run is a good moment. Enough of them in a row make a new habit." : "This run is left out of the loop's Ψ.") + "</p></div></details>";
+    const acts = $("result-actions");
+    if (c.cls === "zero") {
+      acts.innerHTML = '<button class="btn-primary btn-block" data-mutate="' + loop.id + '">Mutate the card → gen ' + ((loop.test.gen || 1) + 1) + "</button>";
+    } else if (o.cls === "old") {
+      acts.innerHTML = '<button class="btn-quiet" data-mutate="' + loop.id + '">Change the card anyway</button>';
+    } else acts.innerHTML = "";
+    flow.test = null; flow.hunger = 0;
+    showStep("u-result");
+    renderAll();
+  }
+
+  $("result-actions").addEventListener("click", e => { const b = e.target.closest("[data-mutate]"); if (b) openMutate(b.dataset.mutate, true); });
+
+  // ---------- Mutation ----------
+  // A mutation changes exactly one thing about a loop's card and starts the next generation.
+  // The generation being replaced is archived with how it did, so the lineage stays readable.
+  function archiveGen(loop, change, reason) {
+    const key = testKey(loop.test.k, loop.test.mods, loop.test.gen);
+    const runs = state.logs.filter(l => l.loopId === loop.id && l.key === key && l.outcome !== "hungry");
+    const c = classify(loop);
+    loop.history = loop.history || [];
+    loop.history.push({ gen: loop.test.gen || 1, k: loop.test.k, mods: (loop.test.mods || []).slice(), action: loop.test.action,
+      secs: loop.test.secs, closure: loop.closure, runs: runs.length, nNew: runs.filter(l => outClass(l.outcome) === "new").length,
+      psi: c.label, cls: c.cls, ended: Date.now(), change, reason });
+  }
+
+  const WHY = [
+    { id: "late", label: "The card fired too late", rec: "earlier" },
+    { id: "strong", label: "The urge outlasted the card", rec: "longer" },
+    { id: "fit", label: "The action didn't fit the moment", rec: "rewrite" },
+    { id: "forgot", label: "I forgot the card existed", rec: "addmod" },
+    { id: "stale", label: "This operator feels used up", rec: "operator" }
+  ];
+  const mut = { loopId: "", why: "", open: "", fromResult: false };
+
+  function mutationOptions(loop) {
+    const t = loop.test, k = K[t.k];
+    const longer = Math.min(3600, Math.round((Number(t.secs) || k.secs) * 1.5));
+    const opts = [
+      { id: "earlier", icon: "⤒", title: "Insert earlier", desc: "Move the closure point one step upstream so the card fires before the loop has momentum." },
+      { id: "rewrite", icon: "✎", title: "Rewrite the action", desc: "Same operator, different move. Iterative rewrite in its purest form." },
+      { id: "longer", icon: "×1.5", title: "Longer timer", desc: "Run the card for " + fmtSecs(longer) + " instead of " + fmtSecs(t.secs) + "." }
+    ];
+    if ((t.mods || []).length < 2) opts.push({ id: "addmod", icon: "+", title: "Add a modifier", desc: "Change how the card is delivered, not what it does." });
+    if ((t.mods || []).length) opts.push({ id: "dropmod", icon: "−", title: "Drop a modifier", desc: "Check whether the modifier is helping or only adding friction." });
+    opts.push({ id: "operator", icon: "⇄", title: "Switch operator", desc: "The biggest jump. Use it when a family has had two or three generations without Ψ ≠ 0." });
+    return opts;
+  }
+
+  function openMutate(loopId, fromResult) {
+    const loop = loopById(loopId); if (!loop) return;
+    mut.loopId = loopId; mut.why = ""; mut.open = ""; mut.fromResult = !!fromResult;
+    renderMutate();
+    $("mutate").hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function closeMutate() { $("mutate").hidden = true; document.body.style.overflow = ""; }
+
+  function renderMutate() {
+    const loop = loopById(mut.loopId); if (!loop) return closeMutate();
+    const c = classify(loop);
+    const rec = mut.why ? (WHY.find(w => w.id === mut.why) || {}).rec : (c.nMissed >= 3 ? "earlier" : "");
+    const t = loop.test, k = K[t.k];
+    let html = '<div class="spread"><div class="stack" style="gap:2px"><span class="eyebrow">' + esc(loop.name) + '</span><h2 id="mut-title">Mutate gen ' + (t.gen || 1) + ' → gen ' + ((t.gen || 1) + 1) + '</h2></div><button class="btn-quiet" data-mclose="1" aria-label="Close">Close</button></div>';
+    html += cardHTML(t, null, { small: true });
+    html += '<div class="spread"><span class="psi ' + c.cls + '">' + c.label + '</span><span class="small muted mono">' + c.nNew + "/" + c.recent.length + " new in window</span></div>";
+    html += '<div class="stack" style="gap:6px"><span class="eyebrow">What went wrong? (optional)</span><div class="row">' +
+      WHY.map(w => '<button class="chip" data-why="' + w.id + '" aria-pressed="' + (mut.why === w.id) + '">' + esc(w.label) + "</button>").join("") + "</div></div>";
+    html += '<div class="stack" style="gap:8px"><span class="eyebrow">Change one thing</span>';
+    mutationOptions(loop).forEach(o => {
+      const open = mut.open === o.id;
+      html += '<button class="mut-opt' + (rec === o.id ? " rec" : "") + '" data-mopt="' + o.id + '" aria-expanded="' + open + '"><span class="mi">' + esc(o.icon) + "</span><b>" + esc(o.title) + '</b><span class="md">' + esc(o.desc) + "</span></button>";
+      if (open) html += '<div class="mut-body">' + mutationBody(o.id, loop) + '<button class="btn-primary" data-mapply="' + o.id + '">Deal gen ' + ((t.gen || 1) + 1) + "</button></div>";
+    });
+    html += "</div>";
+    $("mutate-inner").innerHTML = html;
+  }
+
+  function mutationBody(id, loop) {
+    const t = loop.test, k = K[t.k];
+    if (id === "earlier") return '<label class="f" for="m-closure">New closure point, one step earlier<input id="m-closure" value="' + esc(loop.closure) + '" placeholder="e.g. the moment I think about standing up"></label>' +
+      '<p class="small muted">Was: ' + esc(loop.closure || "not declared") + ". Picture the loop backwards: what happens just before that?</p>";
+    if (id === "rewrite") return '<label class="f" for="m-action">New action<input id="m-action" value="' + esc(t.action) + '"></label>' +
+      '<div class="row">' + k.plays.filter(p => p !== t.action).map((p, i) => '<button class="chip" data-mplay="' + esc(p) + '" style="text-align:left">' + esc(p) + "</button>").join("") + "</div>";
+    if (id === "longer") return '<p class="small">The card keeps its action and modifiers. Only the timer changes.</p>';
+    if (id === "addmod") return '<div class="modgrid">' + Object.values(MODS).filter(m => !(t.mods || []).includes(m.id)).map(m =>
+      '<button class="modtoggle" data-mmod="' + m.id + '" aria-pressed="false"><b><span class="mono" style="color:var(--accent)">' + esc(m.glyph) + "</span> " + esc(m.name) + '</b><span class="muted">' + esc(m.text) + "</span></button>").join("") + "</div>";
+    if (id === "dropmod") return '<div class="modgrid">' + (t.mods || []).map(mid => MODS[mid]).filter(Boolean).map(m =>
+      '<button class="modtoggle" data-mmod="' + m.id + '" aria-pressed="false"><b>− ' + esc(m.name) + '</b><span class="muted">' + esc(m.text) + "</span></button>").join("") + "</div>";
+    if (id === "operator") return '<label class="f" for="m-k">New operator<select id="m-k">' + KOGNEMS.filter(x => x.id !== t.k).map(x =>
+      '<option value="' + x.id + '"' + (x.name === suggestNext(t.k) ? " selected" : "") + ">" + x.code + " · " + x.name + "</option>").join("") + "</select></label>" +
+      '<p class="small muted">Modifiers carry over. The action resets to the new operator\'s first snack play, and you can rewrite it later.</p>';
+    return "";
+  }
+
+  let mutPick = "";
+  $("mutate").addEventListener("click", e => {
+    if (e.target === $("mutate") || e.target.closest("[data-mclose]")) return closeMutate();
+    const w = e.target.closest("[data-why]");
+    if (w) { mut.why = mut.why === w.dataset.why ? "" : w.dataset.why; const r = (WHY.find(x => x.id === mut.why) || {}).rec; if (r) mut.open = r; mutPick = ""; renderMutate(); return; }
+    const o = e.target.closest("[data-mopt]");
+    if (o) { mut.open = mut.open === o.dataset.mopt ? "" : o.dataset.mopt; mutPick = ""; renderMutate(); return; }
+    const pl = e.target.closest("[data-mplay]");
+    if (pl) { const inp = document.getElementById("m-action"); if (inp) inp.value = pl.dataset.mplay; return; }
+    const mm = e.target.closest("[data-mmod]");
+    if (mm) { mutPick = mm.dataset.mmod; document.querySelectorAll("[data-mmod]").forEach(b => b.setAttribute("aria-pressed", b === mm)); return; }
+    const ap = e.target.closest("[data-mapply]");
+    if (ap) applyMutation(ap.dataset.mapply);
+  });
+
+  function applyMutation(kind) {
+    const loop = loopById(mut.loopId); if (!loop) return;
+    const t = clone(loop.test);
+    let change = "", closure = loop.closure;
+    if (kind === "earlier") {
+      const v = (document.getElementById("m-closure").value || "").trim();
+      if (!v || v === loop.closure) return toast("Write the earlier moment first");
+      closure = v; change = "Inserted earlier: " + v;
+    } else if (kind === "rewrite") {
+      const v = (document.getElementById("m-action").value || "").trim();
+      if (!v || v === t.action) return toast("Change the action text first");
+      t.action = v; change = "Rewrote the action";
+    } else if (kind === "longer") {
+      const was = Number(t.secs) || K[t.k].secs;
+      t.secs = Math.min(3600, Math.round(was * 1.5)); change = "Timer " + fmtSecs(was) + " → " + fmtSecs(t.secs);
+    } else if (kind === "addmod") {
+      if (!mutPick) return toast("Pick a modifier first");
+      t.mods = (t.mods || []).concat(mutPick); change = "Added " + MODS[mutPick].name;
+    } else if (kind === "dropmod") {
+      if (!mutPick) return toast("Pick the modifier to drop");
+      t.mods = (t.mods || []).filter(m => m !== mutPick); change = "Dropped " + MODS[mutPick].name;
+    } else if (kind === "operator") {
+      const nk = document.getElementById("m-k").value;
+      change = "Switched " + K[t.k].name + " → " + K[nk].name;
+      t.k = nk; t.action = K[nk].plays[0]; t.secs = K[nk].secs;
+    }
+    const why = (WHY.find(w => w.id === mut.why) || {}).label || "";
+    archiveGen(loop, change, why);
+    t.gen = (loop.test.gen || 1) + 1;
+    delete t.wild;
+    loop.test = t; loop.closure = closure;
+    delete loop.example;
+    save();
+    closeMutate();
+    toast("Gen " + t.gen + " dealt: " + change);
+    if (mut.fromResult) { showStep("u-checkin"); flow.loopId = loop.id; }
+    renderAll();
+  }
+
+  function openAddLoop() {
+    const have = new Set(state.loops.map(l => l.name.trim().toLowerCase()));
+    $("add-grid").innerHTML = TEMPLATES.filter(t => !have.has(t.name.toLowerCase())).map(t => {
+      const k = K[t.test.k];
+      return '<button class="ltile" data-tpl="' + t.tid + '"><span class="le" aria-hidden="true">' + t.emoji + '</span><span class="ln">' + esc(t.name) + '</span><span class="lk">' + k.emoji + " " + k.name + "</span></button>";
+    }).join("") + '<button class="ltile add" data-tpl="blank"><span class="le" aria-hidden="true">✏️</span><span class="ln">Write my own</span></button>';
+    $("addloop").hidden = false; document.body.style.overflow = "hidden";
+  }
+  function closeAddLoop() { $("addloop").hidden = true; document.body.style.overflow = ""; }
+  $("addloop").addEventListener("click", e => {
+    if (e.target === $("addloop") || e.target.closest("[data-aclose]")) return closeAddLoop();
+    const b = e.target.closest("[data-tpl]"); if (!b) return;
+    if (b.dataset.tpl === "blank") {
+      const loop = { id: uid("loop"), emoji: "🍪", name: "New loop", cue: "", auto: "", payoff: "", closure: "", history: [],
+        test: { k: "pause", mods: [], action: K.pause.plays[0], secs: K.pause.secs, gen: 1 } };
+      state.loops.push(loop); openLoopId = loop.id; draftMods = null; save(); closeAddLoop(); renderAll(); setTab("loops");
+      setTimeout(() => { const el = document.getElementById("ed-name"); el && (el.select(), el.scrollIntoView({ block: "center" })); }, 30);
+      return;
+    }
+    const loop = loopFromTemplate(TPL[b.dataset.tpl]);
+    state.loops.push(loop); flow.loopId = loop.id; save(); closeAddLoop(); renderAll();
+    toast(loop.emoji + " " + loop.name + " added");
+  });
+
+  function cancelFlow() { stopTimer(); flow.test = null; showStep("u-checkin"); renderCheckin(); }
+
+  $("loop-chips").addEventListener("click", e => {
+    if (e.target.closest("[data-addloop]")) return openAddLoop();
+    const b = e.target.closest("[data-loop]"); if (!b) return;
+    flow.loopId = b.dataset.loop; renderCheckin();
+  });
+  $("default-ctl").addEventListener("click", e => {
+    const b = e.target.closest("[data-setdefault]"); if (!b) return;
+    state.defaultLoopId = b.dataset.setdefault; save(); renderAll(); toast("★ This loop is now your default");
+  });
+  $("hunger-seg").addEventListener("click", e => {
+    const b = e.target.closest("[data-h]"); if (!b) return;
+    const v = Number(b.dataset.h); flow.hunger = flow.hunger === v ? 0 : v; renderCheckin();
+  });
+  $("deal-btn").addEventListener("click", () => {
+    goFullscreenOnce();
+    dealCard(false);
+  });
+  $("already-btn").addEventListener("click", () => {
+    const loop = loopById(flow.loopId); if (!loop) return;
+    flow.test = clone(loop.test); showOutcome(true);
+  });
+  $("redraw-btn").addEventListener("click", () => dealCard(true));
+  $("run-log-btn").addEventListener("click", () => { if (flow.test && flow.test.hunger) { stopTimer(); $("outcome-note").value = ""; logOutcome("hungry"); } else showOutcome(); });
+  $("dealt-card").addEventListener("click", e => {
+    if (e.target.closest("[data-start]")) { startTimer(); return; }
+    const b = e.target.closest("[data-step]"); if (b) tickStep(Number(b.dataset.step));
+  });
+  $("outcome-list").addEventListener("click", e => { const b = e.target.closest("[data-out]"); if (b) logOutcome(b.dataset.out); });
+  $("result-home-btn").addEventListener("click", () => { flow.loopId = ""; showStep("u-checkin"); renderCheckin(); });
+  document.querySelectorAll(".u-cancel").forEach(b => b.addEventListener("click", cancelFlow));
+
+  // ---------- Loops tab ----------
+  let openLoopId = "";
+  function renderLoops() {
+    const box = $("loops-list");
+    if (!state.loops.length) { box.innerHTML = '<div class="empty">No loops yet. Add the snack moment that happens most often.</div>'; return; }
+    box.innerHTML = state.loops.map(loop => {
+      const c = classify(loop);
+      const open = openLoopId === loop.id;
+      let html = '<div class="panel" data-loopcard="' + loop.id + '">';
+      html += '<div class="loop-head"><div class="stack" style="gap:4px"><h3>' + esc(loop.emoji || "") + " " + esc(loop.name) + (loop.id === state.defaultLoopId ? ' <span class="small" style="color:var(--accent)">★</span>' : "") + (loop.example ? '<span class="example-tag">example</span>' : "") + "</h3>";
+      html += '<p class="rule-line"><b>WHEN</b>' + esc(loop.cue || "…") + " <b>THEN</b>" + esc(loop.auto || "…") + "</p></div>";
+      html += '<span class="psi ' + c.cls + '">' + c.label + "</span></div>";
+      html += cardHTML(loop.test, null, { small: true });
+      html += '<div class="spread">' + dotsHTML(loop, 8) + '<span class="row" style="gap:0"><button class="btn-quiet" data-mutate="' + loop.id + '">Mutate</button><button class="btn-quiet" data-edit="' + loop.id + '">' + (open ? "Close" : "Edit") + "</button></span></div>";
+      html += '<details class="more"><summary>More info</summary><div class="more-body"><p class="small">' + esc(c.advice) + "</p></div></details>";
+      if (open) html += editorHTML(loop);
+      html += "</div>";
+      return html;
+    }).join("");
+  }
+
+  function editorHTML(loop) {
+    const t = loop.test, k = K[t.k];
+    const f = (id, label, val, ph) => '<label class="f" for="' + id + '">' + label + '<input id="' + id + '" value="' + esc(val) + '" placeholder="' + esc(ph) + '"></label>';
+    let html = '<form class="stack ed" data-form="' + loop.id + '" style="border-top:1px dashed var(--line); padding-top:12px">';
+    html += '<span class="eyebrow">Declare the rule</span>';
+    html += f("ed-name", "Loop name", loop.name, "e.g. Afternoon desk slump");
+    html += '<span class="f">Emoji</span><div class="emoji-row" id="ed-emoji-row">' + LOOP_EMOJIS.map(em => '<button type="button" data-emoji="' + em + '" aria-pressed="' + (em === loop.emoji) + '">' + em + "</button>").join("") + "</div>";
+    html += '<input type="hidden" id="ed-emoji" value="' + esc(loop.emoji || "🍪") + '">';
+    html += '<label class="check" for="ed-default"><input type="checkbox" id="ed-default"' + (loop.id === state.defaultLoopId ? " checked" : "") + '> ★ Default loop (the Urge screen opens on this one)</label>';
+    html += f("ed-cue", "When (cue and context)", loop.cue, "e.g. 3 to 4pm, energy dips at my desk");
+    html += f("ed-auto", "I automatically…", loop.auto, "e.g. walk to the kitchen and grab biscuits");
+    html += f("ed-payoff", "It gives me (payoff)", loop.payoff, "e.g. a break, a sugar hit");
+    html += f("ed-closure", "Step 1, the moment you stop (the last moment before the habit completes)", loop.closure, "e.g. hand on the cupboard door");
+    html += '<span class="eyebrow" style="margin-top:6px">The one change under test</span>';
+    html += '<label class="f" for="ed-k">Kognem<select id="ed-k">' + KOGNEMS.map(x => '<option value="' + x.id + '"' + (x.id === t.k ? " selected" : "") + ">" + x.code + " · " + x.name + "</option>").join("") + "</select></label>";
+    html += '<label class="f" for="ed-play">Snack play<select id="ed-play"><option value="">Custom (type below)</option>' + k.plays.map((p, i) => '<option value="' + i + '"' + (p === t.action ? " selected" : "") + ">" + esc(p) + "</option>").join("") + "</select></label>";
+    html += '<label class="f" for="ed-action">What to do (one sentence per step)<input id="ed-action" value="' + esc(t.action) + '"></label>';
+    html += '<label class="f" for="ed-secs">Timer, seconds<input id="ed-secs" type="number" min="5" max="3600" value="' + esc(t.secs) + '" inputmode="numeric"></label>';
+    html += '<span class="f">Modifiers (up to 2)</span><div class="modgrid" id="ed-mods">' + Object.values(MODS).map(m => {
+      const on = (t.mods || []).includes(m.id);
+      const full = !on && (t.mods || []).length >= 2;
+      return '<button type="button" class="modtoggle" data-mod="' + m.id + '" aria-pressed="' + on + '"' + (full ? " disabled" : "") + '><b><span class="mono" style="color:var(--accent)">' + esc(m.glyph) + "</span> " + esc(m.name) + '</b><span class="muted">' + esc(m.text) + "</span></button>";
+    }).join("") + "</div>";
+    html += '<p class="small muted">Changing the kognem or modifiers starts a new test. Past runs stay in the log but won\'t count toward the new Ψ.</p>';
+    html += '<div class="row"><button type="submit" class="btn-primary">Save loop</button><button type="button" class="btn-ghost" data-cancel="1">Cancel</button>';
+    html += '<span style="flex:1"></span><button type="button" class="btn-danger" data-del="' + loop.id + '" style="min-height:40px">Delete</button></div>';
+    html += "</form>";
+    return html;
+  }
+
+  let draftMods = null;
+  $("loops-list").addEventListener("click", e => {
+    const mb = e.target.closest("[data-mutate]");
+    if (mb) { openMutate(mb.dataset.mutate); return; }
+    const em = e.target.closest("[data-emoji]");
+    if (em) { const form = em.closest("form"); form.querySelector("#ed-emoji").value = em.dataset.emoji; form.querySelectorAll("[data-emoji]").forEach(b => b.setAttribute("aria-pressed", b === em)); return; }
+    const ed = e.target.closest("[data-edit]");
+    if (ed) { openLoopId = openLoopId === ed.dataset.edit ? "" : ed.dataset.edit; draftMods = null; renderLoops(); if (openLoopId) setTimeout(() => { const el = document.querySelector('[data-form="' + openLoopId + '"]'); el && el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 30); return; }
+    const mt = e.target.closest("[data-mod]");
+    if (mt) {
+      const form = mt.closest("form"); const loop = loopById(form.dataset.form);
+      if (!draftMods) draftMods = (loop.test.mods || []).slice();
+      const id = mt.dataset.mod, i = draftMods.indexOf(id);
+      if (i >= 0) draftMods.splice(i, 1); else if (draftMods.length < 2) draftMods.push(id);
+      form.querySelectorAll("[data-mod]").forEach(b => {
+        const on = draftMods.includes(b.dataset.mod);
+        b.setAttribute("aria-pressed", on); b.disabled = !on && draftMods.length >= 2;
+      });
+      return;
+    }
+    if (e.target.closest("[data-cancel]")) { openLoopId = ""; draftMods = null; renderLoops(); return; }
+    const del = e.target.closest("[data-del]");
+    if (del) {
+      if (del.dataset.armed) {
+        state.loops = state.loops.filter(l => l.id !== del.dataset.del);
+        state.logs = state.logs.filter(l => l.loopId !== del.dataset.del);
+        openLoopId = ""; save(); renderAll(); toast("Loop deleted");
+      } else { del.dataset.armed = "1"; del.textContent = "Tap again to delete loop and its runs"; }
+    }
+  });
+  $("loops-list").addEventListener("change", e => {
+    const form = e.target.closest("form"); if (!form) return;
+    if (e.target.id === "ed-k") {
+      const k = K[e.target.value];
+      form.querySelector("#ed-play").innerHTML = '<option value="">Custom (type below)</option>' + k.plays.map((p, i) => '<option value="' + i + '"' + (i === 0 ? " selected" : "") + ">" + esc(p) + "</option>").join("");
+      form.querySelector("#ed-action").value = k.plays[0];
+      form.querySelector("#ed-secs").value = k.secs;
+    }
+    if (e.target.id === "ed-play" && e.target.value !== "") {
+      const k = K[form.querySelector("#ed-k").value];
+      form.querySelector("#ed-action").value = k.plays[Number(e.target.value)];
+    }
+  });
+  $("loops-list").addEventListener("submit", e => {
+    e.preventDefault();
+    const form = e.target; const loop = loopById(form.dataset.form); if (!loop) return;
+    const v = id => form.querySelector("#" + id).value.trim();
+    const k = v("ed-k");
+    const sig = (t, closure) => JSON.stringify([t.k, (t.mods || []).slice().sort(), t.action, Number(t.secs), closure]);
+    const nextTest = { k, mods: draftMods ? draftMods.slice() : (loop.test.mods || []).slice(), action: v("ed-action") || K[k].plays[0],
+      secs: Math.min(3600, Math.max(5, parseInt(v("ed-secs"), 10) || K[k].secs)), gen: loop.test.gen || 1 };
+    if (sig(loop.test, loop.closure) !== sig(nextTest, v("ed-closure"))) {
+      archiveGen(loop, "Edited by hand", "");
+      nextTest.gen = (loop.test.gen || 1) + 1;
+    }
+    loop.name = v("ed-name") || "Untitled loop";
+    loop.emoji = v("ed-emoji") || "🍪";
+    if (form.querySelector("#ed-default").checked) state.defaultLoopId = loop.id;
+    else if (state.defaultLoopId === loop.id) state.defaultLoopId = "";
+    loop.cue = v("ed-cue"); loop.auto = v("ed-auto"); loop.payoff = v("ed-payoff"); loop.closure = v("ed-closure");
+    loop.test = nextTest;
+    delete loop.example;
+    openLoopId = ""; draftMods = null; save(); renderAll(); toast("Loop saved");
+  });
+  $("new-loop-btn").addEventListener("click", openAddLoop);
+
+  // ---------- Deck tab ----------
+  function renderDeck() {
+    $("deck-mine").innerHTML = state.loops.length ? state.loops.map(loop => {
+      const c = classify(loop);
+      const hist = (loop.history || []).slice().reverse();
+      let h = '<div class="panel"><div class="spread"><h3>' + esc(loop.emoji || "") + " " + esc(loop.name) + '</h3><span class="psi ' + c.cls + '">' + c.label + "</span></div>";
+      h += cardHTML(loop.test, null, { small: true });
+      h += '<ul class="lineage"><li class="now"><b>Gen ' + (loop.test.gen || 1) + "</b> · live · " + c.runs + " run" + (c.runs === 1 ? "" : "s") + "</li>";
+      hist.forEach(g => {
+        h += "<li><b>Gen " + g.gen + "</b> · " + esc(K[g.k] ? K[g.k].name : g.k) + ((g.mods || []).length ? " + " + g.mods.map(m => MODS[m] ? MODS[m].name : m).join(", ") : "") +
+          ' · <span class="mono">' + g.nNew + "/" + g.runs + '</span> new · <span class="psi ' + g.cls + '" style="font-size:.7rem;padding:1px 6px">' + esc(g.psi) + "</span>" +
+          '<div class="small muted">→ ' + esc(g.change) + (g.reason ? " (" + esc(g.reason) + ")" : "") + "</div></li>";
+      });
+      h += "</ul>";
+      h += '<div class="row" style="justify-content:flex-end"><button class="btn-quiet" data-mutate="' + loop.id + '">Mutate card</button></div></div>';
+      return h;
+    }).join("") : '<div class="empty">Add a loop to start your deck.</div>';
+    const stats = cardStats();
+    $("deck-kognems").innerHTML = KOGNEMS.map(k => {
+      const s = stats[k.id];
+      return '<details class="kd"><summary>' +
+        '<div class="kcard small-card"><span class="bg-glyph" aria-hidden="true">' + k.glyph + "</span>" +
+        '<div class="spread"><div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + " · " + fmtSecs(k.secs) + '</div><div class="kname">' + k.name + "</div></div></div>" +
+        (s && s.n ? '<span class="psi ' + (s.rate >= 0.6 ? "mut" : s.rate <= 0.3 ? "zero" : "drift") + '">' + Math.round(s.rate * 100) + "% · " + s.n + "</span>" : "") + "</div>" +
+        '<p class="small muted more-hint">Tap for snack ideas</p></div></summary>' +
+        '<div class="stack" style="padding:10px 4px 4px; gap:8px"><p class="small">' + esc(k.what) + '</p><p class="small"><b>For snacking:</b> ' + esc(k.snack) + '</p><ul class="plays">' + k.plays.map(p => "<li>" + esc(p) + "</li>").join("") + '</ul><p class="small muted"><b>Counts as the old rule when:</b> ' + esc(k.fail) + "</p></div></details>";
+    }).join("");
+    $("deck-mods").innerHTML = MOD_GROUPS.map(g =>
+      '<div class="stack" style="gap:6px"><span class="eyebrow">' + g.name + '</span><div class="modgrid">' +
+      g.mods.map(m => '<div class="modtoggle" style="border:1px solid var(--line); border-radius:10px; background:var(--surface)"><b><span class="mono" style="color:var(--accent)">' + esc(m.glyph) + "</span> " + esc(m.name) + '</b><span class="muted">' + esc(m.text) + "</span></div>").join("") +
+      "</div></div>").join("");
+  }
+
+  // ---------- Log tab ----------
+  function cardStats() {
+    const s = {};
+    state.logs.forEach(l => {
+      if (l.outcome === "hungry" || l.imported) return;
+      s[l.k] = s[l.k] || { n: 0, win: 0 };
+      s[l.k].n++; if (outClass(l.outcome) === "new") s[l.k].win++;
+    });
+    Object.values(s).forEach(x => { x.rate = x.n ? x.win / x.n : 0; });
+    return s;
+  }
+
+  function renderLog() {
+    const logs = state.logs.filter(l => !l.imported);
+    const since = Date.now() - 14 * 864e5;
+    const recent = logs.filter(l => l.t >= since && l.outcome !== "hungry");
+    const newRate = recent.length ? Math.round(100 * recent.filter(l => outClass(l.outcome) === "new").length / recent.length) : null;
+    const withH = logs.filter(l => l.hunger);
+    const lowH = withH.length ? Math.round(100 * withH.filter(l => l.hunger <= 2).length / withH.length) : null;
+    $("log-stats").innerHTML =
+      '<div class="stat"><div class="v">' + logs.length + '</div><div class="l">urges logged</div></div>' +
+      '<div class="stat"><div class="v" style="color:var(--good)">' + (newRate == null ? "–" : newRate + "%") + '</div><div class="l">new rule ran, last 14 days</div></div>' +
+      '<div class="stat"><div class="v" style="color:var(--accent)">' + (lowH == null ? "–" : lowH + "%") + '</div><div class="l">at hunger 1–2 (the loop, not your stomach)</div></div>';
+
+    // Hour chart
+    const bins = Array.from({ length: 24 }, () => ({ new: 0, old: 0, hun: 0 }));
+    logs.forEach(l => { bins[new Date(l.t).getHours()][outClass(l.outcome)]++; });
+    const max = Math.max(1, ...bins.map(b => b.new + b.old + b.hun));
+    const W = 480, H = 130, padL = 22, padB = 20, padT = 8, bw = (W - padL) / 24;
+    const y = v => padT + (H - padT - padB) * (1 - v / max);
+    let svg = '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Urges by hour of day">';
+    [0, max].forEach(v => {
+      svg += '<line x1="' + padL + '" x2="' + W + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)" stroke-width="1"></line>';
+      svg += '<text x="' + (padL - 5) + '" y="' + (y(v) + 4) + '" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--mono)">' + v + "</text>";
+    });
+    bins.forEach((b, h) => {
+      let base = 0; const x = padL + h * bw + 2, w = bw - 4;
+      [["new", "var(--good)"], ["old", "var(--bad)"], ["hun", "var(--warn)"]].forEach(([k, col]) => {
+        if (!b[k]) return;
+        const y1 = y(base + b[k]), y0 = y(base);
+        svg += '<rect x="' + x.toFixed(1) + '" y="' + y1.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (y0 - y1).toFixed(1) + '" fill="' + col + '" rx="1.5"></rect>';
+        base += b[k];
+      });
+    });
+    [0, 6, 12, 18].forEach(h => {
+      svg += '<text x="' + (padL + h * bw + bw / 2) + '" y="' + (H - 5) + '" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--mono)">' + String(h).padStart(2, "0") + ":00</text>";
+    });
+    svg += "</svg>";
+    $("hour-chart").innerHTML = logs.length ? svg : '<div class="empty">Your urge times will show here after the first few logs. Most people find one or two peak hours.</div>';
+
+    // Card table
+    const st = cardStats();
+    const rows = KOGNEMS.filter(k => st[k.id]).sort((a, b) => st[b.id].rate - st[a.id].rate);
+    $("card-table").innerHTML = rows.length
+      ? "<table><thead><tr><th>Card</th><th class=\"n\">Runs</th><th class=\"n\">New rule</th><th></th></tr></thead><tbody>" +
+        rows.map(k => '<tr><td><span class="mono" style="color:var(--accent)">' + k.glyph + "</span> " + k.name + '</td><td class="n">' + st[k.id].n + '</td><td class="n">' + Math.round(st[k.id].rate * 100) + '%</td><td><div class="bar"><i style="width:' + Math.round(st[k.id].rate * 100) + '%"></i></div></td></tr>').join("") +
+        "</tbody></table>"
+      : '<div class="empty">No runs yet. Cards are ranked here by how often a new rule ran.</div>';
+
+    // History
+    const hist = state.logs.slice(-60).reverse();
+    $("history").innerHTML = hist.length ? hist.map(l => {
+      const loop = loopById(l.loopId), o = OUT[l.outcome], k = K[l.k];
+      const d = new Date(l.t);
+      const when = d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return '<li><span class="dot ' + outClass(l.outcome) + '"></span><div><b>' + esc(o ? o.label : l.outcome) + '</b> <span class="muted">· ' + esc(loop ? loop.name : "deleted loop") + "</span>" +
+        '<div class="small muted">' + (k ? k.name : "") + ((l.mods || []).length ? " + " + l.mods.map(m => MODS[m] ? MODS[m].name : m).join(", ") : "") + (l.hunger ? " · hunger " + l.hunger : "") + "</div>" +
+        (l.note ? '<div class="small">' + esc(l.note) + "</div>" : "") + '</div><span class="small muted mono">' + (l.imported ? "import" : when) + "</span></li>";
+    }).join("") : '<li class="empty" style="display:block">Nothing logged yet. When the next snack urge hits, open the Urge tab.</li>';
+  }
+
+  // Backup
+  $("export-btn").addEventListener("click", () => {
+    const txt = JSON.stringify(state);
+    const fb = () => { const t = $("export-fallback"); t.hidden = false; t.value = txt; t.select(); toast("Select all and copy the text below"); };
+    try { navigator.clipboard.writeText(txt).then(() => toast("Backup copied"), fb); } catch (e) { fb(); }
+  });
+  $("import-toggle-btn").addEventListener("click", () => { $("import-box").hidden = !$("import-box").hidden; });
+  $("import-btn").addEventListener("click", () => {
+    try {
+      const s = JSON.parse($("import-text").value);
+      if (!s || !Array.isArray(s.loops) || !Array.isArray(s.logs)) throw new Error("shape");
+      state = s; normalize(); save(); renderAll(); $("import-box").hidden = true; $("import-text").value = ""; toast("Backup restored");
+    } catch (e) { toast("That isn't a Snack Deck backup. Paste the full copied text."); }
+  });
+  $("reset-btn").addEventListener("click", () => { $("reset-btn").hidden = true; $("reset-confirm-btn").hidden = false; setTimeout(() => { $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; }, 5000); });
+  $("reset-confirm-btn").addEventListener("click", () => {
+    state = { v: 2, loops: clone(EXAMPLE_LOOPS), logs: [], lastLoopId: "" }; normalize(); save(); flow.loopId = ""; renderAll();
+    $("reset-btn").hidden = false; $("reset-confirm-btn").hidden = true; toast("Reset to example loops");
+  });
+
+  // ---------- Version, full screen, self-update ----------
+  const VERSION = "v1 · 11 Oct 2026";
+  const inClaude = !!(window.claude && typeof window.claude.use === "function");
+  const topLevel = (() => { try { return window.self === window.top; } catch (e) { return false; } })();
+  const fsRoot = document.documentElement;
+  const fsReq = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;
+  const fsExit = document.exitFullscreen || document.webkitExitFullscreen;
+  const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const standalone = !!(window.navigator.standalone || (window.matchMedia && (matchMedia("(display-mode: fullscreen)").matches || matchMedia("(display-mode: standalone)").matches)));
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  let fsAsked = false;
+  function enterFs() { try { const r = fsReq.call(fsRoot, { navigationUI: "hide" }); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+  function toggleFs() { if (isFs()) { try { fsExit.call(document); } catch (e) {} } else enterFs(); }
+  function goFullscreenOnce() { if (fsAsked || !fsReq || !topLevel || inClaude || standalone || isFs()) return; fsAsked = true; enterFs(); }
+  function initShell() {
+    $("ver-home").textContent = VERSION.split(" ·")[0];
+    $("ver-menu").textContent = VERSION;
+    const canFs = !!fsReq && topLevel && !inClaude;
+    $("fs-btn").hidden = !canFs; $("fs-menu-btn").hidden = !canFs;
+    $("fs-btn").addEventListener("click", toggleFs); $("fs-menu-btn").addEventListener("click", toggleFs);
+    const sync = () => { $("fs-menu-btn").textContent = isFs() ? "Exit full screen" : "Full screen"; };
+    document.addEventListener("fullscreenchange", sync); document.addEventListener("webkitfullscreenchange", sync); sync();
+    const iosHint = isIOS && !standalone && topLevel && !inClaude;
+    $("ios-hint").hidden = !iosHint; $("ios-hint-menu").hidden = !iosHint;
+    // The hosted copy is often cached: check for a newer published version on load and every few minutes.
+    if (inClaude || !/^https?:$/.test(location.protocol)) return;
+    const check = () => fetch(location.pathname + "?_=" + Date.now(), { cache: "no-store" })
+      .then(r => r.ok ? r.text() : "").then(t => {
+        const m = t.match(/const VERSION = "([^"]+)"/);
+        if (!m || m[1] === VERSION) return;
+        const html = '<div class="upd">🔄 New version ' + esc(m[1].split(" ·")[0]) + ' <button class="btn-primary" data-upd="' + esc(m[1].split(" ·")[0]) + '">Update now</button></div>';
+        $("upd-home").innerHTML = html; $("upd-menu").innerHTML = html;
+      }).catch(() => {});
+    document.addEventListener("click", e => { const b = e.target.closest("[data-upd]"); if (b) location.replace(location.pathname + "?v=" + encodeURIComponent(b.dataset.upd)); });
+    check(); setInterval(check, 4 * 60 * 1000);
+  }
+
+  // ---------- Shell ----------
+  let toastT = null;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
+
+  function setTab(name) {
+    document.querySelectorAll("nav.tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+    ["urge", "loops", "deck", "log"].forEach(t => { $("tab-" + t).hidden = t !== name; });
+    document.body.classList.toggle("running", name === "urge" && (!$("u-card").hidden || !$("u-checkin").hidden));
+    try { sessionStorage.setItem("ksd_tab", name); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+
+  function renderAll(remote) {
+    if (!$("u-checkin").hidden) renderCheckin(); else renderHomeStatus();
+    if (!(remote && openLoopId)) renderLoops();
+    renderDeck(); renderLog();
+    if (remote && !$("mutate").hidden) renderMutate();
+    if (!$("sync-note")) return;
+    $("sync-note").textContent = sync.status === "cloud" ? "Your loops and logs are saved to your account. A backup is still handy before big changes." : "Copy a backup now and then. Paste it back here to restore it or move it to another device.";
+  }
+  $("deck-mine").addEventListener("click", e => { const b = e.target.closest("[data-mutate]"); if (b) openMutate(b.dataset.mutate); });
+  document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (!$("mutate").hidden) closeMutate(); if (!$("addloop").hidden) closeAddLoop(); });
+
+  load();
+  renderCheckin();
+  renderLoops(); renderDeck(); renderLog();
+  const hashTab = (location.hash || "").slice(1);
+  let startTab = ["urge", "loops", "deck", "log"].includes(hashTab) ? hashTab : "urge";
+  try { const s = sessionStorage.getItem("ksd_tab"); if (!hashTab && s) startTab = s; } catch (e) {}
+  setTab(startTab);
+  connectDb();
+  initShell();
+})();
+</script>
+</body>
+</html>
