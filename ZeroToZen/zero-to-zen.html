@@ -253,23 +253,30 @@ const COURSES=[5,10,15,20];
 // g = voice (how often the guide speaks), m = music level,
 // sf = share of the sit spent in silence, n = how many silences it is split into, b = bell pattern.
 // Each step changes one thing: when the music drops, the voice comes back up to carry you;
-// when the voice drops, the music and silence hold you. Silences grow longer and fewer-but-bigger.
+// when the voice drops, the music and silence hold you. Silences grow longer, then fewer but bigger.
 const LESSONS=[
- {t:'Zero',          d:'Full guidance with gentle music. A voice walks you through every breath.',                        g:1,   m:1,   sf:0,   n:0, b:'ends'},
- {t:'First Pause',   d:'The music eases back a little, and a short silence appears. The voice explains what to do.',       g:1,   m:.85, sf:.06, n:1, b:'ends'},
- {t:'Settling',      d:'The voice leaves a bit more room. The music stays, so the quiet feels held.',                      g:.85, m:.85, sf:.10, n:1, b:'ends'},
- {t:'Quarter Bells', d:'The music drops further, so the voice comes back to guide you. Bells mark each quarter.',          g:.95, m:.65, sf:.12, n:2, b:'quarters'},
- {t:'Fewer Words',   d:'Fewer spoken cues, with the music and silences holding you.',                                      g:.75, m:.65, sf:.18, n:2, b:'quarters'},
- {t:'Space',         d:'The music thins again, and the voice steps back in to support you through longer silences.',       g:.85, m:.45, sf:.22, n:2, b:'quarters'},
- {t:'Longer Pauses', d:'The voice relaxes while the music stays soft. Three silences, each a little longer.',              g:.6,  m:.45, sf:.30, n:3, b:'quarters'},
- {t:'Soft Music',    d:'The music becomes a faint colour. The voice is a little more present to compensate.',              g:.7,  m:.25, sf:.35, n:3, b:'quarters'},
- {t:'Distant Guide', d:'Voice eases to short, spaced cues, with the faint music still beneath you.',                       g:.45, m:.25, sf:.45, n:3, b:'quarters'},
- {t:'Almost Silent', d:'The music nearly disappears. The guide holds steady while silences take up half the sit.',         g:.55, m:.08, sf:.50, n:3, b:'quarters'},
- {t:'A Few Whispers',d:'Only a word or two now. A bell marks the middle, and the silences stretch.',                       g:.3,  m:.08, sf:.60, n:3, b:'half'},
- {t:'Open & Close',  d:'Music ends. The voice returns a little to bridge the gap. Long silences, a bell at each end.',     g:.4,  m:0,   sf:.65, n:3, b:'ends'},
- {t:'One Bell',      d:'Barely any voice. One bell to begin, then mostly silence. A soft light marks the end.',            g:.2,  m:0,   sf:.80, n:2, b:'start'},
- {t:'Zen',           d:'Nothing. No voice, no music, no bell, no tone. Only you and the time.',                            g:0,   m:0,   sf:1,   n:0, b:'none'},
+ {t:"Zero", d:"Full guidance with gentle music. A voice walks you through every breath.", g:1, m:1, sf:0, n:0, b:"ends"},
+ {t:"Soft Landing", d:"The music eases back a touch. Everything else stays just as it was.", g:1, m:0.9, sf:0, n:0, b:"ends"},
+ {t:"First Pause", d:"A short silence appears for the first time. The voice explains what to do.", g:1, m:0.9, sf:0.05, n:1, b:"ends"},
+ {t:"Settling", d:"The voice leaves a little more room. The music stays, so the quiet feels held.", g:0.9, m:0.9, sf:0.08, n:1, b:"ends"},
+ {t:"Quarter Bells", d:"The music drops, so the voice steps back up to guide you. Bells now mark each quarter.", g:1, m:0.75, sf:0.1, n:2, b:"quarters"},
+ {t:"Fewer Words", d:"Fewer spoken cues. The music and the silences hold you.", g:0.85, m:0.75, sf:0.13, n:2, b:"quarters"},
+ {t:"Thinner Music", d:"The music thins, and the voice comes back to support you.", g:0.95, m:0.6, sf:0.17, n:2, b:"quarters"},
+ {t:"Space", d:"The voice relaxes into longer gaps while the silences stretch.", g:0.75, m:0.6, sf:0.21, n:2, b:"quarters"},
+ {t:"Longer Pauses", d:"The music drops again; the voice returns. Three silences, each a little longer.", g:0.85, m:0.45, sf:0.26, n:3, b:"quarters"},
+ {t:"Breathing Room", d:"The voice steps back. Longer stretches are yours alone.", g:0.65, m:0.45, sf:0.31, n:3, b:"quarters"},
+ {t:"Soft Music", d:"The music becomes a faint colour; the voice is a little more present to compensate.", g:0.75, m:0.3, sf:0.37, n:3, b:"quarters"},
+ {t:"Short Cues", d:"The guide eases to short, spaced cues. Faint music still beneath you.", g:0.55, m:0.3, sf:0.43, n:3, b:"quarters"},
+ {t:"Distant Guide", d:"Music fades further, so the voice stays with you through longer silences.", g:0.65, m:0.18, sf:0.49, n:3, b:"quarters"},
+ {t:"One Word", d:"The voice drops to a word here and there. The music is nearly a whisper.", g:0.45, m:0.18, sf:0.55, n:3, b:"quarters"},
+ {t:"Almost Silent", d:"The music nearly disappears. Silence takes up more than half the sit.", g:0.55, m:0.08, sf:0.61, n:3, b:"quarters"},
+ {t:"A Few Whispers", d:"Only a few words now. A bell marks the middle, and the silences stretch.", g:0.35, m:0.08, sf:0.67, n:3, b:"half"},
+ {t:"No Music", d:"The music ends. The voice returns a little to bridge the gap.", g:0.45, m:0, sf:0.67, n:3, b:"half"},
+ {t:"Open & Close", d:"The voice thins again. A bell to begin, a bell to end, long silences between.", g:0.3, m:0, sf:0.74, n:2, b:"ends"},
+ {t:"One Bell", d:"Barely any voice. One bell to begin, then mostly silence. A soft light marks the end.", g:0.15, m:0, sf:0.82, n:2, b:"start"},
+ {t:"Zen", d:"Nothing. No voice, no music, no bell, no tone. Only you and the time.", g:0, m:0, sf:1, n:0, b:"none"},
 ];
+const NL=LESSONS.length;
 const BELLS={none:[],start:[0],ends:[0,1],half:[0,.5,1],quarters:[0,.25,.5,.75,1]};
 
 /* ---------- guidance clip bank ---------- */
@@ -326,6 +333,14 @@ const KEY='zerotozen.v1';
 const defState=()=>({done:{5:[],10:[],15:[],20:[]},silSeen:{5:0,10:0,15:0,20:0},last:null,log:[],set:{voiceVol:1,captions:false,vol:.9,amb:'off',ambVol:.5,bells:'lesson',zenChime:false,showTimer:true,reduce:false}});
 let st=defState();
 try{const j=JSON.parse(localStorage.getItem(KEY));if(j){st=Object.assign(defState(),j);st.set=Object.assign(defState().set,j.set||{});st.done=Object.assign(defState().done,j.done||{});st.silSeen=Object.assign(defState().silSeen,j.silSeen||{})}}catch(e){}
+// progress saved under the old 14-lesson layout is mapped onto the 20-lesson one
+(function migrate(){
+  if(st.v>=2)return;
+  const mp=k=>Math.round(1+(k-1)*(NL-1)/13);
+  for(const c of Object.keys(st.done))st.done[c]=[...new Set(st.done[c].map(mp))].sort((a,b)=>a-b);
+  if(st.last&&st.last.l)st.last.l=mp(st.last.l);
+  st.v=2;
+})();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 const dstr=d=>{d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const today=()=>dstr();
@@ -341,9 +356,9 @@ function target(){
   const L=st.last;
   if(!L)return{c:5,l:1,why:'Begin your first sit'};
   if(L.done&&L.date!==today()){
-    if(L.l<14)return{c:L.c,l:L.l+1,why:'Next step in your course'};
+    if(L.l<NL)return{c:L.c,l:L.l+1,why:'Next step in your course'};
     const i=COURSES.indexOf(L.c);
-    return i<3?{c:COURSES[i+1],l:1,why:'Course complete. Onward to '+COURSES[i+1]+' minutes'}:{c:L.c,l:14,why:'You’ve reached Zen. Sit again'};
+    return i<3?{c:COURSES[i+1],l:1,why:'Course complete. Onward to '+COURSES[i+1]+' minutes'}:{c:L.c,l:NL,why:'You’ve reached Zen. Sit again'};
   }
   return{c:L.c,l:L.l,why:L.done?'Sit again today':'Pick up where you left off'};
 }
@@ -386,11 +401,11 @@ function metersHTML(L){
          '<span>Bells</span><div class="dots">'+dots+'</div></div>';
 }
 function renderCourses(){
-  $('#tabs').innerHTML=COURSES.map(c=>'<button class="tab'+(c===viewCourse?' on':'')+'" data-c="'+c+'"><b>'+c+'</b><small>'+st.done[c].length+'/14</small></button>').join('');
+  $('#tabs').innerHTML=COURSES.map(c=>'<button class="tab'+(c===viewCourse?' on':'')+'" data-c="'+c+'"><b>'+c+'</b><small>'+st.done[c].length+'/'+NL+'</small></button>').join('');
   $$('#tabs .tab').forEach(b=>b.onclick=()=>{viewCourse=+b.dataset.c;renderCourses()});
   const dn=st.done[viewCourse].length;
-  $('#progBar').style.width=(dn/14*100)+'%';
-  $('#courseNote').textContent=(dn>=14?'Course complete. ':'')+'14 lessons, one a day. Each step changes one thing at a time, and silences grow longer as you go. Tap any lesson to sit it, and repeat whenever you like.'+(satToday()?' You’ve already sat today. Come back tomorrow for the next step, or repeat any lesson now.':'');
+  $('#progBar').style.width=(dn/NL*100)+'%';
+  $('#courseNote').textContent=(dn>=NL?'Course complete. ':'')+NL+' lessons, one a day. Each step changes one thing at a time, and silences grow longer as you go. Tap any lesson to sit it, and repeat whenever you like.'+(satToday()?' You’ve already sat today. Come back tomorrow for the next step, or repeat any lesson now.':'');
   const t=target();
   $('#lessonGrid').innerHTML=LESSONS.map((L,i)=>{
     const n=i+1,isNext=t.c===viewCourse&&t.l===n;
@@ -402,7 +417,7 @@ function renderCourses(){
 }
 function openSheet(c,l){
   const L=LESSONS[l-1];
-  $('#sheetHost').innerHTML='<div class="sheet" id="sheet"><div class="box"><div class="sub">'+c+' minutes · Lesson '+l+' of 14</div><h3>'+L.t+'</h3><p>'+L.d+'</p>'+metersHTML(L)+
+  $('#sheetHost').innerHTML='<div class="sheet" id="sheet"><div class="box"><div class="sub">'+c+' minutes · Lesson '+l+' of '+NL+'</div><h3>'+L.t+'</h3><p>'+L.d+'</p>'+metersHTML(L)+
     '<div class="acts"><button class="link" id="shClose">Close</button><button class="cta" id="shGo">Begin · '+c+' min</button></div></div></div>';
   $('#shClose').onclick=closeSheet;
   $('#sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet()};
@@ -657,7 +672,7 @@ function planSilence(L,D,seen){
   const total=clamp(L.sf*D,MINLEN*n,avail*.97);
   const slack=D-mins-total;
   const w=[...Array(n)].map((_,i)=>.85+.3*(n>1?i/(n-1):.5)),ws=w.reduce((a,b)=>a+b,0);
-  const lens=w.map(x=>total*x/ws);
+  const lens=w.map(x=>MINLEN+(total-MINLEN*n)*x/ws); // every silence is at least MINLEN, the rest grows through the sit
   // voice gets the spare time earlier in the sit; the middle gaps share the rest
   let t=seg0(n)+slack*(n>1?.4:.6);
   const out=[];
@@ -836,13 +851,13 @@ function teardown(){
 function showDone(s){
   const L=LESSONS[s.l-1];
   let msg;
-  if(s.l===14&&s.c===20)msg='You sat for twenty minutes, in complete silence. That’s the whole course. Sit whenever you like. The silence will be there.';
-  else if(s.l===14)msg='You sat for '+s.c+' minutes with nothing at all. That is Zen. When you’re ready, the '+COURSES[COURSES.indexOf(s.c)+1]+'-minute course is waiting.';
+  if(s.l===NL&&s.c===20)msg='You sat for twenty minutes, in complete silence. That’s the whole course. Sit whenever you like. The silence will be there.';
+  else if(s.l===NL)msg='You sat for '+s.c+' minutes with nothing at all. That is Zen. When you’re ready, the '+COURSES[COURSES.indexOf(s.c)+1]+'-minute course is waiting.';
   else{
     const n=LESSONS[s.l];
     msg=s.c+' minutes done. Tomorrow’s lesson: “'+n.t+'”. '+n.d;
   }
-  $('#doneTitle').textContent=s.l===14?'Zen':'Lesson '+s.l+' complete';
+  $('#doneTitle').textContent=s.l===NL?'Zen':'Lesson '+s.l+' complete';
   $('#doneText').textContent=msg;
   show('done');
 }
