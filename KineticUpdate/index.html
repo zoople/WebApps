@@ -301,6 +301,41 @@
   .st-start { grid-column: 2; margin-top: 6px; min-height: 40px; padding: 6px 14px; justify-self: start; }
   @media (prefers-reduced-motion: no-preference) { .run-list li.cur.timeup button { animation: pulse 1s ease-in-out infinite; } @keyframes pulse { 50% { background: var(--good-soft); border-color: var(--good); } } }
 
+  .quick { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left;
+    padding: clamp(12px, 2.4vh, 20px) 18px; border-radius: 18px; background: var(--accent); color: var(--accent-ink); border: 0; box-shadow: var(--shadow); }
+  .quick .q-top { font-family: var(--display); font-weight: 800; font-size: clamp(1.4rem, 4vh, 1.9rem); line-height: 1.1; }
+  .quick .q-sub { font-weight: 400; font-size: 0.92rem; opacity: 0.9; }
+  .or-line { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+  .or-line #default-ctl .btn-quiet { min-height: 30px; padding: 2px 4px; font-size: 0.8rem; text-transform: none; letter-spacing: 0; }
+  .compact-home .ltile { min-height: clamp(48px, 7.5vh, 62px) !important; flex-direction: row; align-items: center; gap: 8px; padding: 8px 10px !important; }
+  .compact-home .ltile .le { font-size: clamp(1.3rem, 3.4vh, 1.6rem) !important; }
+  .compact-home .ltile .ln { font-size: 0.92rem; }
+  .compact-home .ltile .lk { display: none; }
+  .compact-home .ltile .star { top: 4px; right: 6px; font-size: 0.75rem; }
+  .compact-home .ltile[aria-pressed="true"]::after { height: 3px; }
+  .btn-ink { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  /* One step at a time */
+  .prog { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.8rem; color: var(--muted); font-weight: 700; }
+  .pdots { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .pdots i { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); }
+  .pdots i.d { background: var(--good); } .pdots i.c { background: var(--accent); }
+  .now { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; gap: clamp(8px, 1.6vh, 14px); min-height: 0; padding: 6px 2px; }
+  .now-emoji { font-size: clamp(2.6rem, 8vh, 4rem); line-height: 1; }
+  .now-text { font-family: var(--display); font-weight: 800; font-size: clamp(1.35rem, 4vh, 2rem); line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
+  .now-tag { font-size: 0.82rem; color: var(--muted); }
+  .now .st-timer { margin: 0; }
+  .now-actions { flex: none; display: grid; grid-template-columns: 1fr 2.2fr; gap: 8px; }
+  .now-actions .btn-quiet { border: 1px solid var(--line); }
+  .now-done { min-height: clamp(52px, 8vh, 64px); font-size: 1.12rem; font-family: var(--display); }
+  .now-done:disabled { background: var(--surface-2); color: var(--muted); border-color: var(--line); cursor: not-allowed; font-family: var(--mono); }
+  .show-all { flex: none; align-self: flex-start; min-height: 32px; padding: 2px 0; font-size: 0.82rem; }
+  .all-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.9rem; }
+  .all-list li { display: grid; grid-template-columns: 22px 24px 1fr; gap: 6px; align-items: start; color: var(--muted); }
+  .all-list li.d { text-decoration: line-through; }
+  .all-list li.c { color: var(--ink); font-weight: 700; }
+  #dealt-card .kcard { display: flex; flex-direction: column; }
+
   .loop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .ltile { position: relative; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 12px 12px;
     min-height: 118px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 400; overflow: hidden; }
@@ -366,17 +401,17 @@
   <section id="tab-urge" class="stack" style="gap:16px">
     <!-- Step: check-in -->
     <div id="u-checkin">
-      <div class="spread"><span class="eyebrow">What's pulling you?</span><span id="default-ctl"></span></div>
       <p id="ios-hint" class="small muted" hidden>📱 Full screen on iPhone: Share → Add to Home Screen.</p>
+      <button id="quick-btn" class="quick"><span class="q-top">⚡ Quick draw</span><span class="q-sub" id="quick-sub"></span></button>
+      <div class="or-line"><span>or choose</span><span id="default-ctl"></span></div>
       <div class="home-loops">
-        <div id="loop-chips" class="loop-grid"></div>
+        <div id="loop-chips" class="loop-grid compact-home"></div>
         <div id="home-status"></div>
       </div>
       <div class="home-foot">
-        <span class="eyebrow">How hungry is your body?</span>
-        <div id="hunger-seg" class="hunger" role="group" aria-label="Body hunger 1 to 5"></div>
+        <div id="hunger-seg" class="hunger" role="group" aria-label="How hungry is your body, 1 to 5"></div>
         <p id="hunger-hint" class="small" hidden></p>
-        <button id="deal-btn" class="btn-primary btn-block">Deal my card</button>
+        <button id="deal-btn" class="btn-ink btn-block">Deal my card</button>
         <div class="spread home-meta">
           <button id="already-btn" class="btn-quiet">I already ate it</button>
           <span class="row" style="gap:4px"><span class="ver-tag mono" id="ver-home"></span><button id="fs-btn" class="btn-quiet" hidden aria-label="Full screen">⛶</button></span>
@@ -389,7 +424,7 @@
     <div id="u-card" hidden>
       <div id="dealt-card"></div>
       <div class="run-foot">
-        <button id="run-log-btn" class="btn-primary btn-block">Log what happened</button>
+        <button id="run-log-btn" class="btn-ghost btn-block">Stop and log what happened</button>
         <div class="row" style="justify-content:space-between">
           <button id="redraw-btn" class="btn-quiet">Draw a different card</button>
           <button class="btn-quiet u-cancel">Cancel</button>
@@ -940,8 +975,8 @@
     if (test.hunger) html += '<div class="corner"><span class="glyph" aria-hidden="true">🍎</span><div><div class="code">REAL HUNGER · ' + fmtSecs(effSecs(test)) + '</div><div class="kname">Proper snack</div></div></div>';
     else html += '<div class="corner"><span class="glyph" aria-hidden="true">' + k.emoji + '</span><div><div class="code">' + k.code + (test.wild ? " · WILD CARD · " : " · GEN " + (test.gen || 1) + " · ") + fmtSecs(effSecs(test)) + '</div><div class="kname">' + k.name + "</div></div></div>";
     if (loop && !small && loop.closure && !test.hunger && !(opts && opts.run)) html += '<p class="card-when">Triggered by: <b>' + esc(loop.closure) + "</b></p>";
-    if (opts && opts.run) html += '<p class="run-hint">' + (flow.hunger ? HUNGER[flow.hunger - 1].e + " Hunger " + flow.hunger + ". " : "") + 'Tap each step when it\'s done.</p>' + runStepsHTML();
-    else html += stepsHTML(test);
+    if (opts && opts.run) { html += runViewHTML() + "</div>"; return html; }
+    html += stepsHTML(test);
     if (!small && !test.hunger && (mods.length || (loop && (loop.cue || loop.payoff)))) {
       html += '<details class="more"><summary>More info</summary><div class="more-body">';
       mods.forEach(m => { html += "<p><b>" + esc(m.name) + (m.when === "setup" ? " (set up beforehand)" : "") + ":</b> " + esc(m.when === "setup" ? m.step : m.text) + "</p>"; });
@@ -974,13 +1009,14 @@
         '<span class="le" aria-hidden="true">' + esc(l.emoji || "🍪") + '</span><span class="ln">' + esc(l.name) + '</span><span class="lk">' + k.emoji + " " + k.name + "</span></button>";
     }).join("") + '<button class="add-slim" data-addloop="1">＋ Add a loop</button>';
     const sel = loopById(flow.loopId);
-    $("default-ctl").innerHTML = !sel ? "" : sel.id === state.defaultLoopId
-      ? '<span class="small muted">★ default</span>'
-      : '<button class="btn-quiet" data-setdefault="' + sel.id + '" style="min-height:32px;padding:2px 4px">☆ Make default</button>';
+    $("default-ctl").innerHTML = !sel || sel.id === state.defaultLoopId ? ""
+      : '<button class="btn-quiet" data-setdefault="' + sel.id + '">☆ Make default</button>';
+    const q = loopById(pickLoop());
+    $("quick-sub").textContent = q ? (q.emoji || "") + " " + q.name + " · " + K[q.test.k].emoji + " " + K[q.test.k].name : "Add a loop first";
+    $("quick-btn").disabled = !q;
     $("hunger-seg").innerHTML = HUNGER.map(h => '<button data-h="' + h.v + '" aria-pressed="' + (flow.hunger === h.v) + '"><span class="he" aria-hidden="true">' + h.e + "</span><small>" + h.l + "</small></button>").join("");
     const hungry = flow.hunger >= 4;
-    const hints = { 1: "Not hungry. This is the loop talking, and your card will handle it.", 2: "Barely hungry. This is mostly the loop, so run your card.",
-      3: "A bit hungry. Your card gets a planned-snack step at the end.", 4: "Real hunger. You'll get a proper-snack card instead.", 5: "Real hunger. You'll get a proper-snack card instead." };
+    const hints = { 1: "👍 That's the loop, not hunger.", 2: "👍 That's mostly the loop.", 3: "➕ Adds a snack step at the end.", 4: "🍎 You'll get a proper-snack card.", 5: "🍎 You'll get a proper-snack card." };
     $("hunger-hint").hidden = !flow.hunger;
     $("hunger-hint").textContent = hints[flow.hunger] || "";
     $("deal-btn").textContent = hungry ? "🍎 Deal a proper-snack card" : "Deal my card";
@@ -999,6 +1035,17 @@
   }
 
   // The step that carries the card's timer: the first one about waiting or breathing, else the first action.
+  // A friendly emoji for each step, picked from what the step asks you to do.
+  const STEP_EMOJI = [
+    [/\bstop at the moment\b/i, "✋"], [/\bwait\b|minutes?\b/i, "⏳"], [/\bbreath/i, "🌬️"], [/\bdrink\b/i, "🥤"], [/\bwater\b|\btap\b/i, "💧"],
+    [/\bkettle|\btea\b|brews?/i, "☕"], [/\bteeth\b/i, "🪥"], [/\bgum\b|\bmint\b/i, "🍬"], [/\bfruit|apple/i, "🍎"],
+    [/\bfridge\b|yogurt|egg\b/i, "🧊"], [/carrots?|cucumber/i, "🥕"], [/\bplate\b|portion/i, "🍽️"], [/\bsit down|\bsit\b|feet flat/i, "🪑"],
+    [/\bkitchen\b/i, "🍳"], [/\bwalk|\broom\b|turn around|go and/i, "🚶"], [/\bsay\b|out loud/i, "🗣️"], [/\bwrite|\bpen\b|notes/i, "✍️"],
+    [/\bphone\b|\btext\b/i, "📱"], [/stretch|stand up/i, "🤸"], [/cupboard|put .* away|pack away/i, "🚪"], [/craving|picture/i, "🌊"],
+    [/\btask\b|\bjob\b/i, "✅"], [/\beat\b|bites?\b/i, "🍴"], [/hand on your chest|hand off/i, "✋"], [/decide/i, "🤔"]
+  ];
+  function stepEmoji(st) { if (st.trig) return "✋"; for (const [re, e] of STEP_EMOJI) if (re.test(st.text)) return e; return "👉"; }
+
   function timedIndex(steps) {
     let i = steps.findIndex(st => !st.mod && !st.trig && /\b(wait|minutes?|timer|breath|breathe|brews?|until|task|craving)\b/i.test(st.text));
     if (i < 0) for (let j = steps.length - 1; j >= 0; j--) { if (!steps[j].mod && !steps[j].trig) { i = j; break; } }
@@ -1024,45 +1071,58 @@
     // The loop's trigger is the first thing to confirm: catch the moment, then run the card.
     if (loop.closure && !flow.test.hunger) flow.steps.unshift({ text: "Stop at the moment: " + loop.closure.replace(/[.\s]+$/, "") + ".", trig: true });
     flow.timedIdx = timedIndex(flow.steps);
-    flow.cur = 0; flow.endAt = 0; flow.alerted = false;
+    flow.cur = 0; flow.endAt = 0; flow.alerted = false; flow.showAll = false;
     renderRun();
     showStep("u-card");
   }
 
-  function runStepsHTML() {
-    const total = effSecs(flow.test);
-    return '<ol class="run-list">' + flow.steps.map((st, i) => {
-      const state = i < flow.cur ? "done" : i === flow.cur ? "cur" : "todo";
-      const timed = i === flow.timedIdx;
-      let inner = '<span class="tick" aria-hidden="true">' + (state === "done" ? "✓" : i + 1) + '</span><span class="txt">' + esc(st.text) +
-        (timed && state !== "cur" ? '<span class="dur">⏱ ' + fmtSecs(total) + "</span>" : "") +
-        (state === "cur" && !(timed && flow.endAt) && !(timed && i === 0) ? '<span class="tap">Tap when done</span>' : "") + "</span>";
-      if (state === "cur" && timed && flow.endAt) {
-        inner += '<span class="st-timer"><span class="num" id="run-num">' + fmtSecs(total) + '</span><span class="tbar"><i id="run-bar"></i></span><span class="sub" id="run-sub">Stay with it. Tap when done.</span></span>';
-      }
-      const li = '<li class="' + state + (st.mod ? " ismod" : "") + (state === "cur" && flow.alerted ? " timeup" : "") + '">' +
-        '<button type="button" data-step="' + i + '"' + (state !== "cur" ? ' tabindex="-1"' : "") + ">" + inner + "</button>";
-      const startBtn = state === "cur" && timed && !flow.endAt && i === 0
-        ? '<button type="button" class="btn-primary st-start" data-start="1">▶ Start ' + fmtSecs(total) + " timer</button>" : "";
-      return li + startBtn + "</li>";
-    }).join("") + "</ol>";
+  function runViewHTML() {
+    const n = flow.steps.length, i = flow.cur, st = flow.steps[Math.min(i, n - 1)];
+    const total = effSecs(flow.test), timed = i === flow.timedIdx, finished = i >= n;
+    let h = '<div class="prog"><span>' + (finished ? "All done" : "Step " + (i + 1) + " of " + n) + (flow.hunger ? " · " + HUNGER[flow.hunger - 1].e : "") + '</span><span class="pdots">' +
+      flow.steps.map((x, j) => '<i class="' + (j < i ? "d" : j === i ? "c" : "") + '"></i>').join("") + "</span></div>";
+    h += '<div class="now"><div class="now-emoji" aria-hidden="true">' + (finished ? "🎉" : stepEmoji(st)) + '</div><div class="now-text">' + esc(finished ? "Nice work." : st.text) + "</div>";
+    if (!finished && timed) {
+      h += flow.endAt
+        ? '<div class="st-timer"><span class="num" id="run-num">' + fmtSecs(total) + '</span><span class="tbar"><i id="run-bar"></i></span><span class="sub" id="run-sub">Stay with it.</span></div>'
+        : '<div class="now-tag">⏱ ' + fmtSecs(total) + " timer</div>";
+    }
+    h += "</div>";
+    let label = "✓ Done", locked = false;
+    if (!finished && timed && !flow.alerted) { if (flow.endAt) { locked = true; label = "⏳ " + fmtSecs(Math.max(0, (flow.endAt - Date.now()) / 1000)); } else label = "▶ Start " + fmtSecs(total) + " timer"; }
+    else if (i === n - 1) label = "✓ Finish";
+    h += '<div class="now-actions"><button type="button" class="btn-quiet" data-undo="1"' + (i === 0 ? " disabled" : "") + '>↶ Back</button>' +
+      '<button type="button" class="btn-primary now-done" id="run-done" data-done="1"' + (locked || finished ? " disabled" : "") + ">" + label + "</button></div>";
+    h += '<button type="button" class="btn-quiet show-all" data-toggle-all="1">' + (flow.showAll ? "Hide steps" : "Show all " + n + " steps") + "</button>";
+    if (flow.showAll) h += '<ol class="all-list">' + flow.steps.map((x, j) => '<li class="' + (j < i ? "d" : j === i ? "c" : "") + '"><span class="mono">' + (j < i ? "✓" : j + 1) + "</span><span>" + stepEmoji(x) + "</span><span>" + esc(x.text) + (j === flow.timedIdx ? " ⏱" : "") + "</span></li>").join("") + "</ol>";
+    return h;
   }
 
   function renderRun() {
     const loop = loopById(flow.loopId);
     $("dealt-card").innerHTML = cardHTML(flow.test, loop, { run: true });
     $("redraw-btn").hidden = flow.cur > 0;
-    if (flow.endAt) updateTimer();
+    if (flow.endAt && flow.cur === flow.timedIdx) updateTimer();
   }
 
-  function tickStep(i) {
-    if (i !== flow.cur) return;
-    if (i === flow.timedIdx) stopTimer();
+  function tickStep() {
+    const i = flow.cur;
+    if (i >= flow.steps.length) return;
+    if (i === flow.timedIdx && !flow.alerted) {
+      // Wait steps can't be skipped: the first tap starts the timer, and Done unlocks when it runs out.
+      if (!flow.endAt) startTimer();
+      return;
+    }
     flow.cur++;
-    if (flow.cur >= flow.steps.length) { renderRun(); setTimeout(() => { if ($("u-card").hidden) return; if (flow.test.hunger) { $("outcome-note").value = ""; logOutcome("hungry"); } else showOutcome(); }, 450); return; }
-    if (flow.cur === flow.timedIdx) startTimer(); else renderRun();
-    const cur = document.querySelector(".run-list li.cur");
-    if (cur) cur.scrollIntoView({ block: "nearest" });
+    if (flow.cur >= flow.steps.length) { renderRun(); setTimeout(() => { if ($("u-card").hidden) return; if (flow.test.hunger) { $("outcome-note").value = ""; logOutcome("hungry"); } else showOutcome(); }, 600); return; }
+    if (flow.cur === flow.timedIdx && !flow.alerted) startTimer(); else renderRun();
+  }
+
+  function undoStep() {
+    if (flow.cur === 0) return;
+    if (flow.cur === flow.timedIdx && !flow.alerted) { stopTimer(); flow.endAt = 0; }
+    flow.cur--;
+    renderRun();
   }
 
   let audioCtx = null;
@@ -1088,18 +1148,22 @@
     updateTimer();
   }
   function updateTimer() {
-    const num = document.getElementById("run-num"); if (!num) return;
     const left = Math.max(0, (flow.endAt - Date.now()) / 1000);
-    num.textContent = fmtSecs(left);
-    document.getElementById("run-bar").style.width = (100 * (1 - left / flow.total)).toFixed(1) + "%";
-    const frac = left / flow.total;
-    document.getElementById("run-sub").textContent = left <= 0 ? "Time's up. Tap to tick it off." : frac > 0.66 ? "The urge is peaking. Stay with it." : frac > 0.33 ? "Stay with it." : "Almost there.";
+    const num = document.getElementById("run-num");
+    if (num) {
+      num.textContent = fmtSecs(left);
+      document.getElementById("run-bar").style.width = (100 * (1 - left / flow.total)).toFixed(1) + "%";
+      const frac = left / flow.total;
+      document.getElementById("run-sub").textContent = left <= 0 ? "Time's up. Tap Done." : frac > 0.66 ? "The urge is peaking. Stay with it." : frac > 0.33 ? "Stay with it." : "Almost there.";
+    }
+    const done = document.getElementById("run-done");
+    if (done && !flow.alerted) done.textContent = "⏳ " + fmtSecs(left);
     if (left <= 0 && !flow.alerted) {
       flow.alerted = true; clearInterval(flow.tick);
       beep(880, 0.35); setTimeout(() => beep(1175, 0.4), 250);
       try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch (e) {}
       releaseWake();
-      const cur = document.querySelector(".run-list li.cur"); if (cur) cur.classList.add("timeup");
+      renderRun();
     }
   }
   function releaseWake() { try { flow.wake && flow.wake.release(); } catch (e) {} flow.wake = null; }
@@ -1321,6 +1385,12 @@
     const b = e.target.closest("[data-h]"); if (!b) return;
     const v = Number(b.dataset.h); flow.hunger = flow.hunger === v ? 0 : v; renderCheckin();
   });
+  $("quick-btn").addEventListener("click", () => {
+    goFullscreenOnce();
+    const id = pickLoop(); if (!id) return;
+    flow.loopId = id; flow.hunger = 0;
+    dealCard(false);
+  });
   $("deal-btn").addEventListener("click", () => {
     goFullscreenOnce();
     dealCard(false);
@@ -1332,8 +1402,9 @@
   $("redraw-btn").addEventListener("click", () => dealCard(true));
   $("run-log-btn").addEventListener("click", () => { if (flow.test && flow.test.hunger) { stopTimer(); $("outcome-note").value = ""; logOutcome("hungry"); } else showOutcome(); });
   $("dealt-card").addEventListener("click", e => {
-    if (e.target.closest("[data-start]")) { startTimer(); return; }
-    const b = e.target.closest("[data-step]"); if (b) tickStep(Number(b.dataset.step));
+    if (e.target.closest("[data-done]")) return tickStep();
+    if (e.target.closest("[data-undo]")) return undoStep();
+    if (e.target.closest("[data-toggle-all]")) { flow.showAll = !flow.showAll; renderRun(); }
   });
   $("outcome-list").addEventListener("click", e => { const b = e.target.closest("[data-out]"); if (b) logOutcome(b.dataset.out); });
   $("result-home-btn").addEventListener("click", () => { flow.loopId = ""; showStep("u-checkin"); renderCheckin(); });
@@ -1581,7 +1652,7 @@
   });
 
   // ---------- Version, full screen, self-update ----------
-  const VERSION = "v1 · 11 Oct 2026";
+  const VERSION = "v2 · 11 Oct 2026";
   const inClaude = !!(window.claude && typeof window.claude.use === "function");
   const topLevel = (() => { try { return window.self === window.top; } catch (e) { return false; } })();
   const fsRoot = document.documentElement;
