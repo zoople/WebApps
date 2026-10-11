@@ -120,13 +120,13 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 #bolt{background:radial-gradient(ellipse at 50% 0%,rgba(255,235,170,.28),transparent 65%),radial-gradient(ellipse at 50% 100%,rgba(0,0,0,.55),transparent 70%),var(--tex-bench),#6b4a2c}
 #boltArea{flex:1;position:relative;overflow:hidden;display:flex;justify-content:center;align-items:center}
 #boltBoard{transform-origin:center center;display:flex;flex-wrap:wrap;justify-content:center;gap:18px 8px;--bw:58px;--bh:34px}
-.podium{position:relative;width:calc(var(--bw) + 20px);display:flex;flex-direction:column;align-items:center;cursor:pointer;padding-top:4px}
-.podium .stack{position:relative;width:var(--bw);height:calc(var(--cap)*var(--bh) + 22px)}
+.podium{position:relative;width:calc(var(--bw) + 20px);display:flex;flex-direction:column;align-items:center;cursor:pointer;padding-top:32px}
+.podium .stack{position:relative;width:var(--bw);height:calc(var(--cap)*var(--bh) + 14px)}
 .podium .rod{position:absolute;left:50%;top:0;bottom:0;width:16px;margin-left:-8px;border-radius:8px 8px 0 0;background:repeating-linear-gradient(180deg,#a9b0b8 0 2px,#e9edf1 2px 4px,#6d747c 4px 6px);box-shadow:inset -3px 0 3px rgba(0,0,0,.45),inset 3px 0 3px rgba(255,255,255,.45),0 0 3px rgba(0,0,0,.5)}
 .podium .rod::after{content:"";position:absolute;top:-4px;left:2px;right:2px;height:8px;border-radius:50%;background:radial-gradient(#fff,#9aa3ad)}
 .podium .base{width:calc(var(--bw) + 20px);height:20px;border-radius:12px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,0) 40%,rgba(0,0,0,.4)),var(--tex-metal),#8f98a2;box-shadow:0 5px 8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.7);margin-top:-4px;position:relative}
 .podium .base::after{content:"";position:absolute;left:10px;right:10px;top:-5px;height:8px;border-radius:50%;background:radial-gradient(#555a60,#2c3034)}
-.podium .fullbadge{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;background:radial-gradient(#6fe27e,#2d9a3e);color:#fff;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;border:3px solid #fff3cf;box-shadow:0 0 14px 3px rgba(255,213,74,.95);z-index:6}
+.podium .fullbadge{position:absolute;top:-36px;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;background:radial-gradient(#6fe27e,#2d9a3e);color:#fff;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;border:3px solid #fff3cf;box-shadow:0 0 14px 3px rgba(255,213,74,.95);z-index:6}
 .podium.done .rod{box-shadow:inset -3px 0 3px rgba(0,0,0,.45),inset 3px 0 3px rgba(255,255,255,.45),0 0 14px 3px rgba(255,213,74,.8)}
 .podium.done .bolt{box-shadow:0 0 0 2px #ffd54a,0 0 12px 2px rgba(255,213,74,.9),0 3px 4px rgba(0,0,0,.5);filter:brightness(1.08) saturate(1.1)}
 .podium.done{cursor:default}
@@ -134,6 +134,13 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 @keyframes donePop{25%{transform:scale(1.14)}60%{transform:scale(.97)}100%{transform:scale(1)}}
 .podium .spk{position:absolute;left:50%;top:30%;font-size:16px;pointer-events:none;animation:spk .9s ease-out forwards;z-index:7}
 @keyframes spk{from{transform:translate(-50%,0) scale(.4);opacity:1}to{transform:translate(calc(-50% + var(--dx)),var(--dy)) scale(1.1);opacity:0}}
+.podium .slot{position:absolute;left:3px;right:3px;height:calc(var(--bh) - 6px);bottom:calc(var(--i)*var(--bh) + 4px);border:2px dashed rgba(255,255,255,.4);border-radius:8px;background:rgba(0,0,0,.14);pointer-events:none}
+.podium.capped .rod{background:repeating-linear-gradient(180deg,#b88 0 2px,#fdd 2px 4px,#855 4px 6px)}
+.podium.capped .bolt{filter:saturate(.8)}
+.podium .fullbadge.cap{background:radial-gradient(#ff8a7a,#c43a2c);box-shadow:0 0 12px 2px rgba(255,90,70,.8);font-size:15px}
+.podium.dropok .base{box-shadow:0 0 0 3px #7ee37a,0 0 16px 4px rgba(126,227,122,.85),0 5px 8px rgba(0,0,0,.55);animation:okb 1s infinite}
+@keyframes okb{50%{box-shadow:0 0 0 3px #c6f5c2,0 0 6px 2px rgba(126,227,122,.4),0 5px 8px rgba(0,0,0,.55)}}
+.podium.dropno{opacity:.5;filter:grayscale(.5)}
 .podium.sel .base{box-shadow:0 0 0 3px #ffd54a,0 0 18px 4px rgba(255,213,74,.8),0 5px 8px rgba(0,0,0,.55)}
 .podium.done .base{background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,0) 40%,rgba(0,0,0,.35)),linear-gradient(90deg,#f1d36a,#fff2a8,#d5a92a)}
 .podium.shake{animation:shake .3s}
@@ -321,7 +328,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v17 · 11 Oct 2026';
+const VERSION='v18 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -1882,8 +1889,9 @@ function renderBolt(anim){
   const board=$('#boltBoard');board.style.setProperty('--cap',B.cap);
   board.innerHTML='';
   B.pegs.forEach((a,i)=>{
-    const full=pegDone(a);
-    const p=el(`<div class="podium${B.sel===i?' sel':''}${full?' done':''}${anim&&anim.justdone===i?' justdone':''}" data-i="${i}"><div class="stack"><div class="rod"></div>${full?'<div class="fullbadge">✔</div>':''}${anim&&anim.justdone===i?[0,1,2,3,4,5].map(k=>`<span class="spk" style="--dx:${(k-2.5)*18}px;--dy:${-30-(k%3)*18}px">✨</span>`).join(''):''}</div><div class="base"></div></div>`);
+    const full=pegDone(a),capped=a.length>=B.cap&&!full;
+    const sel=B.sel,okDrop=sel!==null&&sel!==i&&boltCanMove(sel,i),noDrop=sel!==null&&sel!==i&&!okDrop;
+    const p=el(`<div class="podium${B.sel===i?' sel':''}${full?' done':''}${capped?' capped':''}${okDrop?' dropok':''}${noDrop?' dropno':''}${anim&&anim.justdone===i?' justdone':''}" data-i="${i}"><div class="stack"><div class="rod"></div>${Array.from({length:B.cap-a.length},(_,k)=>`<div class="slot" style="--i:${a.length+k}"></div>`).join('')}${full?'<div class="fullbadge">✔</div>':''}${capped?'<div class="fullbadge cap">🔒</div>':''}${anim&&anim.justdone===i?[0,1,2,3,4,5].map(k=>`<span class="spk" style="--dx:${(k-2.5)*18}px;--dy:${-30-(k%3)*18}px">✨</span>`).join(''):''}</div><div class="base"></div></div>`);
     const st=$('.stack',p);
     a.forEach((c,j)=>{
       const hid=B.hid[i][j]&&j<a.length-1&&false; // hidden only while buried (flag cleared on reveal)
