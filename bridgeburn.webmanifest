@@ -1,0 +1,13 @@
+{
+  "name": "Bridgeburn",
+  "short_name": "Bridgeburn",
+  "start_url": "bridgeburn.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#12171f",
+  "theme_color": "#12171f",
+  "icons": [
+    { "src": "bridgeburn-icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "bridgeburn-icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

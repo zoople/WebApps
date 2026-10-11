@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ohm's Law: Picturing Resistance</title>
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="ohms-law.webmanifest">
+<meta name="theme-color" content="#0f1720">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ohm's Law">
+<style>
+  :root{
+    --bg:#0f1720; --panel:#182531; --panel2:#1f2f3d; --border:#2c3e50;
+    --text:#e7edf3; --muted:#93a4b5; --accent:#4fb3ff; --volt:#ffb84f; --amp:#3ecf8e; --ohm:#4fb3ff;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(180deg,#0b1319,#0f1720); color:var(--text); min-height:100vh;
+  }
+  button{font:inherit; cursor:pointer;}
+  .hidden{display:none!important;}
+  #app{max-width:760px; margin:0 auto; padding:calc(12px + var(--safe-t)) 16px calc(60px + var(--safe-b));}
+  .top{display:flex; align-items:flex-start; gap:8px;}
+  .top .grow{flex:1; min-width:0;}
+  .iconbtn{min-width:44px; height:44px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:1.15rem;}
+  h1{font-size:1.4rem; margin:6px 0 2px;}
+  h2{font-size:1.05rem; margin:0 0 10px;}
+  .subtitle{color:var(--muted); font-size:0.9rem;}
+  .ver{color:var(--muted); font-size:0.78rem; margin:4px 0 14px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:12px;}
+  .v{color:var(--volt); font-weight:600;} .a{color:var(--amp); font-weight:600;} .o{color:var(--ohm); font-weight:600;}
+  .big{font-size:1.05rem; background:var(--panel2); border-left:3px solid var(--accent); padding:10px 12px; border-radius:6px; margin-bottom:10px;}
+  table{width:100%; border-collapse:collapse; font-size:0.9rem;}
+  th,td{padding:8px 6px; border-bottom:1px solid var(--border); text-align:left;}
+  th{color:var(--muted); font-weight:500; white-space:nowrap;}
+  td:nth-child(-n+3){white-space:nowrap;}
+  ul{margin:0; padding-left:20px; line-height:1.55;}
+  li+li{margin-top:4px;}
+  code{background:var(--panel2); padding:1px 6px; border-radius:4px; font-size:0.95em;}
+  svg{width:100%; height:auto; display:block;}
+  .ctrl{margin:14px 0 4px;}
+  .ctrl label{display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:6px;}
+  input[type=range]{width:100%; height:32px;}
+  .readout{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; text-align:center;}
+  .readout div{background:var(--panel2); border-radius:8px; padding:8px 4px;}
+  .readout b{display:block; font-size:1.15rem;}
+  .readout span{font-size:0.75rem; color:var(--muted);}
+  .eq{text-align:center; color:var(--muted); font-size:0.9rem; margin-top:10px;}
+  .upd{background:#16324a; border:1px solid var(--accent); border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:0.9rem; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .ios{color:var(--muted); font-size:0.82rem; margin:-6px 0 12px;}
+  .btn{min-height:44px; padding:0 16px; border-radius:10px; border:1px solid var(--border); background:var(--panel2); color:var(--text);}
+  .btn.go{background:#1e6a4a; border-color:var(--amp);}
+  #modal{position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10;}
+  #modal .sheet{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; width:100%; max-width:380px;}
+  #modal .sheet h2{margin-bottom:4px;}
+  #modal .sheet .btn{width:100%; margin-top:10px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <div class="grow">
+      <h1>Picturing Resistance</h1>
+      <div class="subtitle">Why R = V ÷ I, and why more flow at the same push means less resistance</div>
+      <div class="ver" id="ver"></div>
+    </div>
+    <button class="iconbtn" id="bFull" aria-label="Full screen">⛶</button>
+    <button class="iconbtn" id="bMenu" aria-label="Menu">☰</button>
+  </div>
+  <div id="updBox"></div>
+  <div id="iosBox"></div>
+
+  <div class="card">
+    <div class="big">Read <span class="o">R</span> = <span class="v">V</span> / <span class="a">I</span> as <b>"volts per amp"</b>: the push needed for each amp of flow.</div>
+    <ul>
+      <li>It's a rate, like dollars per kilo or km per hour.</li>
+      <li>At a fixed <span class="v">voltage</span>, <b>more <span class="a">current</span> means less <span class="o">resistance</span></b>.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Try it: the water pipe</h2>
+    <svg id="pipe" viewBox="0 0 320 120" aria-label="Pipe with water flowing through it">
+      <g id="pump">
+        <rect x="6" y="30" width="44" height="60" rx="8" fill="#2a2216" stroke="#ffb84f" stroke-width="2"/>
+        <text x="28" y="56" text-anchor="middle" font-size="11" fill="#ffb84f">PUMP</text>
+        <text id="pumpV" x="28" y="73" text-anchor="middle" font-size="12" font-weight="700" fill="#ffb84f">1 V</text>
+      </g>
+      <rect id="pipeBody" x="50" y="40" width="264" height="40" fill="#13202b" stroke="#4fb3ff" stroke-width="2"/>
+      <g id="drops"></g>
+    </svg>
+    <div class="ctrl">
+      <label><span class="v">Push (voltage)</span><span id="vLbl">1.0 V</span></label>
+      <input id="vIn" type="range" min="0.5" max="12" step="0.5" value="1">
+    </div>
+    <div class="ctrl">
+      <label><span class="o">Pipe narrowness (resistance)</span><span id="rLbl">1.0 Ω</span></label>
+      <input id="rIn" type="range" min="-1" max="1" step="0.05" value="0">
+    </div>
+    <div class="readout">
+      <div><b class="v" id="oV">1.0</b><span>volts (push)</span></div>
+      <div><b class="a" id="oI">1.00</b><span>amps (flow)</span></div>
+      <div><b class="o" id="oR">1.0</b><span>ohms (V ÷ I)</span></div>
+    </div>
+    <div class="eq" id="eq">1.0 V ÷ 1.00 A = 1.0 Ω</div>
+  </div>
+
+  <div class="card">
+    <h2>Same 1 volt, different pipes</h2>
+    <table>
+      <tr><th>Push</th><th>Flow</th><th>V ÷ I</th><th>Meaning</th></tr>
+      <tr><td class="v">1 V</td><td class="a">10 A</td><td class="o">0.1 Ω</td><td>Little push per amp: flows easily</td></tr>
+      <tr><td class="v">1 V</td><td class="a">1 A</td><td class="o">1 Ω</td><td></td></tr>
+      <tr><td class="v">1 V</td><td class="a">0.1 A</td><td class="o">10 Ω</td><td>Lots of push per amp: tight squeeze</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>The part that usually causes confusion</h2>
+    <ul>
+      <li>Resistance belongs to the <b>pipe itself</b>.</li>
+      <li>Voltage and current are only how you <b>measure</b> it.</li>
+      <li>Compare the push you applied with the flow you got, and you know how narrow the pipe is.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>One relationship, three sides</h2>
+    <ul>
+      <li><code>I = V / R</code>: this push through this pipe gives this flow.</li>
+      <li><code>V = I × R</code>: this flow through this pipe needs this push. Narrower pipe, more pressure.</li>
+      <li><code>R = V / I</code>: this push gave this flow, so the pipe must be this narrow.</li>
+    </ul>
+  </div>
+</div>
+<div id="modal" class="hidden"></div>
+
+<script>
+  const VERSION='v1 · 11 Oct 2026';
+  const $ = s => document.querySelector(s);
+  $('#ver').textContent = 'Version ' + VERSION;
+
+  /* ---- pipe simulation ---- */
+  const vIn = $('#vIn'), rIn = $('#rIn'), drops = $('#drops'), pipeBody = $('#pipeBody');
+  const N = 14, offsets = []; let V = 1, R = 1, I = 1;
+  for (let i = 0; i < N; i++) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('fill', '#3ecf8e'); c.setAttribute('cy', 60); drops.appendChild(c);
+    offsets.push(i / N);
+  }
+  const fmt = (x, d) => x.toFixed(d);
+  const fmtR = r => fmt(r, r < 1 ? 2 : 1);
+  function update() {
+    V = parseFloat(vIn.value);
+    R = Math.pow(10, parseFloat(rIn.value));
+    I = V / R;
+    const h = 8 + 52 * (1 - (parseFloat(rIn.value) + 1) / 2); // higher R, narrower pipe
+    pipeBody.setAttribute('y', 60 - h / 2); pipeBody.setAttribute('height', h);
+    for (const c of drops.children) c.setAttribute('r', Math.max(2, Math.min(5, h / 5)));
+    $('#pumpV').textContent = fmt(V, 1) + ' V';
+    $('#vLbl').textContent = fmt(V, 1) + ' V';
+    $('#rLbl').textContent = fmtR(R) + ' Ω';
+    $('#oV').textContent = fmt(V, 1);
+    $('#oI').textContent = fmt(I, 2);
+    $('#oR').textContent = fmtR(R);
+    $('#eq').textContent = `${fmt(V, 1)} V ÷ ${fmt(I, 2)} A = ${fmtR(R)} Ω`;
+  }
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const speed = Math.min(1.5, 0.08 * Math.sqrt(I)); // visible speed grows with flow
+    [...drops.children].forEach((c, i) => {
+      offsets[i] = (offsets[i] + speed * dt) % 1;
+      c.setAttribute('cx', 56 + offsets[i] * 252);
+    });
+    requestAnimationFrame(tick);
+  }
+  vIn.addEventListener('input', update); rIn.addEventListener('input', update);
+  update(); requestAnimationFrame(tick);
+
+  /* ---- full screen ---- */
+  const fsRoot = document.documentElement, fsReq = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen, fsExit = document.exitFullscreen || document.webkitExitFullscreen;
+  const fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const isStandalone = () => (window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches)) || navigator.standalone === true;
+  let autoFs = true;
+  function goFull() {
+    if (!autoFs || isStandalone() || fsOn() || !fsReq) return;
+    try { const p = fsReq.call(fsRoot, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  }
+  function toggleFull() {
+    try {
+      if (fsOn()) { autoFs = false; fsExit.call(document); }
+      else { autoFs = true; const p = fsReq.call(fsRoot, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); }
+    } catch (e) {}
+  }
+  // First touch on the sliders is this page's "Play" tap.
+  for (const el of [vIn, rIn]) el.addEventListener('pointerdown', goFull, { once: true });
+  $('#bFull').onclick = toggleFull;
+  if (!fsReq || isStandalone()) $('#bFull').classList.add('hidden');
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !isStandalone())
+    $('#iosBox').innerHTML = '<div class="ios">📱 Full screen on iPhone/iPad: Share → Add to Home Screen.</div>';
+
+  /* ---- menu ---- */
+  function openMenu() {
+    const m = $('#modal');
+    m.innerHTML = `<div class="sheet"><h2>☰ Menu</h2><div class="subtitle">Ohm's Law · version ${VERSION}</div>
+      ${newVersion ? `<button class="btn go" id="mUpd">Update to ${newVersion}</button>` : ''}
+      ${fsReq && !isStandalone() ? `<button class="btn" id="mFull">${fsOn() ? 'Exit full screen' : 'Full screen'}</button>` : ''}
+      <button class="btn" id="mClose">Close</button></div>`;
+    m.classList.remove('hidden');
+    if (newVersion) $('#mUpd').onclick = reloadFresh;
+    if ($('#mFull')) $('#mFull').onclick = () => { toggleFull(); closeMenu(); };
+    $('#mClose').onclick = closeMenu;
+  }
+  function closeMenu() { $('#modal').classList.add('hidden'); }
+  $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeMenu(); });
+  $('#bMenu').onclick = openMenu;
+
+  /* ---- self-update: spot a stale cached copy and offer the fresh one ---- */
+  let newVersion = null;
+  async function checkUpdate() {
+    try {
+      const r = await fetch(location.pathname + '?_=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
+      const m = (await r.text()).match(/const VERSION='([^']+)'/);
+      if (m && m[1] !== VERSION) { newVersion = m[1]; showUpdateBanner(); }
+    } catch (e) {}
+  }
+  function reloadFresh() { location.href = location.pathname + '?v=' + encodeURIComponent((newVersion || '').split(' ')[0] || Date.now()); }
+  function showUpdateBanner() {
+    $('#updBox').innerHTML = `<div class="upd">🔄 A newer version is available (${newVersion}) <button class="btn go" id="updGo">Update now</button></div>`;
+    $('#updGo').onclick = reloadFresh;
+  }
+  checkUpdate(); setInterval(checkUpdate, 5 * 60 * 1000);
+  addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+</script>
+</body>
+</html>
