@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XOR from Scratch</title>
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="circuits-from-scratch.webmanifest">
+<meta name="theme-color" content="#0E1317">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="XOR">
+<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#E9EDF0; --panel:#FFFFFF; --canvas:#F6F8F9; --grid:#E1E6EA;
+  --ink:#16212B; --muted:#56646F; --line:#CCD4DA;
+  --wire:#9AA6B0; --hi:#16935F; --mid:#7DBFA2; --flow:#E09A12;
+  --led:#E0433F; --glow:#FF6A5C; --accent:#1C5D7A; --accent-ink:#FFFFFF;
+  --good:#16935F; --good-bg:#E3F4EC; --bad:#C23B35; --bad-bg:#FBE9E7; --note-bg:#EEF4F7;
+  --shadow:0 1px 2px rgba(22,33,43,.06),0 6px 24px rgba(22,33,43,.06);
+  --display:"Chakra Petch","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#0E1317; --panel:#161E24; --canvas:#11181D; --grid:#1C262D;
+  --ink:#E3E9ED; --muted:#93A2AD; --line:#2A3740;
+  --wire:#56656F; --hi:#35C98A; --mid:#2F7F5E; --flow:#F5B53A;
+  --led:#FF5A52; --glow:#FF6A5C; --accent:#5DB0D2; --accent-ink:#0C1216;
+  --good:#35C98A; --good-bg:#15302A; --bad:#FF6E66; --bad-bg:#3A1C1C; --note-bg:#172731;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 24px rgba(0,0,0,.25);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1317; --panel:#161E24; --canvas:#11181D; --grid:#1C262D;
+  --ink:#E3E9ED; --muted:#93A2AD; --line:#2A3740;
+  --wire:#56656F; --hi:#35C98A; --mid:#2F7F5E; --flow:#F5B53A;
+  --led:#FF5A52; --glow:#FF6A5C; --accent:#5DB0D2; --accent-ink:#0C1216;
+  --good:#35C98A; --good-bg:#15302A; --bad:#FF6E66; --bad-bg:#3A1C1C; --note-bg:#172731;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 24px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--body);padding-inline:16px;padding-block:0 40px}
+.wrap{max-width:1120px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 10px;display:grid;gap:10px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand h1{font:700 22px/1.1 var(--display);letter-spacing:.01em;margin:0}
+.brand h1 span{color:var(--hi)}
+.count{font:500 13px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.dots button{flex:1 1 14px;min-width:14px;height:8px;border:0;border-radius:2px;background:var(--line);cursor:pointer;padding:0}
+.dots button.done{background:var(--mid)}
+.dots button.quiz{background:transparent;outline:1.5px solid var(--line);outline-offset:-1.5px}
+.dots button.quiz.done{background:var(--mid);outline-color:var(--mid)}
+.dots button.cur{background:var(--accent);outline-color:var(--accent)}
+.dots button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+main.step{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:22px;display:grid;gap:18px}
+main.step.enter{animation:enter .35s ease-out}
+@keyframes enter{from{opacity:.001;transform:translateY(8px)}to{opacity:1;transform:none}}
+.eyebrow{font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h2{font:600 clamp(22px,3.2vw,30px)/1.15 var(--display);margin:4px 0 0;text-wrap:balance}
+.cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.cols{grid-template-columns:minmax(0,1fr)}}
+.lab{display:grid;gap:12px;position:sticky;top:110px}
+@media (max-width:820px){.lab{position:static}}
+.canvas{background-color:var(--canvas);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:20px 20px;border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+.canvas svg{display:block;width:100%;height:auto}
+.canvas svg.wide{min-width:520px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tog{font:600 14px var(--mono);display:inline-flex;align-items:center;gap:10px;padding:8px 12px 8px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.tog .knob{width:34px;height:18px;border-radius:9px;background:var(--line);position:relative;transition:background .15s}
+.tog .knob::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--panel);transition:transform .15s}
+.tog[aria-pressed="true"]{border-color:var(--hi)}
+.tog[aria-pressed="true"] .knob{background:var(--hi)}
+.tog[aria-pressed="true"] .knob::after{transform:translateX(16px)}
+.tog .st{font-size:12px;color:var(--muted);min-width:2.2em}
+.btn{font:600 14px var(--body);padding:9px 16px;border-radius:8px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible,.tog:focus-visible,.opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.meters{display:flex;flex-wrap:wrap;gap:6px}
+.meter{font:500 13px var(--mono);padding:5px 9px;border-radius:6px;background:var(--canvas);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.meter b{color:var(--muted);font-weight:500;margin-right:6px}
+.meter.hi{border-color:var(--hi);color:var(--hi)}
+.meter.warn{border-color:var(--bad);color:var(--bad)}
+.now{font-size:15px;background:var(--note-bg);border-radius:8px;padding:10px 12px;border-left:3px solid var(--flow)}
+.now strong{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;display:block;color:var(--muted);margin-bottom:2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font:12px var(--mono);color:var(--muted)}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.legend .l-hi{background:var(--hi)} .legend .l-lo{background:var(--wire)}
+.legend .l-fl{background:repeating-linear-gradient(90deg,var(--flow) 0 3px,transparent 3px 7px)}
+.text{max-width:62ch}
+.text p{margin:0 0 12px}
+.text h3{font:600 17px/1.3 var(--display);margin:18px 0 6px}
+.text ul,.text ol{margin:0 0 12px;padding-left:22px}
+.text li{margin-bottom:5px}
+.text code,.mono{font:500 .92em var(--mono)}
+.why{background:var(--note-bg);border-radius:8px;padding:12px 14px;margin:14px 0}
+.why .k{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:4px}
+.formula{font:500 15px var(--mono);background:var(--canvas);border:1px solid var(--line);border-radius:6px;padding:8px 12px;display:inline-block;margin:2px 0 12px}
+table.tt{border-collapse:collapse;font:500 14px var(--mono);font-variant-numeric:tabular-nums}
+table.tt th,table.tt td{padding:4px 12px;text-align:center;border-bottom:1px solid var(--line)}
+table.tt th{font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.05em}
+table.tt tr.on td{background:var(--good-bg);color:var(--good);font-weight:600}
+.ttwrap{overflow-x:auto}
+nav.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:16px}
+.hint{font-size:13px;color:var(--muted)}
+kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+
+.quiz{display:grid;gap:16px;max-width:760px}
+.q{border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;gap:10px}
+.q .qn{font:600 12px var(--mono);color:var(--muted)}
+.q .qt{font-weight:600;font-size:16px}
+.opts{display:grid;gap:6px}
+.opt{text-align:left;font:15px/1.45 var(--body);padding:9px 12px;border-radius:7px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:var(--good-bg)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.fb{font-size:14px;padding:8px 12px;border-radius:6px}
+.fb.ok{background:var(--good-bg)} .fb.no{background:var(--bad-bg)}
+.score{font:600 15px var(--mono)}
+
+.check{list-style:none;padding:0;margin:0 0 12px;display:grid;gap:6px}
+.check label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;padding:6px 8px;border-radius:6px}
+.check label:hover{background:var(--canvas)}
+.check input{margin-top:5px;accent-color:var(--hi);width:16px;height:16px;flex:none}
+.check input:checked+span{color:var(--muted);text-decoration:line-through}
+table.parts{border-collapse:collapse;font-size:14px;margin-bottom:12px}
+table.parts td,table.parts th{border-bottom:1px solid var(--line);padding:5px 10px;text-align:left}
+table.parts th{font:600 12px var(--mono);color:var(--muted)}
+details.reveal{border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:10px}
+details.reveal summary{cursor:pointer;font-weight:600}
+details.reveal p{margin:8px 0 0}
+
+/* SVG */
+svg text{font-family:var(--mono)}
+.w{fill:none;stroke:var(--wire);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;transition:stroke .25s}
+.w.hi{stroke:var(--hi)} .w.mid{stroke:var(--mid)}
+.dot{fill:var(--wire)} .dot.hi{fill:var(--hi)} .dot.mid{fill:var(--mid)}
+.part{fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.partf{fill:var(--ink)}
+.body{fill:var(--canvas);stroke:var(--muted);stroke-width:1.2}
+.body.on{fill:var(--good-bg);stroke:var(--hi)}
+.bg{stroke:var(--canvas);stroke-width:7;fill:none}
+.flow{fill:none;stroke:var(--flow);stroke-linecap:round;stroke-linejoin:round;animation:flow 1s linear infinite}
+.flow.s{stroke-width:2.2;stroke-dasharray:2 10;animation-duration:1.5s}
+.flow.b{stroke-width:3.6;stroke-dasharray:4 8;animation-duration:.6s}
+@keyframes flow{from{stroke-dashoffset:12}to{stroke-dashoffset:0}}
+.lbl{fill:var(--muted);font-size:11px}
+.nlbl{fill:var(--ink);font-size:12px;font-weight:600}
+.big{fill:var(--ink);font:600 22px var(--display)}
+.term{stroke-width:2;fill:var(--canvas);stroke:var(--wire)}
+.term.hi{stroke:var(--hi);fill:var(--good-bg)}
+.termt{font-size:12px;font-weight:600;fill:var(--ink)}
+.ledtri{stroke:var(--ink);stroke-width:1.8;fill:var(--canvas);transition:fill .25s}
+.ledtri.on{fill:var(--led);stroke:var(--led)}
+.ledtri.dim{fill:var(--led);fill-opacity:.35}
+.glow{fill:var(--glow);transition:opacity .3s}
+.burn{stroke:var(--bad);stroke-width:3;stroke-linecap:round}
+.float{animation:flick .35s steps(2) infinite}
+@keyframes flick{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){
+  .flow{animation:none} .float{animation:none} main.step.enter{animation:none}
+  .tog .knob,.tog .knob::after{transition:none}
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>XOR <span>from scratch</span></h1><div style="display:flex;gap:12px;align-items:baseline"><a href="circuits-from-scratch.html" style="font:600 13px var(--mono);color:var(--accent)">← All modules</a><div class="count" id="count"></div></div></div>
+    <div class="dots" id="dots" aria-label="Steps"></div>
+  </header>
+  <main class="step" id="step" aria-live="polite"></main>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- storage (optional) ---------- */
+function load(k,d){try{var v=localStorage.getItem("xor-tut-"+k);return v==null?d:JSON.parse(v);}catch(e){return d;}}
+function save(k,v){try{localStorage.setItem("xor-tut-"+k,JSON.stringify(v));}catch(e){}}
+
+/* ---------- SVG helpers ---------- */
+function pl(a){var s="";for(var i=0;i<a.length;i+=2)s+=a[i]+","+a[i+1]+" ";return s;}
+function vc(v){return v===true?"hi":v==="mid"?"mid":"lo";}
+function W(a,v){return '<polyline class="w '+vc(v)+'" points="'+pl(a)+'"/>';}
+function F(a,sz){return '<polyline class="flow '+(sz||"s")+'" points="'+pl(a)+'"/>';}
+function D(x,y,v){return '<circle class="dot '+vc(v)+'" cx="'+x+'" cy="'+y+'" r="3.4"/>';}
+function T(x,y,s,c,a){return '<text class="'+(c||"lbl")+'" x="'+x+'" y="'+y+'" text-anchor="'+(a||"middle")+'">'+s+'</text>';}
+function R(x1,y1,x2,y2,label,side){
+  var dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L,px=-uy,py=ux;
+  var z=Math.min(36,L-8),s=(L-z)/2,n=6,amp=6,p="M"+x1+" "+y1+" L"+(x1+ux*s)+" "+(y1+uy*s);
+  for(var i=1;i<=n;i++){var t=s+z*(i-.5)/n,g=i%2?1:-1;p+=" L"+(x1+ux*t+px*amp*g).toFixed(1)+" "+(y1+uy*t+py*amp*g).toFixed(1);}
+  p+=" L"+(x1+ux*(s+z))+" "+(y1+uy*(s+z))+" L"+x2+" "+y2;
+  var out='<path class="part" d="'+p+'"/>';
+  if(label){var mx=(x1+x2)/2,my=(y1+y2)/2;side=side||1;
+    if(Math.abs(dx)>Math.abs(dy))out+=T(mx,my-11*side+(side<0?8:0),label);
+    else out+=T(mx+11*side,my+4,label,"lbl",side>0?"start":"end");}
+  return out;
+}
+function LED(x,y,st){ /* vertical, anode top, cathode bottom */
+  var o="";
+  if(st==="on"||st==="dim")o+='<circle class="glow" cx="'+x+'" cy="'+y+'" r="'+(st==="on"?20:13)+'" opacity="'+(st==="on"?.55:.25)+'" filter="url(#blur)"/>';
+  o+='<path class="part" d="M'+x+' '+(y-20)+' V'+(y-8)+' M'+x+' '+(y+7)+' V'+(y+20)+'"/>';
+  o+='<path class="ledtri '+(st==="on"?"on":st==="dim"?"dim":"")+'" d="M'+(x-9)+' '+(y-8)+' L'+(x+9)+' '+(y-8)+' L'+x+' '+(y+7)+' Z"/>';
+  o+='<path class="part" d="M'+(x-10)+' '+(y+7)+' H'+(x+10)+'"/>';
+  o+='<path class="part" d="M'+(x+12)+' '+(y-1)+' l7 -7 M'+(x+15)+' '+(y+5)+' l7 -7" />';
+  o+='<path class="partf" d="M'+(x+21)+' '+(y-10)+' l-5 1 l4 4 z M'+(x+24)+' '+(y-4)+' l-5 1 l4 4 z"/>';
+  if(st==="burnt")o+='<path class="burn" d="M'+(x-12)+' '+(y-12)+' L'+(x+12)+' '+(y+12)+' M'+(x+12)+' '+(y-12)+' L'+(x-12)+' '+(y+12)+'"/>';
+  return o;
+}
+function NPN(x,y,m,label,on){ /* pins: B=(x-24s,y) C=(x+18s,y-30) E=(x+18s,y+30) */
+  var s=m?-1:1,o="";
+  o+='<circle class="body'+(on?" on":"")+'" cx="'+(x+8*s)+'" cy="'+y+'" r="22"/>';
+  o+='<path class="part" d="M'+(x-24*s)+' '+y+' H'+x+'"/>';
+  o+='<path class="part" style="stroke-width:3.4" d="M'+x+' '+(y-14)+' V'+(y+14)+'"/>';
+  o+='<path class="part" d="M'+x+' '+(y-6)+' L'+(x+18*s)+' '+(y-18)+' V'+(y-30)+' M'+x+' '+(y+6)+' L'+(x+18*s)+' '+(y+18)+' V'+(y+30)+'"/>';
+  var tx=x+14.4*s,ty=y+15.6,ux=0.832*s,uy=0.555,px=-uy,py=ux;
+  o+='<path class="partf" d="M'+tx+' '+ty+' L'+(tx-ux*8+px*4).toFixed(1)+' '+(ty-uy*8+py*4).toFixed(1)+' L'+(tx-ux*8-px*4).toFixed(1)+' '+(ty-uy*8-py*4).toFixed(1)+' Z"/>';
+  if(label)o+=T(x+8*s+(m?-28:28),y+4,label,"nlbl",m?"end":"start");
+  return o;
+}
+function SW(x1,y1,x2,y2,closed,label){
+  var dx=x2-x1,dy=y2-y1,a=closed?0:-0.5,ex=x1+dx*Math.cos(a)-dy*Math.sin(a),ey=y1+dx*Math.sin(a)+dy*Math.cos(a);
+  var o='<path class="part" style="stroke-width:2.4" d="M'+x1+' '+y1+' L'+ex.toFixed(1)+' '+ey.toFixed(1)+'"/>';
+  o+='<circle class="term" cx="'+x1+'" cy="'+y1+'" r="3.5"/><circle class="term" cx="'+x2+'" cy="'+y2+'" r="3.5"/>';
+  if(label){var vert=Math.abs(dy)>Math.abs(dx);o+=vert?T(x1-10,(y1+y2)/2+5,label,"nlbl","end"):T((x1+x2)/2,y1+20,label,"nlbl");}
+  return o;
+}
+/* Rails: every diagram draws its battery on the left. Its + end feeds the top rail, its − end the bottom rail.
+   FLAG = a wire up to the top rail, GND = a wire down to the bottom rail. Both register themselves so the
+   rails can show the current running back to the battery. */
+var RT=20,RB=280,UPS=[],DNS=[];
+function begin(rt,rb){RT=rt;RB=rb;UPS=[];DNS=[];}
+function FLAG(x,y,on,sz){UPS.push([x,on?(sz||"s"):null]);return W([x,RT,x,y],true)+(on?F([x,RT,x,y],sz||"s"):"")+D(x,RT,true);}
+function GND(x,y,on,sz){DNS.push([x,on?(sz||"s"):null]);return W([x,y,x,RB],false)+(on?F([x,y,x,RB],sz||"s"):"")+D(x,RB,false);}
+function finish(o,w,h,dx,wide){
+  h=Math.max(h,RB+22);
+  var bx=-dx+26,mid=(RT+RB)/2,mu=bx,md=bx,au=null,ad=null,bu=false,bd=false,r="";
+  UPS.forEach(function(u){mu=Math.max(mu,u[0]);if(u[1]){au=Math.max(au==null?-1e9:au,u[0]);if(u[1]==="b")bu=true;}});
+  DNS.forEach(function(u){md=Math.max(md,u[0]);if(u[1]){ad=Math.max(ad==null?-1e9:ad,u[0]);if(u[1]==="b")bd=true;}});
+  r+=W([bx,mid-20,bx,RT,mu,RT],true)+W([md,RB,bx,RB,bx,mid+20],false);
+  if(ad!=null)r+=F([ad,RB,bx,RB,bx,mid+20],bd?"b":"s");
+  if(au!=null)r+=F([bx,mid-20,bx,RT,au,RT],bu?"b":"s");
+  r+=BAT(bx,mid)+T(bx+6,RT-6,"+5 V rail (battery +)","lbl","start")+T(bx+6,RB+14,"0 V rail (battery −)","lbl","start");
+  return svg(w+dx,h,'<g transform="translate('+dx+',0)">'+r+o+'</g>',wide);
+}
+function BAT(x,y){return '<path class="part" d="M'+x+' '+(y-20)+' V'+(y-5)+' M'+(x-14)+' '+(y-5)+' H'+(x+14)+' M'+x+' '+(y+5)+' V'+(y+20)+'"/><path class="part" style="stroke-width:4" d="M'+(x-7)+' '+(y+5)+' H'+(x+7)+'"/>'+T(x-20,y-6,"+","nlbl")+T(x-20,y+14,"−","nlbl")+T(x+20,y+4,"5 V","nlbl","start");}
+function HOP(x,y,v){return '<path class="bg" d="M'+(x-7)+' '+y+' H'+(x-2)+' M'+(x+2)+' '+y+' H'+(x+7)+'"/><path class="w '+vc(v)+'" d="M'+(x-7)+' '+y+' A7 7 0 0 1 '+(x+7)+' '+y+'"/>';}
+function TERM(x,y,name,v){return '<circle class="term '+vc(v)+'" cx="'+x+'" cy="'+y+'" r="12"/>'+T(x,y+4,name,"termt");}
+function svg(w,h,inner,wide){return '<svg viewBox="0 0 '+w+' '+h+'" '+(wide?'class="wide" ':'')+'role="img"><defs><filter id="blur" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="5"/></filter></defs>'+inner+'</svg>';}
+function b(x){return x?1:0;}
+
+/* ---------- diagrams ---------- */
+var DIAG={};
+DIAG.goal=function(s){
+  var x=(s.a!==s.b),o="";
+  o+=W([52,70,130,70],s.a)+W([52,150,130,150],s.b)+W([230,110,272,110],x);
+  if(s.a)o+=F([52,70,130,70]); if(s.b)o+=F([52,150,130,150]);
+  o+='<rect class="body'+(x?" on":"")+'" x="130" y="45" width="100" height="130" rx="8"/>'+T(180,118,"XOR","big");
+  o+=TERM(40,70,"A",s.a)+TERM(40,150,"B",s.b);
+  if(x)o+='<circle class="glow" cx="295" cy="110" r="24" opacity=".6" filter="url(#blur)"/>';
+  o+='<circle class="ledtri'+(x?" on":"")+'" cx="295" cy="110" r="14"/>'+T(295,146,"LED","lbl");
+  return {svg:svg(340,200,o),meters:[["A",b(s.a),s.a],["B",b(s.b),s.b],["LED",x?"ON":"off",x]],
+    now:x?"Exactly one input is 1, so the LED is on.":(s.a?"Both inputs are 1. That is not “exactly one”, so the LED stays off.":"Both inputs are 0. Nothing is on, so the LED is off.")};
+};
+function loopDiag(s,noRes){
+  var c=s.sw,burnt=c&&noRes,o="";
+  o+=W([60,130,60,50,130,50],true)+W([180,50,270,50,270,70],c);
+  if(noRes)o+=W([270,70,270,140],c);else o+=W([270,120,270,140],c?"mid":false);
+  o+=W([270,180,270,240,60,240,60,170],false);
+  if(c&&!burnt){o+=F([60,130,60,50,130,50],"b")+F([180,50,270,50,270,70],"b")+F([270,120,270,140],"b")+F([270,180,270,240,60,240,60,170],"b");}
+  o+=BAT(60,150)+SW(130,50,180,50,c,"switch");
+  if(!noRes)o+=R(270,70,270,120,"330 Ω");
+  o+=LED(270,160,burnt?"burnt":c?"on":"off")+T(292,200,"LED","lbl","start");
+  return o;
+}
+DIAG.loop=function(s){
+  return {svg:svg(340,270,loopDiag(s,false)),
+    meters:[["Loop",s.sw?"closed":"open",s.sw],["Current",s.sw?"≈ 9 mA":"0 mA",s.sw],["LED",s.sw?"ON":"off",s.sw]],
+    now:s.sw?"The loop is complete. Current leaves the + terminal, goes through the switch, the resistor and the LED, and returns to the − terminal. The LED lights.":"The switch is open, so there is a gap in the loop. The battery still has 5 V, but no current can flow, so the LED is dark."};
+};
+DIAG.resistor=function(s){
+  var nr=s.nores,burnt=s.sw&&nr;
+  return {svg:svg(340,270,loopDiag(s,nr)),
+    meters:[["Resistor",nr?"removed":"330 Ω",!nr],["Current",!s.sw?"0 mA":nr?"far too much":"≈ 9 mA",s.sw&&!nr],["LED",burnt?"destroyed":s.sw?"ON":"off",s.sw&&!nr]].map(function(m,i){if(i===2&&burnt)m[2]="warn";if(i===1&&burnt)m[2]="warn";return m;}),
+    now:burnt?"With no resistor there is nothing to limit the current. The LED lets through as much as the battery can push, overheats and dies. In the simulator you might see a huge current or a burnt LED.":s.sw?"The resistor takes the leftover 3 V and keeps the current at a safe 9 mA.":"Close the switch to see the current. Then try removing the resistor."};
+};
+DIAG.pulldown=function(s){
+  var pd=s.pd,sw=s.sw,fl=!sw&&!pd,A=sw?true:false,o="";
+  begin(26,272);
+  o+=W([120,110,120,150,240,150],fl?"mid":A)+W([240,195,240,205],sw?"mid":false);
+  if(pd)o+=W([120,150,120,170],A);
+  if(sw){o+=F([120,110,120,150,240,150],"b")+F([240,195,240,205],"b");if(pd)o+=F([120,150,120,170]);}
+  o+=FLAG(120,60,sw,"b")+SW(120,60,120,110,sw,"switch A");
+  if(pd)o+=R(120,170,120,230,"10 kΩ pull-down")+GND(120,230,sw);
+  o+=R(240,150,240,195,"330 Ω")+LED(240,225,sw?"on":"off")+GND(240,245,sw,"b");
+  o+=D(120,150,fl?"mid":A)+'<text class="nlbl'+(fl?" float":"")+'" x="130" y="143" text-anchor="start">'+(fl?"A = ?":"A")+'</text>';
+  return {svg:finish(o,340,290,50),
+    meters:[["A",fl?"floating (somewhere 0–2 V)":A?"5 V → 1":"0 V → 0",fl?"warn":A],["LED",sw?"ON":"off",sw]],
+    now:fl?"The switch is open and there's no pull-down. The LED is dark, but that doesn't prove A is 0 V: an LED doesn't conduct at all below about 2 V, so nothing holds A anywhere between 0 and 2 V. A is floating. It can pick up electrical noise, and a more sensitive input could read it as 1 or 0 at random.":sw?"Follow the loops: top rail → switch → A → 330 Ω → LED → bottom rail lights the LED."+(pd?" A tiny 0.5 mA also goes through the pull-down.":"")+" A is joined straight to the top rail, so it's a solid 1.":"The switch is open, so nothing feeds A. The pull-down joins A to the bottom rail, so A is a solid 0 V and the LED is dark."};
+};
+function inputBlock(o,a,baseOn){ /* switch from top rail + pull-down to bottom rail, feeding a 10k to base at (178,200) */
+  o+=W([60,100,60,200,90,200],a)+W([155,200,178,200],a)+W([60,200,60,215],a);
+  if(a)o+=F([60,100,60,215]);
+  if(a&&baseOn)o+=F([60,200,90,200])+F([155,200,178,200]);
+  o+=FLAG(60,55,a)+SW(60,55,60,100,a,"A")+R(90,200,155,200,"10 kΩ")+R(60,215,60,260,"10 kΩ",-1)+GND(60,260,a)+D(60,200,a);
+  return o;
+}
+DIAG.npn=function(s){
+  var a=s.a,o="";
+  begin(24,286);
+  o+=W([220,100,220,115],true)+W([220,155,220,170],a?false:"mid");
+  if(a)o+=F([220,100,220,115],"b")+F([220,155,220,170],"b");
+  o=inputBlock(o,a,true);
+  o+=FLAG(220,50,a,"b")+R(220,50,220,100,"330 Ω")+LED(220,135,a?"on":"off")+NPN(202,200,false,"",a)+GND(220,230,a,"b");
+  o+=T(185,190,"B","nlbl")+T(232,176,"C","nlbl","start")+T(232,232,"E","nlbl","start");
+  return {svg:finish(o,340,302,50),
+    meters:[["Base current",a?"≈ 0.43 mA":"0",a],["LED current",a?"≈ 9 mA":"0",a],["Transistor",a?"ON":"off",a]],
+    now:a?"Two loops are running. Small loop (thin dashes): top rail → switch → 10 kΩ → base → emitter → bottom rail. Big loop (thick dashes): top rail → 330 Ω → LED → collector → emitter → bottom rail. The small one switches on the big one.":"No base current, so the transistor is off. It acts like an open switch between C and E: the LED's loop is broken and it stays dark."};
+};
+DIAG.not=function(s){
+  var a=s.a,lit=!a,o="";
+  begin(24,286);
+  o+=W([220,110,220,170],lit)+W([220,140,245,140,245,160],lit)+W([245,195,245,210],lit?"mid":false);
+  if(a)o+=F([220,110,220,170],"b");else o+=F([220,110,220,140,245,140,245,160],"b")+F([245,195,245,210],"b");
+  o=inputBlock(o,a,true);
+  o+=FLAG(220,55,true,"b")+R(220,55,220,110,"1 kΩ")+NPN(202,200,false,"",a)+GND(220,230,a,"b")+D(220,140,lit)+T(214,134,"OUT","nlbl","end");
+  o+=R(245,160,245,195,"330 Ω")+LED(245,230,lit?"on":"off")+GND(245,250,lit,"b");
+  return {svg:finish(o,340,302,50),
+    meters:[["A",b(a),a],["OUT",a?"≈ 0.1 V → 0":"≈ 2.8 V → 1",lit],["LED",lit?"ON":"off",lit]],
+    now:a?"The transistor is on and gives the current an easy path: top rail → 1 kΩ → collector → emitter → bottom rail. OUT drops to about 0.1 V, far below the 2 V the LED needs, so the LED goes dark.":"The transistor is off, so the current from the 1 kΩ has only one way back to the battery: top rail → 1 kΩ → OUT → 330 Ω → LED → bottom rail. About 2.3 mA flows and the LED lights."};
+};
+DIAG.nand=function(s){
+  var a=s.a,bb=s.b,n=!(a&&bb),o="";
+  begin(20,292);
+  o+=W([230,95,230,120],n)+W([230,105,290,105,290,115],n)+W([290,150,290,160],n?"mid":false);
+  /* input A (x=40) and B (x=80) */
+  o+=W([40,95,40,150,100,150],a)+W([170,150,188,150],a)+W([40,150,40,215],a);
+  o+=W([80,95,80,210,100,210],bb)+W([170,210,188,210],bb)+W([80,210,80,225],bb);
+  if(a)o+=F([40,95,40,215]); if(a&&bb)o+=F([40,150,100,150])+F([170,150,188,150]);
+  if(bb)o+=F([80,95,80,225])+F([80,210,100,210])+F([170,210,188,210]);
+  if(!n)o+=F([230,95,230,120],"b");else o+=F([230,95,230,105,290,105,290,115],"b")+F([290,150,290,160],"b");
+  o+=FLAG(40,50,a)+SW(40,50,40,95,a,"A")+R(40,215,40,265,"10k",-1)+GND(40,265,a);
+  o+=FLAG(80,50,bb)+SW(80,50,80,95,bb,"B")+R(80,225,80,270,"10k")+GND(80,270,bb);
+  o+=R(100,150,170,150,"10 kΩ")+R(100,210,170,210,"10 kΩ",-1)+HOP(80,150,a)+D(40,150,a)+D(80,210,bb);
+  o+=FLAG(230,45,true,"b")+R(230,45,230,95,"1 kΩ")+NPN(212,150,false,"",a&&bb)+NPN(212,210,false,"",bb)+GND(230,240,!n||bb,!n?"b":"s")+D(230,105,n);
+  o+=T(205,124,"Q1","nlbl","end")+T(205,250,"Q2","nlbl","end")+T(250,98,"NAND","nlbl","start");
+  o+=R(290,115,290,150,"330 Ω")+LED(290,180,n?"on":"off")+GND(290,200,n,"b");
+  return {svg:finish(o,340,306,50),
+    meters:[["A",b(a),a],["B",b(bb),bb],["NAND",n?"≈ 2.8 V → 1":"≈ 0.1 V → 0",n],["LED",n?"ON":"off",n]],
+    now:(a&&bb)?"Q1 and Q2 are both on, so the current from the 1 kΩ takes the easy path: top rail → 1 kΩ → Q1 → Q2 → bottom rail. The NAND point drops to about 0.1 V and the LED goes dark.":(a||bb)?"Only one transistor is on, so the chain through Q1 and Q2 is still broken. The current from the 1 kΩ has to go through the LED instead: top rail → 1 kΩ → 330 Ω → LED → bottom rail. LED on.":"Both transistors are off. The current from the 1 kΩ goes through the LED, so it lights: NAND = 1."};
+};
+DIAG.or=function(s){
+  var a=s.a,bb=s.b,orr=a||bb,o="";
+  begin(20,318);
+  o+=W([128,160,128,185,212,185,212,160],orr)+W([170,185,170,200],orr)+W([170,245,170,258],orr?"mid":false);
+  o+=W([22,90,22,130,40,130],a)+W([82,130,86,130],a)+W([22,130,22,180],a);
+  o+=W([318,90,318,130,300,130],bb)+W([258,130,254,130],bb)+W([318,130,318,180],bb);
+  if(a)o+=F([22,90,22,180])+F([22,130,40,130])+F([82,130,86,130])+F([128,160,128,185,170,185],"b");
+  if(bb)o+=F([318,90,318,180])+F([318,130,300,130])+F([258,130,254,130])+F([212,160,212,185,170,185],"b");
+  if(orr)o+=F([170,185,170,200],"b")+F([170,245,170,258],"b");
+  o+=FLAG(22,45,a)+SW(22,45,22,90,a,"A")+R(22,180,22,230,"10k")+GND(22,230,a)+D(22,130,a);
+  o+=FLAG(318,45,bb)+SW(318,45,318,90,bb,"B")+R(318,180,318,230,"10k",-1)+GND(318,230,bb)+D(318,130,bb);
+  o+=FLAG(128,100,a,"b")+FLAG(212,100,bb,"b")+NPN(110,130,false,"",a)+NPN(230,130,true,"",bb);
+  o+=T(92,178,"Q3","nlbl")+T(248,178,"Q4","nlbl");
+  o+=R(40,130,82,130,"10 kΩ")+R(300,130,258,130,"10 kΩ");
+  o+=D(170,185,orr)+T(180,200,"OR","nlbl","start")+R(170,200,170,245,"330 Ω")+LED(170,278,orr?"on":"off")+GND(170,298,orr,"b");
+  return {svg:finish(o,340,334,50),
+    meters:[["A",b(a),a],["B",b(bb),bb],["OR point",orr?"≈ 3.5 V → 1":"0 V → 0",orr],["LED",orr?"ON":"off",orr]],
+    now:(a&&bb)?"Both transistors are on and both feed the OR point. Each makes its own loop: top rail → collector → emitter → 330 Ω → LED → bottom rail. The LED lights, just as it would with only one.":orr?"One transistor is on. Its loop: top rail → collector → emitter → OR point → 330 Ω → LED → bottom rail. The LED current comes from the top rail, not from your switch. The other transistor is off and stays out of the way.":"Neither transistor gets base current, so there's no loop through the LED. LED off."};
+};
+DIAG.trap=function(s){
+  var a=s.a,sup=s.sup,st=a?(sup?"on":"dim"):"off",o="";
+  begin(20,305);
+  o+=W([188,80,188,110],sup)+W([40,95,40,140,70,140],a)+W([135,140,146,140],a)+W([40,140,40,190],a)+W([188,170,188,185],a?"mid":false)+W([188,230,188,245],a?"mid":false);
+  if(a){o+=F([40,95,40,190])+F([40,140,70,140])+F([135,140,146,140]);var z=sup?"b":"s";if(sup)o+=F([188,80,188,110],"b");o+=F([188,170,188,185],z)+F([188,230,188,245],z);}
+  o+=FLAG(188,35,a&&sup,"b")+SW(188,35,188,80,sup,"supply")+T(200,40,"stands in for","lbl","start")+T(200,53,"the NAND output","lbl","start");
+  o+=FLAG(40,50,a)+SW(40,50,40,95,a,"A")+R(40,190,40,240,"10k")+GND(40,240,a)+D(40,140,a);
+  o+=NPN(170,140,false,"",a&&sup)+R(70,140,135,140,"10 kΩ")+R(188,185,188,230,"330 Ω")+LED(188,265,st)+GND(188,285,a,sup?"b":"s");
+  if(a&&!sup)o+=T(250,190,"base current","lbl","start")+T(250,204,"leaks B → E","lbl","start")+T(250,218,"into the LED","lbl","start");
+  return {svg:finish(o,340,320,50),
+    meters:[["A",b(a),a],["Supply switch",sup?"closed (NAND = 5 V)":"open (NAND = 0 V)",sup],["LED",st==="on"?"bright":st==="dim"?"dim glow: WRONG":"off",st==="dim"?"warn":st==="on"]],
+    now:(a&&!sup)?"This is the bug. The collector has no supply, but there is still a loop: top rail → switch A → 10 kΩ → base → emitter → 330 Ω → LED → bottom rail. That leak makes the LED glow dimly when it should be completely off.":(a&&sup)?"With the collector supplied, the big loop runs: top rail → supply → collector → emitter → LED → bottom rail. The LED is bright.":"No input, no base current, LED off. Now turn A on and open the supply switch to see the leak."};
+};
+DIAG.and=function(s){
+  var orr=s.or,n=s.nand,led=orr&&n,o="";
+  begin(20,290);
+  o+=W([190,70,190,78],orr)+W([190,115,190,122],orr?(led?"mid":true):false)+W([190,162,190,180],n?false:(orr?"mid":false));
+  o+=W([40,95,40,210,70,210],n)+W([135,210,148,210],n)+W([40,210,40,225],n);
+  if(n)o+=F([40,95,40,225])+F([40,210,70,210])+F([135,210,148,210]);
+  if(led)o+=F([190,70,190,78],"b")+F([190,115,190,122],"b")+F([190,162,190,180],"b");
+  o+=FLAG(190,30,led,"b")+SW(190,30,190,70,orr,"OR")+T(202,40,"stands in for","lbl","start")+T(202,53,"the OR stage","lbl","start");
+  o+=R(190,78,190,115,"330 Ω")+LED(190,142,led?"on":"off")+NPN(172,210,false,"Q5",n)+GND(190,240,n,led?"b":"s");
+  o+=FLAG(40,50,n)+SW(40,50,40,95,n,"NAND")+T(50,112,"stands in for","lbl","start")+T(50,125,"the NAND output","lbl","start");
+  o+=R(70,210,135,210,"10 kΩ")+R(40,225,40,270,"10k")+GND(40,270,n)+D(40,210,n);
+  return {svg:finish(o,340,306,50),
+    meters:[["OR",b(orr),orr],["NAND",b(n),n],["Q5",n?"ON":"off",n],["LED",led?"ON":"off",led]],
+    now:led?"The full loop is complete: top rail → OR switch → 330 Ω → LED → Q5 collector → emitter → bottom rail. LED on.":(orr&&!n)?"The OR side is supplying, but Q5 is off, so the loop back to the bottom rail is broken. Nothing flows. Even a leaky base current has no way back to the battery.":!orr&&n?"Q5 is on, but nothing is feeding the LED from the top rail. No loop, LED off.":"Nothing feeds the LED and nothing connects it to the bottom rail. LED off."};
+};
+DIAG.full=function(s){
+  var a=s.a,bb=s.b,n=!(a&&bb),orr=a||bb,led=orr&&n,o="";
+  begin(20,462);
+  /* input A */
+  o+=W([50,95,50,370],a)+W([50,370,250,370,250,150],a)+W([125,370,125,150],a)+W([185,150,191,150],a)+W([290,150,306,150],a)+W([50,370,50,380],a);
+  /* input B */
+  o+=W([100,95,100,400,505,400,505,150],bb)+W([150,400,150,210],bb)+W([185,210,191,210],bb)+W([470,150,464,150],bb);
+  /* NAND */
+  o+=W([233,92,233,120],n)+W([233,105,300,105,300,330],n)+W([338,330,343,330],n);
+  /* OR + output */
+  o+=W([348,180,348,200,422,200,422,180],orr)+W([385,200,385,210],orr)+W([385,250,385,258],orr?"mid":false)+W([385,298,385,300],n?false:(orr?"mid":false));
+  /* flows */
+  if(a){o+=F([50,95,50,380]);if(bb)o+=F([50,370,125,370,125,150])+F([185,150,191,150]);if(led)o+=F([50,370,250,370,250,150])+F([290,150,306,150]);}
+  if(bb){o+=F([100,95,100,400,150,400,150,210])+F([185,210,191,210]);if(led)o+=F([100,400,505,400,505,150])+F([470,150,464,150]);}
+  if(!n)o+=F([233,92,233,120],"b");
+  else o+=F([233,92,233,105])+F([233,105,300,105,300,330])+F([338,330,343,330]);
+  if(led){if(a)o+=F([348,180,348,200,385,200],"b");if(bb)o+=F([422,180,422,200,385,200],"b");o+=F([385,200,385,210],"b")+F([385,250,385,258],"b")+F([385,298,385,300],"b");}
+  /* parts */
+  o+=FLAG(50,55,a)+SW(50,55,50,95,a,"A")+R(50,380,50,425,"R1 10k",-1)+GND(50,425,a);
+  o+=FLAG(100,55,bb)+SW(100,55,100,95,bb,"B")+R(100,400,100,440,"R2 10k")+GND(100,440,bb);
+  o+=R(125,150,185,150,"R4 10k")+R(150,210,185,210,"R5 10k",-1);
+  o+=FLAG(233,48,true,!n?"b":"s")+R(233,48,233,92,"R3 1k")+NPN(215,150,false,"",a&&bb)+NPN(215,210,false,"",bb)+GND(233,240,!n||bb,!n?"b":"s");
+  o+=T(207,126,"Q1","nlbl","end")+T(207,246,"Q2","nlbl","end");
+  o+=R(250,150,290,150,"R6 10k")+FLAG(348,120,led&&a,"b")+FLAG(422,120,led&&bb,"b")+NPN(330,150,false,"",a&&led)+NPN(440,150,true,"",bb&&led);
+  o+=T(330,188,"Q3","nlbl","end")+T(446,188,"Q4","nlbl","start");
+  o+=R(470,150,505,150,"R7 10k");
+  o+=R(385,210,385,250,"R8 330")+LED(385,278,led?"on":"off")+NPN(367,330,false,"",n)+T(410,345,"Q5","nlbl","start")+GND(385,360,n,led?"b":"s");
+  o+=R(300,330,338,330,"R9 10k");
+  /* hops + dots + node labels */
+  o+=HOP(100,370,a)+HOP(150,370,a)+HOP(300,150,a)+HOP(233,370,a)+HOP(233,400,bb)+HOP(385,400,bb);
+  o+=D(50,370,a)+D(125,370,a)+D(100,400,bb)+D(150,400,bb)+D(233,105,n)+D(385,200,orr);
+  o+=T(262,99,"NAND","nlbl","start")+T(395,198,"OR","nlbl","start")+T(360,290,"K","lbl","end");
+  o+=T(30,366,"A","nlbl")+T(84,396,"B","nlbl");
+  return {svg:finish(o,530,478,50,true),
+    meters:[["A",b(a),a],["B",b(bb),bb],["OR",b(orr),orr],["NAND",b(n),n],["LED",led?"ON":"off",led]],
+    now:CASES[""+b(a)+b(bb)]};
+};
+var CASES={
+ "00":"Both switches open. The pull-downs hold A and B at 0 V, so Q1–Q4 get no base current. NAND sits at 5 V through R3, so Q5 is on and ready, but the OR stage has nothing to give. LED off.",
+ "10":"Only A is closed. Q3 turns on and pushes current into the OR node. Q1 is on too, but Q2 is off, so the NAND chain is broken and NAND stays at 5 V. Q5 is on, the LED has a path to ground, and it lights.",
+ "01":"Only B is closed. The mirror image: Q4 supplies the OR node, Q2 is on but Q1 is off, so NAND stays at 5 V, Q5 is on, and the LED lights.",
+ "11":"Both closed. Q1 and Q2 are both on, which pulls NAND down to about 0 V. Q5 loses its base current and turns off. The OR stage is still pushing, but the LED has no path to ground. LED off."
+};
+
+/* ---------- content ---------- */
+var LEG='<div class="legend"><span><i class="l-hi"></i>wire at 5 V (logic 1)</span><span><i class="l-lo"></i>wire at 0 V (logic 0)</span><span><i class="l-fl"></i>current flowing</span></div>';
+function tt(cols,rows,cur){var h='<div class="ttwrap"><table class="tt"><tr>'+cols.map(function(c){return "<th>"+c+"</th>";}).join("")+"</tr>";rows.forEach(function(r,i){h+='<tr class="'+(i===cur?"on":"")+'">'+r.map(function(c){return "<td>"+c+"</td>";}).join("")+"</tr>";});return h+"</table></div>";}
+function ab(s){return (s.a?2:0)+(s.b?1:0);}
+var XT=[[0,0,0],[0,1,1],[1,0,1],[1,1,0]];
+
+var STEPS=[
+{id:"goal",part:"Start",title:"What we are building",diag:"goal",init:{a:false,b:false},ctl:[["a","A"],["b","B"]],
+ table:function(s){return tt(["A","B","XOR"],XT,ab(s));},
+ text:`<p>An <b>XOR gate</b> (“exclusive OR”) has two inputs and one output. The output is 1 when <b>exactly one</b> input is 1. If both are 0, or both are 1, the output is 0.</p>
+<p>Try the A and B buttons. The LED only lights for 0 1 and 1 0.</p>
+<p>You already know this from real life. A staircase light with a switch at the top and another at the bottom is an XOR: flipping <i>either</i> switch changes the light.</p>
+<h3>The plan</h3>
+<p>We can't buy an “exactly one” part, so we build XOR from three simpler ideas:</p>
+<div class="formula">XOR = (A OR B) AND (A NAND B)</div>
+<ul><li><b>A OR B</b>: at least one input is on.</li><li><b>A NAND B</b>: not both inputs are on.</li><li>Both true at once means exactly one is on. That is XOR.</li></ul>
+<p>We'll start from “what is a circuit?”, learn one part at a time, and finish with a circuit you can build in VoltSim and explain yourself. There's a quiz every few steps.</p>`},
+
+{id:"loop",part:"Part 1 · Electricity basics",title:"A circuit is a loop",diag:"loop",init:{sw:false},ctl:[["sw","Switch"]],
+ text:`<p>A battery has two ends: <b>+</b> and <b>−</b>. Our battery keeps the + end <b>5 volts</b> higher than the − end.</p>
+<p><b>Voltage</b> is like water pressure: a push. <b>Current</b> is the flow that the push causes, measured in amps (A) or milliamps (mA, thousandths of an amp).</p>
+<p>Current only flows if there is a complete loop from + back to −. Close the switch: the loop is finished and the LED lights. Open it: one gap anywhere stops the whole loop.</p>
+<div class="why"><span class="k">How to read the diagrams</span>Green wires are at 5 V. Grey wires are at 0 V. Moving amber dashes show current, drawn from + to −. Thick dashes mean a big current and thin dashes a small one.</div>
+<h3>Voltage becomes logic</h3>
+<p>Logic circuits use voltage as a yes/no signal. In this whole tutorial:</p>
+<ul><li><b>5 V means 1</b> (on, true)</li><li><b>0 V means 0</b> (off, false)</li></ul>
+<p>The − end of the battery is our 0 V reference. It's usually called <b>ground</b>.</p>`},
+
+{id:"resistor",part:"Part 1 · Electricity basics",title:"Why the LED needs a resistor",diag:"resistor",init:{sw:true,nores:false},ctl:[["sw","Switch"],["nores","Remove resistor"]],
+ text:`<p>An LED is a one-way valve that glows. It lets current through in the direction of its triangle (from the flat top to the bar). Once it's conducting, it takes a roughly fixed slice of the voltage: about <b>2 V</b> for a red LED, or about 3 V for a white or blue one.</p>
+<p>The LED does <b>not</b> limit the current by itself. So with 5 V pushing and nothing to stop it, far too much current flows and the LED burns out. Try “Remove resistor”.</p>
+<h3>Ohm's law</h3>
+<p>A resistor limits current. The rule linking voltage, current and resistance is:</p>
+<div class="formula">V = I × R &nbsp;→&nbsp; I = V ÷ R</div>
+<p>The battery gives 5 V and the LED takes 2 V, so <b>3 V is left over</b> for the resistor:</p>
+<div class="formula">I = 3 V ÷ 330 Ω ≈ 0.009 A = 9 mA</div>
+<p>LEDs are happy at about 5–20 mA, so 330 Ω is a good choice.</p>
+<div class="why"><span class="k">Remember this</span>Resistors appear everywhere in the XOR circuit. Each one is there to <b>limit a current</b> or to <b>set a voltage</b>. When you meet a new one, ask which job it's doing.</div>`},
+
+{id:"pulldown",part:"Part 1 · Electricity basics",title:"Turning a switch into a clean 1 or 0",diag:"pulldown",init:{sw:false,pd:true},ctl:[["sw","Switch A"],["pd","Pull-down fitted"]],
+ text:`<p>From now on every diagram keeps the battery on the left with two long wires called <b>rails</b>:</p>
+<ul><li>The <b>top rail</b> is joined to the battery's <b>+</b> end, so it's at <b>5 V</b>.</li><li>The <b>bottom rail</b> is joined to the battery's <b>−</b> end, so it's at <b>0 V</b>. This is also called <b>ground</b>.</li></ul>
+<p>Every loop is drawn in full. Current leaves the battery's +, runs along the top rail, down through the parts, back along the bottom rail, and into the battery's −. Watch the dashes do exactly that.</p>
+<p>To <b>see</b> a signal, we hang an LED (with its 330 Ω resistor) from it down to the bottom rail. LED lit means the wire is high (1). LED dark means it's low (0). You'll see this output LED on every gate from now on.</p>
+<p>Our inputs A and B are switches. When a switch is closed, A is connected to +5 V: that's a clear <b>1</b>.</p>
+<p>When the switch is <b>open</b>, nothing feeds A. Untick “Pull-down fitted” and open the switch. The LED is dark, but that doesn't prove A is 0 V. An LED doesn't conduct at all below about 2 V, so nothing holds A anywhere between 0 and 2 V. A is <b>floating</b>. A floating wire picks up electrical noise, and a sensitive input could read it as 1 or 0 at random.</p>
+<h3>The pull-down resistor</h3>
+<p>A 10 kΩ resistor from A to ground fixes this:</p>
+<ul><li><b>Switch open:</b> the resistor quietly connects A to ground. No current flows, so there's no voltage across it (V = I × R = 0), and A is exactly 0 V.</li><li><b>Switch closed:</b> the switch connects A to +5 V with almost zero resistance. It easily wins against 10 kΩ, so A is 5 V. A tiny 0.5 mA leaks through the resistor. That's harmless.</li></ul>
+<div class="why"><span class="k">Why it matters</span>Every input needs a defined value in both switch positions. The XOR circuit has one pull-down on A and one on B.</div>`},
+
+{quiz:true,part:"Check 1",title:"Quick check: the basics",qs:[
+ {q:"In our circuits, what does a wire at 5 V mean?",o:["Logic 1 (on)","Logic 0 (off)","The wire is broken","Current must be flowing in it"],c:0,w:"We agreed that 5 V means 1 and 0 V means 0. Voltage tells you the logic value. Current is a separate thing: a wire can be at 5 V with no current flowing."},
+ {q:"A red LED takes about 2 V. With a 5 V supply and a 330 Ω resistor, about how much current flows?",o:["0.9 mA","9 mA","90 mA","1.5 A"],c:1,w:"5 V − 2 V = 3 V across the resistor. I = V ÷ R = 3 ÷ 330 ≈ 0.009 A, which is 9 mA."},
+ {q:"Switch A is open, there's no pull-down, and the LED on A is dark. What can you say about A?",o:["A is exactly 0 V, because the LED is dark","A is exactly 5 V","A is floating: the LED doesn't conduct below about 2 V, so nothing holds A at 0 V","The LED is broken"],c:2,w:"A dark LED only tells you A is below about 2 V. Nothing actually connects A to the bottom rail, so its voltage is undefined and drifts with noise. The pull-down fixes this by holding A at a solid 0 V."},
+ {q:"Switch A is closed. Why does A read 5 V even though the pull-down still connects it to ground?",o:["The pull-down switches itself off","The switch connects A to 5 V with almost no resistance, so it easily wins over the 10 kΩ","Current can't flow through a resistor when a switch is closed","Ground turns into 5 V"],c:1,w:"The switch is a near-zero-resistance path to 5 V. The 10 kΩ path to ground is weak by comparison, so A sits at 5 V and only a tiny current (0.5 mA) flows to ground."}
+]},
+
+{id:"npn",part:"Part 2 · The transistor",title:"A transistor is a switch you control with electricity",diag:"npn",init:{a:false},ctl:[["a","Switch A"]],
+ text:`<p>An <b>NPN transistor</b> has three legs:</p>
+<ul><li><b>B, base:</b> the control input.</li><li><b>C, collector:</b> where the big current comes in.</li><li><b>E, emitter:</b> where all the current leaves. It's the leg with the arrow.</li></ul>
+<p>Here's the rule. A <b>small current into the base</b> (flowing out through the emitter) lets a <b>much bigger current flow from collector to emitter</b>. No base current means no collector current: it acts like an open switch.</p>
+<p>Close switch A and watch. The thin dashes are the small base current. The thick dashes are the big LED current it controls.</p>
+<h3>The numbers</h3>
+<ul><li>The base must sit about <b>0.7 V</b> higher than the emitter before anything happens.</li><li>The <b>10 kΩ base resistor</b> limits the base current: (5 − 0.7) ÷ 10 000 ≈ <b>0.43 mA</b>.</li><li>A typical transistor multiplies base current by about 100. So 0.43 mA at the base could allow over 40 mA. The LED only needs 9 mA, so the transistor is fully on (“saturated”). That's exactly what we want from a switch.</li></ul>
+<div class="why"><span class="k">Why use a transistor?</span>A tiny signal can switch a bigger current, and the output of one transistor can control the next one. That chaining is how every logic gate, and every computer chip, is built.</div>
+<p class="hint">Memory trick: on an NPN the emitter arrow is “Not Pointing iN”.</p>`},
+
+{id:"not",part:"Part 2 · The transistor",title:"Your first logic gate: NOT",diag:"not",init:{a:false},ctl:[["a","Switch A"]],
+ table:function(s){return tt(["A","OUT"],[[0,1],[1,0]],s.a?1:0);},
+ text:`<p>This time the transistor doesn't switch the LED directly. A <b>1 kΩ resistor</b> runs from the top rail to the collector. The point between them is the output, <b>OUT</b>. The output LED (with its 330 Ω) hangs from OUT down to the bottom rail.</p>
+<ul><li><b>A = 0:</b> the transistor is off. The current from the 1 kΩ has only one way back to the battery: through the LED. The LED lights and OUT is about 2.8 V: <b>1</b>.</li><li><b>A = 1:</b> the transistor turns on and gives the current a much easier path straight to the bottom rail. OUT drops to about 0.1 V, below the 2 V the LED needs, so the LED goes out: <b>0</b>.</li></ul>
+<p>The output is always the opposite of the input. That's a <b>NOT gate</b>, also called an inverter.</p>
+<div class="why"><span class="k">The key idea: steering current</span>Current flows through the 1 kΩ in <b>both</b> states. The transistor only decides where it goes next: through the LED (transistor off) or straight to the bottom rail (transistor on). When the transistor takes the easy path, the LED is starved and goes dark.</div>
+<div class="why"><span class="k">Why the 1 kΩ is needed</span>Without it, turning the transistor on would join the top rail straight to the bottom rail: a short circuit. The 1 kΩ limits that current to about 5 mA. It's called a <b>pull-up</b>, because it pulls OUT up towards 5 V whenever the transistor is off.</div>
+<p>This “resistor from the top, transistors to the bottom” pattern is the heart of the NAND gate on the next step.</p>`},
+
+{quiz:true,part:"Check 2",title:"Quick check: transistors",qs:[
+ {q:"Which leg of an NPN transistor controls it?",o:["Collector","Base","Emitter","Whichever leg is at 5 V"],c:1,w:"A small current into the base controls the big collector-to-emitter current."},
+ {q:"About how much higher than the emitter must the base be before the transistor turns on?",o:["0.07 V","0.7 V","5 V","12 V"],c:1,w:"About 0.7 V. You'll see this number again: in the OR stage the output sits about 0.7 V below the base."},
+ {q:"In the NOT gate, why does the output LED go dark when switch A is ON?",o:["The battery switches off","The transistor turns on and gives the current an easy path to the bottom rail, so OUT drops to about 0.1 V, below the 2 V the LED needs","The 1 kΩ stops all current","Current can't flow through a transistor"],c:1,w:"Current still flows through the 1 kΩ, about 5 mA. It just goes collector → emitter → bottom rail instead of through the LED. With OUT at about 0.1 V, the LED can't conduct, so it goes dark."},
+ {q:"What is the 10 kΩ resistor between switch A and the base for? (Not the pull-down.)",o:["It makes the LED brighter","It limits the base current to a small, safe amount (about 0.4 mA)","It turns the transistor into a diode","Nothing, it's decoration"],c:1,w:"Base to emitter behaves like a diode that only needs about 0.7 V. The resistor takes the rest: (5 V − 0.7 V) ÷ 10 000 Ω ≈ 0.43 mA. That small current is plenty to switch the transistor fully on. Without the resistor, 5 V straight into the base would push a huge current and damage the transistor."}
+]},
+
+{id:"nand",part:"Part 3 · The building blocks",title:"NAND: two transistors in a row",diag:"nand",init:{a:false,b:false},ctl:[["a","A"],["b","B"]],
+ table:function(s){return tt(["A","B","NAND"],[[0,0,1],[0,1,1],[1,0,1],[1,1,0]],ab(s));},
+ text:`<p class="hint">Each input is the switch plus pull-down from step 4: a switch down from the top rail and a 10 kΩ down to the bottom rail. Where A's wire crosses B's with a little hump, they are <b>not</b> connected.</p>
+<p>Take the NOT gate and put <b>two transistors in a chain</b> (in <b>series</b>) between the output and the bottom rail. Q1's emitter feeds Q2's collector.</p>
+<p>For current to get from the output to ground, it has to pass through Q1 <b>and</b> Q2. Like two doors in a corridor, both must be open.</p>
+<ul><li>Only one transistor on: the chain is still broken, so the current from the 1 kΩ goes through the output LED instead. LED on: <b>1</b>.</li><li>Both on: the current takes the chain straight to the bottom rail. The output drops to about 0.1 V and the LED goes out: <b>0</b>.</li></ul>
+<p>The output is 0 only when A AND B are both 1. It's the opposite of AND, which is why it's called <b>NAND</b> (Not AND).</p>
+<p>A detail you can see in the animation: Q1's base current only flows when Q2 is on too. Q1's emitter has no other route back to the bottom rail, and no loop means no current.</p>
+<div class="why"><span class="k">Why NAND is useful here</span>For XOR we need “not both”. NAND gives exactly that: it's 1 in every case except 1 1.</div>
+<p class="hint">Series (chain) acts like AND. Parallel (side by side) acts like OR, which is the next step.</p>`},
+
+{id:"or",part:"Part 3 · The building blocks",title:"OR: two transistors side by side",diag:"or",init:{a:false,b:false},ctl:[["a","A"],["b","B"]],
+ table:function(s){return tt(["A","B","OR"],[[0,0,0],[0,1,1],[1,0,1],[1,1,1]],ab(s));},
+ text:`<p>This stage is wired differently. Each transistor's <b>collector goes straight to +5 V</b>, and the output is taken from the <b>emitters</b>, which are joined together. The LED hangs below them.</p>
+<p>This is called an <b>emitter follower</b>. When the base is pushed high, the emitter “follows” it, sitting about 0.7 V lower. The important part: the current for the LED comes <b>from the +5 V rail through the collector</b>, not from your switch. The input only supplies the small base current.</p>
+<p>The two transistors are <b>side by side</b> (in <b>parallel</b>). Either one can feed the OR node:</p>
+<ul><li>A on: Q3 feeds it. B on: Q4 feeds it. Both on: both feed it. Any of these lights the LED.</li><li>A transistor that's off acts like an open switch, so it doesn't drain what the other one supplies.</li></ul>
+<p>The output is 1 if A OR B (or both) is 1. That's an <b>OR gate</b>.</p>
+<div class="why"><span class="k">Why Q4 is drawn mirrored</span>Q4 is exactly the same transistor, flipped left to right so its base faces input B. Flipping a part doesn't change how it works. Just follow which leg connects where.</div>`},
+
+{id:"trap",part:"Part 3 · The building blocks",title:"Why your first circuit glowed when it shouldn't",diag:"trap",init:{a:true,sup:false},ctl:[["a","A"],["sup","Supply switch"]],
+ text:`<p>Your first design tried to make the AND by <b>powering the OR stage's collectors from the NAND output</b>. The idea: when NAND = 0, the OR stage loses its power, so the LED goes off.</p>
+<p>The <b>supply switch</b> here stands in for the NAND output: closed means NAND = 5 V, open means NAND = 0 V. Leave A on and open the supply switch (that's the 1 1 case). The LED still glows.</p>
+<h3>What goes wrong</h3>
+<p>The base-to-emitter part of a transistor is itself a one-way path, like a small diode. So current from input A flows <b>in at the base, out of the emitter, through the LED to ground</b>, with no collector supply involved. The transistor isn't “off” just because its collector has no power. That leaked current makes the LED glow in the 1 1 case, when it should be completely off.</p>
+<h3>And why the “on” cases were dim</h3>
+<p>In your version, the current for the output LED had to squeeze through a long line of parts: a 1 kΩ resistor, the top indicator LED, another 1 kΩ, the transistor, then the output LED. Two LEDs take about 2 V each, or 3 V each if they're white or blue, and the transistor takes more. Very little of your 5 V is left to push current, so the 1 cases were dim too.</p>
+<div class="why"><span class="k">The lesson</span>You can't reliably switch a stage off by removing its power, because signals leak in through its inputs. Put a proper switch <b>in the path of the current you want to control</b>. That's the fix on the next step.</div>`},
+
+{id:"and",part:"Part 3 · The building blocks",title:"The fix: AND with a switch on the ground side",diag:"and",init:{or:true,nand:true},ctl:[["or","OR signal"],["nand","NAND signal"]],
+ table:function(s){return tt(["OR","NAND","LED"],[[0,0,0],[0,1,0],[1,0,0],[1,1,1]],(s.or?2:0)+(s.nand?1:0));},
+ text:`<p>Keep the OR stage powered from +5 V all the time. Then add a fifth transistor, <b>Q5</b>, <b>under the LED</b>, between the LED and ground. The NAND output drives Q5's base through a 10 kΩ resistor.</p>
+<p>Now the LED current has to pass through two things in a row (in <b>series</b>):</p>
+<ol><li>the OR stage has to <b>supply</b> it (OR = 1), and</li><li>Q5 has to <b>let it through to ground</b> (NAND = 1).</li></ol>
+<p>Series means AND, just like in the NAND chain. The LED lights only when <b>OR AND NAND</b> are both 1.</p>
+<div class="why"><span class="k">Why this fixes the leak</span>When NAND = 0, Q5 is off, and Q5 is the <b>only</b> way from the LED to ground. Even the leaky base current from step 11 has nowhere to go, so the LED is completely dark.</div>
+<p>In this step two switches stand in for the OR stage and the NAND output, so you can try each combination on its own. Try all four and compare with the table.</p>`},
+
+{quiz:true,part:"Check 3",title:"Quick check: the gates",qs:[
+ {q:"When is the NAND output at 0 V?",o:["When either input is 1","Only when A = 1 and B = 1","When both inputs are 0","Never: it's always 5 V"],c:1,w:"Current can only reach ground through Q1 and Q2 in series, so both must be on. Every other case leaves the chain broken, so the current from the 1 kΩ goes through the output LED instead and the output stays high."},
+ {q:"How are the two transistors in the OR stage connected?",o:["In a chain (series), so both must be on","Side by side (parallel), so either one can feed the output","Base to base","Collector to base"],c:1,w:"Parallel acts like OR: either path can supply current. Series acts like AND: both paths must conduct."},
+ {q:"Why did your original circuit's LED still glow with both switches on?",o:["The battery voltage was too high","Base current from the inputs flowed base → emitter → LED, even with no collector supply","The LEDs were in backwards","The 10 kΩ resistors were too small"],c:1,w:"Base to emitter conducts like a diode, so the inputs could light the LED directly. Removing the collector supply didn't block that path."},
+ {q:"What job does Q5 do?",o:["It inverts the OR output","It limits the LED current","It's the AND: it connects the LED to ground only while NAND = 1","It's the pull-up for the NAND stage"],c:2,w:"Q5 sits in series with the LED. The LED only has a path to ground when Q5 is on, and Q5 is only on when NAND = 1."}
+]},
+
+{id:"full",part:"Part 4 · Putting it together",title:"The complete XOR",diag:"full",init:{a:false,b:false},ctl:[["a","A"],["b","B"]],play:true,
+ table:function(s){return tt(["A","B","OR","NAND","LED"],[[0,0,0,1,0],[0,1,1,1,1],[1,0,1,1,1],[1,1,1,0,0]],ab(s));},
+ text:`<p>Here is every piece joined up. Press <b>Play all 4 cases</b>, or use A and B yourself, and read the “What's happening” box as it changes.</p>
+<h3>Find the four blocks</h3>
+<ul><li><b>Inputs (left):</b> switches A and B, each with a pull-down (R1, R2).</li><li><b>NAND (middle):</b> R3 pull-up with Q1 and Q2 in series. Its output is the node labelled NAND.</li><li><b>OR (right):</b> Q3 and Q4 side by side, collectors to +5 V, emitters joined at the OR node.</li><li><b>AND + output (bottom right):</b> OR node → R8 → LED → Q5 → ground, with NAND driving Q5's base through R9.</li></ul>
+<h3>Reading the drawing</h3>
+<ul><li>The battery is on the left. Everything touching the <b>top rail</b> connects to its +, and everything touching the <b>bottom rail</b> connects to its −.</li><li>A <b>dot</b> where wires meet means they're connected.</li><li>A <b>little hump</b> means one wire jumps over the other with <b>no</b> connection.</li><li>A and B each feed <b>two</b> bases: A goes to Q1 and Q3, and B goes to Q2 and Q4.</li><li>The diagram may scroll sideways on a phone.</li></ul>
+<div class="why"><span class="k">The whole idea in one line</span>The OR stage asks “is at least one on?”, the NAND stage asks “are they not both on?”, and Q5 only lets the LED light when both answers are yes.</div>`},
+
+{id:"build",part:"Part 4 · Putting it together",title:"Build it in VoltSim",diag:"full",init:{a:false,b:false},ctl:[["a","A"],["b","B"]],build:true,
+ text:`<h3>Parts</h3>
+<table class="parts"><tr><th>Qty</th><th>Part</th><th>Names</th></tr>
+<tr><td>1</td><td>5 V battery / DC source</td><td></td></tr>
+<tr><td>2</td><td>Switch (SPST)</td><td>A, B</td></tr>
+<tr><td>5</td><td>NPN transistor</td><td>Q1–Q5</td></tr>
+<tr><td>7</td><td>10 kΩ resistor</td><td>R1, R2, R4, R5, R6, R7, R9</td></tr>
+<tr><td>1</td><td>1 kΩ resistor</td><td>R3</td></tr>
+<tr><td>1</td><td>330 Ω resistor</td><td>R8</td></tr>
+<tr><td>1</td><td>LED</td><td></td></tr></table>
+<p class="hint">Build it the way the diagram shows: a top rail wire from the battery's + and a bottom rail wire from its −. In the checklist, “+5 V” means the top rail and “ground” means the bottom rail. To find a transistor's legs: the arrow is the emitter, the single lead on the flat bar is the base, and the remaining leg is the collector.</p>
+<h3>Build in this order and test as you go</h3>
+<ul class="check" id="checklist"></ul>
+<h3>If it doesn't work</h3>
+<ul>
+<li><b>LED never lights:</b> check the LED direction (the triangle points toward Q5), the battery polarity, and that Q5's emitter goes to −.</li>
+<li><b>LED lights for 1 1:</b> NAND isn't going low. Q1's emitter must go to Q2's collector, not straight to ground. Measure NAND: it should read under 0.3 V.</li>
+<li><b>LED dim:</b> Q3 and Q4 collectors must go straight to +5 V, not through anything else.</li>
+<li><b>Output random with a switch open:</b> a pull-down (R1 or R2) is missing.</li>
+<li><b>Nothing makes sense:</b> test one block at a time. Temporarily hang an LED with a 330 Ω from A, B, NAND or OR down to the bottom rail and compare it with the table.</li></ul>`},
+
+{quiz:true,part:"Final check",title:"Final check: the whole circuit",qs:[
+ {q:"A closed, B open. Which is true?",o:["NAND = 0 V, so the LED is off","NAND = 5 V, OR = 1, Q5 on, LED on","OR = 0, so the LED is off","Q1 and Q2 are both on"],c:1,w:"Only Q1 is on, so the NAND chain is broken and NAND stays at 5 V. Q3 feeds the OR node, Q5 is on, and the LED lights."},
+ {q:"Both switches closed. Which transistor turns OFF and stops the LED?",o:["Q1","Q3","Q5","Q2"],c:2,w:"Q1 and Q2 both conduct, pulling NAND to about 0 V. Q5 loses its base current and switches off, cutting the LED's path to ground."},
+ {q:"Which formula does the circuit build?",o:["(A AND B) OR (A NAND B)","(A OR B) AND (A NAND B)","A OR B","NOT (A OR B)"],c:1,w:"The OR stage gives A OR B, the NAND stage gives A NAND B, and Q5 ANDs them."},
+ {q:"What does R3, the 1 kΩ above Q1, do?",o:["It powers the LED","It holds NAND at 5 V unless Q1 and Q2 are both on, and limits the current when they are","It protects the switches","It sets the OR voltage"],c:1,w:"It's the NAND stage's pull-up. With no current it drops 0 V, so NAND = 5 V. When Q1 and Q2 both conduct, it stops +5 V being shorted to ground."},
+ {q:"You build it and the LED never lights in any case. What should you check first?",o:["Change every resistor to 1 kΩ","The LED direction and the battery polarity","Add another transistor","Remove the pull-downs"],c:1,w:"An LED only conducts one way, and a reversed battery stops everything. These are the two most common mistakes."}
+]},
+
+{id:"explain",part:"Finish",title:"Explain it back",final:true,
+ text:`<p>You understand something when you can explain it without looking. Answer each prompt <b>out loud or on paper first</b>, then open it to compare.</p>
+<details class="reveal"><summary>1. What does an XOR gate do?</summary><p>Its output is 1 when exactly one input is 1, and 0 when both inputs are the same. It's like a staircase light with two switches.</p></details>
+<details class="reveal"><summary>2. How does an NPN transistor work as a switch?</summary><p>A small current into the base (through a resistor, with the base about 0.7 V above the emitter) lets a much larger current flow from collector to emitter. No base current means it's off, like an open switch.</p></details>
+<details class="reveal"><summary>3. In the NAND gate, why does the output LED stay lit when only one transistor is on?</summary><p>Current from the 1 kΩ can only reach the bottom rail through Q1 and Q2 in a chain. With one of them off the chain is broken, so the current goes through the LED instead and lights it. Only when both are on does the current take the chain, pulling the output to about 0.1 V and starving the LED.</p></details>
+<details class="reveal"><summary>4. Why is NAND built with transistors in series, and OR with transistors in parallel?</summary><p>In series, current needs every transistor on, which gives AND behaviour (NAND once the pull-up inverts it). In parallel, any one transistor can pass current, which gives OR behaviour.</p></details>
+<details class="reveal"><summary>5. What exactly happens when only switch A is closed?</summary><p>A becomes 5 V. Q1 turns on but Q2 is off, so NAND stays at 5 V and Q5 is on. Q3 turns on and supplies current from +5 V into the OR node. That current flows through R8, the LED and Q5 to ground, so the LED lights.</p></details>
+<details class="reveal"><summary>6. Why didn't the first design work, and how does the new one fix it?</summary><p>It tried to switch the OR stage off by removing its collector supply. Base current from the inputs still flowed base → emitter → LED, so the LED glowed at 1 1. The long line of parts also made the “on” cases dim. The fix leaves the OR stage properly powered and puts Q5 in series with the LED, so NAND = 0 cuts the LED's only path to ground.</p></details>
+<details class="reveal"><summary>7. What are the pull-down resistors for?</summary><p>They hold A and B at a clean 0 V when the switches are open. Without them the inputs float and give random results.</p></details>
+<h3>Challenge yourself</h3>
+<ul><li>Draw the full circuit from memory, then check it against step 14.</li><li>Predict all four rows of the table, including OR and NAND, before testing in VoltSim.</li><li>Stretch goal: an XNOR lights when both inputs are the same. Which single part could you move to turn this XOR into an XNOR? (Hint: what if Q5 were driven by the inverse of NAND, which is AND?)</li></ul>`}
+];
+
+var CHECK=[
+ "Place the battery. Choose which rail is +5 V and which is ground (−).",
+ "Input A: +5 V → switch A → node A. R1 (10 kΩ) from node A to ground.",
+ "Test: hang a temporary LED with a 330 Ω from A down to the bottom rail. It lights with the switch closed and goes dark when open. Remove it afterwards.",
+ "Input B: the same, with switch B and R2. Test it too.",
+ "NAND: R3 (1 kΩ) from +5 V to a node called NAND. Q1 collector → NAND. Q1 emitter → Q2 collector. Q2 emitter → ground.",
+ "R4 (10 kΩ): A → Q1 base. R5 (10 kΩ): B → Q2 base.",
+ "Test: hang the temporary LED + 330 Ω from NAND to the bottom rail. It lights for 00, 01 and 10 and goes dark for 11. Remove it afterwards.",
+ "OR: Q3 and Q4 collectors → +5 V. R6: A → Q3 base. R7: B → Q4 base. Join Q3 and Q4 emitters: that's the OR node.",
+ "Output: OR node → R8 (330 Ω) → LED anode (flat side of the triangle). LED cathode (bar side) → Q5 collector. Q5 emitter → ground.",
+ "R9 (10 kΩ): NAND node → Q5 base.",
+ "Final test: the LED lights for 01 and 10 and is fully off for 00 and 11."
+];
+
+/* ---------- state ---------- */
+var cur=Math.min(load("step",0),STEPS.length-1);
+var ST=STEPS.map(function(s){return s.init?JSON.parse(JSON.stringify(s.init)):{};});
+var QA=load("answers",{}); /* key "stepIdx-q" -> chosen original index */
+var ORDER={};
+var checks=load("checks",[]);
+var timer=null;
+
+function shuffle(n,seed){var a=[];for(var i=0;i<n;i++)a.push(i);var x=seed*9301+49297;for(var j=n-1;j>0;j--){x=(x*9301+49297)%233280;var k=Math.floor(x/233280*(j+1));var t=a[j];a[j]=a[k];a[k]=t;}return a;}
+
+function dots(){
+  var h="";STEPS.forEach(function(s,i){var c=[];if(s.quiz)c.push("quiz");if(i<cur||(s.quiz&&quizDone(i)))c.push("done");if(i===cur)c.push("cur");
+    h+='<button class="'+c.join(" ")+'" aria-label="Step '+(i+1)+': '+s.title.replace(/"/g,"")+'" title="'+(i+1)+". "+s.title.replace(/"/g,"")+'" data-go="'+i+'"></button>';});
+  document.getElementById("dots").innerHTML=h;
+  document.getElementById("count").textContent="Step "+(cur+1)+" of "+STEPS.length;
+}
+function quizDone(i){var s=STEPS[i];if(!s.quiz)return true;for(var q=0;q<s.qs.length;q++)if(QA[i+"-"+q]==null)return false;return true;}
+function score(){var r=0,t=0;STEPS.forEach(function(s,i){if(!s.quiz)return;s.qs.forEach(function(q,j){t++;if(QA[i+"-"+j]===q.c)r++;});});return [r,t];}
+
+function render(anim){
+  stopPlay();
+  var s=STEPS[cur],el=document.getElementById("step"),h="";
+  h+='<div><div class="eyebrow">'+s.part+'</div><h2>'+s.title+'</h2></div>';
+  if(s.quiz){
+    h+='<div class="quiz">';
+    s.qs.forEach(function(q,j){
+      var key=cur+"-"+j,ans=QA[key],ord=ORDER[key]||(ORDER[key]=shuffle(q.o.length,cur*7+j*3+1));
+      h+='<div class="q"><div class="qn">Question '+(j+1)+' of '+s.qs.length+'</div><div class="qt">'+q.q+'</div><div class="opts">';
+      ord.forEach(function(oi){var cls="opt";if(ans!=null){if(oi===q.c)cls+=" right";else if(oi===ans)cls+=" wrong";}
+        h+='<button class="'+cls+'" data-q="'+j+'" data-o="'+oi+'"'+(ans!=null?" disabled":"")+'>'+q.o[oi]+'</button>';});
+      h+='</div>';
+      if(ans!=null)h+='<div class="fb '+(ans===q.c?"ok":"no")+'"><b>'+(ans===q.c?"Correct.":"Not quite.")+'</b> '+q.w+'</div>';
+      h+='</div>';
+    });
+    var done=quizDone(cur),r=0;s.qs.forEach(function(q,j){if(QA[cur+"-"+j]===q.c)r++;});
+    h+='<div class="score">'+(done?"You got "+r+" of "+s.qs.length+"."+(r<s.qs.length?" Reread the explanations above, and go back to any step that felt shaky.":" Nice work."):"Answer every question to continue.")+'</div>';
+    if(done&&r<s.qs.length)h+='<div><button class="btn" id="retry">Try this check again</button></div>';
+    h+='</div>';
+  } else if(s.final){
+    var sc=score();
+    h+='<div class="text">'+s.text+'<div class="why"><span class="k">Your quiz score</span><span class="score">'+sc[0]+' / '+sc[1]+'</span> across all four checks.</div></div>';
+  } else {
+    var d=DIAG[s.diag](ST[cur]);
+    h+='<div class="cols"><div class="lab"><div class="canvas">'+d.svg+'</div>';
+    h+='<div class="controls">';
+    s.ctl.forEach(function(c){var on=!!ST[cur][c[0]];h+='<button class="tog" aria-pressed="'+on+'" data-k="'+c[0]+'"><span class="knob"></span>'+c[1]+'<span class="st">'+(on?"ON":"OFF")+'</span></button>';});
+    if(s.play)h+='<button class="btn" id="play">Play all 4 cases</button>';
+    h+='</div>'+LEG;
+    h+='<div class="meters">'+d.meters.map(function(m){return '<span class="meter '+(m[2]==="warn"?"warn":m[2]?"hi":"")+'"><b>'+m[0]+'</b>'+m[1]+'</span>';}).join("")+'</div>';
+    h+='<div class="now"><strong>What’s happening</strong>'+d.now+'</div>';
+    if(s.table)h+=s.table(ST[cur]);
+    h+='</div><div class="text">'+s.text+'</div></div>';
+  }
+  var canNext=!s.quiz||quizDone(cur);
+  h+='<nav class="foot"><button class="btn" id="prev"'+(cur===0?" disabled":"")+'>← Back</button><span class="hint">Use <kbd>←</kbd> <kbd>→</kbd> keys</span>'+
+     (cur<STEPS.length-1?'<button class="btn primary" id="next"'+(canNext?"":" disabled")+'>Next →</button>':'<button class="btn primary" id="restart">Start again</button>')+'</nav>';
+  el.innerHTML=h;
+  if(s.build){var cl=document.getElementById("checklist");cl.innerHTML=CHECK.map(function(t,i){return '<li><label><input type="checkbox" id="chk'+i+'" data-c="'+i+'"'+(checks[i]?" checked":"")+'><span>'+t+'</span></label></li>';}).join("");}
+  if(anim){el.classList.remove("enter");void el.offsetWidth;el.classList.add("enter");}
+  dots();save("step",cur);
+}
+function refreshLab(){ /* re-render without animation, keep scroll */
+  var y=window.scrollY;render(false);window.scrollTo(0,y);
+}
+function go(i){if(i<0||i>=STEPS.length)return;cur=i;render(true);window.scrollTo(0,0);}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;}}
+
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button,input");if(!t)return;
+  if(t.dataset.go!=null){go(+t.dataset.go);return;}
+  if(t.id==="next"){go(cur+1);return;}
+  if(t.id==="prev"){go(cur-1);return;}
+  if(t.id==="restart"){go(0);return;}
+  if(t.id==="retry"){STEPS[cur].qs.forEach(function(q,j){delete QA[cur+"-"+j];delete ORDER[cur+"-"+j];});save("answers",QA);refreshLab();return;}
+  if(t.dataset.k){ST[cur][t.dataset.k]=!ST[cur][t.dataset.k];refreshLab();return;}
+  if(t.dataset.q!=null){QA[cur+"-"+t.dataset.q]=+t.dataset.o;save("answers",QA);refreshLab();return;}
+  if(t.id==="play"){
+    if(timer){stopPlay();refreshLab();return;}
+    var seq=[[false,false],[true,false],[false,true],[true,true]],k=0,idx=cur;
+    var stepf=function(){ST[idx].a=seq[k][0];ST[idx].b=seq[k][1];k=(k+1)%4;var y=window.scrollY;var tm=timer;timer=null;render(false);timer=tm;window.scrollTo(0,y);var p=document.getElementById("play");if(p)p.textContent="Stop";};
+    stepf();timer=setInterval(stepf,3200);return;
+  }
+  if(t.dataset.c!=null){checks[+t.dataset.c]=t.checked;save("checks",checks);return;}
+});
+document.addEventListener("keydown",function(e){
+  if(e.target.closest("input,textarea"))return;
+  if(e.key==="ArrowRight"){var s=STEPS[cur];if(cur<STEPS.length-1&&(!s.quiz||quizDone(cur)))go(cur+1);}
+  if(e.key==="ArrowLeft")go(cur-1);
+});
+render(false);
+})();
+</script>
+
+</body>
+</html>
