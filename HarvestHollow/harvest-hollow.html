@@ -328,7 +328,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v18 · 11 Oct 2026';
+const VERSION='v19 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -398,9 +398,9 @@ const ITEMS={
   wood:{n:'Wood',e:'🪵'},stone:{n:'Stone',e:'🪨'},berries:{n:'Berries',e:'🫐'},wheat:{n:'Wheat',e:'🌾'},
   plank:{n:'Planks',e:'🟫'},brick:{n:'Bricks',e:'🧱'},jam:{n:'Jam',e:'🍯'},bread:{n:'Bread',e:'🍞'}
 };
-const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1},boltLvl:0,st:{},claimed:{},seen:{},story:0,say:1,tools:{axe:1,pick:1,basket:1}});
+const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1,lights:1,match:1},boltLvl:0,lightLvl:0,matchLvl:0,st:{},claimed:{},seen:{},story:0,say:1,tools:{axe:1,pick:1,basket:1}});
 let S=defState();
-function load(){try{const j=JSON.parse(localStorage.getItem(SAVE_KEY));if(j&&j.v===1){S=Object.assign(defState(),j);return true}}catch(e){}return false}
+function load(){try{const j=JSON.parse(localStorage.getItem(SAVE_KEY));if(j&&j.v===1){S=Object.assign(defState(),j);S.bld=Object.assign({bolt:1,card:1,lights:1,match:1},S.bld);return true}}catch(e){}return false}
 let saveT=0;
 function save(force){const n=Date.now();if(!force&&n-saveT<1500)return;saveT=n;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
 const stat=(k,n=1)=>{S.st[k]=(S.st[k]||0)+n};
@@ -513,6 +513,8 @@ const BLD=[
   {id:'barn',name:'Barn',x:16,y:3,kind:'barn',icon:'📦',wall:'wood',wh:6,roof:[6,58,34]},
   {id:'bolt',name:'Bolt Works',x:22,y:3,kind:'game',game:'bolt',icon:'⚙️',wall:'metal',wh:212,roof:[214,28,34]},
   {id:'card',name:'Card Barn',x:28,y:3,kind:'game',game:'card',icon:'🃏',wall:'wood',wh:108,roof:[285,34,36]},
+  {id:'lights',name:'Lantern Loft',x:5,y:9,kind:'game',game:'lights',icon:'💡',wall:'stone',wh:46,roof:[44,62,38]},
+  {id:'match',name:'Match Hall',x:25,y:9,kind:'game',game:'match',icon:'🎴',wall:'wood',wh:168,roof:[172,42,32]},
   {id:'jam',name:'Jam Kitchen',x:11,y:9,kind:'craft',icon:'🍓',wall:'wood',wh:345,roof:[340,50,42],in:{berries:3},out:'jam',time:4},
   {id:'bakery',name:'Bakery',x:19,y:9,kind:'craft',icon:'🥖',wall:'wood',wh:40,roof:[205,45,38],in:{wheat:2},out:'bread',time:4}
 ];
@@ -539,7 +541,7 @@ function buildMap(){
   for(let y=0;y<MH;y++){grid[y]=new Array(MW).fill(0)}
   const hl=(x0,x1,y)=>{for(let x=x0;x<=x1;x++)grid[y][x]=1};
   const vl=(x,y0,y1)=>{for(let y=y0;y<=y1;y++)grid[y][x]=1};
-  hl(4,31,6);vl(17,6,14);hl(12,22,12);hl(6,28,14);vl(6,14,17);vl(26,14,17);vl(14,12,14);
+  hl(4,31,6);vl(17,6,14);hl(12,22,12);hl(6,28,14);vl(6,14,17);vl(26,14,17);vl(14,12,14);hl(6,26,12);vl(6,12,14);
   // water
   const lake=(cx,cy,rx,ry)=>{for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){const d=((x-cx)/rx)**2+((y-cy)/ry)**2;if(d<1+(hash(x,y,3)-.5)*.35)grid[y][x]=2}};
   lake(31,21,4.2,3.2);lake(3.5,22,3.3,2.3);
@@ -581,9 +583,11 @@ buildMap();
 const NPCS=[
   {id:'granny',name:'Granny Marigold',x:16,y:11,col:'#8e5aa8',hair:'#e6e6e6'},
   {id:'tess',name:'Tinker Tess',x:24,y:7,col:'#d9822b',hair:'#5a2a12'},
-  {id:'bram',name:'Farmer Bram',x:30,y:7,col:'#4a7a3a',hair:'#7a4a22'}
+  {id:'bram',name:'Farmer Bram',x:30,y:7,col:'#4a7a3a',hair:'#7a4a22'},
+  {id:'lena',name:'Lamplighter Lena',x:8,y:11,col:'#e0b030',hair:'#2a1a10'},
+  {id:'mabel',name:'Matchmaker Mabel',x:28,y:11,col:'#2f9a8e',hair:'#b04a2a'}
 ];
-NPCS.forEach(n=>{block[n.y*MW+n.x]=1;for(let i=decor.length-1;i>=0;i--){if(decor[i].x===n.x&&decor[i].y===n.y)decor.splice(i,1)}});
+NPCS.forEach(n=>{block[n.y*MW+n.x]=1;const k=n.x+','+n.y;if(nodeAt[k]){const i=nodes.indexOf(nodeAt[k]);if(i>=0)nodes.splice(i,1);delete nodeAt[k]}for(let i=decor.length-1;i>=0;i--){if(decor[i].x===n.x&&decor[i].y===n.y)decor.splice(i,1)}});
 
 /* =====================================================================
    SPRITES (procedurally painted once to offscreen canvases)
@@ -1314,6 +1318,8 @@ function drawPlayer(g,time){
 const NPC_LOOK={
   granny:{hair:['#eeeeee','#b9b9b9'],tunic:['#b57fd0','#8e5aa8','#64407e'],pants:['#6a4a82','#463058'],bun:true,glasses:true,apron:true,shawl:'#e9d6f2'},
   tess:{hair:['#6b3a1c','#40210d'],tunic:['#f0a04b','#d9822b','#a85a14'],pants:['#4a6a8e','#2f4a66'],hat:'cap',capCol:'#e8b230',goggles:true,overalls:'#3c6aa6'},
+  lena:{hair:['#3a2418','#20120a'],tunic:['#f4cf5a','#e0b030','#a8801a'],pants:['#5a4a6e','#3a2e4c'],hat:'cap',capCol:'#7a4aa8',overalls:'#6a4aa6'},
+  mabel:{hair:['#c0562e','#8a3a1c'],tunic:['#4fbcae','#2f9a8e','#1f6e66'],pants:['#6a4a3a','#44301f'],bun:true,glasses:true},
   bram:{hair:['#8a5a2b','#573510'],tunic:['#7fbf62','#4a7a3a','#2f5226'],pants:['#7a5b3a','#523a22'],hat:'straw',beard:'#7b4f26',overalls:'#4a6aa6',skin:['#f2cba2','#d49c6c']}
 };
 function drawNPC(g,n,time){
@@ -1344,6 +1350,13 @@ const QUESTS=[
   {id:'q13',t:'Upgrade the Card Barn',g:()=>[sget('up_card'),1],r:{coins:30,brick:2}},
   {id:'q14',t:'Solve 6 Bolt Works puzzles',g:()=>[sget('boltWins'),6],r:{coins:50,energy:2}},
   {id:'q15',t:'Harvest 60 coins of beans',g:()=>[sget('cardCoins'),60],r:{coins:60,plank:3,brick:3}},
+  {id:'q21',t:'Clear a Lantern Loft puzzle',g:()=>[sget('lightWins'),1],r:{coins:25}},
+  {id:'q22',t:'Win a Match Hall game',g:()=>[sget('matchWins'),1],r:{coins:25}},
+  {id:'q23',t:'Upgrade the Lantern Loft',g:()=>[sget('up_lights'),1],r:{coins:30,plank:2}},
+  {id:'q24',t:'Upgrade the Match Hall',g:()=>[sget('up_match'),1],r:{coins:30,brick:2}},
+  {id:'q25',t:'Clear 6 Lantern Loft puzzles',g:()=>[sget('lightWins'),6],r:{coins:50,energy:2}},
+  {id:'q26',t:'Win 6 Match Hall games',g:()=>[sget('matchWins'),6],r:{coins:50,energy:2}},
+  {id:'q27',t:'Get 3 ⭐ in any mini-game 5 times',g:()=>[sget('threeStars'),5],r:{coins:70,energy:2}},
   {id:'q16',t:'Stitch a bigger backpack',g:()=>[sget('packUp'),1],r:{coins:40,jam:2}},
   {id:'q19',t:'Sharpen a tool (axe, pickaxe or basket)',g:()=>[sget('toolUp'),1],r:{coins:30}},
   {id:'q20',t:'Upgrade your tools 4 times',g:()=>[sget('toolUp'),4],r:{coins:80,energy:2}},
@@ -1458,9 +1471,15 @@ const GAMES={
   card:{name:'Card Barn',icon:'🃏',desc:'Bean Harvest — plant crops in order, harvest them for coins. A short, solo take on the bean-trading card game.',
     perks:lv=>[`${Math.min(3,lv)} round${lv>1?'s':''} per game`,`${cardTrades(lv)} trade${cardTrades(lv)>1?'s':''} per round`,lv>=4?'Start with a 3rd field':null,lv>=5?'Harvest bonus ×1.25':null].filter(Boolean)}
 };
+GAMES.lights={name:'Lantern Loft',icon:'💡',desc:'Tap a lamp to flip it and its 4 neighbours. Switch every lamp off.',
+  perks:lv=>[`${3+2*(lv-1)} undos per puzzle`,`${lv} hint${lv>1?'s':''} per puzzle`,lv>=3?'Hints show 2 lamps':null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
+GAMES.match={name:'Match Hall',icon:'🎴',desc:'Flip cards to find sets of 3 matching fruit. Fewer tries earns more stars.',
+  perks:lv=>[`Peek at all cards for ${matchPeek(lv).toFixed(1)}s`,matchFree(lv)?`${matchFree(lv)} forgiven miss${matchFree(lv)>1?'es':''}`:null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
+const matchPeek=lv=>.8+.6*(lv-1),matchFree=lv=>Math.floor(lv/2);
 const cardTrades=lv=>1+Math.floor((lv-1)/2);
 const MAXLV=5;
 const upCost=lv=>({coins:[40,80,140,220][lv-1],plank:[2,4,6,8][lv-1],brick:[1,3,5,7][lv-1]});
+const START={bolt:m=>startBolt(m),card:m=>startCards(m),lights:m=>startLights(m),match:m=>startMatch(m)};
 function openBuilding(b){
   const gm=GAMES[b.game];
   const draw=()=>{
@@ -1482,7 +1501,7 @@ function openBuilding(b){
   const wire=()=>{
     const sh=$('#modal .sheet');
     const redraw=()=>{sh.innerHTML=`<button class="x">✕</button>`+draw();sh.querySelector('.x').onclick=closeModal;wire()};
-    sh.querySelector('[data-play]').onclick=()=>{if(S.energy<1)return;closeModal();spendEnergy();b.game==='bolt'?startBolt('play'):startCards('play')};
+    sh.querySelector('[data-play]').onclick=()=>{if(S.energy<1)return;closeModal();spendEnergy();START[b.game]('play')};
     sh.querySelector('[data-free]').onclick=()=>{closeModal();openFreeSetup(b.game)};
     sh.querySelector('[data-help]').onclick=()=>openRules(b.game);
     const up=sh.querySelector('[data-up]');if(up)up.onclick=()=>{const lv=S.bld[b.game];const c=upCost(lv);if(!canPay(c))return;pay(c);S.bld[b.game]++;stat('up_'+b.game);sfx.win();toast(`${gm.icon} ${gm.name} is now Level ${lv+1}!`);save(true);hud();redraw()};
@@ -1504,6 +1523,22 @@ function openFreeSetup(game){
     ['o1','o2','o3','o4'].forEach(i=>$('#'+i).oninput=sync);
     $('#go').onclick=()=>{const o={colors:+$('#o1').value,empty:+$('#o2').value,cap:+$('#o3').value,mystery:+$('#o4').value/100};closeModal();startBolt('free',o)};
     $('#rnd').onclick=()=>{const o={colors:rint(3,9),empty:rint(1,3),cap:rint(3,5),mystery:Math.random()<.6?rint(1,6)/10:0};closeModal();startBolt('free',o)};
+  }else if(game==='lights'){
+    const full=arguments[1]==='full';
+    openModal(`<h2>💡 Lantern Loft — Free Play</h2><div class="muted">Practice only: no energy used, no rewards, no progress.</div>
+      <div style="display:flex;gap:8px;margin:10px 0"><button class="btn ${full?'green':'grey'}" data-md="full">💡 All on</button><button class="btn ${full?'grey':'green'}" data-md="random">🎲 Random</button></div>
+      ${full?'':'<div class="field"><label>Scramble <span id="o1v">8</span></label><input type="range" id="o1" min="2" max="20" value="8"></div>'}
+      <div style="margin-top:10px"><button class="btn green" id="go">▶ Start</button></div>`);
+    $('#modal').querySelectorAll('[data-md]').forEach(b=>b.onclick=()=>openFreeSetup('lights',b.dataset.md));
+    if(!full)$('#o1').oninput=()=>{$('#o1v').textContent=$('#o1').value};
+    $('#go').onclick=()=>{const o={full,scramble:full?0:+$('#o1').value};closeModal();startLights('free',o)};
+  }else if(game==='match'){
+    openModal(`<h2>🎴 Match Hall — Free Play</h2><div class="muted">Practice only: no energy used, no rewards, no progress.</div>
+      <div class="field"><label>Sets of 3 <span id="o1v">6</span></label><input type="range" id="o1" min="3" max="10" value="6"></div>
+      <div class="field"><label>Peek at start <span id="o2v">Yes</span></label><input type="range" id="o2" min="0" max="1" value="1"></div>
+      <div style="margin-top:10px"><button class="btn green" id="go">▶ Start</button></div>`);
+    $('#o1').oninput=()=>{$('#o1v').textContent=$('#o1').value};$('#o2').oninput=()=>{$('#o2v').textContent=$('#o2').value==='1'?'Yes':'No'};
+    $('#go').onclick=()=>{const o={sets:+$('#o1').value,peek:$('#o2').value==='1'};closeModal();startMatch('free',o)};
   }else{
     const classic=(typeof arguments[1]==='undefined'?'classic':arguments[1])==='classic';
     openModal(`<h2>🃏 Free Play</h2><div class="muted">Practice only: no ⚡, no 🪙, no progress.</div>
@@ -1521,7 +1556,7 @@ function openFreeSetup(game){
 }
 function openMenu(){
   openModal(`<h2>☰ Menu</h2><div class="muted">Harvest Hollow · version ${VERSION}</div>
-    <div class="row"><div class="grow"><b>Free Play</b><div class="muted">Play either mini-game without touching your progress.</div></div><button class="btn small blue" data-fp="bolt">⚙️ Bolts</button><button class="btn small blue" data-fp="card">🃏 Beans</button></div>
+    <div class="row" style="flex-wrap:wrap"><div class="grow"><b>Free Play</b><div class="muted">Play any mini-game without touching your progress.</div></div><button class="btn small blue" data-fp="bolt">⚙️ Bolts</button><button class="btn small blue" data-fp="card">🃏 Beans</button><button class="btn small blue" data-fp="lights">💡 Lamps</button><button class="btn small blue" data-fp="match">🎴 Match</button></div>
     <div class="row" style="flex-wrap:wrap"><div class="grow"><b>Thumbstick sensitivity</b><div class="muted">Higher = a smaller push moves you.</div></div>
       <div style="width:100%"><input type="range" id="mSens" min="1" max="5" step="1" value="${S.stickSens||3}" style="width:100%;accent-color:#b8851a"><div class="muted" style="display:flex;justify-content:space-between"><span>Low</span><span>High</span></div></div></div>
     <div class="row"><div class="grow"><b>Guide arrows</b><div class="muted">Yellow arrows pointing to your next goal.</div></div><button class="btn small blue" id="mGuide">Toggle</button></div>
@@ -1541,10 +1576,13 @@ function openMenu(){
 const CAST={
   granny:{name:'Granny Marigold',short:'Granny',face:'👵',role:'Quest Board keeper'},
   tess:{name:'Tinker Tess',short:'Tess',face:'👩‍🔧',role:'Runs the Bolt Works'},
-  bram:{name:'Farmer Bram',short:'Bram',face:'👨‍🌾',role:'Runs the Card Barn'}
+  bram:{name:'Farmer Bram',short:'Bram',face:'👨‍🌾',role:'Runs the Card Barn'},
+  lena:{name:'Lamplighter Lena',short:'Lena',face:'🧑‍🔧',role:'Runs the Lantern Loft'},
+  mabel:{name:'Matchmaker Mabel',short:'Mabel',face:'👩‍🎤',role:'Runs the Match Hall'}
 };
 const stored=k=>sget('st_'+k)>0||(S.store[k]||0)>0;
-const bothLv=()=>Math.min(S.bld.bolt,S.bld.card);
+const bothLv=()=>Math.min(S.bld.bolt,S.bld.card,S.bld.lights,S.bld.match);
+const GWHO={bolt:'tess',card:'bram',lights:'lena',match:'mabel'},GPLAYS={bolt:'boltWins',card:'cardGames',lights:'lightWins',match:'matchWins'};
 const STORY=[
   {who:'granny',goal:'Chop 4 wood: walk onto a tree 🌳 and stand still',prog:()=>[sget('g_wood'),4],done:()=>sget('g_wood')>=4,r:{coins:5},
    say:["Welcome home! Grandpa Alder left you Harvest Hollow, and it needs some love.", "Walk onto a 🌳 tree and stand still to chop wood.", "Your 🎒 backpack holds 6 things.", "Follow the yellow 🧭 arrow. Tap ❓ for help any time."]},
@@ -1562,10 +1600,10 @@ const STORY=[
    say:["Bram here! At the Card Barn we play Bean Harvest.", "Plant crops from your hand, then harvest them for coins.", "Step on the red mat under my barn and press ▶ Play.", "Tap ❓ in the game for the rules."]},
   {who:'bram',goal:'Upgrade the Card Barn ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_card')>=1,r:{coins:15,energy:2},
    say:["More levels mean more rounds, more trades and bigger harvests.", "Open the Card Barn and press ⬆ Upgrade when you have the goods."]},
-  {who:'granny',goal:'Raise both workshops to Level 3 🏗️',prog:()=>[bothLv(),3],done:()=>bothLv()>=3,r:{coins:30},
-   say:["Look at the Hollow now! Grandpa would be proud.", "The Quest Board has plenty of bounties.", "Both workshops can reach Level 5.", "Free Play (☰ menu) never touches your progress."]},
-  {who:'granny',goal:'Raise both workshops to Level 5 🏆',prog:()=>[bothLv(),5],done:()=>bothLv()>=5,r:{coins:100,energy:3},
-   say:["Level 3 already!", "One more push makes both workshops the finest in the valley."]}
+  {who:'granny',goal:'Raise all four workshops to Level 3 🏗️',prog:()=>[bothLv(),3],done:()=>bothLv()>=3,r:{coins:30},
+   say:["Look at the Hollow now! Grandpa would be proud.", "The Quest Board has plenty of bounties.", "All four workshops can reach Level 5.", "Free Play (☰ menu) never touches your progress."]},
+  {who:'granny',goal:'Raise all four workshops to Level 5 🏆',prog:()=>[bothLv(),5],done:()=>bothLv()>=5,r:{coins:100,energy:3},
+   say:["Level 3 already!", "One more push makes every workshop the finest in the valley."]}
 ];
 const END_SAY=["Harvest Hollow is thriving, thanks to you!","The workshops are humming and the Barn is full.","Free Play and the Quest Board are always open.","Thank you, dear!"];
 
@@ -1611,17 +1649,27 @@ function talkTo(id){
   const chat={
     granny:["I keep the Quest Board.","Finished quests pay coins, energy, even planks and bricks."],
     tess:["The Bolt Works is open for business.","Sort the nuts, pocket the coins, spend them on upgrades."],
-    bram:["Nothing beats a good harvest.","Plant like crops together and harvest big piles."]
+    bram:["Nothing beats a good harvest.","Plant like crops together and harvest big piles."],
+    lena:["The Lantern Loft keeps the village bright.","Tap a lamp to flip it and its neighbours. Lights out wins!"],
+    mabel:["The Match Hall is all about memory.","Find 3 matching fruit. Fewer tries, more stars."]
   }[id];
   showSay(id,st?chat.concat([`<i>Your next step is with ${CAST[st.who].name}.</i>`]):chat);
 }
 
 /* ---- per-building coaching, shown inside the building panel ---- */
 function buildingBlurb(game){
-  const who=game==='bolt'?'tess':'bram',c=CAST[who];
-  const plays=game==='bolt'?sget('boltWins'):sget('cardGames'),ups=sget('up_'+game);
+  const who=GWHO[game],c=CAST[who];
+  const plays=sget(GPLAYS[game]),ups=sget('up_'+game);
   let t;
-  if(game==='bolt'){
+  if(game==='lights'){
+    t=plays===0?["Press <b>▶ Play</b> (costs ⚡1) to start a puzzle.","Tap a lamp to flip it and the 4 beside it.","Switch every lamp <b>off</b>.","You earn <b>coins</b> for each puzzle."]
+      :ups===0?["Coins + planks + bricks from your Barn <b>upgrade</b> this loft.","Each level: more undos and hints, bigger payouts."]
+      :["Each upgrade level adds undos, hints and bigger payouts."];
+  }else if(game==='match'){
+    t=plays===0?["Press <b>▶ Play</b> (costs ⚡1) to start a game.","Flip cards and find sets of <b>3</b> matching fruit.","Fewer tries earns more ⭐ and coins."]
+      :ups===0?["Coins + planks + bricks from your Barn <b>upgrade</b> this hall.","Each level: a longer peek, forgiven misses, bigger payouts."]
+      :["Higher levels give a longer peek and forgiven misses."];
+  }else if(game==='bolt'){
     t=plays===0?["Press <b>▶ Play</b> (costs ⚡1) to start a puzzle.","Tap a rod to lift its top nut, tap another to drop it.","Make every rod one colour.","You earn <b>coins</b> for each puzzle."]
       :ups===0?["Coins + planks + bricks from your Barn <b>upgrade</b> this workshop.","Each level: more undos and hints, a spare rod, bigger payouts."]
       :["Each upgrade level adds undos, hints and bigger payouts."];
@@ -1640,6 +1688,17 @@ const RULES={
     <li><b>Grey “?” nuts</b> hide their colour until the nuts above them are moved away.</li>
     <li><b>Undo</b> takes back a move, <b>Hint</b> shows a good next move (green = from, blue = to), <b>Restart</b> resets the puzzle.</li>
     <li>Every puzzle is guaranteed solvable. Fewer moves earns more stars and coins.</li></ul>`,
+  lights:`<h2>💡 How to play Lantern Loft</h2><ul class="perks">
+    <li><b>Goal:</b> switch every lamp <b>off</b>.</li>
+    <li><b>Tap a lamp</b> to flip it and the lamps above, below, left and right of it.</li>
+    <li><b>Undo</b> takes back a tap, <b>Hint</b> pulses a lamp worth tapping, <b>Restart</b> resets the puzzle.</li>
+    <li>Every puzzle is solvable. Fewer taps earns more stars and coins.</li></ul>`,
+  match:`<h2>🎴 How to play Match Hall</h2><ul class="perks">
+    <li><b>Goal:</b> find every set of <b>3</b> matching fruit.</li>
+    <li><b>Tap cards</b> to flip them (up to 3 at a time).</li>
+    <li>If the flipped cards don't all match, they flip back — that's a <b>miss</b>.</li>
+    <li>At the start you get a short <b>peek</b> at every card. Higher levels peek longer and forgive some misses.</li>
+    <li>Fewer tries earns more stars and coins.</li></ul>`,
   card:`<h2>🃏 How to play Bean Harvest</h2><ul class="perks">
     <li><b>Goal:</b> harvest as many coins as you can. Each field holds one crop type, and more of a crop pays more coins (see the little table on each card).</li>
     <li><b>Your hand is a queue.</b> You <b>must</b> plant the first card and <b>may</b> plant the second. Tap a field to plant the highlighted card.</li>
@@ -1684,7 +1743,7 @@ function supply(item){
 function upgradeAction(game){
   const lv=S.bld[game],b=bldBy(game);
   if(lv>=MAXLV)return null;
-  const c=upCost(lv),icon=game==='bolt'?'⚙️':'🃏';
+  const c=upCost(lv),icon=GAMES[game].icon;
   if(canPay(c))return doorT(b,icon,`You can afford it! Step on the mat and press ⬆ Upgrade`);
   if(S.coins<c.coins)return doorT(b,icon,`You need ${c.coins}🪙 (you have ${S.coins}). Play here to earn coins`);
   if((S.store.plank||0)<c.plank)return supply('plank');
@@ -1701,7 +1760,7 @@ function nextAction(){
     case 5:return upgradeAction('bolt');
     case 6:return doorT(bldBy('card'),'🃏','Step on the red mat under the Card Barn, then press ▶ Play');
     case 7:return upgradeAction('card');
-    default:return upgradeAction(S.bld.bolt<=S.bld.card?'bolt':'card');
+    default:return upgradeAction(['bolt','card','lights','match'].sort((a,b)=>S.bld[a]-S.bld[b])[0]);
   }
 }
 let GUIDE=null,guideT=0;
@@ -1754,7 +1813,7 @@ function openHowTo(){
       <li><b>Gather</b> — stand on 🌳 trees, ⛰️ rocks, 🫐 bushes and 🌾 wheat. Your 🎒 backpack holds a few things.</li>
       <li><b>Drop off</b> — step on the red mat in front of the 📦 Barn to store everything.</li>
       <li><b>Craft</b> — feed goods into the Sawmill, Kiln, Jam Kitchen or Bakery by stepping on their mats. Step on again later to collect.</li>
-      <li><b>Play</b> — step on the red mat under the ⚙️ Bolt Works or 🃏 Card Barn and press ▶ Play (costs ⚡1) to earn 🪙 coins.</li>
+      <li><b>Play</b> — step on the red mat under a workshop (⚙️ 🃏 💡 🎴) and press ▶ Play (costs ⚡1) to earn 🪙 coins.</li>
       <li><b>Upgrade</b> — spend coins and goods from the Barn on workshop levels, and on the ⬆ Upgrades screen for a bigger 🎒 backpack and a faster 🪓 axe, ⛏️ pickaxe and 🧺 forage basket.</li>
       <li><b>Eat</b> — bread and jam (🧺 Storage) refill your ⚡ energy.</li></ol>
     <div class="muted">Move: arrow keys / WASD, or the thumbstick. Walk up to a character and press 💬 Talk.</div>
@@ -1881,7 +1940,7 @@ function startBolt(mode,opts){
     if(!S.seen.rb){S.seen.rb=1;save();openRules('bolt')}
   },30);
 }
-function leaveMG(){const mg=$('#mg');mg.classList.add('hidden');mg.innerHTML='';B=null;C=null;if(!worldOn)return;hud()}
+function leaveMG(){const mg=$('#mg');mg.classList.add('hidden');mg.innerHTML='';B=null;C=null;L=null;M=null;if(!worldOn)return;hud()}
 const topOf=a=>a[a.length-1];
 function pegDone(a){return a.length===B.cap&&a.every(x=>x===a[0])}
 function renderBolt(anim){
@@ -1988,6 +2047,241 @@ function boltWin(){
   $('#wNext').onclick=()=>{
     if(B.mode==='play'){if(S.energy<1)return;spendEnergy();startBolt('play')}else startBolt('free',B.opts);
   };
+}
+/* =====================================================================
+   MINI-GAME 3: LANTERN LOFT — Lights Out (5x5)
+   Puzzles are scrambled by real presses, so they're always solvable.
+   ===================================================================== */
+document.head.appendChild(Object.assign(document.createElement('style'),{textContent:`
+#lights{background:radial-gradient(ellipse at 50% 0%,rgba(255,225,140,.25),transparent 65%),radial-gradient(ellipse at 50% 100%,rgba(0,0,0,.6),transparent 70%),var(--tex-bench),#3b3550;display:flex;flex-direction:column}
+#lightsArea{flex:1;position:relative;overflow:hidden;display:flex;justify-content:center;align-items:center}
+#lightsBoard{--ls:min(15.5vw,calc((var(--vh,1vh)*100 - 230px)/5),84px);display:grid;grid-template-columns:repeat(5,var(--ls));gap:calc(var(--ls)*.12);padding:calc(var(--ls)*.18);border-radius:18px;
+  background:var(--tex-metal),linear-gradient(#58606a,#2f353c);box-shadow:inset 0 2px 0 rgba(255,255,255,.3),inset 0 -6px 12px rgba(0,0,0,.5),0 12px 26px rgba(0,0,0,.6)}
+.lamp{width:var(--ls);height:var(--ls);border-radius:50%;border:0;padding:0;position:relative;cursor:pointer;background:radial-gradient(circle at 35% 30%,#59606e,#232830 70%);box-shadow:inset 0 -4px 8px rgba(0,0,0,.6),inset 0 2px 4px rgba(255,255,255,.18),0 2px 3px rgba(0,0,0,.6);transition:background .18s,box-shadow .18s,transform .1s}
+.lamp:active{transform:scale(.92)}
+.lamp.on{background:radial-gradient(circle at 38% 32%,#fffbe0,#ffd84a 45%,#e8a010 100%);box-shadow:inset 0 -4px 8px rgba(160,90,0,.5),0 0 calc(var(--ls)*.35) rgba(255,205,60,.85),0 0 calc(var(--ls)*.7) rgba(255,190,40,.4)}
+.lamp::after{content:"";position:absolute;left:22%;top:14%;width:34%;height:22%;border-radius:50%;background:rgba(255,255,255,.35);transform:rotate(-30deg)}
+.lamp.hint{animation:lhint .8s infinite}
+@keyframes lhint{50%{box-shadow:0 0 0 4px #7ee37a,0 0 18px 6px rgba(126,227,122,.9)}}
+.lamp.flip{animation:lflip .28s}
+@keyframes lflip{50%{transform:scale(.82)}}
+`}));
+let L=null;
+/* ---- solver over GF(2): returns the cheapest set of cells to press ---- */
+const LN=5,LNN=25;
+function lightsEffect(p){const r=Math.floor(p/LN),c=p%LN,o=[p];if(r>0)o.push(p-LN);if(r<LN-1)o.push(p+LN);if(c>0)o.push(p-1);if(c<LN-1)o.push(p+1);return o}
+function lightsSolve(state){
+  const rows=[];for(let i=0;i<LNN;i++){const r=new Uint8Array(LNN+1);lightsEffect(i).forEach(j=>r[j]=1);r[LNN]=state[i]?1:0;rows.push(r)}
+  const piv=[];let rk=0;
+  for(let col=0;col<LNN&&rk<LNN;col++){
+    let p=-1;for(let i=rk;i<LNN;i++)if(rows[i][col]){p=i;break}
+    if(p<0)continue;[rows[rk],rows[p]]=[rows[p],rows[rk]];
+    for(let i=0;i<LNN;i++)if(i!==rk&&rows[i][col])for(let k=0;k<=LNN;k++)rows[i][k]^=rows[rk][k];
+    piv.push(col);rk++;
+  }
+  for(let i=rk;i<LNN;i++)if(rows[i][LNN])return null;
+  const free=[];for(let c=0;c<LNN;c++)if(!piv.includes(c))free.push(c);
+  let best=null;
+  for(let m=0;m<(1<<free.length);m++){
+    const x=new Uint8Array(LNN);free.forEach((c,k)=>{x[c]=(m>>k)&1});
+    piv.forEach((c,i)=>{let v=rows[i][LNN];free.forEach(f=>{if(rows[i][f]&&x[f])v^=1});x[c]=v});
+    const w=x.reduce((a,b)=>a+b,0);if(!best||w<best.w)best={w,x}
+  }
+  const cells=[];best.x.forEach((v,i)=>{if(v)cells.push(i)});return cells;
+}
+function lightsPress(g,p){lightsEffect(p).forEach(j=>g[j]^=1)}
+function lightsNewGrid(o){
+  const g=new Uint8Array(LNN);
+  if(o.full){g.fill(1);return g}
+  for(let t=0;t<50;t++){
+    g.fill(0);
+    shuffle(Array.from({length:LNN},(_,i)=>i)).slice(0,clamp(o.scramble,1,LNN)).forEach(p=>lightsPress(g,p));
+    if(g.some(Boolean))return g;
+  }
+  g[12]=1;return g;
+}
+function lightsOptsForLevel(){
+  const n=S.lightLvl;
+  return n%4===3?{full:true,scramble:0}:{full:false,scramble:clamp(4+Math.floor(n*.6),4,14)};
+}
+function startLights(mode,opts){
+  const lv=S.bld.lights;
+  const o=mode==='free'?opts:lightsOptsForLevel();
+  const mg=$('#mg');mg.className='screen';mg.id='mg';
+  mg.innerHTML=`<div id="lights" class="screen">
+    <div class="mgbar"><button class="btn small grey" id="lBack">←<span class="lbl"> Village</span></button><h3>💡 Lantern Loft</h3>
+      ${mode==='free'?'<span class="tag free">FREE PLAY</span>':`<span class="tag">Puzzle ${S.lightLvl+1}</span>`}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span><span class="tag" id="mgCoins">🪙 ${S.coins}</span>`:''}<button class="btn small grey" id="lHelp">❓</button><span class="tag" id="lMoves">Taps 0</span></div>
+    <div id="lightsArea"><div id="lightsBoard"></div></div>
+    <div class="mgfoot"><button class="btn small blue" id="lUndo">↶ Undo</button><button class="btn small" id="lHint">💡 Hint</button><button class="btn small grey" id="lReset">⟲ Restart</button>${mode==='free'?'<button class="btn small green" id="lNew">🎲 New puzzle</button>':''}</div>
+  </div>`;
+  mg.classList.remove('hidden');
+  const g=lightsNewGrid(o);
+  L={mode,lv,opts:o,g,start:g.slice(),hist:[],moves:0,par:lightsSolve(g).length,undos:mode==='free'?Infinity:3+2*(lv-1),hints:mode==='free'?Infinity:lv,done:false,hint:[],full:!!o.full};
+  $('#lBack').onclick=()=>{if(!L.done&&L.moves>0&&mode==='play'&&!confirm('Leave this puzzle? The energy spent is lost.'))return;leaveMG()};
+  $('#lHelp').onclick=()=>openRules('lights');$('#lUndo').onclick=lightsUndo;$('#lHint').onclick=lightsHint;$('#lReset').onclick=lightsRestart;
+  if($('#lNew'))$('#lNew').onclick=()=>startLights('free',o);
+  renderLights();
+  if(!S.seen.rl){S.seen.rl=1;save();openRules('lights')}
+}
+function renderLights(flips){
+  if(!L)return;
+  const bd=$('#lightsBoard');bd.innerHTML='';
+  for(let i=0;i<LNN;i++){
+    const b=el(`<button class="lamp${L.g[i]?' on':''}${L.hint.includes(i)?' hint':''}${flips&&flips.includes(i)?' flip':''}" data-i="${i}" aria-label="lamp"></button>`);
+    b.onclick=()=>lightsTap(i);bd.appendChild(b);
+  }
+  $('#lMoves').textContent='Taps '+L.moves;
+  $('#lUndo').textContent=`↶ Undo${L.undos===Infinity?'':` (${L.undos})`}`;$('#lUndo').disabled=!L.hist.length||L.undos<=0||L.done;
+  $('#lHint').textContent=`💡 Hint${L.hints===Infinity?'':` (${L.hints})`}`;$('#lHint').disabled=L.hints<=0||L.done;
+}
+function lightsTap(i){
+  if(!L||L.done)return;
+  L.hist.push(L.g.slice());lightsPress(L.g,i);L.moves++;L.hint=[];
+  sfx.pick();
+  renderLights(lightsEffect(i));
+  if(!L.g.some(Boolean))lightsWin();
+}
+function lightsUndo(){if(!L||L.done||!L.hist.length||L.undos<=0)return;L.g=L.hist.pop();L.moves=Math.max(0,L.moves-1);if(L.undos!==Infinity)L.undos--;L.hint=[];sfx.click();renderLights()}
+function lightsRestart(){if(!L||L.done)return;L.g=L.start.slice();L.hist=[];L.moves=0;L.hint=[];sfx.click();renderLights()}
+function lightsHint(){
+  if(!L||L.done||L.hints<=0)return;
+  const sol=lightsSolve(L.g);if(!sol||!sol.length)return;
+  if(L.hints!==Infinity)L.hints--;
+  L.hint=shuffle(sol.slice()).slice(0,L.lv>=3?2:1);sfx.get();renderLights();
+}
+function lightsWin(){
+  L.done=true;sfx.win();
+  const ratio=L.moves/Math.max(1,L.par);
+  const stars=ratio<=1.0?3:ratio<=1.6?2:1;
+  let coins=0;
+  if(L.mode==='play'){
+    coins=Math.round((6+L.par+(L.full?4:0)+stars*2)*(1+.15*(L.lv-1)));
+    S.coins+=coins;stat('earned',coins);stat('lightWins');if(stars===3)stat('threeStars');S.lightLvl++;save(true);hud();
+  }
+  const sh=el(`<div class="overlay"><div class="sheet"><h2>🎉 Lights out!</h2>
+    <div class="stars">${[1,2,3].map(i=>`<span class="${i<=stars?'':'off'}">⭐</span>`).join('')}</div>
+    <div class="muted">${L.moves} taps · best ${L.par}</div>
+    ${L.mode==='play'?`<div class="reward">🪙 +${coins}</div><div class="muted">Higher Lantern Loft levels pay more per puzzle.</div>`:'<div class="reward" style="font-size:16px">Free play — no rewards</div>'}
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+      ${L.mode==='play'?`<button class="btn green" id="wNext" ${S.energy<1?'disabled':''}>Next puzzle · costs ⚡1 <small>(you have ${S.energy})</small></button>`:`<button class="btn green" id="wNext">New puzzle</button>`}
+      <button class="btn grey" id="wBack">Back to village</button></div></div></div>`);
+  $('#lights').appendChild(sh);
+  $('#wBack').onclick=leaveMG;
+  $('#wNext').onclick=()=>{if(L.mode==='play'){if(S.energy<1)return;spendEnergy();startLights('play')}else startLights('free',L.opts)};
+}
+/* =====================================================================
+   MINI-GAME 4: MATCH HALL — Triple Match memory game
+   ===================================================================== */
+document.head.appendChild(Object.assign(document.createElement('style'),{textContent:`
+#match{background:radial-gradient(ellipse at 50% 0%,rgba(255,235,170,.25),transparent 65%),radial-gradient(ellipse at 50% 100%,rgba(0,0,0,.55),transparent 70%),var(--tex-felt),#1f5a4a;display:flex;flex-direction:column}
+#matchArea{flex:1;position:relative;overflow:hidden;display:flex;justify-content:center;align-items:center}
+#matchBoard{display:grid;gap:8px;justify-content:center;perspective:700px}
+.mcard{width:var(--cs);height:calc(var(--cs)*1.25);position:relative;cursor:pointer;transform-style:preserve-3d;transition:transform .35s;border:0;padding:0;background:none}
+.mcard.up{transform:rotateY(180deg)}
+.mcard .f,.mcard .b{position:absolute;inset:0;border-radius:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;align-items:center;justify-content:center}
+.mcard .b{background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.18) 0 22%,transparent 24%),repeating-linear-gradient(45deg,rgba(255,255,255,.1) 0 6px,transparent 6px 12px),var(--tex-wood),#8a5a2b;border:2px solid #4a2c12;box-shadow:inset 0 0 0 3px rgba(255,230,160,.35),0 4px 6px rgba(0,0,0,.45)}
+.mcard .f{transform:rotateY(180deg);background:var(--tex-paper),var(--paper);border:2px solid #7a5530;box-shadow:0 4px 6px rgba(0,0,0,.45);font-size:calc(var(--cs)*.55);font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif}
+.mcard.done .f{background:linear-gradient(#fff6c8,#ffe27a);border-color:#d4a020;box-shadow:0 0 14px 2px rgba(255,213,74,.8)}
+.mcard.done{cursor:default}
+.mcard.shake{animation:mshake .4s}
+@keyframes mshake{25%{margin-left:-5px}75%{margin-left:5px}}
+`}));
+let M=null;
+const MEMOJI=['🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍒','🍑','🥭','🍍','🥝','🍅','🥕','🌽','🥦','🍄','🎃'];
+function matchSetsForLevel(){return clamp(4+Math.floor(sget('matchWins')/2),4,8)}
+function startMatch(mode,opts){
+  const lv=S.bld.match;
+  const sets=mode==='free'?opts.sets:matchSetsForLevel();
+  const peek=mode==='free'?(opts.peek?1.6:0):matchPeek(lv);
+  const mg=$('#mg');mg.className='screen';mg.id='mg';
+  mg.innerHTML=`<div id="match" class="screen">
+    <div class="mgbar"><button class="btn small grey" id="mBack">←<span class="lbl"> Village</span></button><h3>🎴 Match Hall</h3>
+      ${mode==='free'?'<span class="tag free">FREE PLAY</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span><span class="tag" id="mgCoins">🪙 ${S.coins}</span>`:''}<button class="btn small grey" id="mHelp">❓</button><span class="tag" id="mSets"></span><span class="tag" id="mMoves"></span></div>
+    <div id="matchArea"><div id="matchBoard"></div></div>
+    <div class="mgfoot"><span class="tag hidden" id="mInfo"></span>${mode==='free'?'<button class="btn small green" id="mNew">🎲 New game</button>':''}</div>
+  </div>`;
+  mg.classList.remove('hidden');
+  const faces=shuffle(MEMOJI.slice()).slice(0,sets);
+  const cards=shuffle(faces.flatMap((e,i)=>[{e,s:i},{e,s:i},{e,s:i}]));
+  M={mode,lv,opts,sets,cards,up:[],done:new Set(),moves:0,misses:0,lock:true,over:false,free:mode==='free'?0:matchFree(lv),peek,gen:Date.now()};
+  $('#mBack').onclick=()=>{if(!M.over&&M.moves>0&&mode==='play'&&!confirm('Leave this game? The energy spent is lost.'))return;leaveMG()};
+  $('#mHelp').onclick=()=>openRules('match');
+  if($('#mNew'))$('#mNew').onclick=()=>startMatch('free',opts);
+  renderMatch();
+  if(!S.seen.rm){S.seen.rm=1;save();openRules('match')}
+  const gen=M.gen;
+  if(peek>0){
+    setTimeout(()=>{if(!M||M.gen!==gen)return;document.querySelectorAll('.mcard').forEach(c=>c.classList.add('up'));$('#mInfo').textContent='👀 Remember!';$('#mInfo').classList.remove('hidden')},350);
+    setTimeout(()=>{if(!M||M.gen!==gen)return;document.querySelectorAll('.mcard').forEach(c=>c.classList.remove('up'));M.lock=false;$('#mInfo').classList.add('hidden')},350+peek*1000+400);
+  }else M.lock=false;
+}
+function renderMatch(){
+  if(!M)return;
+  const n=M.cards.length,rows=Math.max(3,Math.ceil(n/6)),cols=Math.ceil(n/rows);
+  const bd=$('#matchBoard');bd.innerHTML='';
+  const area=$('#matchArea'),aw=area.clientWidth-24,ah=area.clientHeight-16;
+  const cs=Math.floor(Math.max(36,Math.min((aw-(cols-1)*8)/cols,(ah-(rows-1)*8)/(rows*1.25),96)));
+  bd.style.setProperty('--cs',cs+'px');bd.style.gridTemplateColumns=`repeat(${cols},var(--cs))`;
+  M.cards.forEach((c,i)=>{
+    const b=el(`<button class="mcard${M.done.has(i)?' up done':''}${M.up.includes(i)?' up':''}" data-i="${i}"><div class="b"></div><div class="f">${c.e}</div></button>`);
+    b.onclick=()=>matchTap(i);bd.appendChild(b);
+  });
+  updMatch();
+}
+function updMatch(){
+  const left=M.free-Math.min(M.free,M.misses);
+  $('#mSets').textContent=`✅ ${M.done.size/3}/${M.sets}`;
+  $('#mMoves').textContent=`Tries ${M.moves}`+(M.mode==='free'||!left?'':` · 🛟 ${left}`);
+}
+function matchTap(i){
+  if(!M||M.over||M.lock||M.done.has(i)||M.up.includes(i))return;
+  M.up.push(i);sfx.pick();
+  document.querySelector(`.mcard[data-i="${i}"]`).classList.add('up');
+  const up=M.up,first=M.cards[up[0]].s;
+  const same=up.every(k=>M.cards[k].s===first);
+  if(!same){
+    M.lock=true;
+    if(M.misses<M.free){M.misses++}else M.moves++;
+    sfx.bad();
+    const gen=M.gen,ids=up.slice();
+    setTimeout(()=>{ids.forEach(k=>{const c=document.querySelector(`.mcard[data-i="${k}"]`);if(c)c.classList.add('shake')})},320);
+    setTimeout(()=>{
+      if(!M||M.gen!==gen)return;
+      ids.forEach(k=>{const c=document.querySelector(`.mcard[data-i="${k}"]`);if(c)c.classList.remove('up','shake')});
+      M.up=[];M.lock=false;
+    },950);
+    updMatch();
+  }else if(up.length===3){
+    M.moves++;
+    up.forEach(k=>{M.done.add(k);const c=document.querySelector(`.mcard[data-i="${k}"]`);if(c)c.classList.add('done')});
+    M.up=[];sfx.get();
+    updMatch();
+    if(M.done.size===M.cards.length)matchWin();
+  }
+}
+function matchWin(){
+  M.over=true;M.lock=true;
+  const sets=M.sets,m=M.moves;
+  const stars=m<=sets*2.5?3:m<=sets*3.5?2:1;
+  let coins=0;
+  setTimeout(()=>{
+    if(!M)return;
+    sfx.win();
+    if(M.mode==='play'){
+      coins=Math.round((4+sets*2+stars*3)*(1+.15*(M.lv-1)));
+      S.coins+=coins;stat('earned',coins);stat('matchWins');if(stars===3)stat('threeStars');S.matchLvl++;save(true);hud();
+    }
+    const sh=el(`<div class="overlay"><div class="sheet"><h2>🎉 All matched!</h2>
+      <div class="stars">${[1,2,3].map(i=>`<span class="${i<=stars?'':'off'}">⭐</span>`).join('')}</div>
+      <div class="muted">${m} tries · ${sets} sets</div>
+      ${M.mode==='play'?`<div class="reward">🪙 +${coins}</div><div class="muted">Higher Match Hall levels pay more per game.</div>`:'<div class="reward" style="font-size:16px">Free play — no rewards</div>'}
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+        ${M.mode==='play'?`<button class="btn green" id="wNext" ${S.energy<1?'disabled':''}>Next game · costs ⚡1 <small>(you have ${S.energy})</small></button>`:`<button class="btn green" id="wNext">New game</button>`}
+        <button class="btn grey" id="wBack">Back to village</button></div></div></div>`);
+    $('#match').appendChild(sh);
+    $('#wBack').onclick=leaveMG;
+    $('#wNext').onclick=()=>{if(M.mode==='play'){if(S.energy<1)return;spendEnergy();startMatch('play')}else startMatch('free',M.opts)};
+  },700);
 }
 /* =====================================================================
    MINI-GAME 2: BEAN HARVEST — a short solo take on bean-planting card games
@@ -2399,6 +2693,8 @@ function showTitle(){
     <p>Gather wood, stone, berries and wheat. Craft goods. Then step into the workshops and play puzzles and card games to earn the coins that grow your village.</p>
     <div class="menu">
       <button class="btn green" id="tPlay">${has?'▶ Continue village':'▶ Start village'}</button>
+      <button class="btn blue" id="tFL">💡 Free Play — Lights Out</button>
+      <button class="btn blue" id="tFM">🎴 Free Play — Triple Match</button>
       <button class="btn blue" id="tFB">⚙️ Free Play — Bolt Sorting</button>
       <button class="btn blue" id="tFC">🃏 Free Play — Beans (Classic)</button>
       ${has?'<button class="btn grey" id="tReset" style="font-size:15px">🗑 Start over (erase my village)</button>':''}
@@ -2408,6 +2704,8 @@ function showTitle(){
     ${iosHint()}<div id="updBox"></div>`;
   $('#tPlay').onclick=()=>{sfx.click();goFull();startWorld()};
   $('#tFB').onclick=()=>{goFull();openFreeSetup('bolt')};
+  $('#tFL').onclick=()=>{goFull();openFreeSetup('lights')};
+  $('#tFM').onclick=()=>{goFull();openFreeSetup('match')};
   $('#tFC').onclick=()=>{goFull();openFreeSetup('card')};
   showUpdateBanner();
   const tr=$('#tReset');if(tr)tr.onclick=askReset;
