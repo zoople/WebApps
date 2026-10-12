@@ -258,7 +258,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v7 · 12 Oct 2026';
+const VERSION='v8 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -493,7 +493,12 @@ function makeSide(){
   const pool=sideGens(); if(!pool.length) return null;
   const hi = S.ch>=4?4 : S.ch>=2?3 : 2;
   const pick=()=>[pool[Math.floor(Math.random()*pool.length)], 1+Math.floor(Math.random()*hi)];
-  const need=[pick()]; if(Math.random()<.35){ const b=pick(); b[1]=Math.max(1,b[1]-1); need.push(b); }
+  // never ask for something that is already sitting on the board: a fresh order should take some work
+  let need;
+  for(let tries=0;tries<20;tries++){
+    need=[pick()]; if(Math.random()<.35){ const b=pick(); b[1]=Math.max(1,b[1]-1); need.push(b); }
+    if(!need.every(([k,l])=>openCount(k,l)>0)) break;
+  }
   const size=need.reduce((a,[,l])=>a+(1<<(l-1)),0);
   const rw=[['C', size>=6?2:1]]; if(Math.random()<.25) rw.push(['N',1]); else if(Math.random()<.4) rw.push(['X',1]);
   S.sideN=(S.sideN||0)+1;
@@ -714,7 +719,8 @@ function freshState(){
   return {v:1, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
-  try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[]; return s; } } }catch(e){}
+  try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
+      s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[]; return s; } } }catch(e){}
   return freshState();
 }
 function save(){ try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} }
@@ -1020,6 +1026,7 @@ function renderHud(){
   $('chBar').style.width = (S.complete?100:dn/chT.length*100)+'%';
 }
 function fmt(s){ s=Math.max(0,s); return s>=60? Math.floor(s/60)+':'+String(s%60).padStart(2,'0') : '0:'+String(s).padStart(2,'0'); }
+const readySince={};
 function renderOrders(tasks){
   const box=$('orders');
   if(S.complete){
@@ -1029,7 +1036,15 @@ function renderOrders(tasks){
   }
   box.innerHTML='';
   ensureSide();
-  tasks.concat(S.side).forEach(t=>{
+  const tnow=now(), list=tasks.concat(S.side).map((t,i)=>({t,i,ready:taskStatus(t).ready}));
+  let newlyReady=false;
+  list.forEach(o=>{ if(o.ready){ if(!readySince[o.t.id]){ readySince[o.t.id]=tnow; newlyReady=true; } } else delete readySince[o.t.id]; });
+  list.sort((a,b)=> (b.ready-a.ready)
+    || (a.ready ? readySince[a.t.id]-readySince[b.t.id] : 0)
+    || ((a.t.side?1:0)-(b.t.side?1:0))
+    || (a.i-b.i));
+  if(newlyReady) box.scrollTo({left:0,behavior:'smooth'});
+  list.map(o=>o.t).forEach(t=>{
     const st=taskStatus(t);
     const el=document.createElement('div');
     el.className='order'+(st.ready?' ready':'')+(t.side?' side':'');
