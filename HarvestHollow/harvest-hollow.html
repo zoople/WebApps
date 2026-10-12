@@ -268,6 +268,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 .card.tap:not(.sel)::before{content:"👆";background:#fff3cf;animation:tapp2 1s infinite}
 @keyframes tapp2{50%{transform:scale(1.2)}}
 .flyc{position:fixed;z-index:60;pointer-events:none;transform-origin:top left;transition:transform .5s cubic-bezier(.3,.7,.3,1)}
+.flab{position:absolute;left:50%;top:-18px;transform:translateX(-50%);background:#ffe27a;color:#3a2606;font-weight:900;font-size:12px;padding:1px 8px;border-radius:999px;white-space:nowrap}
 .flyc .card{animation:none;box-shadow:0 10px 18px rgba(0,0,0,.55)}
 /* v17: market offers from the computer players */
 .mslot{display:flex;flex-direction:column;align-items:center;gap:4px}
@@ -333,7 +334,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v24 · 11 Oct 2026';
+const VERSION='v25 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -2675,7 +2676,7 @@ function stepsHTML(){
   if(C.phase==='ai')return `<div class="steps"><div class="r final"><span class="ic">⏳</span>Bots are playing…</div></div>`;
   if(C.phase==='final')return `<div class="steps"><div class="r final"><span class="ic">🏁</span>Final turn<span class="sub">${e}👇 · ✔</span></div></div>`;
   const idx=C.phase==='plant1'?0:C.phase==='plant2'?1:2;
-  const subs={plant1:`${e} 👇`,plant2:`${e} 👇 · ⏭`,market:C.classic?`Flipped from the deck. Tap a card to offer it, or plant it`:`👆 · 👇 · 🔁`};
+  const subs={plant1:`${e} 👇`,plant2:`${e} 👇 · ⏭`,market:C.classic?(C.market[C.sel]&&C.market[C.sel].locked?`You got this card in a trade. Plant it`:`Flipped from the deck. Tap a card to offer it, or plant it`):`👆 · 👇 · 🔁`};
   return `<div class="steps">`+STEPS.map((s,i)=>{
     const st=i<idx?'done':i===idx?'on':'';
     const title=i===2?`${C.classic?'Trade':'Market'}${idx===2?` ${C.mTotal-C.market.length+1}/${C.mTotal}`:''}`:s[2];
@@ -2754,6 +2755,7 @@ function renderCards(flipIdx){
     if(n*(cw+3)>avail){const ov=clamp((n*cw-avail)/(n-1),3,cw-12);qc.style.gap='0';cards.forEach((c,i)=>{if(i)c.style.marginLeft='-'+ov+'px'})}
   }
   const sk=$('#cSkip');if(sk)sk.onclick=()=>{sfx.click();cardFlip()};
+  runAnims();
   // the planted card flies from the card row into its field
   if(C.fly){
     const f=C.fly;C.fly=null;
@@ -2768,6 +2770,33 @@ function renderCards(flipIdx){
       setTimeout(()=>{g.remove();dst.style.visibility=''},540);
     }
   }
+}
+/* ---- card movement animations: C.anims is filled by game events, played after the next render ---- */
+const addAnim=a=>{C.anims=(C.anims||[]).concat(a)};
+function capCard(sel,t){const e=document.querySelector(sel);if(!e)return null;const r=e.getBoundingClientRect();return{left:r.left,top:r.top,w:r.width,html:faceHTML(t)}}
+function runAnims(){
+  const list=C.anims;C.anims=null;if(!list||!list.length)return;
+  const root=$('#cards');if(!root)return;const rr=root.getBoundingClientRect();
+  list.forEach(a=>{
+    const dstEl=a.dst?document.querySelector(a.dst):null,dr=dstEl?dstEl.getBoundingClientRect():null;
+    const w=(a.from&&a.from.w)||(dr&&dr.width)||60,h=w*1.45;
+    let from;
+    if(a.from==='deck'){const r=$('#cDeck').getBoundingClientRect();from={left:r.left+r.width/2-w/2,top:r.top};}
+    else if(a.from&&a.from.bot!=null)from={left:rr.left+rr.width*(a.from.bot===0?.28:.72)-w/2,top:rr.top-h*.6};
+    else from=a.from;
+    let to;
+    if(dr)to={left:dr.left,top:dr.top,k:dr.width/w};
+    else if(a.toBot!=null)to={left:rr.left+rr.width*(a.toBot===0?.28:.72)-w/2,top:rr.top-h*.8,k:.6,fade:1};
+    if(!from||!to)return;
+    if(dstEl)dstEl.style.visibility='hidden';
+    setTimeout(()=>{
+      const g=el('<div class="flyc"></div>');g.innerHTML=a.html;const ce=g.firstChild;ce.className='card';ce.style.setProperty('--w',w+'px');
+      if(a.label){const l=el(`<div class="flab">${a.label}</div>`);g.appendChild(l)}
+      g.style.left=from.left+'px';g.style.top=from.top+'px';g.style.opacity=a.from==='deck'?'.9':'1';root.appendChild(g);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{g.style.transform=`translate(${to.left-from.left}px,${to.top-from.top}px) scale(${to.k})`;if(to.fade)g.style.opacity='0'}));
+      setTimeout(()=>{g.remove();if(dstEl)dstEl.style.visibility=''},640);
+    },(a.delay||0)*1000);
+  });
 }
 function floatAt(el_,text){
   if(!el_)return;const r=el_.getBoundingClientRect();
@@ -2822,6 +2851,7 @@ function cardFlip(){
   }
   C.market=[];for(let k=0;k<2;k++){const c=drawCard();if(c)C.market.push(c)}
   C.mTotal=C.market.length;C.phase='market';C.sel=0;C.msg=`${C.reshuffled?'🔀 ':''}🂠 ➜ ${C.market.map(m=>CROPS[m.t].e).join(' ')}`;C.reshuffled=false;sfx.pick();
+  addAnim(C.market.map((m,i)=>({from:'deck',dst:`.crow .grp.tbl .card[data-m="${i}"]`,html:faceHTML(m.t),delay:i*.2})));
   renderCards(-1);
 }
 function cardTrade(i){
@@ -2909,8 +2939,10 @@ function acceptHandOffer(j,k){
   const c=C.hand[j];if(!c)return;
   const o=botReplies(c.t)[k];if(!o||!o.ok)return;
   const a=C.ai[k];
+  const cp=capCard(`.grp.q .card[data-q="${j}"]`,c.t);
   C.hand.splice(j,1);aiPlant(a,c);C.offerHand=null;
-  if(o.h){a.hand.splice(a.hand.indexOf(o.h),1);C.market.push({t:o.h.t,locked:true});C.mTotal++;C.sel=C.market.length-1;C.msg=`Bot ${k+1} took your ${CROPS[c.t].e} and gave you ${CROPS[o.h.t].e}`}
+  if(cp)addAnim({from:cp,toBot:k,html:cp.html});
+  if(o.h){a.hand.splice(a.hand.indexOf(o.h),1);C.market.push({t:o.h.t,locked:true});C.mTotal++;C.sel=C.market.length-1;addAnim({from:{bot:k},dst:`.crow .grp.tbl .card[data-m="${C.market.length-1}"]`,html:faceHTML(o.h.t),label:`Bot ${k+1}`,delay:.45});C.msg=`Bot ${k+1} took your ${CROPS[c.t].e} and gave you ${CROPS[o.h.t].e}`}
   else C.msg=`Bot ${k+1} took your ${CROPS[c.t].e}`;
   sfx.coin();renderCards();
 }
@@ -2918,8 +2950,10 @@ function acceptOffer(idx,k){
   const c=C.market[idx];if(!c)return;
   const o=botReplies(c.t)[k];if(!o||!o.ok)return;C.offerHand=null;
   const a=C.ai[k];
+  const cp=capCard(`.crow .grp.tbl .card[data-m="${idx}"]`,c.t);
+  if(cp)addAnim({from:cp,toBot:k,html:cp.html});
   C.market.splice(idx,1);aiPlant(a,c);
-  if(o.h){a.hand.splice(a.hand.indexOf(o.h),1);C.market.splice(idx,0,{t:o.h.t,locked:true});C.msg=`Bot ${k+1} swapped ${CROPS[o.h.t].e} for your ${CROPS[c.t].e}`}
+  if(o.h){a.hand.splice(a.hand.indexOf(o.h),1);C.market.splice(idx,0,{t:o.h.t,locked:true});addAnim({from:{bot:k},dst:`.crow .grp.tbl .card[data-m="${idx}"]`,html:faceHTML(o.h.t),label:`Bot ${k+1}`,delay:.45});C.msg=`Bot ${k+1} swapped ${CROPS[o.h.t].e} for your ${CROPS[c.t].e}`}
   else C.msg=`Bot ${k+1} took the ${CROPS[c.t].e}`;
   C.sel=clamp(C.sel,0,Math.max(0,C.market.length-1));sfx.coin();
   if(!C.market.length){cardAfterMarket();return}
@@ -2945,9 +2979,10 @@ function answerGift(n){
   const g=C.gift;if(!g)return;C.gift=null;C.aiMarket=[];
   if(n>=0){
     const o=g.opts[n],a=C.ai[g.k];
-    if(o.give){const ix=C.hand.indexOf(o.give);if(ix>=0)C.hand.splice(ix,1);aiPlant(a,o.give)}
+    if(o.give){const ix=C.hand.indexOf(o.give);const cp=capCard(`.grp.q .cards .card:nth-child(${ix+1})`,o.give.t);if(cp)addAnim({from:cp,toBot:g.k,html:cp.html});if(ix>=0)C.hand.splice(ix,1);aiPlant(a,o.give)}
     if(o.fromBot){const ix=a.hand.indexOf(o.get);if(ix>=0)a.hand.splice(ix,1)}
     C.market=[{t:o.get.t,locked:true}];C.sel=0;C.mTotal=1;C.giftRes=()=>g.res(true);C.phase='market';
+    addAnim({from:{bot:g.k},dst:'.crow .grp.tbl .card[data-m="0"]',html:faceHTML(o.get.t),label:`Bot ${g.k+1}`,delay:o.give?.45:0});
     C.msg=o.give?`Bot ${g.k+1} took your ${CROPS[o.give.t].e} and gave you ${CROPS[o.get.t].e}`:`Bot ${g.k+1} gave you a ${CROPS[o.get.t].e}`;
     renderCards();
   }else{C.phase='ai';renderCards();g.res(false)}
@@ -2984,6 +3019,7 @@ function cardAfterMarket(){
   C.turn++;if(C.classic)C.trades=C.o.trades;
   if(!C.hand.length&&!C.deck.length&&!(C.classic&&C.pass<C.o.rounds&&C.discardPile.length)){cardEndRound();return}
   C.msg=`${C.reshuffled?'🔀 ':''}${C.deck.length?'🂠 +3':'🂠 +3 · 🏁'}`;C.reshuffled=false;
+  addAnim(C.hand.slice(C.hand.length-C.drew).map((c,i)=>({from:'deck',dst:`.grp.q .cards .card:nth-child(${C.hand.length-C.drew+i+1})`,html:faceHTML(c.t),delay:.3+i*.18})));
   if(C.classic){C.phase='ai';renderCards();runAIs();return}
   C.phase='plant1';
   renderCards();
