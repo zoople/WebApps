@@ -20,6 +20,21 @@ Static browser apps, published with GitHub Pages from `main`
    offer an "Update now" button that reloads with `?v=<version>`.
 4. **Touch first.** Thumbstick for movement (never tap-to-move), big targets, no hover-only UI.
 5. **Guidance text is short bullet points**, never paragraphs.
+6. **Synth audio must never crackle.** This has had to be fixed repeatedly; build it right first time.
+   Crackle on phones comes from CPU underruns and speaker overload, not just bad envelopes. Always:
+   - `new AudioContext({latencyHint:'playback'})` (bigger buffers on Android), with a plain fallback.
+   - Master chain: high-pass ~90 Hz (phone speakers distort below it) → high-shelf cut → gentle
+     compressor (attack ≥ 20 ms) → destination, with master gain ≤ 0.7 for headroom. Peak well under 0.5.
+   - Every envelope starts and ends at 0 with ramps: attack ≥ 8 ms, exponential decay to 0.0001,
+     `stop()` after the tail. Never schedule at exactly `currentTime` — add ~20 ms.
+   - Keep node count low: share one filter per chord/pad, cap simultaneous SFX voices (~28),
+     `disconnect()` oscillators `onended`. Reverb IR ≤ 2.5 s. No LFO-modulated delay chorus.
+   - Music scheduler: ≥ 0.5 s lookahead, and if the clock has passed `nextT` after a stall,
+     jump ahead instead of scheduling into the past.
+   - Soft timbres: filtered, detuned pairs (triangle/sine, or saw under a low-pass). No raw square waves
+     or bright high partials. Suspend the context when the page is hidden.
+   - Test: record the output with an AudioWorklet in headless Chromium and check peak level and
+     sample discontinuities before shipping.
 
 ## Publishing workflow
 
