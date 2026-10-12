@@ -76,14 +76,27 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .ch-name{font-family:var(--display);font-weight:400;font-size:21px;margin:0;line-height:1.1;text-wrap:balance;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ch-count{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .bar{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
-.xprow{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;padding:0;text-align:left}
+.xprow{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.xpbtn{flex:1;display:flex;align-items:center;gap:8px;padding:0;text-align:left;color:inherit;min-width:0}
+.passbtn{position:relative;display:flex;align-items:center;gap:4px;background:#1f2238;border:1px solid #8ea0ff44;border-radius:999px;padding:2px 9px;font-size:12px;color:#dfe4ff}
+.passbtn .dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--velvet);box-shadow:0 0 0 2px var(--bg)}
+.tier{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #ffffff10}
+.tier .tp{width:44px;font-weight:800;color:#c9d0ff;font-variant-numeric:tabular-nums}
+.tier .tr{flex:1;font-size:22px;letter-spacing:4px}
+.tier.locked .tr{opacity:.4;filter:grayscale(.7)}
+.passbar{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;margin:8px 0 4px}
+.passbar i{display:block;height:100%;background:linear-gradient(90deg,#5b6bd6,#dfe4ff)}
 .xprow .xpl{white-space:nowrap;font-weight:600}.xprow .xpl b{color:var(--ink)}
 .xprow .xb{flex:1;height:4px}.xprow .xb i{background:linear-gradient(90deg,#c9a24a,#fff0b0)}
 .cell.res .em{filter:drop-shadow(0 0 4px #e4b84c99) drop-shadow(0 2px 1px #0006)}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--velvet),var(--gold));width:0;transition:width .5s}
 
 /* orders */
-.orders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;min-height:104px}
+.orders{display:flex;gap:7px;min-height:104px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px}
+.orders::-webkit-scrollbar{display:none}
+.orders>.order{flex:0 0 calc((100% - 32px - 14px)/3.25);scroll-snap-align:start}
+.order.side{background:#2a2420;border:1px dashed #e4b84c55}
+.order.side .who{color:#d9c49a}
 .order{background:var(--panel);border:1px solid #ffffff12;border-radius:12px;padding:7px 7px 6px;display:flex;flex-direction:column;gap:5px;cursor:pointer;min-width:0}
 .order.ready{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
 .who{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);min-width:0}
@@ -95,7 +108,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .need i{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;border-radius:50%;background:var(--ok);color:#10200f;font-size:9px;font-style:normal;font-weight:800;display:grid;place-items:center}
 .order .act{height:24px;border-radius:7px;font-size:12px;font-weight:800;display:grid;place-items:center;color:var(--muted);font-variant-numeric:tabular-nums}
 .order.ready .act{background:var(--ok);color:#10200f}
-.orders .empty{grid-column:1/-1;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:13px;background:var(--panel);border-radius:12px;padding:10px}
+.orders .empty{flex:1;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:13px;background:var(--panel);border-radius:12px;padding:10px}
 .orders .empty b{font-family:var(--display);font-weight:400;color:var(--gold);font-size:18px;display:block}
 
 /* board */
@@ -210,6 +223,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <li>Merges open the boxes next to them</li>
     <li>Fill orders to uncover Odile’s story</li>
     <li>Tap coins, tea and stars twice to claim</li>
+    <li>Jumble Sale orders are always open</li>
+    <li>Merge moons 🌑→🌕 for Moon Pass rewards</li>
     <li>No timer. Play at your own pace</li>
   </ul>
   <button id="playBtn">Play</button>
@@ -231,7 +246,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <section class="chapter">
     <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Dust Sheets</h1><span class="ch-count" id="chCount">0/5</span></div>
     <div class="bar"><i id="chBar"></i></div>
-    <button class="xprow" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button>
+    <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button><button class="passbtn" id="passBtn" aria-label="Moon Pass">🌕 <b id="pts">0</b><i class="dot" id="passDot" hidden></i></button></div>
   </section>
   <section class="orders" id="orders"></section>
   <main class="boardwrap" id="wrap"><div id="board"></div></main>
@@ -243,7 +258,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v5 · 12 Oct 2026';
+const VERSION='v6 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -281,6 +296,9 @@ const CHAINS = {
   X:{name:'Applause', type:'res', claim:'xp', items:[
     {e:'⭐',n:'Star',v:1},{e:'🌟',n:'Bright Star',v:3},{e:'💫',n:'Shooting Star',v:8},
     {e:'🌠',n:'Star Shower',v:20},{e:'🏆',n:'Standing Ovation',v:50}]},
+  N:{name:'Moon Tokens', type:'res', claim:'points', claimMax:true, items:[
+    {e:'🌑',n:'New Moon',v:0},{e:'🌒',n:'Crescent Moon',v:0},{e:'🌓',n:'Half Moon',v:0},{e:'🌕',n:'Full Moon',v:10}]},
+  H:{name:'Time Skips', type:'res', claim:'skip', items:[{e:'⏳',n:'Hourglass',v:15},{e:'⌛',n:'Sand Timer',v:60}]},
   /* rare chains: each generator's occasional bonus drop */
   K:{name:'Keepsakes', rare:true, items:[{e:'🔖',n:'Bookmark'},{e:'🎟️',n:'Ticket Stub'},{e:'🖼️',n:'Photograph'},{e:'📸',n:'Box Camera'}]},
   B:{name:'Haberdashery', rare:true, items:[{e:'🔘',n:'Button'},{e:'🎀',n:'Silk Bow'},{e:'👒',n:'Bonnet'},{e:'👑',n:'Paste Tiara'}]},
@@ -297,20 +315,20 @@ const CHAINS = {
     {e:'🌙',n:'The Vanishing Moon', lore:'The full method, written out. Two pages. The second page is a drawing of a black cat.'}]},
   /* generators */
   gD:{name:'Paper Tray', gen:true, main:'P', rare:'K', items:[
-    {e:'🗂️',n:'Paper Tray', drop:[['P',1,75],['P',2,10],['K',1,8],['E',1,2],['C',1,3],['X',1,2]]},
-    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,44],['P',2,28],['P',3,10],['K',1,9],['K',2,3],['E',1,2],['C',1,2],['X',1,2]]}]},
+    {e:'🗂️',n:'Paper Tray', drop:[['P',1,75],['P',2,10],['K',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,44],['P',2,28],['P',3,10],['K',1,9],['K',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
   gS:{name:'Sewing Basket', gen:true, main:'F', rare:'B', items:[
-    {e:'🧺',n:'Sewing Basket', drop:[['F',1,75],['F',2,10],['B',1,8],['E',1,2],['C',1,3],['X',1,2]]},
-    {e:'🪡',n:'Sewing Kit', drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2]]}]},
+    {e:'🧺',n:'Sewing Basket', drop:[['F',1,75],['F',2,10],['B',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🪡',n:'Sewing Kit', drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
   gT:{name:'Toolbox', gen:true, main:'T', rare:'W', items:[
-    {e:'🧰',n:'Toolbox', drop:[['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2]]},
-    {e:'🗜️',n:'Workbench', drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2]]}]},
+    {e:'🧰',n:'Toolbox', drop:[['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🗜️',n:'Workbench', drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
   gL:{name:'Fuse Box', gen:true, main:'L', rare:'R', items:[
-    {e:'🔌',n:'Fuse Box', drop:[['L',1,75],['L',2,10],['R',1,8],['E',1,2],['C',1,3],['X',1,2]]},
-    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,44],['L',2,28],['L',3,10],['R',1,9],['R',2,3],['E',1,2],['C',1,2],['X',1,2]]}]},
+    {e:'🔌',n:'Fuse Box', drop:[['L',1,75],['L',2,10],['R',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,44],['L',2,28],['L',3,10],['R',1,9],['R',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
   gM:{name:'Circus Trunk', gen:true, main:'M', rare:'X', items:[
-    {e:'🎪',n:'Circus Trunk', drop:[['M',1,80],['M',2,8],['X',1,7],['C',1,5]]},
-    {e:'🪞',n:'Magic Mirror', drop:[['M',1,50],['M',2,26],['M',3,10],['X',1,8],['X',2,3],['C',1,3]]}]},
+    {e:'🎪',n:'Circus Trunk', drop:[['M',1,80],['M',2,8],['X',1,7],['C',1,5],['N',1,5]]},
+    {e:'🪞',n:'Magic Mirror', drop:[['M',1,50],['M',2,26],['M',3,10],['X',1,8],['X',2,3],['C',1,3],['N',1,5]]}]},
   gK:{name:'Kettle', gen:true, main:'E', items:[
     {e:'🫖',n:'Kettle', free:true, charges:3, rechargeMs:480000, drop:[['E',1,70],['E',2,25],['E',3,5]]}]},
 };
@@ -325,7 +343,7 @@ const LAYOUT = [
   'wT1 bL2 bP1 wE2 bF2 wT2 bP3',
   'bP1 bgT1 wP1 bF2 wF1 bX1 bT1',   // zone 0 — start
   'wF2 oP1 o. o. o. oF1 wP2',
-  'oE1 ogD1 o. ogK1 o. ogS1 oE1',
+  'oE1 ogD1 o. o. o. ogS1 oE1',
 ];
 const zoneOfRow = r => r>=6?0 : r>=4?1 : r>=2?2 : 3;
 
@@ -336,6 +354,7 @@ const CAST = {
   P:{name:'Mrs Pike', av:'👵'},
   M:{name:'Mothball', av:'🐈‍⬛'},
   O:{name:'Odile’s note', av:'📜'},
+  S:{name:'Jumble Sale', av:'🏷️'},
 };
 
 /* ---------- story ---------- */
@@ -355,11 +374,12 @@ const CHAPTERS = [
       ['P','Coo-ee! Door was open. Oh, you’ve started on her attic. Brave.'],
       ['P','Forty years next door and Odile never let me past the hatch. Mind if I have a nose?'],
     ]},
-  { title:'Letters in the Rafters', zone:1, gifts:[['gL',1],['E',2]],
+  { title:'Letters in the Rafters', zone:1, gifts:[['gL',1],['gK',1]],
     intro:[
       ['T','There’s a fuse box up here. Why is there a fuse box in an attic?'],
       ['N','Theo flips the switch. A row of bulbs along the beam stutters on, then off, then on again. It sounds a bit like applause.'],
       ['N','The dust sheets over the next stretch of floor slide away. <em>(A Fuse Box is waiting in your gifts.)</em>'],
+      ['P','And you can’t clear an attic without tea. I’ve brought my kettle up. It’s on loan, mind. <em>(Free tea every few minutes.)</em>'],
     ],
     outro:[
       ['N','The letters are tied in red ribbon, all addressed to the same name. Not Odile. “The Great Odelia.”'],
@@ -419,43 +439,43 @@ const CHAPTERS = [
 /* ---------- orders ---------- */
 const TASKS = [
   // ch1 — zone 0 only
-  {ch:0, who:'T', need:[['F',2]], coins:8,  say:'Got any yarn? I want to tie these bin bags shut properly.'},
-  {ch:0, who:'M', need:[['P',2]], coins:8, say:'Mrrp. (He wants a note to bat about under the rafters.)'},
-  {ch:0, who:'T', need:[['P',3]], coins:10, say:'Find me an envelope for the receipts. There are… a lot of receipts.'},
-  {ch:0, who:'M', need:[['E',2]], coins:8, say:'(He is sitting by the kettle. He is staring at the biscuit tin.)'},
-  {ch:0, who:'T', need:[['T',2],['F',3]], coins:12, say:'Wrench for the hatch hinge, and a sock to stop it squeaking. Don’t ask.'},
+  {beat:['T','Bin bags tied. And under this sheet… a hatbox full of sequins. Buttons, apparently.'], ch:0, who:'T', need:[['F',2]], coins:8,  say:'Got any yarn? I want to tie these bin bags shut properly.'},
+  {beat:['M','(He bats the note under a floorboard. Something underneath it rattles.)'], ch:0, who:'M', need:[['P',2]], coins:8, say:'Mrrp. (He wants a note to bat about under the rafters.)'},
+  {beat:['T','These receipts are all from a theatrical costumier in Covent Garden. Forty years of them.'], ch:0, who:'T', need:[['P',3]], coins:10, say:'Find me an envelope for the receipts. There are… a lot of receipts.'},
+  {beat:['N','Under the floorboard: a playbill, folded small. The name on it has been scratched out.'], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He is pawing at a loose floorboard. A bolt and some yarn might shift it.)'},
+  {beat:['T','Hatch fixed. Sock… deployed. Now we can get the big dust sheets off.'], ch:0, who:'T', need:[['T',2],['F',3]], coins:12, say:'Wrench for the hatch hinge, and a sock to stop it squeaking. Don’t ask.'},
   // ch2 — zone 1, fuse box
-  {ch:1, who:'T', need:[['L',2]], coins:12, say:'Half these bulbs are dead. Spare one?'},
-  {ch:1, who:'P', need:[['P',4]], coins:14, say:'Bundle up those letters, dear. Letters want keeping together.'},
-  {ch:1, who:'M', need:[['F',4]], coins:12, say:'(He has claimed a pair of opera gloves. Or he would like to.)'},
-  {ch:1, who:'T', need:[['T',3],['L',1]], coins:14, say:'Hammer and a candle. The fuse box has opinions.'},
-  {ch:1, who:'P', need:[['P',4],['K',2]], coins:16, say:'Another bundle. And look for ticket stubs tucked in them, I want to see where she played.'},
-  {x:1, ch:1, who:'M', need:[['F',4],['L',3]], coins:14, say:'(He wants gloves to sleep on and a torch to guard them with.)'},
+  {beat:['T','Now I can see the rafters have writing on them. Dates. Cities. Paris, 1964.'], ch:1, who:'T', need:[['L',2]], coins:12, say:'Half these bulbs are dead. Spare one?'},
+  {beat:['P','Look at the postmarks. She told us she’d never been further than Brighton.'], ch:1, who:'P', need:[['P',4]], coins:14, say:'Bundle up those letters, dear. Letters want keeping together.'},
+  {beat:['M','(He curls up in the opera gloves like they were made for him. They may have been.)'], ch:1, who:'M', need:[['F',4]], coins:12, say:'(He has claimed a pair of opera gloves. Or he would like to.)'},
+  {beat:['T','The fuses are labelled in her handwriting. “Stage left.” “Stage right.” “Moon.”'], ch:1, who:'T', need:[['T',3],['L',1]], coins:14, say:'Hammer and a candle. The fuse box has opinions.'},
+  {beat:['P','A ticket stub. Front row, the Palladium. She kept one from every night.'], ch:1, who:'P', need:[['P',4],['K',2]], coins:16, say:'Another bundle. And look for ticket stubs tucked in them, I want to see where she played.'},
+  {beat:['N','Mothball has found the warmest spot in the attic. It is directly above the dust sheet with the trunk under it.'], x:1, ch:1, who:'M', need:[['F',4],['L',3]], coins:14, say:'(He wants gloves to sleep on and a torch to guard them with.)'},
   // ch3 — zone 2, circus trunk
-  {ch:2, who:'M', need:[['M',2]], coins:16, say:'(He drops a playing card at your feet. Then another. He wants the whole deck.)'},
-  {ch:2, who:'T', need:[['L',3],['W',2]], coins:18, say:'A torch and a wind-up key. That panel has a keyhole, and I’m not leaving it alone.'},
-  {ch:2, who:'P', need:[['F',5]], coins:18, say:'Is that silk? Let me see. Oh, that’s real silk.'},
-  {ch:2, who:'T', need:[['M',3]], coins:20, say:'If there’s a wand in that trunk I am absolutely going to wave it.'},
-  {ch:2, who:'M', need:[['P',5]], coins:18, say:'(He is sitting on a stack of nothing, waiting for a diary to sit on instead.)'},
-  {x:1, ch:2, who:'P', need:[['P',5],['B',2]], coins:20, say:'A diary and a silk bow to tie it shut. Some secrets want a ribbon.'},
+  {beat:['N','Every card in the deck is the same card. The ace of moons.'], ch:2, who:'M', need:[['M',2]], coins:16, say:'(He drops a playing card at your feet. Then another. He wants the whole deck.)'},
+  {beat:['T','The panel opens on a tiny clockwork stage. Little moon, little curtains. It still works.'], ch:2, who:'T', need:[['L',3],['W',2]], coins:18, say:'A torch and a wind-up key. That panel has a keyhole, and I’m not leaving it alone.'},
+  {beat:['P','This silk was a costume once. You can see where the sequins were unpicked.'], ch:2, who:'P', need:[['F',5]], coins:18, say:'Is that silk? Let me see. Oh, that’s real silk.'},
+  {beat:['T','I waved it. Nothing happened. I’m a bit gutted, honestly.'], ch:2, who:'T', need:[['M',3]], coins:20, say:'If there’s a wand in that trunk I am absolutely going to wave it.'},
+  {beat:['N','The diary he chooses to sit on is the one from 1968.'], ch:2, who:'M', need:[['P',5]], coins:18, say:'(He is sitting on a stack of nothing, waiting for a diary to sit on instead.)'},
+  {beat:['P','She tied her letters with silk bows. I used to see them on her doormat.'], x:1, ch:2, who:'P', need:[['P',5],['B',2]], coins:20, say:'A diary and a silk bow to tie it shut. Some secrets want a ribbon.'},
   // ch4 — zone 3
-  {ch:3, who:'P', need:[['M',4]], coins:22, say:'A top hat! Bring it here, I want to try it on. Don’t tell anyone.'},
-  {ch:3, who:'T', need:[['T',4],['W',3]], coins:22, say:'Screwdriver and a stopwatch. Every trick in that corner is timed.'},
-  {ch:3, who:'M', need:[['F',5],['P',4]], coins:22, say:'(He has made a nest of letters. It needs a scarf.)'},
-  {ch:3, who:'T', need:[['M',5]], coins:26, say:'The programme says there was a rabbit. I need to see the rabbit.'},
-  {ch:3, who:'P', need:[['B',3]], coins:20, say:'A bonnet! I had one just like it. Well. Nearly.'},
-  {x:1, ch:3, who:'M', need:[['T',5],['K',2]], coins:24, say:'(He is batting a ticket stub around a saw. He wants both.)'},
+  {beat:['P','It fits. Don’t you dare laugh.'], ch:3, who:'P', need:[['M',4]], coins:22, say:'A top hat! Bring it here, I want to try it on. Don’t tell anyone.'},
+  {beat:['T','The stopwatch is stopped at four minutes twelve. The exact length of the Moon act on the programme.'], ch:3, who:'T', need:[['T',4],['W',3]], coins:22, say:'Screwdriver and a stopwatch. Every trick in that corner is timed.'},
+  {beat:['N','In the nest of letters: one from Felix. Never opened.'], ch:3, who:'M', need:[['F',5],['P',4]], coins:22, say:'(He has made a nest of letters. It needs a scarf.)'},
+  {beat:['T','It’s not a real rabbit. It’s a very good puppet. I’m not crying, it’s dusty.'], ch:3, who:'T', need:[['M',5]], coins:26, say:'The programme says there was a rabbit. I need to see the rabbit.'},
+  {beat:['P','She wore this to my wedding. I never knew it was a costume.'], ch:3, who:'P', need:[['B',3]], coins:20, say:'A bonnet! I had one just like it. Well. Nearly.'},
+  {beat:['N','The stub is for the last night of the Vanishing Moon. Seat A1, reserved for “F.” It was never torn.'], x:1, ch:3, who:'M', need:[['T',5],['K',2]], coins:24, say:'(He is batting a ticket stub around a saw. He wants both.)'},
   // ch5
-  {ch:4, who:'T', need:[['T',5]], coins:28, say:'A saw. This false wall comes down today.'},
-  {ch:4, who:'P', need:[['F',6]], coins:30, say:'Her stage gown. I want to see it in the light.'},
-  {ch:4, who:'M', need:[['M',5],['R',2]], coins:30, say:'(He and the rabbit are having a standoff. Music might calm everyone down.)'},
-  {ch:4, who:'T', need:[['P',6],['K',3]], coins:30, say:'All her diaries, in order. And the photographs that go with them.'},
-  {x:1, ch:4, who:'P', need:[['F',6],['L',4]], coins:30, say:'Hold the gown up to the lantern, love. I want to see the beading.'},
+  {beat:['T','The false wall comes away. Behind it, a mirror. Of course there’s a mirror.'], ch:4, who:'T', need:[['T',5]], coins:28, say:'A saw. This false wall comes down today.'},
+  {beat:['P','Oh, Odile. You were magnificent.'], ch:4, who:'P', need:[['F',6]], coins:30, say:'Her stage gown. I want to see it in the light.'},
+  {beat:['N','The music settles it. Cat and rabbit share the windowsill.'], ch:4, who:'M', need:[['M',5],['R',2]], coins:30, say:'(He and the rabbit are having a standoff. Music might calm everyone down.)'},
+  {beat:['T','The photos line up with the diaries. Every city, every year. Then nothing after 1969.'], ch:4, who:'T', need:[['P',6],['K',3]], coins:30, say:'All her diaries, in order. And the photographs that go with them.'},
+  {beat:['P','Every bead stitched by hand. That’s months of work, love.'], x:1, ch:4, who:'P', need:[['F',6],['L',4]], coins:30, say:'Hold the gown up to the lantern, love. I want to see the beading.'},
   // ch6
-  {ch:5, who:'T', need:[['T',6],['R',3]], coins:34, say:'Tools to angle the mirror, and the wireless for the overture. Let’s do this properly.'},
-  {ch:5, who:'P', need:[['M',6]], coins:34, say:'The dove. It belongs with the trick.'},
-  {ch:5, who:'M', need:[['F',6],['B',3]], coins:34, say:'(A gown and a bonnet. He is dressing the set like he’s done it before.)'},
-  {x:1, ch:5, who:'P', need:[['M',6],['R',3]], coins:34, say:'The dove, and the wireless. She’d have wanted music.'},
+  {beat:['T','Mirror angled. Wireless tuned. All we need now is the moon.'], ch:5, who:'T', need:[['T',6],['R',3]], coins:34, say:'Tools to angle the mirror, and the wireless for the overture. Let’s do this properly.'},
+  {beat:['P','She forgave him, you know. She just never told him.'], ch:5, who:'P', need:[['M',6]], coins:34, say:'The dove. It belongs with the trick.'},
+  {beat:['N','The set is dressed. Mothball takes his mark.'], ch:5, who:'M', need:[['F',6],['B',3]], coins:34, say:'(A gown and a bonnet. He is dressing the set like he’s done it before.)'},
+  {beat:['P','A bit of music for the finale. She’d insist.'], x:1, ch:5, who:'P', need:[['M',6],['R',3]], coins:34, say:'The dove, and the wireless. She’d have wanted music.'},
   {ch:5, who:'O', need:[['M',7]], coins:50, say:'“…a crystal, and someone who looks.”'},
 ];
 /* stable ids: original orders keep 0..27 so existing saves line up; orders added later (x:1) get 100+ */
@@ -464,8 +484,31 @@ const TASKS = [
 function taskRewards(t){
   const c = t.coins>=30?3 : t.coins>=14?2 : 1;
   const x = t.ch>=4?3 : t.ch>=2?2 : 1;
-  return t.who==='O' ? [['C',4],['X',4]] : [['C',c],['X',x]];
+  return t.who==='O' ? [['C',4],['X',4],['N',3]] : [['C',c],['X',x],['N',t.ch>=3?2:1]];
 }
+/* Jumble Sale: side orders that never run out, built from generators you already have,
+   so there is always something to work on whatever happens to the story orders */
+function sideGens(){ const g=new Set(); S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&isGen(c.it)){ const m=CHAINS[c.it.k].main; if(m&&m!=='E'&&m!=='M') g.add(m); } }); return [...g]; }
+function makeSide(){
+  const pool=sideGens(); if(!pool.length) return null;
+  const hi = S.ch>=4?4 : S.ch>=2?3 : 2;
+  const pick=()=>[pool[Math.floor(Math.random()*pool.length)], 1+Math.floor(Math.random()*hi)];
+  const need=[pick()]; if(Math.random()<.35){ const b=pick(); b[1]=Math.max(1,b[1]-1); need.push(b); }
+  const size=need.reduce((a,[,l])=>a+(1<<(l-1)),0);
+  const rw=[['C', size>=6?2:1]]; if(Math.random()<.25) rw.push(['N',1]); else if(Math.random()<.4) rw.push(['X',1]);
+  S.sideN=(S.sideN||0)+1;
+  return {id:'s'+S.sideN, who:'S', side:true, need, rw, say:'For the church jumble sale. Anything you can spare.'};
+}
+function ensureSide(){ S.side=S.side||[]; while(S.side.length<2){ const o=makeSide(); if(!o) break; S.side.push(o); } }
+
+/* Moon Pass: event points from Full Moons unlock tiers of rewards outside the board */
+const PASS=[
+  {pts:10, rw:[['E',2]]},{pts:20, rw:[['H',1]]},{pts:30, rw:[['C',2]]},{pts:40, rw:[['E',3]]},{pts:50, rw:[['H',1]]},
+  {pts:60, rw:[['X',2]]},{pts:70, rw:[['E',3]]},{pts:80, rw:[['C',3]]},{pts:90, rw:[['H',2]]},{pts:100, rw:[['E',4]]},
+  {pts:115, rw:[['C',3],['X',2]]},{pts:130, rw:[['H',2]]},{pts:145, rw:[['E',4]]},{pts:160, rw:[['C',4]]},{pts:180, rw:[['E',5],['H',2]]},
+];
+function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i]).length; }
+
 /* stage level: claimed applause (XP) fills it; each level-up drops a gift */
 const STAGE_XP=[0,6,15,28,45,66,92,124,162,206,256,316,386,466];
 function stageOf(xp){ let l=1; while(l<60 && xp>=stageNeed(l)) l++; return l; }
@@ -668,10 +711,10 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, xp:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
-  try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ s.xp=s.xp||0; return s; } } }catch(e){}
+  try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[]; return s; } } }catch(e){}
   return freshState();
 }
 function save(){ try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} }
@@ -759,8 +802,16 @@ function claim(i){
   S.cells[i].it=null; sel=-1; fx[i]='pulse';
   if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
   else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
+  else if(kind==='points'){ S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} Moon Pass points${passReady()?' · a reward is ready 🌕':''}`); }
+  else if(kind==='skip'){ timeSkip(d.v); SND.play('unweb'); toast(`${d.e} Skipped ${d.v} minutes`); }
   else { SND.play('unweb'); toast(`${d.e} +${d.v} applause`); addXP(d.v); }
   save(); render();
+}
+/* time skip: fast-forwards energy refill and every generator cooldown */
+function timeSkip(min){
+  const ms=min*60000; tickEnergy(); if(S.energy<CONFIG.energyMax) S.eT-=ms;
+  S.cells.forEach(c=>{ if(c.it&&isGen(c.it)&&def(c.it).charges){ c.it.t-=ms; refreshCharges(c.it); } });
+  tickEnergy();
 }
 function addXP(v){
   const before=stageOf(S.xp); S.xp+=v; const after=stageOf(S.xp);
@@ -836,19 +887,24 @@ function completeTask(t){
     if(idx===sel) sel=-1;
     S.cells[idx].it=null; fx[idx]='pulse';
   });
-  S.done[t.id]=1;
   SND.play('coins');
+  if(t.side){
+    S.side=S.side.filter(o=>o.id!==t.id); dropItems(t.rw); ensureSide();
+    toast(`🏷️ Sold at the jumble sale. Rewards are on the board`);
+    save(); render(); return;
+  }
+  S.done[t.id]=1;
   dropItems(taskRewards(t));
-  toast(`${CAST[t.who].av} Thanks! Rewards are on the board`);
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
-  if(chTasks.every(x=>S.done[x.id])) finishChapter();
+  if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat);
+  else if(t.beat) playScene({lines:[t.beat]});
   save(); render();
 }
-function finishChapter(){
+function finishChapter(beat){
   const c=S.ch;
   S.journal.push(c);
   setTimeout(()=>SND.play('fanfare'),350);
-  const queue=[{title:'Chapter '+(c+1)+' complete', sub:CHAPTERS[c].title, lines:CHAPTERS[c].outro}];
+  const queue=[{title:'Chapter '+(c+1)+' complete', sub:CHAPTERS[c].title, lines:(beat?[beat]:[]).concat(CHAPTERS[c].outro)}];
   S.ch++;
   if(S.ch>=CHAPTERS.length){ S.complete=true; }
   else{
@@ -901,7 +957,8 @@ function buildBoard(){
 function render(){
   tickEnergy();
   const tasks=activeTasks();
-  const needed=new Set(); tasks.forEach(t=>t.need.forEach(([k,l])=>needed.add(key(k,l))));
+  ensureSide();
+  const needed=new Set(); tasks.concat(S.side).forEach(t=>t.need.forEach(([k,l])=>needed.add(key(k,l))));
   const cellEls=board.children;
   S.cells.forEach((c,i)=>{
     const el=cellEls[i]; const [r,cc]=rc(i);
@@ -951,6 +1008,7 @@ function renderHud(){
   $('energy').textContent=S.energy;
   $('eTimer').textContent = S.energy<CONFIG.energyMax ? fmt(Math.ceil((CONFIG.energyRegenMs-(now()-S.eT))/1000)) : '';
   $('coins').textContent=S.coins;
+  $('pts').textContent=S.pts||0; $('passDot').hidden=!passReady();
   { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
     $('xpLv').textContent=l; $('xpTxt').textContent=`${S.xp-lo}/${hi-lo}`; $('xpBar').style.width=((S.xp-lo)/(hi-lo)*100)+'%'; }
   $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length;
@@ -970,13 +1028,14 @@ function renderOrders(tasks){
     return;
   }
   box.innerHTML='';
-  tasks.forEach(t=>{
+  ensureSide();
+  tasks.concat(S.side).forEach(t=>{
     const st=taskStatus(t);
     const el=document.createElement('div');
-    el.className='order'+(st.ready?' ready':'');
+    el.className='order'+(st.ready?' ready':'')+(t.side?' side':'');
     el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
-      <div class="act">${st.ready?'Hand over':taskRewards(t).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
+      <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     el.onclick=()=>{ if(taskStatus(t).ready) completeTask(t); else hintTask(t); };
     box.appendChild(el);
   });
@@ -998,8 +1057,10 @@ function renderInfo(){
     else ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}. Costs ⚡${CONFIG.energyCost}.`;
     if(it.l<maxL(it.k)) ds+=` Merge two to get a ${ch.items[it.l].n}.`;
   } else if(ch.type==='res'){
-    const unit = ch.claim==='energy'?'⚡' : ch.claim==='coins'?'🪙' : '⭐ applause';
-    ds=`Tap again to collect +${d.v} ${unit}.`+(it.l<maxL(it.k)?` Merge two for +${ch.items[it.l].v}.`:' Top of the chain.');
+    const unit = ch.claim==='energy'?'⚡' : ch.claim==='coins'?'🪙' : ch.claim==='skip'?'min time skip' : ch.claim==='points'?'Moon Pass points' : '⭐ applause';
+    if(ch.claimMax) ds = it.l<maxL(it.k) ? `Merge up to a ${ch.items[maxL(it.k)-1].e} Full Moon to claim ${ch.items[maxL(it.k)-1].v} Moon Pass points.` : `Tap again to claim +${d.v} Moon Pass points.`;
+    else if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min: refills energy and generator timers.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
+    else ds=`Tap again to collect +${d.v} ${unit}.`+(it.l<maxL(it.k)?` Merge two for +${ch.items[it.l].v}.`:' Top of the chain.');
   } else {
     ds = (ch.rare?`Rare find from the ${genFor(it.k).name}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
   }
@@ -1061,7 +1122,7 @@ function tap(i){
   if(!c.it){ sel=-1; sellArm=false; render(); return; }
   if(sel===i){
     if(isGen(c.it)){ produce(i); return; }
-    if(isRes(c.it)){ claim(i); return; }
+    if(isRes(c.it)){ const ch=CHAINS[c.it.k]; if(ch.claimMax && c.it.l<maxL(c.it.k)){ SND.play('nope'); toast(`Merge up to a ${ch.items[maxL(c.it.k)-1].e} ${ch.items[maxL(c.it.k)-1].n} to claim Moon Pass points`); return; } claim(i); return; }
     return;
   }
   sel=i; sellArm=false; render();
@@ -1159,6 +1220,18 @@ function showMenu(){
   $('sfxBtn').onclick=()=>{ SND.setSfx(!SND.pref.sfx); showMenu(); SND.play('tap'); };
   $('resetBtn').onclick=()=>{ if(!resetArm){ resetArm=true; showMenu(); return; } resetArm=false; S=freshState(); sel=-1; save(); closeModal(); render(); startIntro(); };
 }
+function showPass(){
+  const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;
+  let h=`<h2>Moon Pass</h2><p style="color:var(--muted);font-size:13px">• Moon tokens 🌑 drop from generators and orders<br>• Merge them up to a Full Moon 🌕, then tap twice to claim points<br>• Points unlock the rewards below</p>
+    <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">🌕 ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
+  PASS.forEach((t,i)=>{
+    const got=S.passGot[i], ok=S.pts>=t.pts;
+    h+=`<div class="tier${ok?'':' locked'}"><span class="tp">${t.pts}</span><span class="tr">${t.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span>${got?'<span style="color:var(--ok);font-weight:800">✓</span>':ok?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-tier="${i}">Claim</button>`:''}</div>`;
+  });
+  h+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
+  openModal(h);
+  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>S.gifts.push(r)); SND.play('gift'); toast('Added to your gifts 🎁'); save(); render(); showPass(); });
+}
 function showComplete(){
   openModal(`<h3 style="margin-top:0">Event complete</h3><h2>The Vanishing Moon</h2><p>You restored Odile’s attic and found out who she really was.</p><p style="color:var(--muted)">The board stays open. Merge as long as you like. The Circus Trunk chain has one level nobody has reached yet.</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button></div>`);
 }
@@ -1166,6 +1239,7 @@ function showComplete(){
 $('journalBtn').onclick=showJournal;
 $('menuBtn').onclick=()=>{ resetArm=false; showMenu(); };
 $('giftBtn').onclick=placeGift;
+$('passBtn').onclick=showPass;
 $('xpRow').onclick=()=>{ const l=stageOf(S.xp); toast(`⭐ Stage ${l}. Next level gives: ${stageReward(l+1).map(([k,lv])=>CHAINS[k].items[lv-1].e).join(' ')}<br><small>Claim stars ⭐ on the board to fill it</small>`,3200); };
 
 /* full screen toggle */
