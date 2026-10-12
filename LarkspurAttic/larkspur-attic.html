@@ -237,7 +237,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v3 · 12 Oct 2026';
+const VERSION='v4 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -445,21 +445,24 @@ const SND = (()=>{
   const PREF_KEY='larkspur-attic-audio';
   let pref={music:true,sfx:true};
   try{ const p=JSON.parse(localStorage.getItem(PREF_KEY)||'null'); if(p) pref={...pref,...p}; }catch(e){}
-  let ctx=null, out, sfxG, musG, revIn, noiseBuf, timer=null, nextT=0, step=0, lastNote=57;
+  let ctx=null, out, sfxG, musG, revIn, noiseBuf, timer=null, nextT=0, step=0, lastNote=57, live=0;
+  const MAX_SFX_VOICES=28;
   const mtof=m=>440*Math.pow(2,(m-69)/12);
   const SFX_VOL=.8, MUS_VOL=.75;
 
   function init(){
     if(ctx){ if(ctx.state==='suspended') ctx.resume(); return; }
-    try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
+    const AC=window.AudioContext||window.webkitAudioContext;
+    try{ ctx=new AC({latencyHint:'playback'}); }catch(e){ try{ ctx=new AC(); }catch(e2){ return; } }
     // master: warm shelf + gentle glue compression
     const shelf=ctx.createBiquadFilter(); shelf.type='highshelf'; shelf.frequency.value=3200; shelf.gain.value=-9;
     const top=ctx.createBiquadFilter(); top.type='lowpass'; top.frequency.value=7500; top.Q.value=.5;
-    const comp=ctx.createDynamicsCompressor(); comp.threshold.value=-20; comp.ratio.value=3; comp.attack.value=.01; comp.release.value=.3;
-    out=ctx.createGain(); out.gain.value=.9;
-    out.connect(shelf); shelf.connect(top); top.connect(comp); comp.connect(ctx.destination);
+    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=90; hp.Q.value=.5; // phone speakers distort below this
+    const comp=ctx.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=12; comp.ratio.value=2.5; comp.attack.value=.03; comp.release.value=.25;
+    out=ctx.createGain(); out.gain.value=.7; // headroom so nothing ever hits 0 dBFS
+    out.connect(hp); hp.connect(shelf); shelf.connect(top); top.connect(comp); comp.connect(ctx.destination);
     // long soft reverb, darkened on the way in
-    const rev=ctx.createConvolver(), len=Math.floor(ctx.sampleRate*3.4), ir=ctx.createBuffer(2,len,ctx.sampleRate);
+    const rev=ctx.createConvolver(), len=Math.floor(ctx.sampleRate*2.2), ir=ctx.createBuffer(2,len,ctx.sampleRate);
     for(let c=0;c<2;c++){ const d=ir.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6); }
     rev.buffer=ir;
     revIn=ctx.createBiquadFilter(); revIn.type='lowpass'; revIn.frequency.value=2400;
@@ -470,17 +473,11 @@ const SND = (()=>{
     const sfxLP=ctx.createBiquadFilter(); sfxLP.type='lowpass'; sfxLP.frequency.value=3400; sfxLP.Q.value=.4;
     const sfxSend=ctx.createGain(); sfxSend.gain.value=.35;
     sfxG.connect(sfxLP); sfxLP.connect(out); sfxLP.connect(sfxSend); sfxSend.connect(revIn);
-    // music bus: low-pass → stereo chorus → reverb + tape echo
+    // music bus: low-pass → reverb + tape echo
     musG=ctx.createGain(); musG.gain.value=0;
     const mLP=ctx.createBiquadFilter(); mLP.type='lowpass'; mLP.frequency.value=2200; mLP.Q.value=.3;
     musG.connect(mLP);
     const chorusOut=ctx.createGain(); mLP.connect(chorusOut);
-    [[.012,.31,-.7],[.017,.23,.7]].forEach(([d,rate,pan])=>{
-      const dl=ctx.createDelay(.05), lfo=ctx.createOscillator(), depth=ctx.createGain(), p=ctx.createStereoPanner?ctx.createStereoPanner():ctx.createGain(), g=ctx.createGain();
-      dl.delayTime.value=d; lfo.frequency.value=rate; depth.gain.value=.0025; lfo.connect(depth); depth.connect(dl.delayTime); lfo.start();
-      if(p.pan) p.pan.value=pan; g.gain.value=.55;
-      mLP.connect(dl); dl.connect(g); g.connect(p); p.connect(chorusOut);
-    });
     chorusOut.connect(out);
     const mSend=ctx.createGain(); mSend.gain.value=.55; chorusOut.connect(mSend); mSend.connect(revIn);
     const dly=ctx.createDelay(2), fb=ctx.createGain(), dlp=ctx.createBiquadFilter(), wet=ctx.createGain();
@@ -494,7 +491,9 @@ const SND = (()=>{
   /* one soft synth voice: detuned pair through an enveloped low-pass */
   function voice({m,f,t=0,dur=.4,g=.1,a=.012,wave='triangle',det=7,lp=1800,lpEnd=0,glide=0,dest=sfxG,abs=false,sub=0}){
     if(!ctx) return;
-    const t0=abs?t:ctx.currentTime+t, fr=f||mtof(m), e=ctx.createGain(), fl=ctx.createBiquadFilter(), stop=t0+dur+.1;
+    if(!abs && live>=MAX_SFX_VOICES) return;
+    a=Math.max(a,.008);
+    const t0=abs?Math.max(t,ctx.currentTime+.02):ctx.currentTime+.02+t, fr=f||mtof(m), e=ctx.createGain(), fl=ctx.createBiquadFilter(), stop=t0+dur+.12;
     fl.type='lowpass'; fl.Q.value=.6; fl.frequency.setValueAtTime(lp,t0);
     if(lpEnd) fl.frequency.exponentialRampToValueAtTime(lpEnd,t0+dur);
     e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+a); e.gain.exponentialRampToValueAtTime(.0001,t0+dur);
@@ -503,6 +502,7 @@ const SND = (()=>{
       const o=ctx.createOscillator(), og=ctx.createGain(); o.type=w; o.frequency.setValueAtTime(lvl?fr/2:fr,t0); o.detune.value=dt;
       if(glide) o.frequency.exponentialRampToValueAtTime((lvl?glide/2:glide),t0+dur*.7);
       og.gain.value=lvl||.5; o.connect(og); og.connect(fl); o.start(t0); o.stop(stop);
+      if(!abs){ live++; o.onended=()=>{ live--; o.disconnect(); }; } else o.onended=()=>o.disconnect();
     });
     fl.connect(e); e.connect(dest);
   }
@@ -510,7 +510,7 @@ const SND = (()=>{
   const mallet=(m,t,g=.12,dur=.5)=>{ voice({m,t,dur,g,a:.006,wave:'sine',det:3,lp:2600,lpEnd:900}); voice({f:mtof(m)*4,t,dur:dur*.18,g:g*.07,a:.003,wave:'sine',det:0,lp:3000}); };
   function puff({t=0,dur=.25,g=.06,f=900,to=300}){
     if(!ctx) return;
-    const t0=ctx.currentTime+t, s=ctx.createBufferSource(), fl=ctx.createBiquadFilter(), e=ctx.createGain();
+    const t0=ctx.currentTime+.02+t, s=ctx.createBufferSource(), fl=ctx.createBiquadFilter(), e=ctx.createGain();
     s.buffer=noiseBuf; fl.type='lowpass'; fl.frequency.setValueAtTime(f,t0); fl.frequency.exponentialRampToValueAtTime(to,t0+dur);
     e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+.02); e.gain.exponentialRampToValueAtTime(.0001,t0+dur);
     s.connect(fl); fl.connect(e); e.connect(sfxG); s.start(t0); s.stop(t0+dur+.05);
@@ -553,8 +553,13 @@ const SND = (()=>{
   ];
   const SCALE=[57,59,60,62,64,65,67,69,71,72];
   function pad(notes,t,dur){
-    notes.forEach(m=>voice({m,t,abs:true,dur,g:.022,a:1.4,wave:'sawtooth',det:11,lp:520,lpEnd:900,dest:musG}));
-    voice({m:notes[0]-12,t,abs:true,dur,g:.035,a:1.2,wave:'sine',det:4,lp:800,dest:musG});
+    t=Math.max(t,ctx.currentTime+.02);
+    const fl=ctx.createBiquadFilter(), e=ctx.createGain(), stop=t+dur+.2;
+    fl.type='lowpass'; fl.Q.value=.5; fl.frequency.setValueAtTime(520,t); fl.frequency.linearRampToValueAtTime(900,t+dur*.5); fl.frequency.linearRampToValueAtTime(560,t+dur);
+    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(.022,t+1.4); e.gain.setValueAtTime(.022,t+dur-1); e.gain.linearRampToValueAtTime(0,t+dur+.15);
+    notes.forEach((m,i)=>{ const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=mtof(m); o.detune.value=i%2?9:-9; o.connect(fl); o.start(t); o.stop(stop); o.onended=()=>o.disconnect(); });
+    const s=ctx.createOscillator(), sg=ctx.createGain(); s.type='sine'; s.frequency.value=mtof(notes[0]); sg.gain.value=.9; s.connect(sg); sg.connect(fl); s.start(t); s.stop(stop); s.onended=()=>s.disconnect();
+    fl.connect(e); e.connect(musG);
   }
   function bass(m,t,dur,g=.17){ voice({m,t,abs:true,dur,g,a:.06,wave:'sine',det:0,lp:300,sub:0,dest:musG}); voice({m,t,abs:true,dur:dur*.6,g:g*.18,a:.05,wave:'triangle',det:3,lp:420,dest:musG}); }
   function keys(m,t,g,dur){ voice({m,t,abs:true,dur,g,a:.025,wave:'triangle',det:6,lp:1500,lpEnd:550,dest:musG}); voice({m:m+12,t,abs:true,dur:dur*.4,g:g*.15,a:.02,wave:'sine',det:3,lp:2000,dest:musG}); }
@@ -582,7 +587,7 @@ const SND = (()=>{
     musG.gain.setValueAtTime(musG.gain.value,ctx.currentTime);
     musG.gain.linearRampToValueAtTime(MUS_VOL,ctx.currentTime+3);
     nextT=ctx.currentTime+.1; step=0;
-    timer=setInterval(()=>{ while(nextT<ctx.currentTime+.3){ scheduleBeat(nextT); nextT+=BEAT; } },70);
+    timer=setInterval(()=>{ if(nextT<ctx.currentTime+.05) nextT=ctx.currentTime+.1; while(nextT<ctx.currentTime+.6){ scheduleBeat(nextT); nextT+=BEAT; } },100);
   }
   function stopMusic(){
     if(!ctx) return;
