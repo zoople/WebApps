@@ -149,6 +149,13 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* dust sheet: locked until a chapter opens it */
 .cell.sheet{background:repeating-linear-gradient(115deg,#5e5248 0 7px,#544940 7px 15px)}
 .cell.sheet .lock{font-size:10px;font-weight:800;letter-spacing:.08em;color:#e9dcc6cc;white-space:nowrap;text-transform:uppercase;pointer-events:none;position:absolute;z-index:2}
+.cell.maxed .em{animation:breathe 2.2s ease-in-out infinite}
+.cell.res.maxed .em{animation:breathe 1.6s ease-in-out infinite}
+.cell.must{box-shadow:inset 0 0 0 2px #c9d0ffaa;animation:mustring 1.2s ease-in-out infinite}
+.cell.must .em{animation:breathe 1.2s ease-in-out infinite}
+.musttag{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:#c9d0ff;color:#1a1d33;border-radius:5px;padding:0 4px;pointer-events:none}
+@keyframes breathe{0%,100%{transform:scale(1);filter:drop-shadow(0 2px 1px #0006)}50%{transform:scale(1.08);filter:drop-shadow(0 0 6px #e4b84ccc) drop-shadow(0 2px 1px #0006)}}
+@keyframes mustring{0%,100%{box-shadow:inset 0 0 0 2px #c9d0ff66}50%{box-shadow:inset 0 0 0 3px #e6eaff}}
 .cell.pop .em{animation:pop .32s cubic-bezier(.3,1.6,.5,1)}
 .cell.spawn .em{animation:spawn .35s cubic-bezier(.3,1.5,.5,1)}
 .cell.reveal::before,.cell.reveal .em{animation:pop .35s ease-out}
@@ -263,7 +270,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v10 · 12 Oct 2026';
+const VERSION='v11 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -723,8 +730,11 @@ function mkItem(k,l){
   const it={k,l};
   const d=CHAINS[k].items[l-1];
   if(CHAINS[k].gen && d.charges){ it.ch=d.charges; it.t=now(); }
+  if(k==='N' && typeof S!=='undefined' && S && !(S.moonSeen||{})[l] && !moonPending()) it.st=1;
   return it;
 }
+/* a story moon is waiting to be tapped */
+function moonPending(){ return typeof S!=='undefined' && S && S.cells.some(c=>c.it&&c.it.st); }
 function freshState(){
   const cells=[];
   const map={o:'open',w:'web',b:'box'};
@@ -816,7 +826,8 @@ function produce(i){
   if(t<0){ SND.play('nope'); toast('No room left. Merge or sell something first.'); fx[i]='pulse'; render(); return; }
   if(d.charges){ if(it.ch>=d.charges) it.t=now(); it.ch--; }
   else spendEnergy(CONFIG.energyCost);
-  const [k,l]=pickDrop(d.drop);
+  let [k,l]=pickDrop(d.drop);
+  if(k==='N' && moonPending()){ const alt=d.drop.filter(x=>x[0]!=='N'); [k,l]=pickDrop(alt); } // one story moon at a time
   S.cells[t].it=mkItem(k,l);
   fx[i]='pulse'; fx[t]='spawn';
   SND.play('spawn',l);
@@ -825,7 +836,7 @@ function produce(i){
 }
 
 function claim(i){
-  const it=S.cells[i].it, d=def(it), kind=CHAINS[it.k].claim;
+  const it=S.cells[i].it, d=def(it), kind=CHAINS[it.k].claim; delete it.st;
   S.cells[i].it=null; sel=-1; fx[i]='pulse';
   if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
   else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
@@ -856,11 +867,13 @@ function isRes(it){ return CHAINS[it.k].type==='res'; }
 /* put items on the board near the bottom; anything that doesn't fit goes to gifts */
 function dropItems(list, near=59){
   let overflow=0;
-  list.forEach(([k,l])=>{ const t=nearestEmpty(near); if(t<0){ S.gifts.push([k,l]); overflow++; return; } S.cells[t].it=mkItem(k,l); fx[t]='spawn'; discover(S.cells[t].it); });
+  let held=0;
+  list.forEach(([k,l])=>{ if(k==='N' && moonPending()){ S.gifts.push([k,l]); held++; return; } const t=nearestEmpty(near); if(t<0){ S.gifts.push([k,l]); overflow++; return; } S.cells[t].it=mkItem(k,l); fx[t]='spawn'; discover(S.cells[t].it); });
   if(overflow) toast(`No room for ${overflow} reward${overflow>1?'s':''}. Find ${overflow>1?'them':'it'} in 🎁`);
+  if(held) toast(`🌙 Moon reward saved in 🎁 until you tap the glowing moon`);
 }
 
-function canMerge(a,b){ return a&&b&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
+function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
 
 function drop(a,b){
   if(b<0||a===b){ return; }
@@ -957,7 +970,9 @@ function placeGift(){
   if(!S.gifts.length) return;
   const t=nearestEmpty(59);
   if(t<0){ toast('No room for your gift. Clear a space first.'); return; }
-  const [k,l]=S.gifts.shift();
+  let gi=0;
+  if(moonPending()){ gi=S.gifts.findIndex(g=>g[0]!=='N'); if(gi<0){ SND.play('nope'); toast('Tap the glowing moon on the board first 🌙'); return; } }
+  const [k,l]=S.gifts.splice(gi,1)[0];
   S.cells[t].it=mkItem(k,l); fx[t]='spawn'; sel=t;
   SND.play('gift');
   discover(S.cells[t].it);
@@ -1019,6 +1034,8 @@ function render(){
           else html+=`<i class="gen">⚡</i>`;
         } else {
           if(isRes(c.it)) cls+=' res';
+          if(c.it.st){ cls+=' must'; html+=`<b class="musttag">Tap</b>`; }
+          else if(c.it.l===maxL(c.it.k)) cls+=' maxed';
           if(needed.has(key(c.it.k,c.it.l))) html+=`<b class="chk">✓</b>`;
           else if(sideNeeded.has(key(c.it.k,c.it.l))) html+=`<b class="chk side">✓</b>`;
         }
@@ -1104,6 +1121,8 @@ function renderInfo(){
     if(d.charges){ refreshCharges(it); ds = it.ch>0 ? `Tap again to brew tea. Free. ${it.ch} left.` : `Boiling… ready in ${nextChargeIn(it)}s.`; }
     else ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}. Costs ⚡${CONFIG.energyCost}.`;
     if(it.l<maxL(it.k)) ds+=` Merge two to get a ${ch.items[it.l].n}.`;
+  } else if(it.st){
+    ds='A page from Odile’s moon notebook is folded inside. Tap it to read. It can’t be merged until you do.';
   } else if(ch.type==='res'){
     const unit = ch.claim==='energy'?'⚡' : ch.claim==='coins'?'🪙' : ch.claim==='skip'?'min time skip' : ch.claim==='points'?'Moon Pass points' : '⭐ applause';
     if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min: refills energy and generator timers.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
@@ -1134,6 +1153,7 @@ board.addEventListener('pointermove',e=>{
   if(!press.drag){
     if(Math.hypot(e.clientX-press.x,e.clientY-press.y)<8) return;
     if(c.s!=='open'||!c.it){ press=null; return; }
+    if(c.it.st){ press=null; toast('Tap the glowing moon to read it 🌙'); return; }
     press.drag=true; sellArm=false;
     ghost.textContent=def(c.it).e;
     board.children[press.i].classList.add('lift');
@@ -1167,6 +1187,7 @@ function tap(i){
   if(c.s==='box'){ toast('Merge something next to this box to open it.'); return; }
   if(c.s==='web'){ const d=def(c.it); toast(`${d.e} ${d.n} is stuck in cobwebs. Drop a matching one on it.`); sel=-1; render(); return; }
   if(!c.it){ sel=-1; sellArm=false; render(); return; }
+  if(c.it.st){ sel=i; claim(i); return; } // story moon: one tap reads it
   if(sel===i){
     if(isGen(c.it)){ produce(i); return; }
     if(isRes(c.it)){ const ch=CHAINS[c.it.k]; if(ch.claimMax && c.it.l<maxL(c.it.k)){ SND.play('nope'); toast(`Merge up to a ${ch.items[maxL(c.it.k)-1].e} ${ch.items[maxL(c.it.k)-1].n} to claim Moon Pass points`); return; } claim(i); return; }
