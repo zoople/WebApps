@@ -206,6 +206,12 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .pip.l.x{background:var(--red);color:#fff}
 .goal-list li.ok::before{content:'✓'} .goal-list li{font-size:15px}
 .center{text-align:center}
+.seg.rounds button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px}
+.seg.rounds .rs{font-size:11px;letter-spacing:0}
+.notes{display:flex;flex-direction:column;gap:8px}
+.note{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px;display:flex;flex-direction:column;gap:6px}
+.note b{font-size:15px}
+.tradecard{background:var(--bg);border:1px solid var(--gold);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:15px;line-height:1.5}
 @media (prefers-reduced-motion:reduce){.card{transition:none}}
 </style>
 </head>
@@ -289,7 +295,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <li>A side tower is worth one crown. The king tower is worth three and ends the match.</li>
         <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
         <li>The rival's difficulty changes how fast it reacts and how much elixir it gets: Easy is slow, Normal is fair, Hard gets extra.</li>
-        <li>Academy has ten drills, each teaching one Classic Challenge skill, plus a field guide. After every match the coach grades your play and points you to the drill that fixes your biggest mistake.</li>
+        <li>Academy has eleven drills, each teaching one Classic Challenge skill over three rounds, plus a field guide. After every match the coach grades your play and points you to the drill that fixes your biggest mistake.</li>
         <li>Classic Challenge plays like the real one: keep going until 8 wins or 3 losses. The Rival gets tougher as you win.</li>
       </ul>
       <button class="btn go" id="helpClose">Got it</button>
@@ -315,7 +321,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <div class="lbl-sm">Academy · train for Classic Challenge</div>
       <h2 class="sm">Coach</h2>
       <div class="coachbox" id="progressBox"></div>
-      <div class="lbl-sm">Drills · each one teaches one skill</div>
+      <div class="lbl-sm">Drills · each has three rounds; win all three goals to win a round</div>
       <div class="drills" id="drillList"></div>
       <div class="lbl-sm">Classic Challenge field guide</div>
       <div class="guide" id="guide"></div>
@@ -324,7 +330,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <label class="toggle"><input type="checkbox" id="hintsToggle"><span>Coach hints during play</span></label>
       <div class="coachbox" id="resetBox">
         <h3>Start the Academy again</h3>
-        <p class="plan" id="resetText">Clears your drill stars and the coach's match history so you can work through the drills from scratch. Your deck, win record and Classic Challenge run are kept.</p>
+        <p class="plan" id="resetText">Clears your drill rounds and the coach's match history so you can work through the drills from scratch. Your deck, win record and Classic Challenge run are kept.</p>
         <div class="row" id="resetRow"><button class="btn" id="academyReset">Clear Academy progress</button></div>
       </div>
       <button class="btn" id="academyBack">Back</button>
@@ -336,7 +342,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <div class="lbl-sm" id="drillSkill">Drill</div>
       <h2 class="sm" id="drillName">Drill</h2>
       <p id="drillBrief"></p>
-      <div class="coachbox"><h3>Goals <small>one star each</small></h3><ul class="checks goal-list" id="drillGoals"></ul></div>
+      <div class="seg rounds" id="drillRounds" role="group" aria-label="Round"></div>
+      <div class="notes" id="drillNotes" hidden></div>
+      <div class="coachbox"><h3><span id="drillRoundLabel">Goals</span> <small>win all three</small></h3><ul class="checks goal-list" id="drillGoals"></ul></div>
       <div class="tip" id="drillTip" hidden></div>
       <div class="row" id="drillButtons"></div>
     </div>
@@ -2533,133 +2541,265 @@ function deckCoachHTML(deck){
 }
 
 // ---- Drills ----
+// ---- Drills: each has three rounds (different scenarios). A round is won by meeting all three goals. ----
+const signed = v => (v >= 0 ? '+' : '') + v.toFixed(1);
+// Value trade: elixir you destroyed minus elixir you actually lost (spent, less what is still alive).
+const valueTrade = (T, G) => T.killed[0] - (T.spent[0] - aliveValue(G, 0));
+const gNet = (n, strict) => ({ text: strict ? `Net cost below the Rival’s ${n}` : `Net cost ${n} elixir or less`, test:(T,G) => strict ? netSpent(T,G) < n : netSpent(T,G) <= n, show:netShow });
+const gLoss = n => ({ text:`Your towers lose under ${n} HP`, test:(T,G) => towerLoss(G,0) < n, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` });
+const gDealt = n => ({ text:`Deal ${n}+ damage to the Rival’s towers`, test:(T,G) => towerLoss(G,1) >= n, show:(T,G) => `dealt ${Math.round(towerLoss(G,1))}` });
+const gNoHit = (keys, label) => ({ text:`${label} never hit your towers`, test:T => keys.every(k => !(T.towerBy[k] > 0)), show:T => `${Math.round(sum(keys.map(k => T.towerBy[k] || 0)))} damage` });
+const gClear = { text:'Destroy the whole push', test:(T,G) => !rivalUnitsAlive(G) };
+const gKills = n => ({ text:`Kill ${n} or more troops with one card`, test:T => T.maxKills[0] >= n, show:T => `best ${T.maxKills[0]}` });
+const gSpell = n => ({ text:`One spell takes out ${n}+ elixir of troops`, test:T => bestSpell(T) >= n, show:T => `best ${bestSpell(T).toFixed(1)}` });
+const gKeep = { text:'Do not lose a tower', test:(T,G) => G.crowns[1] === 0 };
+const gTake = { text:'Take a tower', test:(T,G) => G.crowns[0] >= 1 };
+const gFast = s => ({ text:`Take it with ${s}+ seconds left`, test:T => !!T.firstCrownT && T.firstCrownT.team === 0 && T.firstCrownT.t <= 60 - s });
+const gLeak = n => ({ text:`Waste less than ${n} elixir`, test:T => T.leak[0] < n, show:T => `wasted ${T.leak[0].toFixed(1)}` });
+const gMark = (n, s) => ({ text:`${n}+ damage on the other lane’s tower within ${s} seconds`, test:T => (T.mark || 0) >= n, show:T => `dealt ${Math.round(T.mark||0)}` });
+const gRaw = () => ({ text:'Raw trade: spend less than the Rival', test:T => T.spent[0] < T.spent[1], show:T => `you ${T.spent[0]}, Rival ${T.spent[1]}` });
+const gValue = n => ({ text:`Value trade: finish ${signed(n)} or better`, test:(T,G) => valueTrade(T,G) >= n, show:(T,G) => signed(valueTrade(T,G)) });
+const gAlive = n => ({ text:`Keep troops worth ${n}+ elixir alive`, test:(T,G) => aliveValue(G,0) >= n, show:(T,G) => `${aliveValue(G,0).toFixed(1)} alive` });
+// A Rival troop placed just behind another one that is already walking.
+const behind = (key, dy = 2.5, fb = [3.5, 3]) => G => { const c = G.ents.find(e => e.key === key && e.team === 1 && alive(e)); return c ? [c.x, clamp(c.y - dy, 1, 14.5)] : fb; };
+// Punish drills: remember the Rival's side tower on the given lane, then read its damage at a set time.
+const markLane = lane => G => { const t = G.ents.find(e => e.team === 1 && !e.king && (e.x < 9 ? 0 : 1) === lane); G.markId = t ? t.id : -1; };
+const markAt = at => ({ at, run:G => { G.track.mark = G.track.towerHit[G.markId] || 0; } });
+const lowTower = (team, lane, hp) => G => { const t = G.ents.find(e => e.team === team && !e.king && (e.x < 9 ? 0 : 1) === lane); if (t) t.hp = hp; };
+const CLEAR = 'clear';
+
 const DRILLS = [
-  { id:'pull', name:'Pull the Charger', skill:'Building placement', time:40, elixir:7,
-    deck:['turret','imps','squire','frost','spire','longbows','fireball','rattlers'],
+  { id:'pull', name:'Pull the Charger', skill:'Building placement',
     brief:'Tower-only attackers like the Charger (Hog Rider in Clash Royale) run past your troops straight to your tower. A building in the middle of your side, about 4 tiles below the river, pulls them off course so your towers and the building shoot them together.',
     tip:'In Clash Royale, drop your Cannon or Tesla in the centre, about 4 tiles from the river, just as the Hog Rider jumps. Too early and it still goes for your tower. Too late and it is already hitting.',
-    script:[ { at:0.3, say:'A Charger is coming on the right. Get your Bolt Turret ready.' }, { at:3, key:'charger', pos:[14.5,12.5] }, { at:19, say:'Another one, left lane this time.' }, { at:21, key:'charger', pos:[3.5,12.5] } ],
-    endWhen:G => G.t > 23 && !rivalUnitsAlive(G),
-    goals:[ { text:'Chargers never hit your towers', test:T => !(T.towerBy.charger > 0), show:T => `${Math.round(T.towerBy.charger||0)} damage` },
-            { text:'Net cost 8 elixir or less', test:(T,G) => netSpent(T,G) <= 8, show:netShow },
-            { text:'Your towers lose under 300 HP', test:(T,G) => towerLoss(G,0) < 300, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` } ] },
-  { id:'trade', name:'Win the elixir trade', skill:'Elixir trades', time:45, elixir:8,
-    deck:['rattlers','imps','turret','squire','longbows','frost','fireball','crossbow'],
+    rounds:[
+      { label:'Two Chargers', time:40, elixir:7, deck:['turret','imps','squire','frost','spire','longbows','fireball','rattlers'], end:CLEAR,
+        script:[ { at:0.3, say:'A Charger is coming on the right. Get your Bolt Turret ready.' }, { at:3, key:'charger', pos:[14.5,12.5] }, { at:19, say:'Another one, left lane this time.' }, { at:21, key:'charger', pos:[3.5,12.5] } ],
+        goals:[ gNoHit(['charger'], 'Chargers'), gNet(8), gLoss(300) ] },
+      { label:'Charger with Imps', time:40, elixir:8, deck:['spire','imps','frost','squire','turret','longbows','fireball','log'], end:CLEAR,
+        script:[ { at:0.3, say:'Charger with Imps behind it. Pull the Charger and deal with the Imps cheaply.' }, { at:3, key:'charger', pos:[14.5,12.5] }, { at:3.4, key:'imps', pos:[14.5,10.5] } ],
+        goals:[ gNoHit(['charger'], 'The Charger'), gNet(6), gLoss(400) ] },
+      { label:'Brute, then Charger', time:45, elixir:8, deck:['turret','rattlers','imps','squire','spire','frost','fireball','longbows'], end:CLEAR,
+        script:[ { at:0.3, say:'A Brute on the left, then a Charger on the right. Both only hit buildings.' }, { at:2, key:'brute', pos:[3.5,10] }, { at:14, key:'charger', pos:[14.5,12.5] } ],
+        goals:[ gNoHit(['brute','charger'], 'Brute and Charger'), gNet(9), gLoss(400) ] } ] },
+
+  { id:'trade', name:'Win the elixir trade', skill:'Elixir trades',
     brief:'An elixir trade is what you lose against what you destroy. Troops that survive the defence are not lost: spend 8 to stop an 8-elixir push but keep a full-health 3-elixir Squire, and you are really 3 ahead, with a counter-push already walking. Net cost here means what you spent minus what is still alive.',
     tip:'Count the cost of what they played. Your target is to answer it for less. Tower HP is a resource you can spend; elixir you over-spend is gone.',
-    script:[ { at:0.3, say:'The Rival is building a push: Brute in front, Longbows behind.' }, { at:2, key:'brute', pos:[14.5,9] }, { at:4, key:'longbows', pos:[14.5,6.8] } ],
-    endWhen:G => G.t > 6 && !rivalUnitsAlive(G),
-    goals:[ { text:'Destroy the whole push', test:(T,G) => !rivalUnitsAlive(G) },
-            { text:'Net cost below the Rival\u2019s 8', test:(T,G) => netSpent(T,G) < 8, show:netShow },
-            { text:'Your towers lose under 500 HP', test:(T,G) => towerLoss(G,0) < 500, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` } ] },
-  { id:'swarm', name:'Splash versus swarms', skill:'Card matchups', time:45, elixir:6,
-    deck:['whirl','log','volley','sapper','squire','pyromancer','frost','turret'],
+    rounds:[
+      { label:'Brute and Longbows', time:45, elixir:8, deck:['rattlers','imps','turret','squire','longbows','frost','fireball','crossbow'], end:CLEAR,
+        script:[ { at:0.3, say:'The Rival is building a push: Brute in front, Longbows behind.' }, { at:2, key:'brute', pos:[14.5,9] }, { at:4, key:'longbows', pos:[14.5,6.8] } ],
+        goals:[ gClear, gNet(8, true), gLoss(500) ] },
+      { label:'Squire and Sapper', time:40, elixir:7, deck:['cleaver','imps','log','squire','turret','longbows','frost','whirl'], end:CLEAR,
+        script:[ { at:0.3, say:'Squire in front, Sapper lobbing bombs from behind. 6 elixir.' }, { at:2, key:'squire', pos:[3.5,10] }, { at:3, key:'sapper', pos:[3.5,7.5] } ],
+        goals:[ gClear, gNet(6, true), gLoss(500) ] },
+      { label:'Drake and Longbows', time:40, elixir:8, deck:['longbows','crossbow','spire','imps','squire','frost','fireball','gloomwings'], end:CLEAR,
+        script:[ { at:0.3, say:'Flying Drake with Longbows. 7 elixir, and only some of your cards hit air.' }, { at:2, key:'drake', pos:[14.5,10] }, { at:3, key:'longbows', pos:[14.5,7.5] } ],
+        goals:[ gClear, gNet(7, true), gLoss(500) ] } ] },
+
+  { id:'tradepure', name:'Two ways to count a trade', skill:'Raw spend vs value',
+    brief:'There are two ways to count an exchange. The raw trade is just what each side spent. The value trade is what you destroyed minus what you actually lost, so troops still standing count in your favour at their remaining health. Each round asks you to win both at once, and the result shows both numbers.',
+    notes:[
+      { title:'Raw trade (elixir spent)', pros:['Easy to count live: add up the cards each side played.','Tells you who has more elixir in the bank right now, so who can afford to attack next.'],
+        cons:['Ignores what is left on the board. A defence that leaves a full-health Squire looks even.','Over a whole match both sides earn the same elixir, so the raw total mostly shows who wasted elixir.'] },
+      { title:'Value trade (destroyed vs lost)', pros:['Shows who is winning the board, including survivors you can counter-push with.','Rewards defending with troops that live, not just cheap ones.'],
+        cons:['Harder to count in your head mid-match.','A survivor is only worth its elixir if you use it. If it wanders into a tower alone and dies, the value was never real.'] },
+      { title:'Both', pros:['Use raw to decide whether you can afford to act now. Use value to judge who is ahead on the board.'], cons:['Neither counts tower damage. Tower HP is a third currency you trade too.'] } ],
+    tip:'Count raw elixir to time your next play, and count value to decide whether to push. The best defences win both: cheaper than their attack, with survivors left over.',
+    rounds:[
+      { label:'A lone Brute', time:40, elixir:7, deck:['squire','imps','cleaver','turret','longbows','frost','fireball','rattlers'], end:CLEAR,
+        script:[ { at:0.3, say:'A 5-elixir Brute. Beat it for less, and keep something alive.' }, { at:2, key:'brute', pos:[14.5,9] } ],
+        goals:[ gRaw(), gValue(2), gAlive(2) ] },
+      { label:'Swarm and support', time:40, elixir:7, deck:['log','whirl','squire','imps','volley','turret','frost','longbows'], end:CLEAR,
+        script:[ { at:0.3, say:'Rattlers with Longbows behind: 6 elixir that dies to splash.' }, { at:2, key:'rattlers', pos:[3.5,12.5] }, { at:2.6, key:'longbows', pos:[3.5,10] } ],
+        goals:[ gRaw(), gValue(3), gLoss(400) ] },
+      { label:'Charger and Imps', time:40, elixir:8, deck:['squire','turret','imps','cleaver','frost','log','longbows','spire'], end:CLEAR,
+        script:[ { at:0.3, say:'Charger and Imps: 6 elixir. Raw says spend less; value says keep a defender alive.' }, { at:2, key:'charger', pos:[14.5,12.5] }, { at:2.4, key:'imps', pos:[14.5,10.5] } ],
+        goals:[ gRaw(), gValue(2), gAlive(2) ] } ] },
+
+  { id:'swarm', name:'Splash versus swarms', skill:'Card matchups',
     brief:'Swarms (Rattlers, Imps and Gloomwings, like Skeleton Army, Goblins and Bats) melt to splash and small spells. One splash card that kills a whole swarm is a big win. Wait for the swarm to bunch up on a target before you hit it.',
     tip:'In Clash Royale, the Log and Arrows exist to beat swarms. Do not waste them on a single troop if a swarm card is still in their cycle.',
-    script:[ { at:0.3, say:'Swarms incoming. One splash card should handle each wave.' }, { at:3, key:'rattlers', pos:[3.5,12.5] }, { at:13, key:'imps', pos:[14.5,12.5] }, { at:24, key:'gloomwings', pos:[14.5,12.5] }, { at:25, key:'imps', pos:[3.5,12.5] } ],
-    endWhen:G => G.t > 27 && !rivalUnitsAlive(G),
-    goals:[ { text:'Your towers lose under 400 HP', test:(T,G) => towerLoss(G,0) < 400, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` },
-            { text:'Net cost 9 elixir or less', test:(T,G) => netSpent(T,G) <= 9, show:netShow },
-            { text:'Kill 3 or more troops with one card', test:T => T.maxKills[0] >= 3, show:T => `best ${T.maxKills[0]}` } ] },
-  { id:'spell', name:'Spell value', skill:'Spell timing', time:45, elixir:9,
-    deck:['fireball','blight','squire','turret','imps','volley','crossbow','frost'],
+    rounds:[
+      { label:'Mixed waves', time:45, elixir:6, deck:['whirl','log','volley','sapper','squire','pyromancer','frost','turret'], end:CLEAR,
+        script:[ { at:0.3, say:'Swarms incoming. One splash card should handle each wave.' }, { at:3, key:'rattlers', pos:[3.5,12.5] }, { at:13, key:'imps', pos:[14.5,12.5] }, { at:24, key:'gloomwings', pos:[14.5,12.5] }, { at:25, key:'imps', pos:[3.5,12.5] } ],
+        goals:[ gLoss(400), gNet(9), gKills(3) ] },
+      { label:'Rattlers both lanes', time:45, elixir:7, deck:['log','whirl','volley','squire','sapper','turret','frost','imps'], end:CLEAR,
+        script:[ { at:0.3, say:'Rattlers on both sides. Splash them as they bunch.' }, { at:3, key:'rattlers', pos:[3.5,12.5] }, { at:11, key:'rattlers', pos:[14.5,12.5] }, { at:20, key:'imps', pos:[3.5,12.5] } ],
+        goals:[ gLoss(400), gNet(8), gKills(4) ] },
+      { label:'Air swarm', time:45, elixir:7, deck:['volley','pyromancer','longbows','frost','whirl','log','squire','spire'], end:CLEAR,
+        script:[ { at:0.3, say:'Gloomwings fly over ground splash. You need air splash or a spell.' }, { at:3, key:'gloomwings', pos:[14.5,12] }, { at:10, key:'gloomwings', pos:[3.5,12] }, { at:18, key:'rattlers', pos:[14.5,12.5] } ],
+        goals:[ gLoss(400), gNet(7), gKills(3) ] } ] },
+
+  { id:'spell', name:'Spell value', skill:'Spell timing',
     brief:'Big spells are worth it when they hit several troops, or troops and a tower together. Let the Rival stack its ranged support behind the tank, wait until they bunch up, then hit them all at once. Never Fireball a lone cheap troop.',
     tip:'A good spell gets back at least what it cost. Fireball (4) on Musketeer plus Wizard is 9 elixir of value. Fireball on Goblins is a loss unless it also hits the tower.',
-    script:[ { at:0.3, say:'Watch the Rival stack ranged troops behind its Squire.' }, { at:2, key:'squire', pos:[14.5,8.5] }, { at:3.5, key:'longbows', pos:[14.5,6.8] }, { at:4.5, key:'sapper', pos:[13.5,6.8] } ],
-    endWhen:G => G.t > 7 && !rivalUnitsAlive(G),
-    goals:[ { text:'One spell takes out 4+ elixir of troops', test:T => bestSpell(T) >= 4, show:T => `best ${bestSpell(T).toFixed(1)}` },
-            { text:'Your towers lose under 500 HP', test:(T,G) => towerLoss(G,0) < 500, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` },
-            { text:'Net cost below the Rival\u2019s 9', test:(T,G) => netSpent(T,G) < 9, show:netShow } ] },
-  { id:'air', name:'Air defence', skill:'Defending air', time:45, elixir:8,
-    deck:['spire','longbows','crossbow','gloomwings','squire','imps','fireball','frost'],
+    rounds:[
+      { label:'Ranged stack', time:45, elixir:9, deck:['fireball','blight','squire','turret','imps','volley','crossbow','frost'], end:CLEAR,
+        script:[ { at:0.3, say:'Watch the Rival stack ranged troops behind its Squire.' }, { at:2, key:'squire', pos:[14.5,8.5] }, { at:3.5, key:'longbows', pos:[14.5,6.8] }, { at:4.5, key:'sapper', pos:[13.5,6.8] } ],
+        goals:[ gSpell(4), gLoss(500), gNet(9, true) ] },
+      { label:'Tank with Pyromancer', time:55, elixir:9, deck:['fireball','cleaver','imps','turret','meteor','squire','frost','longbows'], end:CLEAR,
+        script:[ { at:0.3, say:'Brute up front, Pyromancer and Longbows behind. Spell the support, not the tank.' }, { at:2, key:'brute', pos:[3.5,8] }, { at:3, key:'pyromancer', pos:behind('brute', 2.2) }, { at:4, key:'longbows', pos:behind('brute', 3) } ],
+        goals:[ gSpell(5), gLoss(700), gNet(13, true) ] },
+      { label:'Spell on the tower', time:45, elixir:8, deck:['blight','fireball','squire','imps','turret','log','crossbow','frost'], end:CLEAR,
+        script:[ { at:0.3, say:'Their troops will reach your tower. Catch troops and tower area together.' }, { at:2, key:'longbows', pos:[14.5,10] }, { at:3, key:'sapper', pos:[13.5,10] }, { at:4, key:'imps', pos:[14.5,12] } ],
+        goals:[ gSpell(4), gLoss(600), gNet(8, true) ] } ] },
+
+  { id:'air', name:'Air defence', skill:'Defending air',
     brief:'Flying win conditions like the Zeppelin (the Balloon in Clash Royale) ignore ground troops entirely. You need anti-air ready, placed early enough that it shoots before the bomber reaches your tower. Keep your troops out of the death bomb.',
     tip:'Against Balloon decks, track their Balloon in the cycle and keep at least one anti-air card in hand when it is due back.',
-    script:[ { at:0.3, say:'Air attack. Ground troops cannot touch the Zeppelin.' }, { at:3, key:'zeppelin', pos:[14.5,10] }, { at:5, key:'gloomwings', pos:[14.5,12] }, { at:20, say:'Second Zeppelin, left lane.' }, { at:22, key:'zeppelin', pos:[3.5,10] } ],
-    endWhen:G => G.t > 24 && !rivalUnitsAlive(G),
-    goals:[ { text:'Zeppelins never bomb your towers', test:T => !(T.towerBy.zeppelin > 0), show:T => `${Math.round(T.towerBy.zeppelin||0)} damage` },
-            { text:'Net cost 10 elixir or less', test:(T,G) => netSpent(T,G) <= 10, show:netShow },
-            { text:'Your towers lose under 300 HP', test:(T,G) => towerLoss(G,0) < 300, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` } ] },
-  { id:'tank', name:'Kill the tank', skill:'Defending beatdown', time:60, elixir:9,
-    deck:['cleaver','pylon','imps','rattlers','fireball','longbows','log','squire'],
+    rounds:[
+      { label:'Two Zeppelins', time:45, elixir:8, deck:['spire','longbows','crossbow','gloomwings','squire','imps','fireball','frost'], end:CLEAR,
+        script:[ { at:0.3, say:'Air attack. Ground troops cannot touch the Zeppelin.' }, { at:3, key:'zeppelin', pos:[14.5,10] }, { at:5, key:'gloomwings', pos:[14.5,12] }, { at:20, say:'Second Zeppelin, left lane.' }, { at:22, key:'zeppelin', pos:[3.5,10] } ],
+        goals:[ gNoHit(['zeppelin'], 'Zeppelins'), gNet(10), gLoss(300) ] },
+      { label:'Drake and Zeppelin', time:45, elixir:9, deck:['crossbow','spire','longbows','frost','squire','imps','volley','gloomwings'], end:CLEAR,
+        script:[ { at:0.3, say:'A Drake first, then a Zeppelin behind it. Save anti-air for the bomber.' }, { at:2, key:'drake', pos:[3.5,10] }, { at:7, key:'zeppelin', pos:[3.5,8] } ],
+        goals:[ gNoHit(['zeppelin'], 'The Zeppelin'), gNet(9), gLoss(500) ] },
+      { label:'Brute shields a Zeppelin', time:50, elixir:9, deck:['spire','crossbow','imps','cleaver','longbows','frost','fireball','gloomwings'], end:CLEAR,
+        script:[ { at:0.3, say:'A Brute soaks tower shots while a Zeppelin follows. Kill the Zeppelin first.' }, { at:2, key:'brute', pos:[14.5,9] }, { at:5, key:'zeppelin', pos:behind('brute', 2.5, [14.5,6]) } ],
+        goals:[ gNoHit(['zeppelin'], 'The Zeppelin'), gNet(10), gLoss(700) ] } ] },
+
+  { id:'tank', name:'Kill the tank', skill:'Defending beatdown',
     brief:'Huge tanks like the Stone Colossus (Golem) are slow and soak damage. Let them walk to you, meet them with a high-damage card (Cleaver, Ember Pylon, a swarm) near your tower, and save splash for the support behind. The elixir you save becomes your counter-push.',
     tip:'Against Golem in Clash Royale: punish the other lane while it walks, then defend with Inferno or Mini P.E.K.K.A plus a spell on the support.',
-    script:[ { at:0.3, say:'A Stone Colossus is starting at the back. Let it walk to you.' }, { at:1, key:'colossus', pos:[3.5,2.5] },
-      { at:12, key:'pyromancer', pos:G => { const c = G.ents.find(e => e.key === 'colossus' && e.team === 1); return c ? [c.x, Math.max(1, c.y - 2.5)] : [3.5, 3]; } },
-      { at:12.5, say:'Support behind the tank. Splash it when it is in range of your tower.' } ],
-    endWhen:G => G.t > 14 && !rivalUnitsAlive(G),
-    goals:[ { text:'Your left tower survives', test:(T,G) => towersOf(0).some(t => !t.king && t.x < 9) },
-            { text:'Your towers lose under 1200 HP', test:(T,G) => towerLoss(G,0) < 1200, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` },
-            { text:'Net cost below the Rival\u2019s 12', test:(T,G) => netSpent(T,G) < 12, show:netShow } ] },
-  { id:'counter', name:'Defend, then counter-push', skill:'Counter-pushing', time:45, elixir:7,
-    deck:['squire','lancer','imps','longbows','fireball','frost','turret','charger'],
+    rounds:[
+      { label:'Colossus and Pyromancer', time:60, elixir:9, deck:['cleaver','pylon','imps','rattlers','fireball','longbows','log','squire'], end:CLEAR,
+        script:[ { at:0.3, say:'A Stone Colossus is starting at the back. Let it walk to you.' }, { at:1, key:'colossus', pos:[3.5,2.5] }, { at:12, key:'pyromancer', pos:behind('colossus') }, { at:12.5, say:'Support behind the tank. Splash it when it is in range of your tower.' } ],
+        goals:[ gKeep, gLoss(1200), gNet(12, true) ] },
+      { label:'Brute and Crossbowman', time:50, elixir:8, deck:['rattlers','cleaver','turret','imps','log','squire','frost','fireball'], end:CLEAR,
+        script:[ { at:0.3, say:'Brute with a Crossbowman behind. Kill the Brute fast, then the shooter.' }, { at:2, key:'brute', pos:[14.5,7] }, { at:5, key:'crossbow', pos:behind('brute', 2.5, [14.5,5]) } ],
+        goals:[ gKeep, gLoss(700), gNet(9, true) ] },
+      { label:'Colossus on the right', time:60, elixir:9, deck:['pylon','imps','rattlers','volley','squire','cleaver','frost','longbows'], end:CLEAR,
+        script:[ { at:0.3, say:'Colossus on the right with Longbows behind.' }, { at:1, key:'colossus', pos:[14.5,2.5] }, { at:11, key:'longbows', pos:behind('colossus') } ],
+        goals:[ gKeep, gLoss(1100), gNet(10, true) ] } ] },
+
+  { id:'counter', name:'Defend, then counter-push', skill:'Counter-pushing',
     brief:'After a cheap defence your surviving troops walk to the bridge. Add one card behind them and you have a push the Rival must answer with fresh elixir. This is how most towers fall in Classic Challenge.',
     tip:'Defend with troops that survive (Knight, Valkyrie, Mini P.E.K.K.A), then add your win condition behind them at the bridge.',
-    script:[ { at:0.3, say:'Defend this Charger cheaply, then push back with what survives.' }, { at:2, key:'charger', pos:[14.5,12.5] }, { at:24, key:'squire', pos:[14.5,9] } ],
-    goals:[ { text:'Deal 600+ damage to the Rival’s towers', test:(T,G) => towerLoss(G,1) >= 600, show:(T,G) => `dealt ${Math.round(towerLoss(G,1))}` },
-            { text:'Your towers lose under 400 HP', test:(T,G) => towerLoss(G,0) < 400, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` },
-            { text:'Net cost 12 elixir or less', test:(T,G) => netSpent(T,G) <= 12, show:netShow } ] },
-  { id:'punish', name:'Punish the other lane', skill:'Opposite-lane pressure', time:50, elixir:9,
-    deck:['charger','imps','squire','cleaver','longbows','fireball','turret','frost'],
-    setup:G => { G.rightId = G.ents.find(e => e.team === 1 && !e.king && e.x > 9).id; },
+    rounds:[
+      { label:'After a Charger', time:45, elixir:7, deck:['squire','lancer','imps','longbows','fireball','frost','turret','charger'],
+        script:[ { at:0.3, say:'Defend this Charger cheaply, then push back with what survives.' }, { at:2, key:'charger', pos:[14.5,12.5] }, { at:24, key:'squire', pos:[14.5,9] } ],
+        goals:[ gDealt(600), gLoss(400), gNet(12) ] },
+      { label:'After a Brute', time:50, elixir:7, deck:['whirl','cleaver','imps','charger','longbows','frost','turret','log'],
+        script:[ { at:0.3, say:'Stop the Brute with a troop that lives, then go.' }, { at:2, key:'brute', pos:[3.5,9] }, { at:26, key:'imps', pos:[3.5,9] } ],
+        goals:[ gDealt(600), gLoss(500), gNet(12) ] },
+      { label:'After a Drake', time:45, elixir:7, deck:['crossbow','longbows','squire','lancer','frost','imps','spire','fireball'],
+        script:[ { at:0.3, say:'Shoot down the Drake, then counter on the same lane.' }, { at:2, key:'drake', pos:[14.5,10] }, { at:22, key:'squire', pos:[14.5,9] } ],
+        goals:[ gDealt(500), gLoss(400), gNet(11) ] } ] },
+
+  { id:'punish', name:'Punish the other lane', skill:'Opposite-lane pressure',
     brief:'When the Rival drops an expensive tank at the back, it has little elixir left for about ten seconds. Attack the opposite lane right then: they must split their defence or take free damage. Then come back and defend the tank.',
     tip:'In Clash Royale, a Golem or Giant at the back is your signal: Hog or Miner in the other lane immediately.',
-    script:[ { at:0.3, say:'Watch the back left.' }, { at:2, key:'colossus', pos:[3.5,1.8] }, { at:2.4, say:'It just spent 7 elixir. Hit the RIGHT lane now.' },
-      { at:22, run:G => { G.track.mark = G.track.towerHit[G.rightId] || 0; } } ],
-    goals:[ { text:'500+ damage on the right tower within 20 seconds', test:T => (T.mark || 0) >= 500, show:T => `dealt ${Math.round(T.mark||0)}` },
-            { text:'Your left tower survives', test:(T,G) => towersOf(0).some(t => !t.king && t.x < 9) },
-            { text:'Your towers lose under 1500 HP', test:(T,G) => towerLoss(G,0) < 1500, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` } ] },
-  { id:'leak', name:'Never waste elixir', skill:'Elixir discipline', time:60, elixir:5, ai:true, aiDiff:'easy', rivalDeck:STARTER,
-    deck:['squire','longbows','imps','turret','fireball','frost','charger','sapper'],
+    rounds:[
+      { label:'Colossus on the left', time:50, elixir:9, deck:['charger','imps','squire','cleaver','longbows','fireball','turret','frost'], setup:markLane(1),
+        script:[ { at:0.3, say:'Watch the back left.' }, { at:2, key:'colossus', pos:[3.5,1.8] }, { at:2.4, say:'It just spent 7 elixir. Hit the RIGHT lane now.' }, markAt(22) ],
+        goals:[ gMark(500, 20), gKeep, gLoss(1500) ] },
+      { label:'Brute on the right', time:45, elixir:9, deck:['burrower','imps','charger','cleaver','squire','frost','turret','longbows'], setup:markLane(0),
+        script:[ { at:0.3, say:'Watch the back right.' }, { at:2, key:'brute', pos:[14.5,2.5] }, { at:2.4, say:'Brute at the back. Pressure the LEFT lane.' }, markAt(20) ],
+        goals:[ gMark(400, 18), gKeep, gLoss(1000) ] },
+      { label:'Colossus on the right', time:50, elixir:10, deck:['lancer','charger','imps','squire','cleaver','fireball','turret','frost'], setup:markLane(0),
+        script:[ { at:0.3, say:'Big tank coming on the right.' }, { at:2, key:'colossus', pos:[14.5,1.8] }, { at:2.4, say:'7 elixir spent. Go LEFT, hard.' }, markAt(22) ],
+        goals:[ gMark(600, 20), gKeep, gLoss(1500) ] } ] },
+
+  { id:'leak', name:'Never waste elixir', skill:'Elixir discipline',
     brief:'Sitting on 10 elixir throws elixir away every second. When you are full and nothing is happening, play a cheap card behind your king tower so it builds into a push. A slow start is one of the most common reasons matches are lost.',
     tip:'Opening in Clash Royale: wait until about 9 elixir, then play a cheap card or your tank at the back. Watch what they play first.',
-    script:[ { at:0.3, say:'Keep your bar below full the whole time.' } ],
-    goals:[ { text:'Waste less than 1 elixir', test:T => T.leak[0] < 1, show:T => `wasted ${T.leak[0].toFixed(1)}` },
-            { text:'Deal 300+ damage to the Rival’s towers', test:(T,G) => towerLoss(G,1) >= 300, show:(T,G) => `dealt ${Math.round(towerLoss(G,1))}` },
-            { text:'Your towers lose under 600 HP', test:(T,G) => towerLoss(G,0) < 600, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` } ] },
-  { id:'closer', name:'Double elixir closer', skill:'Closing a match', time:60, elixir:7, ai:true, aiDiff:'normal', double:true,
-    deck:['brute','longbows','imps','fireball','squire','charger','frost','crossbow'],
-    setup:G => { const t = G.ents.find(e => e.team === 1 && !e.king && e.x < 9); t.hp = 900; },
-    brief:'In double elixir both sides get cards twice as fast. The Rival’s left tower is already low. Finish it with a real push and a spell, but defend properly: giving up a tower now throws the match away.',
+    rounds:[
+      { label:'Easy Rival', time:60, elixir:5, ai:true, aiDiff:'easy', rivalDeck:STARTER, deck:['squire','longbows','imps','turret','fireball','frost','charger','sapper'],
+        script:[ { at:0.3, say:'Keep your bar below full the whole time.' } ], goals:[ gLeak(1), gDealt(300), gLoss(600) ] },
+      { label:'Normal Rival', time:60, elixir:7, ai:true, aiDiff:'normal', deck:['brute','longbows','imps','log','squire','fireball','turret','wisp'],
+        script:[ { at:0.3, say:'A tougher Rival. Spend every drop, but on useful plays.' } ], goals:[ gLeak(1), gDealt(300), gLoss(800) ] },
+      { label:'Double elixir', time:45, elixir:8, ai:true, aiDiff:'normal', double:true, deck:['charger','squire','imps','wisp','log','fireball','longbows','turret'],
+        script:[ { at:0.3, say:'Double elixir: your bar fills twice as fast. Keep cycling.' } ], goals:[ gLeak(1.5), gDealt(400), gLoss(900) ] } ] },
+
+  { id:'closer', name:'Double elixir closer', skill:'Closing a match',
+    brief:'In double elixir both sides get cards twice as fast. One of the Rival’s towers is already low. Finish it with a real push and a spell, but defend properly: giving up a tower now throws the match away.',
     tip:'Late in the match, a big spell can finish a low tower that troops cannot reach. Count: Fireball does about 200 to a tower here, Rocket in Clash Royale far more.',
-    script:[ { at:0.3, say:'Their left tower is on 900. Finish it.' } ],
-    endWhen:G => G.crowns[0] >= 1 || G.crowns[1] >= 1,
-    goals:[ { text:'Take a tower', test:(T,G) => G.crowns[0] >= 1 },
-            { text:'Do not lose a tower', test:(T,G) => G.crowns[1] === 0 },
-            { text:'Take it with 20+ seconds left', test:T => !!T.firstCrownT && T.firstCrownT.team === 0 && T.firstCrownT.t <= 40 } ] }
+    rounds:[
+      { label:'Left tower on 900', time:60, elixir:7, ai:true, aiDiff:'normal', double:true, deck:['brute','longbows','imps','fireball','squire','charger','frost','crossbow'], setup:lowTower(1,0,900), end:'crown',
+        script:[ { at:0.3, say:'Their left tower is on 900. Finish it.' } ], goals:[ gTake, gKeep, gFast(20) ] },
+      { label:'Both sides low', time:60, elixir:7, ai:true, aiDiff:'normal', double:true, deck:['charger','meteor','imps','squire','log','turret','longbows','frost'], setup:G => { lowTower(1,1,1200)(G); lowTower(0,0,900)(G); },
+        end:'crown', script:[ { at:0.3, say:'Their right tower is on 1200, but your left is on 900. Defend while you push.' } ], goals:[ gTake, gKeep, gFast(15) ] },
+      { label:'Hard Rival', time:60, elixir:7, ai:true, aiDiff:'hard', double:true, deck:['burrower','fireball','imps','cleaver','squire','log','spire','longbows'], setup:lowTower(1,0,1300), end:'crown',
+        script:[ { at:0.3, say:'A Hard Rival with its left tower on 1300.' } ], goals:[ gTake, gKeep, gFast(10) ] } ] }
 ];
-let drillStars = loadJSON('bridgeburn-drills', {});
+// The playable version of one round: the drill's shared text plus that round's scenario.
+function drillRound(d, i){
+  const r = d.rounds[i];
+  const last = Math.max(0, ...r.script.filter(e => e.key).map(e => e.at));
+  const endWhen = r.end === CLEAR ? (G => G.t > last + 2 && !rivalUnitsAlive(G)) : r.end === 'crown' ? (G => G.crowns[0] >= 1 || G.crowns[1] >= 1) : null;
+  return { ...d, ...r, id:d.id, round:i, endWhen };
+}
+// Progress: best stars per round. Older saves stored one number per drill; that becomes round 1.
+let drillProg = (() => { const raw = loadJSON('bridgeburn-drills', {}); const out = {}; for (const k in raw) out[k] = Array.isArray(raw[k]) ? raw[k] : [raw[k] || 0, 0, 0]; return out; })();
+const roundStars = (id, i) => (drillProg[id] || [0,0,0])[i] || 0;
+const roundsWon = id => [0,1,2].filter(i => roundStars(id, i) === 3).length;
 let curDrill = null, savedDiff = null;
 function starsHTML(n){ return '★'.repeat(n) + '<i>' + '★'.repeat(3-n) + '</i>'; }
-function openDrill(id, result){
+function openDrill(id, result, round){
   const d = DRILLS.find(x => x.id === id); if (!d) return;
-  curDrill = d;
+  if (round === undefined) round = [0,1,2].find(i => roundStars(id, i) < 3) ?? 0;
+  const R = drillRound(d, round);
+  curDrill = R;
   hideOverlays(); $('#drillScreen').hidden = false;
-  $('#drillSkill').textContent = `Drill ${DRILLS.indexOf(d)+1} · ${d.skill}`;
-  $('#drillName').textContent = result ? (result.stars === 3 ? 'Three stars' : result.stars ? `${result.stars} star${result.stars>1?'s':''}` : 'Not yet') : d.name;
-  $('#drillBrief').textContent = result ? d.name : d.brief;
+  $('#drillSkill').textContent = `Drill ${DRILLS.indexOf(d)+1} · ${d.skill} · ${roundsWon(id)}/3 rounds won`;
+  $('#drillName').textContent = result ? (result.stars === 3 ? 'Round won' : result.stars ? `${result.stars} of 3 goals` : 'Not yet') : d.name;
+  $('#drillBrief').textContent = result ? `${d.name}: round ${round+1}, ${R.label}` : d.brief;
+  // Round picker
+  const rp = $('#drillRounds'); rp.textContent = '';
+  d.rounds.forEach((r, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-pressed', i === round ? 'true' : 'false');
+    b.innerHTML = `Round ${i+1}<span class="rs"></span>`;
+    b.querySelector('.rs').innerHTML = starsHTML(roundStars(id, i));
+    b.title = r.label;
+    b.addEventListener('click', () => openDrill(id, undefined, i));
+    rp.append(b);
+  });
+  $('#drillRoundLabel').textContent = `Round ${round+1}: ${R.label}`;
+  // Pros and cons panel, for modules that have one
+  const nb = $('#drillNotes'); nb.textContent = ''; nb.hidden = !d.notes || !!result;
+  for (const n of d.notes || []){
+    const box = document.createElement('div'); box.className = 'note';
+    const h = document.createElement('b'); h.textContent = n.title; box.append(h);
+    const ul = document.createElement('ul'); ul.className = 'checks';
+    for (const p of n.pros){ const li = document.createElement('li'); li.textContent = p; ul.append(li); }
+    for (const c of n.cons){ const li = document.createElement('li'); li.className = 'warn'; li.textContent = c; ul.append(li); }
+    box.append(ul); nb.append(box);
+  }
   const ul = $('#drillGoals'); ul.textContent = '';
-  d.goals.forEach((g, i) => {
+  R.goals.forEach((g, i) => {
     const li = document.createElement('li');
     if (result){ li.className = result.passed[i] ? '' : 'bad'; li.textContent = g.text + (result.shows[i] ? ` (${result.shows[i]})` : ''); }
     else { li.className = 'warn'; li.textContent = g.text; }
     ul.append(li);
   });
-  const tip = $('#drillTip');
-  tip.hidden = !result;
-  if (result) tip.innerHTML = '<b>Coach</b>' + '';
-  if (result) tip.append(document.createTextNode(d.tip));
+  const tip = $('#drillTip'); tip.hidden = !result; tip.textContent = '';
+  if (result){
+    if (result.extra){ const x = document.createElement('div'); x.className = 'tradecard'; x.textContent = result.extra; tip.append(x); }
+    const b = document.createElement('b'); b.textContent = 'Coach'; tip.append(b, document.createTextNode(d.tip));
+  }
   const btns = $('#drillButtons'); btns.textContent = '';
   const mk = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = label; b.addEventListener('click', fn); btns.append(b); };
-  mk(result ? 'Retry' : 'Start drill', 'go', () => startDrill(d));
-  if (result){ const next = DRILLS[DRILLS.indexOf(d)+1]; if (next) mk('Next drill', '', () => openDrill(next.id)); }
+  mk(result ? 'Retry round' : `Start round ${round+1}`, 'go', () => startDrill(R));
+  if (result){
+    const nextRound = [0,1,2].find(i => i !== round && roundStars(id, i) < 3);
+    if (nextRound !== undefined) mk(`Round ${nextRound+1}`, '', () => openDrill(id, undefined, nextRound));
+    else { const next = DRILLS[DRILLS.indexOf(d)+1]; if (next) mk('Next drill', '', () => openDrill(next.id)); }
+  }
   mk('Academy', '', openAcademy);
 }
-function startDrill(d){
+function startDrill(R){
   initAudio();
   if (savedDiff === null) savedDiff = diffKey;
-  diffKey = d.aiDiff || 'normal';
+  diffKey = R.aiDiff || 'normal';
   hideOverlays();
-  newGame({ drill:d });
+  newGame({ drill:R });
+}
+function tradeCard(T, G){
+  const a = aliveValue(G, 0), lost = T.spent[0] - a;
+  return `Raw trade: you spent ${T.spent[0]}, the Rival spent ${T.spent[1]} (${signed(T.spent[1] - T.spent[0])} to you). ` +
+         `Value trade: you destroyed ${T.killed[0].toFixed(1)} and lost ${lost.toFixed(1)} (spent ${T.spent[0]}, ${a.toFixed(1)} still alive), so ${signed(valueTrade(T, G))}.`;
 }
 function finishDrill(){
   if (G.over) return;
@@ -2668,10 +2808,12 @@ function finishDrill(){
   const passed = d.goals.map(g => !!g.test(T, G));
   const shows = d.goals.map(g => g.show ? g.show(T, G) : '');
   const stars = passed.filter(Boolean).length;
-  drillStars[d.id] = Math.max(drillStars[d.id] || 0, stars); saveJSON('bridgeburn-drills', drillStars);
+  const prog = drillProg[d.id] || [0,0,0];
+  prog[d.round] = Math.max(prog[d.round] || 0, stars); drillProg[d.id] = prog; saveJSON('bridgeburn-drills', drillProg);
   if (savedDiff !== null){ diffKey = savedDiff; savedDiff = null; }
   if (stars === 3) sfx.crown();
-  setTimeout(() => { if (G && G.drill === d) openDrill(d.id, { stars, passed, shows }); }, 1200);
+  const extra = d.notes || d.id === 'trade' ? tradeCard(T, G) : '';
+  setTimeout(() => { if (G && G.drill === d) openDrill(d.id, { stars, passed, shows, extra }, d.round); }, 1200);
 }
 
 // ---- Coach report after a match ----
@@ -2739,6 +2881,7 @@ const GUIDE = [
   ['Pick a deck you know', 'Classic Challenge rewards consistency more than surprise. Take a deck you have played a lot with: one clear win condition, a small and a big spell, at least two cards that hit air, a tank killer and a couple of cheap cycle cards. An average of 3.0 to 4.0 elixir is a safe range.'],
   ['The first minute', 'Do not rush the bridge at the start. Let your elixir build to about 9, then play a cheap card or your tank at the back. Watch their first cards: they tell you their deck. If they open at the bridge, defend it cheaply and counter-push.'],
   ['Elixir trades win games', 'Every exchange has a price. Answer a 5-elixir push with 3 and you are 2 ahead. Troops that survive count in your favour: if you both spent 8 but your Knight is still standing at full health, you are about 3 ahead, as long as you use that Knight in a counter-push before it is picked off. Tower HP is a resource too: losing 200 HP to save 3 elixir is usually right.'],
+  ['Raw spend versus value', 'The raw trade is what each side spent; it tells you who can afford to play next. The value trade is what you destroyed minus what you lost, with survivors counting for you; it tells you who is winning the board. Over a whole match both sides earn the same elixir, so raw spend mostly measures wasted elixir. Neither count includes tower damage, which is a third thing you trade.'],
   ['Count their cards', 'Once you have seen all eight, remember the last four they played: those cannot be in their hand. Attack when their counter to your win condition has just been used.'],
   ['Single elixir: defend, then counter', 'In the first two minutes most towers fall to counter-pushes, not to cold pushes at the bridge. Defend with troops that survive, then add your win condition behind them.'],
   ['Double elixir: go big', 'With twice the elixir, build one full push: tank, support behind, spell ready for their defence. If they commit on one lane, hit the other.'],
@@ -2749,9 +2892,9 @@ function openAcademy(){
   hideOverlays(); $('#academyScreen').hidden = false;
   $('#trackerToggle').checked = trackerOn; $('#hintsToggle').checked = hintsOn;
   const pb = $('#progressBox'); pb.textContent = '';
-  const total = sum(DRILLS.map(d => drillStars[d.id] || 0));
+  const total = sum(DRILLS.map(d => roundsWon(d.id)));
   const h = loadJSON('bridgeburn-history', []).slice(-10);
-  const head = document.createElement('h3'); head.innerHTML = 'Your progress <small></small>'; head.querySelector('small').textContent = `${total}/${DRILLS.length*3} stars`; pb.append(head);
+  const head = document.createElement('h3'); head.innerHTML = 'Your progress <small></small>'; head.querySelector('small').textContent = `${total}/${DRILLS.length*3} rounds won`; pb.append(head);
   const p = document.createElement('p'); p.className = 'plan';
   if (h.length){
     const wins = h.filter(x => x.result === 'win').length;
@@ -2761,7 +2904,7 @@ function openAcademy(){
   pb.append(p);
   // Recommend the drill that comes up most in recent reports, else the first one without 3 stars.
   const tally = {}; h.forEach(x => (x.tips || []).forEach(id => tally[id] = (tally[id] || 0) + 1));
-  const recId = Object.keys(tally).sort((a,b) => tally[b] - tally[a])[0] || (DRILLS.find(d => (drillStars[d.id] || 0) < 3) || DRILLS[0]).id;
+  const recId = Object.keys(tally).sort((a,b) => tally[b] - tally[a])[0] || (DRILLS.find(d => roundsWon(d.id) < 3) || DRILLS[0]).id;
   const rec = DRILLS.find(d => d.id === recId);
   const rb = document.createElement('button'); rb.className = 'btn go'; rb.textContent = `Recommended: ${rec.name}`; rb.addEventListener('click', () => openDrill(rec.id)); pb.append(rb);
   const list = $('#drillList'); list.textContent = '';
@@ -2769,7 +2912,8 @@ function openAcademy(){
     const b = document.createElement('button'); b.className = 'drill';
     b.innerHTML = '<span class="n"></span><span><span class="t"></span><br><span class="k"></span></span><span class="stars"></span>';
     b.querySelector('.n').textContent = i + 1; b.querySelector('.t').textContent = d.name; b.querySelector('.k').textContent = d.skill;
-    b.querySelector('.stars').innerHTML = starsHTML(drillStars[d.id] || 0);
+    const w = roundsWon(d.id);
+    b.querySelector('.stars').innerHTML = ['','',''].map((_, i) => roundStars(d.id, i) === 3 ? '●' : '<i>●</i>').join(' ') + `<br><small class="k">${w}/3 won</small>`;
     b.addEventListener('click', () => openDrill(d.id));
     list.append(b);
   });
@@ -2783,9 +2927,9 @@ function paintReset(asking){
   const mk = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = label; b.addEventListener('click', fn); row.append(b); };
   if (!asking){ mk('Clear Academy progress', '', () => paintReset(true)); return; }
   mk('Yes, clear it', 'go', () => {
-    drillStars = {}; saveJSON('bridgeburn-drills', {}); saveJSON('bridgeburn-history', []);
+    drillProg = {}; saveJSON('bridgeburn-drills', {}); saveJSON('bridgeburn-history', []);
     openAcademy(); paintReset(false);
-    $('#resetText').textContent = 'Academy cleared. All drills are back to zero stars.';
+    $('#resetText').textContent = 'Academy cleared. Every round is back to not won.';
   });
   mk('Cancel', '', () => paintReset(false));
 }
@@ -3016,7 +3160,7 @@ newGame(); G.demo = true; renderTracker();
 showStart();
 requestAnimationFrame(frame);
 window.__bbCanPlace = canPlace;
-window.__bb = { get G(){ return G; }, step, findSpot, deploy, deployKey, rivalDeck, newDeck, start, renderHand, DRILLS, startDrill, analyzeDeck, coachReport, openAcademy, openChallenge, get CHAL(){ return CHAL; } };
+window.__bb = { get G(){ return G; }, step, findSpot, deploy, deployKey, drillRound, openDrill, rivalDeck, newDeck, start, renderHand, DRILLS, startDrill, analyzeDeck, coachReport, openAcademy, openChallenge, get CHAL(){ return CHAL; } };
 })();
 </script>
 </body>
