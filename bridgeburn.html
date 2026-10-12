@@ -322,6 +322,11 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <div class="lbl-sm">Training aids in matches</div>
       <label class="toggle"><input type="checkbox" id="trackerToggle"><span>Rival card tracker</span></label>
       <label class="toggle"><input type="checkbox" id="hintsToggle"><span>Coach hints during play</span></label>
+      <div class="coachbox" id="resetBox">
+        <h3>Start the Academy again</h3>
+        <p class="plan" id="resetText">Clears your drill stars and the coach's match history so you can work through the drills from scratch. Your deck, win record and Classic Challenge run are kept.</p>
+        <div class="row" id="resetRow"><button class="btn" id="academyReset">Clear Academy progress</button></div>
+      </div>
       <button class="btn" id="academyBack">Back</button>
     </div>
   </div>
@@ -2771,6 +2776,19 @@ function openAcademy(){
 }
 $('#academyBtn').addEventListener('click', openAcademy);
 $('#academyBack').addEventListener('click', () => { hideOverlays(); showStart(); });
+// Two-step clear: the page can't show a browser confirm box, so the button asks in place.
+function paintReset(asking){
+  const row = $('#resetRow'); row.textContent = '';
+  const mk = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = label; b.addEventListener('click', fn); row.append(b); };
+  if (!asking){ mk('Clear Academy progress', '', () => paintReset(true)); return; }
+  mk('Yes, clear it', 'go', () => {
+    drillStars = {}; saveJSON('bridgeburn-drills', {}); saveJSON('bridgeburn-history', []);
+    openAcademy(); paintReset(false);
+    $('#resetText').textContent = 'Academy cleared. All drills are back to zero stars.';
+  });
+  mk('Cancel', '', () => paintReset(false));
+}
+$('#academyReset').addEventListener('click', () => paintReset(true));
 $('#trackerToggle').addEventListener('change', ev => { trackerOn = ev.target.checked; try { localStorage.setItem('bridgeburn-tracker', trackerOn ? '1' : '0'); } catch(e) {} });
 $('#hintsToggle').addEventListener('change', ev => { hintsOn = ev.target.checked; try { localStorage.setItem('bridgeburn-hints', hintsOn ? '1' : '0'); } catch(e) {} });
 function hideOverlays(){ for (const id of ['startScreen','academyScreen','drillScreen','challengeScreen','endScreen','pauseScreen','helpScreen','deckScreen']) $('#'+id).hidden = true; }
