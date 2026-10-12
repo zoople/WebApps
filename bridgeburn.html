@@ -269,7 +269,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <button class="btn go big" id="startBtn">Start match</button>
       <div class="row">
         <button class="btn" id="academyBtn">Academy<span class="sub">Drills and coaching</span></button>
-        <button class="btn" id="challengeBtn">Classic Challenge<span class="sub">12 wins or 3 losses</span></button>
+        <button class="btn" id="challengeBtn">Classic Challenge<span class="sub">8 wins or 3 losses</span></button>
       </div>
       <p class="record" id="record"></p>
       <div class="foot">
@@ -290,7 +290,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
         <li>The rival's difficulty changes how fast it reacts and how much elixir it gets: Easy is slow, Normal is fair, Hard gets extra.</li>
         <li>Academy has ten drills, each teaching one Classic Challenge skill, plus a field guide. After every match the coach grades your play and points you to the drill that fixes your biggest mistake.</li>
-        <li>Classic Challenge plays like the real one: keep going until 12 wins or 3 losses. The Rival gets tougher as you win.</li>
+        <li>Classic Challenge plays like the real one: keep going until 8 wins or 3 losses. The Rival gets tougher as you win.</li>
       </ul>
       <button class="btn go" id="helpClose">Got it</button>
     </div>
@@ -2418,6 +2418,11 @@ const sum = a => a.reduce((s, x) => s + x, 0);
 const towerLoss = (G, team) => { const d = G.track.towerDmg[1-team]; return d.single + d.double + d.ot; };
 const rivalUnitsAlive = G => G.ents.some(e => e.team === 1 && alive(e) && (e.kind === 'unit' || e.kind === 'plant')) || G.spells.some(s => s.team === 1);
 const bestSpell = T => Math.max(0, ...T.spells[0].map(r => r.value));
+// Elixir still on the field: each surviving troop or building counts back its cost, scaled by
+// the health it has left. A full-health Squire is 3 elixir you still have; a half-dead one is 1.5.
+const aliveValue = (G, team) => sum(G.ents.filter(e => e.team === team && alive(e) && (e.kind === 'unit' || e.kind === 'building')).map(e => (e.value || 0) * Math.max(0, e.hp) / e.maxHp));
+const netSpent = (T, G, team = 0) => T.spent[team] - aliveValue(G, team);
+const netShow = (T, G) => { const a = aliveValue(G, 0); return a >= 0.5 ? `spent ${T.spent[0]}, ${a.toFixed(1)} still alive, net ${(T.spent[0] - a).toFixed(1)}` : `spent ${T.spent[0]}`; };
 
 // A short line from the coach, shown across the middle of your half.
 function say(text, dur = 4.5){ if (G) G.banner = { text, t0:G.t, dur }; }
@@ -2530,16 +2535,16 @@ const DRILLS = [
     script:[ { at:0.3, say:'A Charger is coming on the right. Get your Bolt Turret ready.' }, { at:3, key:'charger', pos:[14.5,12.5] }, { at:19, say:'Another one, left lane this time.' }, { at:21, key:'charger', pos:[3.5,12.5] } ],
     endWhen:G => G.t > 23 && !rivalUnitsAlive(G),
     goals:[ { text:'Chargers never hit your towers', test:T => !(T.towerBy.charger > 0), show:T => `${Math.round(T.towerBy.charger||0)} damage` },
-            { text:'Spend 8 elixir or less', test:T => T.spent[0] <= 8, show:T => `spent ${T.spent[0]}` },
+            { text:'Net cost 8 elixir or less', test:(T,G) => netSpent(T,G) <= 8, show:netShow },
             { text:'Your towers lose under 300 HP', test:(T,G) => towerLoss(G,0) < 300, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` } ] },
   { id:'trade', name:'Win the elixir trade', skill:'Elixir trades', time:45, elixir:8,
     deck:['rattlers','imps','turret','squire','longbows','frost','fireball','crossbow'],
-    brief:'An elixir trade is what you spend against what you destroy. Stop an 8-elixir push with 5 and you are 3 ahead, and those 3 become your counter-attack. Letting your tower take a few hits is fine; over-spending to save every point of HP is not.',
+    brief:'An elixir trade is what you lose against what you destroy. Troops that survive the defence are not lost: spend 8 to stop an 8-elixir push but keep a full-health 3-elixir Squire, and you are really 3 ahead, with a counter-push already walking. Net cost here means what you spent minus what is still alive.',
     tip:'Count the cost of what they played. Your target is to answer it for less. Tower HP is a resource you can spend; elixir you over-spend is gone.',
     script:[ { at:0.3, say:'The Rival is building a push: Brute in front, Longbows behind.' }, { at:2, key:'brute', pos:[14.5,9] }, { at:4, key:'longbows', pos:[14.5,6.8] } ],
     endWhen:G => G.t > 6 && !rivalUnitsAlive(G),
     goals:[ { text:'Destroy the whole push', test:(T,G) => !rivalUnitsAlive(G) },
-            { text:'Spend less than the Rival (8)', test:T => T.spent[0] < 8, show:T => `spent ${T.spent[0]}` },
+            { text:'Net cost below the Rival\u2019s 8', test:(T,G) => netSpent(T,G) < 8, show:netShow },
             { text:'Your towers lose under 500 HP', test:(T,G) => towerLoss(G,0) < 500, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` } ] },
   { id:'swarm', name:'Splash versus swarms', skill:'Card matchups', time:45, elixir:6,
     deck:['whirl','log','volley','sapper','squire','pyromancer','frost','turret'],
@@ -2548,7 +2553,7 @@ const DRILLS = [
     script:[ { at:0.3, say:'Swarms incoming. One splash card should handle each wave.' }, { at:3, key:'rattlers', pos:[3.5,12.5] }, { at:13, key:'imps', pos:[14.5,12.5] }, { at:24, key:'gloomwings', pos:[14.5,12.5] }, { at:25, key:'imps', pos:[3.5,12.5] } ],
     endWhen:G => G.t > 27 && !rivalUnitsAlive(G),
     goals:[ { text:'Your towers lose under 400 HP', test:(T,G) => towerLoss(G,0) < 400, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` },
-            { text:'Spend 9 elixir or less', test:T => T.spent[0] <= 9, show:T => `spent ${T.spent[0]}` },
+            { text:'Net cost 9 elixir or less', test:(T,G) => netSpent(T,G) <= 9, show:netShow },
             { text:'Kill 3 or more troops with one card', test:T => T.maxKills[0] >= 3, show:T => `best ${T.maxKills[0]}` } ] },
   { id:'spell', name:'Spell value', skill:'Spell timing', time:45, elixir:9,
     deck:['fireball','blight','squire','turret','imps','volley','crossbow','frost'],
@@ -2558,7 +2563,7 @@ const DRILLS = [
     endWhen:G => G.t > 7 && !rivalUnitsAlive(G),
     goals:[ { text:'One spell takes out 4+ elixir of troops', test:T => bestSpell(T) >= 4, show:T => `best ${bestSpell(T).toFixed(1)}` },
             { text:'Your towers lose under 500 HP', test:(T,G) => towerLoss(G,0) < 500, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` },
-            { text:'Spend less than the Rival (9)', test:T => T.spent[0] < 9, show:T => `spent ${T.spent[0]}` } ] },
+            { text:'Net cost below the Rival\u2019s 9', test:(T,G) => netSpent(T,G) < 9, show:netShow } ] },
   { id:'air', name:'Air defence', skill:'Defending air', time:45, elixir:8,
     deck:['spire','longbows','crossbow','gloomwings','squire','imps','fireball','frost'],
     brief:'Flying win conditions like the Zeppelin (the Balloon in Clash Royale) ignore ground troops entirely. You need anti-air ready, placed early enough that it shoots before the bomber reaches your tower. Keep your troops out of the death bomb.',
@@ -2566,7 +2571,7 @@ const DRILLS = [
     script:[ { at:0.3, say:'Air attack. Ground troops cannot touch the Zeppelin.' }, { at:3, key:'zeppelin', pos:[14.5,10] }, { at:5, key:'gloomwings', pos:[14.5,12] }, { at:20, say:'Second Zeppelin, left lane.' }, { at:22, key:'zeppelin', pos:[3.5,10] } ],
     endWhen:G => G.t > 24 && !rivalUnitsAlive(G),
     goals:[ { text:'Zeppelins never bomb your towers', test:T => !(T.towerBy.zeppelin > 0), show:T => `${Math.round(T.towerBy.zeppelin||0)} damage` },
-            { text:'Spend 10 elixir or less', test:T => T.spent[0] <= 10, show:T => `spent ${T.spent[0]}` },
+            { text:'Net cost 10 elixir or less', test:(T,G) => netSpent(T,G) <= 10, show:netShow },
             { text:'Your towers lose under 300 HP', test:(T,G) => towerLoss(G,0) < 300, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` } ] },
   { id:'tank', name:'Kill the tank', skill:'Defending beatdown', time:60, elixir:9,
     deck:['cleaver','pylon','imps','rattlers','fireball','longbows','log','squire'],
@@ -2578,7 +2583,7 @@ const DRILLS = [
     endWhen:G => G.t > 14 && !rivalUnitsAlive(G),
     goals:[ { text:'Your left tower survives', test:(T,G) => towersOf(0).some(t => !t.king && t.x < 9) },
             { text:'Your towers lose under 1200 HP', test:(T,G) => towerLoss(G,0) < 1200, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` },
-            { text:'Spend less than the Rival (12)', test:T => T.spent[0] < 12, show:T => `spent ${T.spent[0]}` } ] },
+            { text:'Net cost below the Rival\u2019s 12', test:(T,G) => netSpent(T,G) < 12, show:netShow } ] },
   { id:'counter', name:'Defend, then counter-push', skill:'Counter-pushing', time:45, elixir:7,
     deck:['squire','lancer','imps','longbows','fireball','frost','turret','charger'],
     brief:'After a cheap defence your surviving troops walk to the bridge. Add one card behind them and you have a push the Rival must answer with fresh elixir. This is how most towers fall in Classic Challenge.',
@@ -2586,7 +2591,7 @@ const DRILLS = [
     script:[ { at:0.3, say:'Defend this Charger cheaply, then push back with what survives.' }, { at:2, key:'charger', pos:[14.5,12.5] }, { at:24, key:'squire', pos:[14.5,9] } ],
     goals:[ { text:'Deal 600+ damage to the Rival’s towers', test:(T,G) => towerLoss(G,1) >= 600, show:(T,G) => `dealt ${Math.round(towerLoss(G,1))}` },
             { text:'Your towers lose under 400 HP', test:(T,G) => towerLoss(G,0) < 400, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` },
-            { text:'Spend 12 elixir or less', test:T => T.spent[0] <= 12, show:T => `spent ${T.spent[0]}` } ] },
+            { text:'Net cost 12 elixir or less', test:(T,G) => netSpent(T,G) <= 12, show:netShow } ] },
   { id:'punish', name:'Punish the other lane', skill:'Opposite-lane pressure', time:50, elixir:9,
     deck:['charger','imps','squire','cleaver','longbows','fireball','turret','frost'],
     setup:G => { G.rightId = G.ents.find(e => e.team === 1 && !e.king && e.x > 9).id; },
@@ -2690,7 +2695,7 @@ function coachReport(G){
   pen.sort((a,b) => b.p - a.p);
   const stats = [
     { l:'Elixir wasted', v:leak.toFixed(1), good:leak <= 2 },
-    { l:'Elixir trade (destroyed − lost)', v:(trade >= 0 ? '+' : '') + trade.toFixed(1), good:trade >= 0 },
+    { l:'Elixir trade (destroyed − lost; survivors are not lost)', v:(trade >= 0 ? '+' : '') + trade.toFixed(1), good:trade >= 0 },
     { l:'Tower damage dealt / taken', v:`${Math.round(sum(Object.values(T.towerDmg[0])))} / ${Math.round(sum(Object.values(T.towerDmg[1])))}`, good:sum(Object.values(T.towerDmg[0])) >= sum(Object.values(T.towerDmg[1])) },
     { l:'Spells with good value', v:spells.length ? `${spells.length - badSpells}/${spells.length}` : 'none', good:!badSpells }
   ];
@@ -2727,7 +2732,7 @@ function saveHistory(rep, result, mode){
 const GUIDE = [
   ['Pick a deck you know', 'Classic Challenge rewards consistency more than surprise. Take a deck you have played a lot with: one clear win condition, a small and a big spell, at least two cards that hit air, a tank killer and a couple of cheap cycle cards. An average of 3.0 to 4.0 elixir is a safe range.'],
   ['The first minute', 'Do not rush the bridge at the start. Let your elixir build to about 9, then play a cheap card or your tank at the back. Watch their first cards: they tell you their deck. If they open at the bridge, defend it cheaply and counter-push.'],
-  ['Elixir trades win games', 'Every exchange has a price. Answer a 5-elixir push with 3 and you are 2 ahead. Small advantages turn into a push they cannot afford to stop. Tower HP is a resource: losing 200 HP to save 3 elixir is usually right.'],
+  ['Elixir trades win games', 'Every exchange has a price. Answer a 5-elixir push with 3 and you are 2 ahead. Troops that survive count in your favour: if you both spent 8 but your Knight is still standing at full health, you are about 3 ahead, as long as you use that Knight in a counter-push before it is picked off. Tower HP is a resource too: losing 200 HP to save 3 elixir is usually right.'],
   ['Count their cards', 'Once you have seen all eight, remember the last four they played: those cannot be in their hand. Attack when their counter to your win condition has just been used.'],
   ['Single elixir: defend, then counter', 'In the first two minutes most towers fall to counter-pushes, not to cold pushes at the bridge. Defend with troops that survive, then add your win condition behind them.'],
   ['Double elixir: go big', 'With twice the elixir, build one full push: tank, support behind, spell ready for their defence. If they commit on one lane, hit the other.'],
@@ -2770,28 +2775,29 @@ $('#trackerToggle').addEventListener('change', ev => { trackerOn = ev.target.che
 $('#hintsToggle').addEventListener('change', ev => { hintsOn = ev.target.checked; try { localStorage.setItem('bridgeburn-hints', hintsOn ? '1' : '0'); } catch(e) {} });
 function hideOverlays(){ for (const id of ['startScreen','academyScreen','drillScreen','challengeScreen','endScreen','pauseScreen','helpScreen','deckScreen']) $('#'+id).hidden = true; }
 
-// ---- Classic Challenge practice: 12 wins or 3 losses, Rival gets tougher as you win ----
+// ---- Classic Challenge practice: 8 wins or 3 losses, Rival gets tougher as you win ----
 let CHAL = loadJSON('bridgeburn-challenge', null);
-const chalDiff = w => w <= 2 ? 'normal' : w <= 6 ? 'hard' : 'elite';
+const CHAL_WINS = 8;
+const chalDiff = w => w <= 1 ? 'normal' : w <= 4 ? 'hard' : 'elite';
 const CHAL_TIPS = [
   'Early matches are against a normal Rival. Use them to settle in and play your deck’s plan cleanly.',
-  'From 3 wins the Rival plays at Hard: it reacts faster and gets a little extra elixir. Win your trades.',
-  'From 7 wins the Rival is at its strongest. Defend first, count its cards, and punish its big commits.'
+  'From 2 wins the Rival plays at Hard: it reacts faster and gets a little extra elixir. Win your trades.',
+  'From 5 wins the Rival is at its strongest. Defend first, count its cards, and punish its big commits.'
 ];
 function openChallenge(){
   hideOverlays(); $('#challengeScreen').hidden = false;
   const c = CHAL;
   const wins = c ? c.wins : 0, losses = c ? c.losses : 0;
-  const done = c && (c.wins >= 12 || c.losses >= 3);
-  $('#chalTitle').textContent = !c ? 'New run' : c.wins >= 12 ? 'Challenge won!' : c.losses >= 3 ? 'Run over' : `${wins} win${wins===1?'':'s'}, ${losses} loss${losses===1?'':'es'}`;
+  const done = c && (c.wins >= CHAL_WINS || c.losses >= 3);
+  $('#chalTitle').textContent = !c ? 'New run' : c.wins >= CHAL_WINS ? 'Challenge won!' : c.losses >= 3 ? 'Run over' : `${wins} win${wins===1?'':'s'}, ${losses} loss${losses===1?'':'es'}`;
   const pw = $('#chalWins'); pw.textContent = '';
-  for (let i=0;i<12;i++){ const d = document.createElement('span'); d.className = 'pip' + (i < wins ? ' w' : ''); d.textContent = i+1; pw.append(d); }
+  for (let i=0;i<CHAL_WINS;i++){ const d = document.createElement('span'); d.className = 'pip' + (i < wins ? ' w' : ''); d.textContent = i+1; pw.append(d); }
   const pl = $('#chalLosses'); pl.textContent = '';
   for (let i=0;i<3;i++){ const d = document.createElement('span'); d.className = 'pip l' + (i < losses ? ' x' : ''); d.textContent = '✕'; pl.append(d); }
   const lvl = chalDiff(wins);
-  $('#chalStatus').textContent = done ? (c.wins >= 12 ? `You reached 12 wins with ${c.losses} loss${c.losses===1?'':'es'}. You are ready for the real thing.` : `You finished on ${c.wins} wins. Check the coach reports and drills, then try again.`)
+  $('#chalStatus').textContent = done ? (c.wins >= CHAL_WINS ? `You reached ${CHAL_WINS} wins with ${c.losses} loss${c.losses===1?'':'es'}. You are ready for the real thing.` : `You finished on ${c.wins} wins. Check the coach reports and drills, then try again.`)
     : `Next Rival: ${lvl === 'elite' ? 'Elite' : lvl[0].toUpperCase() + lvl.slice(1)}. Uses your ${randomDeck ? 'random' : 'saved'} deck.`;
-  $('#chalTip').textContent = CHAL_TIPS[wins <= 2 ? 0 : wins <= 6 ? 1 : 2];
+  $('#chalTip').textContent = CHAL_TIPS[wins <= 1 ? 0 : wins <= 4 ? 1 : 2];
   const btns = $('#chalButtons'); btns.textContent = '';
   const mk = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = label; b.addEventListener('click', fn); btns.append(b); };
   if (!c || done) mk('Start new run', 'go', () => { CHAL = { wins:0, losses:0, log:[] }; saveJSON('bridgeburn-challenge', CHAL); openChallenge(); });
