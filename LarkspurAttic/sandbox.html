@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Larkspur Sandbox</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="sandbox.webmanifest">
+<meta name="theme-color" content="#1a1316">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sandbox">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Limelight&family=Karla:wght@400;600;800&display=swap">
+<style>
+/* Layout: one-screen portrait game — HUD, chapter strip, three order cards, 7×9 attic board, info bar */
+:root{
+  --bg:#1a1316;        /* night attic */
+  --panel:#271c1f;
+  --panel2:#30232a;
+  --wood:#4a3427;
+  --wood2:#3f2c21;
+  --ink:#f4e8d3;
+  --muted:#b8a387;
+  --gold:#e4b84c;
+  --velvet:#a3303d;
+  --ok:#78c27c;
+  --card:#c48a54;
+  --display:"Limelight","Didot","Bodoni 72",Georgia,serif;
+  --body:"Karla",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cs:50px;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+/* title screen */
+#title{position:fixed;inset:0;z-index:70;background:var(--bg);background-image:radial-gradient(90% 55% at 50% 30%,#4a2c36 0%,transparent 70%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+#title .logo{width:120px;height:120px;border-radius:26px;box-shadow:0 12px 30px #000a}
+#title h1{font-family:var(--display);font-weight:400;font-size:44px;color:var(--gold);margin:0;line-height:1}
+#title .sub{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+#title ul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--ink);text-align:left}
+#title ul li::before{content:"✦";color:var(--gold);margin-right:8px}
+#playBtn{background:var(--gold);color:#2a1a10;font-weight:800;font-size:18px;border-radius:14px;padding:14px 46px;box-shadow:0 6px 0 #9a7426}
+#playBtn:active{transform:translateY(3px);box-shadow:0 3px 0 #9a7426}
+#title .ver{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#title .best{font-size:12px;color:var(--muted);margin:0}
+#updBox{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:80;background:var(--panel);border:1px solid var(--gold);border-radius:12px;padding:8px 10px 8px 14px;font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 20px #0009;white-space:nowrap}
+#updBox button{background:var(--gold);color:#2a1a10;font-weight:800;border-radius:8px;padding:6px 10px}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  background-image:radial-gradient(120% 60% at 50% -10%, #3a2530 0%, transparent 60%);}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+#app{height:100%;max-width:520px;margin:0 auto;padding-inline:16px;padding-block:8px 10px;display:flex;flex-direction:column;gap:8px}
+
+/* HUD */
+.top{display:flex;align-items:center;gap:8px}
+.pill{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid #ffffff14;border-radius:999px;padding:5px 11px 5px 8px;font-variant-numeric:tabular-nums;font-weight:800}
+.pill small{font-weight:400;color:var(--muted);font-size:11px}
+.pill.gift{background:var(--velvet);border-color:#ffffff30;animation:nudge 1.6s ease-in-out infinite}
+.spacer{flex:1}
+.iconbtn{width:36px;height:36px;border-radius:50%;background:var(--panel);border:1px solid #ffffff14;font-size:17px;display:grid;place-items:center}
+
+/* chapter strip */
+.chapter{display:flex;flex-direction:column;gap:5px}
+.ch-row{display:flex;align-items:baseline;gap:10px}
+.ch-num{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:800;white-space:nowrap}
+.ch-name{font-family:var(--display);font-weight:400;font-size:21px;margin:0;line-height:1.1;text-wrap:balance;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-count{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.xprow{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.xpbtn{flex:1;display:flex;align-items:center;gap:8px;padding:0;text-align:left;color:inherit;min-width:0}
+.passbtn{position:relative;display:flex;align-items:center;gap:4px;background:#1f2238;border:1px solid #8ea0ff44;border-radius:999px;padding:2px 9px;font-size:12px;color:#dfe4ff}
+.passbtn .dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--velvet);box-shadow:0 0 0 2px var(--bg)}
+.tier{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #ffffff10}
+.tier .tp{width:44px;font-weight:800;color:#c9d0ff;font-variant-numeric:tabular-nums}
+.tier .tr{flex:1;font-size:22px;letter-spacing:4px}
+.tier.locked .tr{opacity:.4;filter:grayscale(.7)}
+.passbar{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;margin:8px 0 4px}
+.passbar i{display:block;height:100%;background:linear-gradient(90deg,#5b6bd6,#dfe4ff)}
+.xprow .xpl{white-space:nowrap;font-weight:600}.xprow .xpl b{color:var(--ink)}
+.xprow .xb{flex:1;height:4px}.xprow .xb i{background:linear-gradient(90deg,#c9a24a,#fff0b0)}
+.cell.res .em{filter:drop-shadow(0 0 4px #e4b84c99) drop-shadow(0 2px 1px #0006)}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--velvet),var(--gold));width:0;transition:width .5s}
+
+/* orders */
+.orders{display:flex;gap:7px;min-height:104px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px}
+.orders::-webkit-scrollbar{display:none}
+.orders>.order{flex:0 0 calc((100% - 32px - 14px - 25px)/3.15);scroll-snap-align:start}
+.order.side{background:#2a2420;border:1px dashed #e4b84c55}
+.orders>.grp{flex:0 0 18px;display:flex;align-items:center;justify-content:center;border-radius:8px;scroll-snap-align:start}
+.orders>.grp span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
+.orders>.grp.g-story{background:#e4b84c22;color:var(--gold)}
+.orders>.grp.g-side{background:#ffffff0d;color:#d9c49a;margin-left:6px}
+.chk.side{background:#d9c49a;color:#2a1a10}
+.order.side .who{color:#d9c49a}
+.order{background:var(--panel);border:1px solid #ffffff12;border-radius:12px;padding:7px 7px 6px;display:flex;flex-direction:column;gap:5px;cursor:pointer;min-width:0}
+.order.ready{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
+.who{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);min-width:0}
+.who .av{font-size:18px;line-height:1}
+.who span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.needs{display:flex;gap:4px;flex:1;align-items:center;justify-content:center}
+.need{position:relative;width:34px;height:34px;border-radius:9px;background:var(--panel2);display:grid;place-items:center;font-size:21px}
+.need.have{background:#2f4430}
+.need i{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;border-radius:50%;background:var(--ok);color:#10200f;font-size:9px;font-style:normal;font-weight:800;display:grid;place-items:center}
+.order .act{height:24px;border-radius:7px;font-size:12px;font-weight:800;display:grid;place-items:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.order.ready .act{background:var(--ok);color:#10200f}
+.orders .empty{flex:1;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:13px;background:var(--panel);border-radius:12px;padding:10px}
+.orders .empty b{font-family:var(--display);font-weight:400;color:var(--gold);font-size:18px;display:block}
+
+/* board */
+.boardwrap{flex:1;min-height:0;display:grid;place-items:center}
+#board{display:grid;grid-template-columns:repeat(7,var(--cs));grid-auto-rows:var(--cs);border-radius:14px;overflow:hidden;
+  box-shadow:0 0 0 3px #2a1d16,0 0 0 4px #6b4a33,0 14px 30px #0008;touch-action:none;user-select:none;-webkit-user-select:none}
+.cell{position:relative;display:grid;place-items:center;background:var(--wood)}
+.cell.alt{background:var(--wood2)}
+.cell .em{font-size:calc(var(--cs)*.6);line-height:1;pointer-events:none;filter:drop-shadow(0 2px 1px #0006);transition:transform .12s}
+.cell.sel{box-shadow:inset 0 0 0 3px var(--gold);z-index:1}
+.cell.sel .em{transform:scale(1.08)}
+.cell.hint{animation:hint 1.2s ease-in-out 2}
+.cell.lift .em{opacity:.25}
+.cell.drop{box-shadow:inset 0 0 0 3px #fff8}
+.lv{position:absolute;right:3px;bottom:2px;font-size:9px;font-style:normal;font-weight:800;color:#f4e8d3aa;pointer-events:none}
+.chk{position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:var(--ok);color:#10200f;font-size:9px;font-weight:800;display:grid;place-items:center;pointer-events:none}
+.gen{position:absolute;left:2px;top:2px;font-size:9px;font-style:normal;font-weight:800;background:#0007;color:var(--gold);border-radius:6px;padding:1px 4px;pointer-events:none;font-variant-numeric:tabular-nums}
+.ring{position:absolute;inset:5%;width:90%;height:90%;transform:rotate(-90deg);pointer-events:none}
+.ring circle{fill:none;stroke-width:7}
+.ring .trk{stroke:#0000004d}
+.ring .arc{stroke:var(--gold);stroke-linecap:round;transition:stroke-dasharray 1s linear;filter:drop-shadow(0 0 2px #e4b84c88)}
+.cell.cool .em{opacity:.45;filter:grayscale(.6)}
+.cell.isgen{background-image:radial-gradient(circle at 50% 55%,#e4b84c33,transparent 65%)}
+/* cobweb: visible but stuck */
+.cell.web .em{filter:grayscale(.85) brightness(.75) sepia(.3);opacity:.85}
+.cell.web::after{content:"";position:absolute;inset:0;pointer-events:none;background-size:100% 100%;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='none' stroke='%23f4e8d3' stroke-opacity='.5' stroke-width='.7'%3E%3Cpath d='M0 0L40 40M0 0L40 15M0 0L15 40M0 0L40 0M0 0L0 40M40 40L40 22M40 40L22 40M0 9Q5 5 9 0M0 19Q11 11 19 0M0 29Q16 16 29 0M40 31Q35 35 31 40M40 21Q30 30 21 40'/%3E%3C/svg%3E")}
+/* cardboard box: hidden */
+.cell.box::before{content:"";position:absolute;inset:12%;border-radius:4px;
+  background:linear-gradient(90deg,transparent 42%,#e9d2a066 42% 58%,transparent 58%),linear-gradient(160deg,#d29a63,var(--card) 55%,#9c6a3e);
+  box-shadow:0 2px 0 #6e4a2b,inset 0 0 0 1px #0002}
+.cell.box::after{content:"?";position:absolute;font-weight:800;color:#5a3a1f99;font-size:calc(var(--cs)*.26);top:52%;left:50%;transform:translate(-50%,-50%)}
+/* dust sheet: locked until a chapter opens it */
+.cell.sheet{background:repeating-linear-gradient(115deg,#5e5248 0 7px,#544940 7px 15px)}
+.cell.sheet .lock{font-size:10px;font-weight:800;letter-spacing:.08em;color:#e9dcc6cc;white-space:nowrap;text-transform:uppercase;pointer-events:none;position:absolute;z-index:2}
+.cell.maxed .em{animation:breathe 2.2s ease-in-out infinite}
+.cell.res.maxed .em{animation:breathe 1.6s ease-in-out infinite}
+.cell.must{box-shadow:inset 0 0 0 2px #c9d0ffaa;animation:mustring 1.2s ease-in-out infinite}
+.cell.must .em{animation:breathe 1.2s ease-in-out infinite}
+.musttag{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:#c9d0ff;color:#1a1d33;border-radius:5px;padding:0 4px;pointer-events:none}
+@keyframes breathe{0%,100%{transform:scale(1);filter:drop-shadow(0 2px 1px #0006)}50%{transform:scale(1.08);filter:drop-shadow(0 0 6px #e4b84ccc) drop-shadow(0 2px 1px #0006)}}
+@keyframes mustring{0%,100%{box-shadow:inset 0 0 0 2px #c9d0ff66}50%{box-shadow:inset 0 0 0 3px #e6eaff}}
+.cell.powered{box-shadow:inset 0 0 0 2px #7fd3ffaa}
+.cell.powered::after{content:"⚡";position:absolute;right:2px;bottom:1px;font-size:10px;pointer-events:none}
+.cell.battery .em{filter:drop-shadow(0 0 6px #7fd3ff) drop-shadow(0 2px 1px #0006)}
+.want{position:absolute;right:1px;top:1px;font-size:calc(var(--cs)*.26);font-style:normal;background:#000a;border-radius:6px;padding:0 2px;line-height:1.2;pointer-events:none}
+.cell.pop .em{animation:pop .32s cubic-bezier(.3,1.6,.5,1)}
+.cell.spawn .em{animation:spawn .35s cubic-bezier(.3,1.5,.5,1)}
+.cell.reveal::before,.cell.reveal .em{animation:pop .35s ease-out}
+.cell.pulse .em{animation:pulse .25s ease-out}
+
+/* info bar */
+.info{background:var(--panel);border:1px solid #ffffff12;border-radius:14px;padding:9px 10px;display:flex;align-items:center;gap:10px;min-height:76px}
+.info .big{font-size:36px;width:48px;text-align:center;flex:none}
+.info .txt{flex:1;min-width:0}
+.info .nm{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.info .nm small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+.info .ds{font-size:12.5px;color:var(--muted);line-height:1.35}
+.info .btns{display:flex;flex-direction:column;gap:5px;flex:none}
+.sbtn{background:var(--panel2);border:1px solid #ffffff1a;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap}
+.sbtn.warn{background:var(--velvet)}
+.info .hintline{color:var(--muted);font-size:13px;line-height:1.4}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:#0d080acc;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.dlg{width:100%;max-width:488px;background:linear-gradient(180deg,#2e2125,#241a1d);border:1px solid #e4b84c55;border-radius:16px;padding:16px 16px 12px;box-shadow:0 20px 50px #000a;cursor:pointer;animation:rise .25s ease-out}
+.dlg .spk{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dlg .spk .av{font-size:30px;width:46px;height:46px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;border:1px solid #e4b84c55}
+.dlg .spk b{font-family:var(--display);font-weight:400;font-size:19px;color:var(--gold)}
+.dlg p{margin:0;font-size:16px;line-height:1.5;min-height:3em}
+.dlg p em{color:var(--muted)}
+.dlg.narr p{font-style:italic;color:#e9dcc6}
+.dlg.note{background:#efe1c2;color:#3a2a1c;border-color:#b08a55}
+.dlg.note p{font-family:Georgia,serif;font-style:italic}
+.dlg.note .spk b{color:#7a2a33}
+.dlg .foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.dlg.note .foot{color:#7a6248}
+.scene-title{font-family:var(--display);font-size:28px;color:var(--gold);text-align:center;margin:auto 0 18px;text-wrap:balance;animation:rise .4s ease-out}
+.scene-title small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+
+.modal{justify-content:center}
+.sheetbox{width:100%;max-width:488px;max-height:82%;overflow:auto;background:var(--panel);border:1px solid #ffffff1a;border-radius:16px;padding:16px;animation:rise .22s ease-out}
+.sheetbox h2{font-family:var(--display);font-weight:400;color:var(--gold);margin:0 0 4px;font-size:24px}
+.sheetbox h3{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.sheetbox p{color:var(--ink);line-height:1.5;margin:6px 0}
+.chain{display:flex;flex-wrap:wrap;gap:6px}
+.chain .ci{width:58px;text-align:center;font-size:10px;color:var(--muted);line-height:1.2}
+.chain .ci span{display:grid;place-items:center;height:44px;border-radius:9px;background:var(--panel2);font-size:26px;margin-bottom:3px}
+.chain .ci.unk span{color:#ffffff30;font-size:20px;font-weight:800}
+.chain .ci.cur span{box-shadow:inset 0 0 0 2px var(--gold)}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.bigbtn{background:var(--panel2);border:1px solid #ffffff1a;border-radius:10px;padding:10px 14px;font-weight:800}
+.bigbtn.gold{background:var(--gold);color:#2a1a10}
+.bigbtn.warn{background:var(--velvet)}
+.entry{border-top:1px solid #ffffff12;padding:10px 0}
+.entry b{font-family:var(--display);font-weight:400;font-size:17px}
+.lore{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
+.lore span{font-size:24px}
+.lore div{font-size:13.5px;line-height:1.45}
+.lore div b{display:block;font-size:13px}
+
+#toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));flex-direction:column-reverse!important;transform:translateX(-50%);z-index:60;pointer-events:none;display:flex;flex-direction:column;gap:6px;align-items:center;width:min(92vw,440px)}
+.t{background:#120c0ee8;border:1px solid #e4b84c55;color:var(--ink);padding:8px 14px;border-radius:12px;font-size:13.5px;text-align:center;animation:rise .2s ease-out;box-shadow:0 8px 20px #0008}
+#ghost{position:fixed;left:0;top:0;z-index:40;pointer-events:none;font-size:calc(var(--cs)*.75);line-height:1;transform:translate(-999px,-999px);filter:drop-shadow(0 8px 6px #0009)}
+
+@keyframes pop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+@keyframes spawn{0%{transform:scale(0) translateY(30%)}100%{transform:scale(1)}}
+@keyframes pulse{50%{transform:scale(.85)}}
+@keyframes hint{50%{box-shadow:inset 0 0 0 3px var(--ok)}}
+@keyframes rise{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes nudge{50%{transform:scale(1.07)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="title">
+  <img class="logo" src="icons/icon-192.png" alt="">
+  <div class="sub">Test bench · new mechanics</div>
+  <h1>Sandbox</h1>
+  <ul>
+    <li>📦 Crates run out after a few taps, then vanish</li>
+    <li>🌱→🌳 Grow a Fruit Tree: 10 harvests, then it withers to a log</li>
+    <li>🗑️ Compost Bin: feed it what it asks for, get seeds</li>
+    <li>♨️ Stove: feed it logs or papers, it cooks tea</li>
+    <li>🔋 Batteries power generators next to them</li>
+    <li>Separate save. Larkspur Attic is untouched</li>
+  </ul>
+  <button id="playBtn">Play</button>
+  <p id="iosHint" class="best" hidden>📱 Full screen on iPhone: Share → Add to Home Screen</p>
+  <div class="ver" id="ver"></div>
+</div>
+<div id="updBox" hidden></div>
+
+<div id="app">
+  <header class="top">
+    <div class="pill" title="Energy"><span>⚡</span><b id="energy">100</b><small id="eTimer"></small></div>
+    <div class="pill" title="Coins"><span>🪙</span><b id="coins">0</b></div>
+    <span class="spacer"></span>
+    <button class="pill gift" id="giftBtn" hidden>🎁 <b id="giftCount">1</b></button>
+    <button class="iconbtn" id="fsBtn" aria-label="Full screen" title="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path id="fsPath" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
+    <button class="iconbtn" id="journalBtn" aria-label="Journal">📖</button>
+    <button class="iconbtn" id="menuBtn" aria-label="Menu">⋯</button>
+  </header>
+  <section class="chapter">
+    <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Dust Sheets</h1><span class="ch-count" id="chCount">0/5</span></div>
+    <div class="bar"><i id="chBar"></i></div>
+    <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button><button class="passbtn" id="passBtn" aria-label="Moon Pass">🌕 <b id="pts">0</b><i class="dot" id="passDot" hidden></i></button></div>
+  </section>
+  <section class="orders" id="orders"></section>
+  <main class="boardwrap" id="wrap"><div id="board"></div></main>
+  <footer class="info" id="info"></footer>
+</div>
+<div class="overlay" id="scene" hidden></div>
+<div class="overlay modal" id="modal" hidden><div class="sheetbox" id="modalBody"></div></div>
+<div id="toast"></div>
+<div id="ghost"></div>
+
+<script>
+const VERSION='v1 · 12 Oct 2026';
+/* ============================================================
+   LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
+   All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
+   ============================================================ */
+const CONFIG = {
+  cols: 7, rows: 9,
+  energyMax: 100,
+  energyRegenMs: 30000,   // sandbox: fast refill so mechanics can be tried freely
+  energyCost: 1,
+  buyEnergy: { cost: 0, step: 0, amount: 100 },  // sandbox: free refills
+  saveKey: 'larkspur-sandbox-v1',
+};
+
+/* ---------- merge chains ---------- */
+const CHAINS = {
+  P:{name:'Papers', items:[
+    {e:'📄',n:'Torn Scrap'},{e:'📃',n:'Note'},{e:'✉️',n:'Envelope'},{e:'📨',n:'Letter Bundle'},
+    {e:'📔',n:'Diary'},{e:'📚',n:'Diary Stack'},{e:'🗃️',n:'Archive Box'}]},
+  F:{name:'Fabric', items:[
+    {e:'🧵',n:'Thread'},{e:'🧶',n:'Yarn'},{e:'🧦',n:'Odd Sock'},{e:'🧤',n:'Opera Gloves'},
+    {e:'🧣',n:'Silk Scarf'},{e:'👗',n:'Stage Gown'},{e:'🎭',n:'Costume Masks'}]},
+  T:{name:'Tools', items:[
+    {e:'🔩',n:'Bolt'},{e:'🔧',n:'Wrench'},{e:'🔨',n:'Hammer'},{e:'🪛',n:'Screwdriver'},
+    {e:'🪚',n:'Saw'},{e:'🛠️',n:'Tool Roll'},{e:'⚒️',n:"Stagehand's Tools"}]},
+  L:{name:'Lights', items:[
+    {e:'🕯️',n:'Candle Stub'},{e:'💡',n:'Bulb'},{e:'🔦',n:'Torch'},{e:'🏮',n:'Paper Lantern'},
+    {e:'🪔',n:'Oil Lamp'},{e:'🔆',n:'Spotlight'}]},
+  /* resource chains: tap twice to claim, or merge first for a bigger payout (values follow Merge Mansion's 2/6/16/40/100 curve) */
+  E:{name:'Tea Time', type:'res', claim:'energy', items:[
+    {e:'🍬',n:'Sugar Lump',v:2},{e:'🍪',n:'Biscuit',v:6},{e:'☕',n:'Cuppa',v:16},
+    {e:'🧁',n:'Cupcake',v:40},{e:'🍰',n:'Victoria Sponge',v:100}]},
+  C:{name:'Coins', type:'res', claim:'coins', items:[
+    {e:'🪙',n:'Old Penny',v:2},{e:'💷',n:'Banknote',v:5},{e:'👛',n:'Coin Purse',v:12},
+    {e:'💰',n:'Money Bag',v:30},{e:'💎',n:'Heirloom Jewel',v:75}]},
+  X:{name:'Applause', type:'res', claim:'xp', items:[
+    {e:'⭐',n:'Star',v:1},{e:'🌟',n:'Bright Star',v:3},{e:'💫',n:'Shooting Star',v:8},
+    {e:'🌠',n:'Star Shower',v:20},{e:'🏆',n:'Standing Ovation',v:50}]},
+  N:{name:'Moon Tokens', type:'res', claim:'points', items:[
+    {e:'🌑',n:'New Moon',v:1},{e:'🌒',n:'Crescent Moon',v:3},{e:'🌓',n:'Half Moon',v:7},{e:'🌕',n:'Full Moon',v:16}]},
+  H:{name:'Time Skips', type:'res', claim:'skip', items:[{e:'⏳',n:'Hourglass',v:15},{e:'⌛',n:'Sand Timer',v:60}]},
+  /* ===== sandbox mechanics ===== */
+  // 1. depleting generators (Merge Mansion chests): free taps, then gone. Two unopened crates merge into a bigger one.
+  Q:{name:'Supply Crates', gen:true, items:[
+    {e:'📦',n:'Small Crate', free:true, uses:6, drop:[['C',1,30],['E',1,25],['X',1,20],['P',1,10],['F',1,10],['V',1,5]]},
+    {e:'🗳️',n:'Big Crate', free:true, uses:14, drop:[['C',1,22],['C',2,12],['E',1,18],['E',2,10],['X',1,14],['X',2,6],['V',1,8],['H',1,10]]}]},
+  // 2. a chain whose top item becomes a limited generator, then withers into fuel
+  G:{name:'Garden', main:'Y', items:[{e:'🌱',n:'Seed'},{e:'🌿',n:'Sprout'},{e:'🪴',n:'Potted Plant'},
+    {e:'🌳',n:'Fruit Tree', gen:true, uses:10, after:['O',1], drop:[['Y',1,70],['Y',2,20],['O',1,10]]}]},
+  Y:{name:'Fruit', items:[{e:'🍒',n:'Cherries'},{e:'🍎',n:'Apple'},{e:'🍐',n:'Pear'},{e:'🍑',n:'Peach'},{e:'🥧',n:'Fruit Pie'}]},
+  O:{name:'Firewood', items:[{e:'🪵',n:'Log'}]},
+  // 3. fed generators: the bin wants a specific item (like MM's Wood Chipper); the stove burns fuel instead of energy
+  Z:{name:'Compost Bin', gen:true, items:[{e:'🗑️',n:'Compost Bin', want:true}]},
+  U:{name:'Stove', gen:true, main:'E', items:[{e:'♨️',n:'Pot-Bellied Stove', fuelled:true, drop:[['E',1,55],['E',2,30],['E',3,10],['Y',2,5]]}]},
+  // 4. power: generators next to a battery drop one level higher (coil reaches diagonals too)
+  V:{name:'Power', items:[{e:'🔋',n:'Battery',pw:1},{e:'🌀',n:'Tesla Coil',pw:2}]},
+  /* rare chains: each generator's occasional bonus drop */
+  K:{name:'Keepsakes', rare:true, items:[{e:'🔖',n:'Bookmark'},{e:'🎟️',n:'Ticket Stub'},{e:'🖼️',n:'Photograph'},{e:'📸',n:'Box Camera'}]},
+  B:{name:'Haberdashery', rare:true, items:[{e:'🔘',n:'Button'},{e:'🎀',n:'Silk Bow'},{e:'👒',n:'Bonnet'},{e:'👑',n:'Paste Tiara'}]},
+  W:{name:'Clockwork', rare:true, items:[{e:'⚙️',n:'Cog'},{e:'🗝️',n:'Wind-up Key'},{e:'⏱️',n:'Stopwatch'},{e:'🕰️',n:'Mantel Clock'}]},
+  R:{name:'Music', rare:true, items:[{e:'🎵',n:'Sheet Music'},{e:'🎶',n:'Duet Score'},{e:'📻',n:'Wireless Set'},{e:'🎻',n:'Violin'}]},
+  M:{name:'The Great Odelia', story:true, items:[
+    {e:'🃏',n:'Playing Card', lore:'The ace of moons. There is no such card. This one was printed for a single show, in 1968.'},
+    {e:'🎴',n:'Trick Deck', lore:'Fifty-two cards, every one the ace of moons. A note in the box: “Nobody checks. Nobody ever checks.”'},
+    {e:'🪄',n:'Wand', lore:'Ebony with a silver cap. Her initials, O.L., are worn almost smooth where her thumb rested.'},
+    {e:'🎩',n:'Top Hat', lore:'Felix’s. The label says “If found, return to the better magician.” It is crossed out. Underneath, in Odile’s hand: “I have.”'},
+    {e:'🐇',n:'White Rabbit', lore:'A programme note: “The rabbit is played by Bertrand.” Bertrand had a pension and his own dressing room.'},
+    {e:'🕊️',n:'Paper Dove', lore:'Folded from one of Felix’s letters. You can still read the word “sorry” along one wing.'},
+    {e:'🔮',n:'Crystal Ball', lore:'Not crystal. Glass, polished by hand until it holds the whole attic upside down.'},
+    {e:'🌙',n:'The Vanishing Moon', lore:'The full method, written out. Two pages. The second page is a drawing of a black cat.'}]},
+  /* generators */
+  gD:{name:'Paper Tray', gen:true, main:'P', rare:'K', items:[
+    {e:'🗂️',n:'Paper Tray', drop:[['P',1,75],['P',2,10],['K',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,44],['P',2,28],['P',3,10],['K',1,9],['K',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
+  gS:{name:'Sewing Basket', gen:true, main:'F', rare:'B', items:[
+    {e:'🧺',n:'Sewing Basket', drop:[['F',1,75],['F',2,10],['B',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🪡',n:'Sewing Kit', drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
+  gT:{name:'Toolbox', gen:true, main:'T', rare:'W', items:[
+    {e:'🧰',n:'Toolbox', drop:[['V',1,6],['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🗜️',n:'Workbench', drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
+  gL:{name:'Fuse Box', gen:true, main:'L', rare:'R', items:[
+    {e:'🔌',n:'Fuse Box', drop:[['L',1,75],['L',2,10],['R',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,44],['L',2,28],['L',3,10],['R',1,9],['R',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
+  gM:{name:'Circus Trunk', gen:true, main:'M', rare:'X', items:[
+    {e:'🎪',n:'Circus Trunk', drop:[['M',1,80],['M',2,8],['X',1,7],['C',1,5],['N',1,5]]},
+    {e:'🪞',n:'Magic Mirror', drop:[['M',1,50],['M',2,26],['M',3,10],['X',1,8],['X',2,3],['C',1,3],['N',1,5]]}]},
+  gK:{name:'Kettle', gen:true, main:'E', items:[
+    {e:'🫖',n:'Kettle', free:true, charges:3, rechargeMs:480000, drop:[['E',1,70],['E',2,25],['E',3,5]]}]},
+};
+
+/* ---------- board: o=open, w=cobweb (visible, merge onto it to free), b=box (hidden until a merge next to it) ---------- */
+const LAYOUT = [
+  'oQ1 o. oV1 o. oQ1 o. oG1',
+  'oG1 o. o. o. o. o. oG1',
+  'o. o. oZ1 o. oU1 o. o.',
+  'o. o. o. o. o. o. o.',
+  'oO1 o. o. o. o. o. oP1',
+  'o. o. o. o. o. o. o.',
+  'oV1 o. o. o. o. o. oF1',
+  'oG2 o. o. o. o. o. oT1',
+  'oE1 ogD1 o. ogT1 o. ogS1 oE1',
+];
+const zoneOfRow = r => 0; // sandbox: whole board open
+
+/* ---------- cast ---------- */
+const CAST = {
+  N:{name:'', av:''},
+  T:{name:'Theo', av:'🧔'},
+  P:{name:'Mrs Pike', av:'👵'},
+  M:{name:'Mothball', av:'🐈‍⬛'},
+  O:{name:'Odile’s note', av:'📜'},
+  F:{name:'Felix’s letter', av:'✉️'},
+  S:{name:'Jumble Sale', av:'🏷️'},
+};
+
+/* ---------- story ---------- */
+const CHAPTERS = [
+  { title:'Mechanics test bench', zone:0, gifts:[],
+    intro:[['N','Sandbox. No story, just mechanics to try:<br>• 📦 crates run out<br>• 🌱 grow a tree, harvest it, it withers to 🪵<br>• 🗑️ feed the bin, ♨️ fuel the stove<br>• 🔋 power the generators next to it']],
+    outro:[] },
+];
+
+/* ---------- orders ---------- */
+const TASKS = [
+];
+/* stable ids: original orders keep 0..27 so existing saves line up; orders added later (x:1) get 100+ */
+{ let n=0, m=100; TASKS.forEach(t=>{ t.id = t.x ? m++ : n++; }); }
+/* order rewards land on the board as claimable items (coins + applause), like Merge Mansion */
+function taskRewards(t){
+  const c = t.coins>=30?3 : t.coins>=14?2 : 1;
+  const x = t.ch>=4?3 : t.ch>=2?2 : 1;
+  return t.who==='O' ? [['C',4],['X',4],['N',3]] : [['C',c],['X',x],['N',t.ch>=3?2:1]];
+}
+/* Jumble Sale: side orders that never run out, built from generators you already have,
+   so there is always something to work on whatever happens to the story orders */
+function sideGens(){ const g=new Set(); S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&isGen(c.it)){ const m=CHAINS[c.it.k].main; if(m&&m!=='E'&&m!=='M') g.add(m); } }); return [...g]; }
+function makeSide(){
+  const pool=sideGens(); if(!pool.length) return null;
+  const hi = S.ch>=4?4 : S.ch>=2?3 : 2;
+  const pick=()=>[pool[Math.floor(Math.random()*pool.length)], 1+Math.floor(Math.random()*hi)];
+  // never ask for something that is already sitting on the board: a fresh order should take some work
+  let need;
+  for(let tries=0;tries<20;tries++){
+    need=[pick()]; if(Math.random()<.35){ const b=pick(); b[1]=Math.max(1,b[1]-1); need.push(b); }
+    if(!need.every(([k,l])=>openCount(k,l)>0)) break;
+  }
+  const size=need.reduce((a,[,l])=>a+(1<<(l-1)),0);
+  const rw=[['C', size>=6?2:1]]; if(Math.random()<.25) rw.push(['N',1]); else if(Math.random()<.4) rw.push(['X',1]);
+  S.sideN=(S.sideN||0)+1;
+  return {id:'s'+S.sideN, who:'S', side:true, need, rw, say:'For the church jumble sale. Anything you can spare.'};
+}
+function ensureSide(){ S.side=S.side||[]; while(S.side.length<2){ const o=makeSide(); if(!o) break; S.side.push(o); } }
+
+/* Moon Pass: event points from Full Moons unlock tiers of rewards outside the board */
+/* every third tier also unlocks one of Felix's letters (a side story told from his end) */
+const PASS=[
+  {pts:15, rw:[['E',2]]},{pts:30, rw:[['H',1]]},{pts:50, rw:[['C',2]]},{pts:65, rw:[['E',3]]},{pts:80, rw:[['H',1]]},
+  {pts:95, rw:[['X',2]]},{pts:110, rw:[['E',3]]},{pts:130, rw:[['C',3]]},{pts:145, rw:[['H',2]]},{pts:160, rw:[['E',4]]},
+  {pts:185, rw:[['C',3],['X',2]]},{pts:210, rw:[['H',2]]},{pts:230, rw:[['E',4]]},{pts:255, rw:[['C',4]]},{pts:290, rw:[['E',5],['H',2]]},
+];
+const FELIX=[
+  [['N','A letter is tucked into the reward bundle. Vienna, 1970.'],['F','“Odelia. I have the method and no idea what to do with it. When I make the moon vanish, they look at me. They’re supposed to look up.” — F.']],
+  [['F','“Paris, 1973. I did the Moon tonight. It vanished perfectly and nobody gasped. I don’t understand. It’s the same trick.” — F.']],
+  [['F','“London, 1979. I came to the stage door. You’d gone. They said you’d given it all up for sewing. I bought a ticket for a show that wasn’t on.” — F.']],
+  [['F','“1985. I have a theory. You never hid the moon. You hid the audience from themselves for a second, then gave them back. I can’t do that part.” — F.']],
+  [['F','“Last one, I think. I’m keeping seat A1 warm. If you ever do it again, I’ll be looking up.” — F.'],['M','<em>(Mothball sits on the letter until you’ve finished reading it.)</em>']],
+];
+/* the first time you claim each moon level, Odile's moon notebook has something to say */
+const MOON_NOTES=[
+  [['N','Folded inside the token: a strip of paper in Odile’s hand.'],['O','“New moon. Nothing to see. That’s the best time to set up.”']],
+  [['O','“Crescent. Show them a sliver and they fill in the rest themselves. People love to finish a picture.”']],
+  [['O','“Half moon. Half the trick is the method. The other half is the reason. Felix only ever had the first half.”']],
+  [['O','“Full moon. Everyone looks up at once. That’s the moment, Nell. Not the vanishing. The looking.”']],
+];
+function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i]).length; }
+
+/* stage level: claimed applause (XP) fills it; each level-up drops a gift */
+const STAGE_XP=[0,6,15,28,45,66,92,124,162,206,256,316,386,466];
+function stageOf(xp){ let l=1; while(l<60 && xp>=stageNeed(l)) l++; return l; }
+function stageNeed(l){ return l<STAGE_XP.length ? STAGE_XP[l] : STAGE_XP[STAGE_XP.length-1]+(l-STAGE_XP.length+1)*80; }
+function stageReward(l){ return l%5===0 ? [['E',3],['C',2]] : l%2 ? [['C',2]] : [['E',2]]; }
+
+/* ============================================================ sound — all synthesised with Web Audio, no files
+   Everything runs through a soft master chain (high-shelf cut, gentle compressor) so it stays
+   warm on phone speakers. Voices are filtered, detuned pairs with soft attacks: no raw square or
+   bright partials, which is what makes synth audio sound "8-bit". */
+const SND = (()=>{
+  const PREF_KEY='larkspur-attic-audio';
+  let pref={music:true,sfx:true};
+  try{ const p=JSON.parse(localStorage.getItem(PREF_KEY)||'null'); if(p) pref={...pref,...p}; }catch(e){}
+  let ctx=null, out, sfxG, musG, revIn, noiseBuf, timer=null, nextT=0, step=0, lastNote=57, live=0;
+  const MAX_SFX_VOICES=28;
+  const mtof=m=>440*Math.pow(2,(m-69)/12);
+  const SFX_VOL=.8, MUS_VOL=.75;
+
+  function init(){
+    if(ctx){ if(ctx.state==='suspended') ctx.resume(); return; }
+    const AC=window.AudioContext||window.webkitAudioContext;
+    try{ ctx=new AC({latencyHint:'playback'}); }catch(e){ try{ ctx=new AC(); }catch(e2){ return; } }
+    // master: warm shelf + gentle glue compression
+    const shelf=ctx.createBiquadFilter(); shelf.type='highshelf'; shelf.frequency.value=3200; shelf.gain.value=-9;
+    const top=ctx.createBiquadFilter(); top.type='lowpass'; top.frequency.value=7500; top.Q.value=.5;
+    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=90; hp.Q.value=.5; // phone speakers distort below this
+    const comp=ctx.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=12; comp.ratio.value=2.5; comp.attack.value=.03; comp.release.value=.25;
+    out=ctx.createGain(); out.gain.value=.7; // headroom so nothing ever hits 0 dBFS
+    out.connect(hp); hp.connect(shelf); shelf.connect(top); top.connect(comp); comp.connect(ctx.destination);
+    // long soft reverb, darkened on the way in
+    const rev=ctx.createConvolver(), len=Math.floor(ctx.sampleRate*2.2), ir=ctx.createBuffer(2,len,ctx.sampleRate);
+    for(let c=0;c<2;c++){ const d=ir.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6); }
+    rev.buffer=ir;
+    revIn=ctx.createBiquadFilter(); revIn.type='lowpass'; revIn.frequency.value=2400;
+    const revOut=ctx.createGain(); revOut.gain.value=.5;
+    revIn.connect(rev); rev.connect(revOut); revOut.connect(out);
+    // sfx bus
+    sfxG=ctx.createGain(); sfxG.gain.value=pref.sfx?SFX_VOL:0;
+    const sfxLP=ctx.createBiquadFilter(); sfxLP.type='lowpass'; sfxLP.frequency.value=3400; sfxLP.Q.value=.4;
+    const sfxSend=ctx.createGain(); sfxSend.gain.value=.35;
+    sfxG.connect(sfxLP); sfxLP.connect(out); sfxLP.connect(sfxSend); sfxSend.connect(revIn);
+    // music bus: low-pass → reverb + tape echo
+    musG=ctx.createGain(); musG.gain.value=0;
+    const mLP=ctx.createBiquadFilter(); mLP.type='lowpass'; mLP.frequency.value=2200; mLP.Q.value=.3;
+    musG.connect(mLP);
+    const chorusOut=ctx.createGain(); mLP.connect(chorusOut);
+    chorusOut.connect(out);
+    const mSend=ctx.createGain(); mSend.gain.value=.55; chorusOut.connect(mSend); mSend.connect(revIn);
+    const dly=ctx.createDelay(2), fb=ctx.createGain(), dlp=ctx.createBiquadFilter(), wet=ctx.createGain();
+    dly.delayTime.value=BEAT*.75; fb.gain.value=.3; dlp.type='lowpass'; dlp.frequency.value=1300; wet.gain.value=.22;
+    chorusOut.connect(dly); dly.connect(dlp); dlp.connect(fb); fb.connect(dly); dlp.connect(wet); wet.connect(out); wet.connect(revIn);
+    noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
+    const nd=noiseBuf.getChannelData(0); let b=0; for(let i=0;i<nd.length;i++){ b=.97*b+.03*(Math.random()*2-1); nd[i]=b*6; } // brown-ish noise: soft, not hissy
+    if(pref.music) startMusic();
+  }
+
+  /* one soft synth voice: detuned pair through an enveloped low-pass */
+  function voice({m,f,t=0,dur=.4,g=.1,a=.012,wave='triangle',det=7,lp=1800,lpEnd=0,glide=0,dest=sfxG,abs=false,sub=0}){
+    if(!ctx) return;
+    if(!abs && live>=MAX_SFX_VOICES) return;
+    a=Math.max(a,.008);
+    const t0=abs?Math.max(t,ctx.currentTime+.02):ctx.currentTime+.02+t, fr=f||mtof(m), e=ctx.createGain(), fl=ctx.createBiquadFilter(), stop=t0+dur+.12;
+    fl.type='lowpass'; fl.Q.value=.6; fl.frequency.setValueAtTime(lp,t0);
+    if(lpEnd) fl.frequency.exponentialRampToValueAtTime(lpEnd,t0+dur);
+    e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+a); e.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    const oscs=[[-det,wave],[det,wave]]; if(sub) oscs.push([0,'sine',sub]);
+    oscs.forEach(([dt,w,lvl])=>{
+      const o=ctx.createOscillator(), og=ctx.createGain(); o.type=w; o.frequency.setValueAtTime(lvl?fr/2:fr,t0); o.detune.value=dt;
+      if(glide) o.frequency.exponentialRampToValueAtTime((lvl?glide/2:glide),t0+dur*.7);
+      og.gain.value=lvl||.5; o.connect(og); og.connect(fl); o.start(t0); o.stop(stop);
+      if(!abs){ live++; o.onended=()=>{ live--; o.disconnect(); }; } else o.onended=()=>o.disconnect();
+    });
+    fl.connect(e); e.connect(dest);
+  }
+  /* mallet: sine with a quiet 4th partial, quick but rounded decay (marimba-ish) */
+  const mallet=(m,t,g=.12,dur=.5)=>{ voice({m,t,dur,g,a:.006,wave:'sine',det:3,lp:2600,lpEnd:900}); voice({f:mtof(m)*4,t,dur:dur*.18,g:g*.07,a:.003,wave:'sine',det:0,lp:3000}); };
+  function puff({t=0,dur=.25,g=.06,f=900,to=300}){
+    if(!ctx) return;
+    const t0=ctx.currentTime+.02+t, s=ctx.createBufferSource(), fl=ctx.createBiquadFilter(), e=ctx.createGain();
+    s.buffer=noiseBuf; fl.type='lowpass'; fl.frequency.setValueAtTime(f,t0); fl.frequency.exponentialRampToValueAtTime(to,t0+dur);
+    e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+.02); e.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    s.connect(fl); fl.connect(e); e.connect(sfxG); s.start(t0); s.stop(t0+dur+.05);
+  }
+
+  let lastPlay={};
+  function play(name,lv=1){
+    if(!ctx||!pref.sfx) return;
+    const n=performance.now(); if(lastPlay[name]&&n-lastPlay[name]<50) return; lastPlay[name]=n;
+    switch(name){
+      case 'tap':  voice({f:440,glide:330,dur:.07,g:.05,a:.004,wave:'sine',det:0,lp:1400}); break;
+      case 'move': voice({f:200,glide:140,dur:.12,g:.08,a:.006,wave:'sine',det:0,lp:900}); puff({dur:.1,g:.03,f:700,to:250}); break;
+      case 'spawn': { const f=260+lv*35; voice({f,glide:f*1.5,dur:.18,g:.11,a:.01,wave:'sine',det:4,lp:1600}); puff({dur:.14,g:.025,f:900,to:300}); break; }
+      case 'merge': { // warm major-chord swell, rising with level
+        const base=55+Math.min(lv,8)*2;
+        [0,4,7,12].forEach((iv,i)=>voice({m:base+iv,t:i*.035,dur:1.0,g:.06,a:.02,wave:'triangle',det:8,lp:2400,lpEnd:700}));
+        voice({m:base-12,dur:.35,g:.12,a:.01,wave:'sine',det:0,lp:600}); break; }
+      case 'reveal': puff({dur:.35,g:.07,f:1400,to:250}); voice({f:150,glide:95,dur:.22,g:.07,a:.01,wave:'sine',det:0,lp:500}); break;
+      case 'unweb': [76,79,83].forEach((m,i)=>voice({m,t:.05+i*.06,dur:.7,g:.025,a:.05,wave:'sine',det:6,lp:3000})); break;
+      case 'coins': [67,71,74,79].forEach((m,i)=>mallet(m,i*.075,.11,.55)); break;
+      case 'coin': mallet(74,0,.1,.4); mallet(79,.07,.09,.5); break;
+      case 'drink': voice({f:260,glide:200,dur:.1,g:.07,a:.01,wave:'sine',det:0,lp:900}); voice({f:280,glide:210,t:.13,dur:.12,g:.07,a:.01,wave:'sine',det:0,lp:900}); puff({t:.02,dur:.25,g:.03,f:600,to:200}); break;
+      case 'nope': voice({f:150,glide:110,dur:.2,g:.09,a:.008,wave:'triangle',det:5,lp:500}); break;
+      case 'page': puff({dur:.16,g:.035,f:1800,to:600}); break;
+      case 'gift': [67,71,74,79,83].forEach((m,i)=>mallet(m,i*.09,.09,.6)); break;
+      case 'magic': [60,64,67,71,74].forEach((m,i)=>voice({m:m+12,t:i*.06,dur:2.2,g:.03,a:.35,wave:'sawtooth',det:12,lp:500,lpEnd:2000})); [83,86,91].forEach((m,i)=>voice({m,t:.4+i*.12,dur:1.2,g:.018,a:.08,wave:'sine',det:5,lp:3000})); break;
+      case 'fanfare': // soft synth-brass: G then C, filtered saws swelling open
+        [[55,59,62,67],[60,64,67,72]].forEach((ch,k)=>ch.forEach(m=>voice({m,t:k*.55,dur:k?2.0:.6,g:.035,a:.06,wave:'sawtooth',det:10,lp:k?600:500,lpEnd:k?1800:1200})));
+        voice({m:36,t:.55,dur:2.0,g:.16,a:.03,wave:'sine',det:0,lp:400}); break;
+    }
+  }
+
+  /* --- background music: slow, warm 4/4 chill — pads, sub bass, soft keys, a faint arpeggio --- */
+  const BPM=76, BEAT=60/BPM;
+  const PROGS=[
+    [[45,[57,60,64,67]],[41,[57,60,64,65]],[36,[55,60,64,67]],[43,[55,59,62,65]]],   // Am7  Fmaj7  Cadd  G7sus-ish
+    [[38,[57,60,62,65]],[41,[57,60,64,65]],[40,[56,59,62,64]],[40,[56,59,64,68]]],   // Dm7  Fmaj7  E7   E
+    [[36,[55,59,64,67]],[45,[57,60,64,67]],[41,[57,60,65,69]],[43,[55,59,62,67]]],   // Cmaj7 Am7  F    G
+    [[36,[55,59,64,67]],[40,[55,59,64,67]],[41,[57,60,64,69]],[43,[55,59,62,65]]],   // Cmaj7 Em7  Fmaj7 G7
+  ];
+  const SCALE=[57,59,60,62,64,65,67,69,71,72];
+  function pad(notes,t,dur){
+    t=Math.max(t,ctx.currentTime+.02);
+    const fl=ctx.createBiquadFilter(), e=ctx.createGain(), stop=t+dur+.2;
+    fl.type='lowpass'; fl.Q.value=.5; fl.frequency.setValueAtTime(520,t); fl.frequency.linearRampToValueAtTime(900,t+dur*.5); fl.frequency.linearRampToValueAtTime(560,t+dur);
+    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(.022,t+1.4); e.gain.setValueAtTime(.022,t+dur-1); e.gain.linearRampToValueAtTime(0,t+dur+.15);
+    notes.forEach((m,i)=>{ const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=mtof(m); o.detune.value=i%2?9:-9; o.connect(fl); o.start(t); o.stop(stop); o.onended=()=>o.disconnect(); });
+    const s=ctx.createOscillator(), sg=ctx.createGain(); s.type='sine'; s.frequency.value=mtof(notes[0]); sg.gain.value=.9; s.connect(sg); sg.connect(fl); s.start(t); s.stop(stop); s.onended=()=>s.disconnect();
+    fl.connect(e); e.connect(musG);
+  }
+  function bass(m,t,dur,g=.17){ voice({m,t,abs:true,dur,g,a:.06,wave:'sine',det:0,lp:300,sub:0,dest:musG}); voice({m,t,abs:true,dur:dur*.6,g:g*.18,a:.05,wave:'triangle',det:3,lp:420,dest:musG}); }
+  function keys(m,t,g,dur){ voice({m,t,abs:true,dur,g,a:.025,wave:'triangle',det:6,lp:1500,lpEnd:550,dest:musG}); voice({m:m+12,t,abs:true,dur:dur*.4,g:g*.15,a:.02,wave:'sine',det:3,lp:2000,dest:musG}); }
+  function scheduleBeat(t){
+    const bar=Math.floor(step/4), beat=step%4, phrase=Math.floor(bar/4);
+    const prog=PROGS[phrase%PROGS.length], [root,chord]=prog[bar%4];
+    if(beat===0){ pad(chord,t,BEAT*4.6); bass(root,t,BEAT*2.8); }
+    if(beat===2 && Math.random()<.5) bass(root+(Math.random()<.5?7:12),t,BEAT*1.6,.1);
+    // faint arpeggio in alternate phrases, eighth notes
+    if(phrase%2===1){ [0,.5].forEach(h=>{ const n=chord[(step*2+h*2)%chord.length]+12; voice({m:n,t:t+h*BEAT,abs:true,dur:BEAT*.9,g:.012,a:.01,wave:'triangle',det:5,lp:1700,lpEnd:600,dest:musG}); }); }
+    // melody: sparse, legato, mid register
+    const p = beat===0?.7 : beat===2?.4 : .15;
+    if(Math.random()<p && !(bar%4===3 && beat>1)){
+      const pool = beat===0 ? chord.map(c=>c+12).concat(chord.filter(c=>c>=57)) : SCALE;
+      let target=pool[Math.floor(Math.random()*pool.length)];
+      if(Math.abs(target-lastNote)>7) target=pool.reduce((a,b)=>Math.abs(b-lastNote)<Math.abs(a-lastNote)?b:a);
+      lastNote=target;
+      keys(target,t,.07,BEAT*(beat===0?3:2));
+    }
+    step++;
+  }
+  function startMusic(){
+    if(!ctx||timer) return;
+    musG.gain.cancelScheduledValues(ctx.currentTime);
+    musG.gain.setValueAtTime(musG.gain.value,ctx.currentTime);
+    musG.gain.linearRampToValueAtTime(MUS_VOL,ctx.currentTime+3);
+    nextT=ctx.currentTime+.1; step=0;
+    timer=setInterval(()=>{ if(nextT<ctx.currentTime+.05) nextT=ctx.currentTime+.1; while(nextT<ctx.currentTime+.6){ scheduleBeat(nextT); nextT+=BEAT; } },100);
+  }
+  function stopMusic(){
+    if(!ctx) return;
+    musG.gain.cancelScheduledValues(ctx.currentTime);
+    musG.gain.setValueAtTime(musG.gain.value,ctx.currentTime);
+    musG.gain.linearRampToValueAtTime(0,ctx.currentTime+.8);
+    clearInterval(timer); timer=null;
+  }
+  function savePref(){ try{ localStorage.setItem(PREF_KEY,JSON.stringify(pref)); }catch(e){} }
+  function setMusic(on){ pref.music=on; savePref(); if(!ctx) return; on?startMusic():stopMusic(); }
+  function setSfx(on){ pref.sfx=on; savePref(); if(sfxG) sfxG.gain.value=on?SFX_VOL:0; }
+  document.addEventListener('visibilitychange',()=>{ if(!ctx) return; document.hidden?ctx.suspend():ctx.resume(); });
+  const unlock=()=>{ init(); };
+  document.addEventListener('pointerdown',unlock,{capture:true});
+  document.addEventListener('keydown',unlock,{capture:true});
+  return {play,setMusic,setSfx,get pref(){return pref;}};
+})();
+
+/* ============================================================ state */
+let S, sel = -1, fx = {};
+const $ = id => document.getElementById(id);
+const now = () => Date.now();
+const def = it => CHAINS[it.k].items[it.l-1];
+const maxL = k => CHAINS[k].items.length;
+const isGen = it => !!CHAINS[it.k].gen || !!CHAINS[it.k].items[it.l-1].gen;
+const key = (k,l) => k+l;
+
+function mkItem(k,l){
+  const it={k,l};
+  const d=CHAINS[k].items[l-1];
+  if(CHAINS[k].gen && d.charges){ it.ch=d.charges; it.t=now(); }
+  if(d.uses) it.left=d.uses;
+  if(d.fuelled) it.fuel=0;
+  if(d.want) it.want=pickWant();
+  if(k==='N' && typeof S!=='undefined' && S && !(S.moonSeen||{})[l] && !moonPending()) it.st=1;
+  return it;
+}
+/* a story moon is waiting to be tapped */
+const WANTS=[['P',1],['P',2],['F',1],['F',2],['T',1],['T',2],['Y',1],['Y',2]];
+function pickWant(){ return WANTS[Math.floor(Math.random()*WANTS.length)]; }
+const FUEL={O:4,P:1};
+function fuelValue(it){ return FUEL[it.k] ? FUEL[it.k]*it.l : 0; }
+/* power: a battery powers the 4 tiles next to it, a Tesla Coil all 8 */
+function poweredCell(i){
+  const [r,c]=rc(i);
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+    if(!dr&&!dc) continue; const rr=r+dr, cc=c+dc; if(rr<0||rr>8||cc<0||cc>6) continue;
+    const n=S.cells[rr*7+cc]; if(n.s!=='open'||!n.it) continue; const d=CHAINS[n.it.k].items[n.it.l-1];
+    if(d.pw===2 || (d.pw===1 && (dr===0||dc===0))) return true;
+  }
+  return false;
+}
+function moonPending(){ return typeof S!=='undefined' && S && S.cells.some(c=>c.it&&c.it.st); }
+function freshState(){
+  const cells=[];
+  const map={o:'open',w:'web',b:'box'};
+  LAYOUT.forEach((row,r)=>row.trim().split(/\s+/).forEach(tok=>{
+    const st=map[tok[0]], rest=tok.slice(1);
+    let it=null;
+    if(rest!=='.'){ const m=rest.match(/^([a-zA-Z]+?)(\d)$/); it=mkItem(m[1],+m[2]); }
+    const z=zoneOfRow(r);
+    cells.push({s: z>0?'sheet':st, ps:st, it, z});
+  }));
+  const disc={};
+  cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
+  return {v:1, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
+}
+function load(){
+  try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
+      s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[]; return s; } } }catch(e){}
+  return freshState();
+}
+function save(){ try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} }
+
+/* ============================================================ energy & charges */
+function tickEnergy(){
+  const M=CONFIG.energyMax, R=CONFIG.energyRegenMs;
+  if(S.energy>=M){ S.eT=now(); return; }
+  const g=Math.floor((now()-S.eT)/R);
+  if(g>0){ S.energy=Math.min(M,S.energy+g); S.eT+=g*R; if(S.energy>=M) S.eT=now(); }
+}
+function spendEnergy(n){ if(S.energy>=CONFIG.energyMax) S.eT=now(); S.energy-=n; }
+function refreshCharges(it){
+  const d=def(it); if(!d.charges) return;
+  if(it.ch>=d.charges){ it.t=now(); return; }
+  const g=Math.floor((now()-it.t)/d.rechargeMs);
+  if(g>0){ it.ch=Math.min(d.charges,it.ch+g); it.t+=g*d.rechargeMs; if(it.ch>=d.charges) it.t=now(); }
+}
+function nextChargeIn(it){ const d=def(it); return Math.max(0, Math.ceil((d.rechargeMs-(now()-it.t))/1000)); }
+
+/* ============================================================ board logic */
+const rc = i => [Math.floor(i/CONFIG.cols), i%CONFIG.cols];
+function neighbours(i){
+  const [r,c]=rc(i), out=[];
+  if(r>0) out.push(i-7); if(r<8) out.push(i+7); if(c>0) out.push(i-1); if(c<6) out.push(i+1);
+  return out;
+}
+function revealCell(i){
+  const c=S.cells[i];
+  if(c.s!=='box') return false;
+  c.s = (c.it && !isGen(c.it)) ? 'web' : 'open';
+  if(c.s==='open' && c.it) discover(c.it, true);
+  fx[i]='reveal';
+  SND.play('reveal');
+  return true;
+}
+function revealAround(i){ neighbours(i).forEach(revealCell); }
+
+function nearestEmpty(from){
+  const [r0,c0]=rc(from); let best=-1, bd=1e9;
+  S.cells.forEach((c,i)=>{
+    if(c.s!=='open'||c.it) return;
+    const [r,cc]=rc(i); const d=(r-r0)**2+(cc-c0)**2 + Math.random()*.01;
+    if(d<bd){bd=d;best=i;}
+  });
+  return best;
+}
+function pickDrop(drop){
+  const tot=drop.reduce((a,d)=>a+d[2],0); let x=Math.random()*tot;
+  for(const d of drop){ x-=d[2]; if(x<=0) return d; }
+  return drop[0];
+}
+function discover(it, quiet){
+  const k=key(it.k,it.l);
+  if(S.disc[k]) return;
+  S.disc[k]=1;
+  if(quiet) return;
+  const d=def(it), ch=CHAINS[it.k];
+  if(ch.story && d.lore){ setTimeout(()=>showLore(it),350); }
+  else toast(`New: ${d.e} <b>${d.n}</b>`);
+}
+
+function produce(i){
+  const it=S.cells[i].it, d=def(it);
+  if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1]; SND.play('nope'); toast(`${d.e} Wants ${w.e} ${w.n}. Drag one onto it for seeds.`); return; }
+  if(d.fuelled){ if(!(it.fuel>0)){ SND.play('nope'); toast(`${d.e} The stove is cold. Drag a 🪵 log or some papers onto it.`); return; } }
+  else if(d.charges){
+    refreshCharges(it);
+    if(it.ch<=0){ SND.play('nope'); toast(`${d.e} The ${d.n.toLowerCase()} is boiling. Ready in ${nextChargeIn(it)}s.`); return; }
+  } else if(!d.free && S.energy<CONFIG.energyCost){
+    SND.play('nope'); toast('Out of energy. Refill from the ⋯ menu (free in the sandbox).'); return;
+  }
+  const t=nearestEmpty(i);
+  if(t<0){ SND.play('nope'); toast('No room left. Merge or sell something first.'); fx[i]='pulse'; render(); return; }
+  if(d.fuelled) it.fuel--;
+  else if(d.charges){ if(it.ch>=d.charges) it.t=now(); it.ch--; }
+  else if(!d.free) spendEnergy(CONFIG.energyCost);
+  let [k,l]=pickDrop(d.drop);
+  if(k==='N' && moonPending()){ const alt=d.drop.filter(x=>x[0]!=='N'); [k,l]=pickDrop(alt); }
+  const boosted = poweredCell(i) && l<maxL(k);
+  if(boosted) l++;
+  S.cells[t].it=mkItem(k,l);
+  fx[i]='pulse'; fx[t]='spawn';
+  SND.play('spawn',l); if(boosted) SND.play('unweb');
+  discover(S.cells[t].it);
+  if(d.uses){
+    it.left--;
+    if(it.left<=0){
+      S.cells[i].it = d.after ? mkItem(d.after[0],d.after[1]) : null; fx[i]='reveal'; SND.play('reveal');
+      if(sel===i && !S.cells[i].it) sel=-1;
+      toast(d.after ? `${d.e} ${d.n} is spent. It leaves a ${CHAINS[d.after[0]].items[d.after[1]-1].e} behind.` : `${d.e} ${d.n} is empty and falls apart.`);
+    }
+  }
+  save(); render();
+}
+/* feeding: drop the wanted item on the bin, or fuel on the stove */
+function feed(a,b){
+  const A=S.cells[a].it, B=S.cells[b].it, T=def(B);
+  if(T.want){
+    const [wk,wl]=B.want, w=CHAINS[wk].items[wl-1];
+    if(A.k!==wk||A.l!==wl){ SND.play('nope'); toast(`${T.e} It wants ${w.e} ${w.n}, not that.`); return true; }
+    S.cells[a].it=null;
+    const t=nearestEmpty(b);
+    let l=Math.random()<.8?1:2; if(poweredCell(b)) l++;
+    if(t>=0){ S.cells[t].it=mkItem('G',l); fx[t]='spawn'; discover(S.cells[t].it); } else S.gifts.push(['G',l]);
+    B.want=pickWant(); fx[b]='pop'; SND.play('merge',2);
+    toast(`${T.e} Composted. Out pops a ${CHAINS.G.items[l-1].e}`); save(); render(); return true;
+  }
+  if(T.fuelled){
+    const fv=fuelValue(A);
+    if(!fv){ SND.play('nope'); toast(`${T.e} That won’t burn. Try a 🪵 log or papers.`); return true; }
+    S.cells[a].it=null; B.fuel=(B.fuel||0)+fv; fx[b]='pop'; SND.play('reveal');
+    toast(`${T.e} +${fv} fuel (${B.fuel} total)`); save(); render(); return true;
+  }
+  return false;
+}
+function claim(i){
+  const it=S.cells[i].it, d=def(it), kind=CHAINS[it.k].claim; delete it.st;
+  S.cells[i].it=null; sel=-1; fx[i]='pulse';
+  if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
+  else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
+  else if(kind==='points'){
+    S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} Moon Pass points${passReady()?' · a reward is ready 🌕':''}`);
+    S.moonSeen=S.moonSeen||{};
+    if(!S.moonSeen[it.l]){ S.moonSeen[it.l]=1; save(); setTimeout(()=>playScene({title:'Odile’s moon notebook', sub:d.n, lines:MOON_NOTES[it.l-1]}),250); }
+  }
+  else if(kind==='skip'){ timeSkip(d.v); SND.play('unweb'); toast(`${d.e} Skipped ${d.v} minutes`); }
+  else { SND.play('unweb'); toast(`${d.e} +${d.v} applause`); addXP(d.v); }
+  save(); render();
+}
+/* time skip: fast-forwards energy refill and every generator cooldown */
+function timeSkip(min){
+  const ms=min*60000; tickEnergy(); if(S.energy<CONFIG.energyMax) S.eT-=ms;
+  S.cells.forEach(c=>{ if(c.it&&isGen(c.it)&&def(c.it).charges){ c.it.t-=ms; refreshCharges(c.it); } });
+  tickEnergy();
+}
+function addXP(v){
+  const before=stageOf(S.xp); S.xp+=v; const after=stageOf(S.xp);
+  for(let l=before+1;l<=after;l++){
+    stageReward(l).forEach(r=>S.gifts.push(r));
+    setTimeout(()=>{ SND.play('gift'); toast(`⭐ Stage level ${l}! A gift is waiting 🎁`,3000); },300);
+  }
+}
+function energyPrice(){ const b=CONFIG.buyEnergy; return b.cost+(S.buys||0)*b.step; }
+function isRes(it){ return CHAINS[it.k].type==='res'; }
+/* put items on the board near the bottom; anything that doesn't fit goes to gifts */
+function dropItems(list, near=59){
+  let overflow=0;
+  let held=0;
+  list.forEach(([k,l])=>{ if(k==='N' && moonPending()){ S.gifts.push([k,l]); held++; return; } const t=nearestEmpty(near); if(t<0){ S.gifts.push([k,l]); overflow++; return; } S.cells[t].it=mkItem(k,l); fx[t]='spawn'; discover(S.cells[t].it); });
+  if(overflow) toast(`No room for ${overflow} reward${overflow>1?'s':''}. Find ${overflow>1?'them':'it'} in 🎁`);
+  if(held) toast(`🌙 Moon reward saved in 🎁 until you tap the glowing moon`);
+}
+
+function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
+
+function drop(a,b){
+  if(b<0||a===b){ return; }
+  const A=S.cells[a], B=S.cells[b];
+  if(B.s==='sheet'){ SND.play('nope'); toast('That part of the attic is still under dust sheets.'); return; }
+  if(B.s==='box'){ SND.play('nope'); toast('Merge something next to that box to open it.'); return; }
+  if(B.s==='web'){
+    if(canMerge(A.it,B.it)){ doMerge(a,b); }
+    else { SND.play('nope'); toast(`Stuck in cobwebs. Drop another ${def(B.it).e} ${def(B.it).n} on it to free it.`); }
+    return;
+  }
+  // open
+  if(!B.it){ B.it=A.it; A.it=null; sel=b; SND.play('move'); save(); render(); return; }
+  if(canMerge(A.it,B.it)){ doMerge(a,b); return; }
+  if(feed(a,b)) return;
+  const tmp=B.it; B.it=A.it; A.it=tmp; sel=b; SND.play('move'); save(); render();
+}
+function doMerge(a,b){
+  const A=S.cells[a], B=S.cells[b];
+  const it=mkItem(A.it.k, A.it.l+1);
+  if(def(A.it).uses && def(it).uses && A.it.k==='Q'){
+    const fa=A.it.left===def(A.it).uses, fb=B.it.left===def(B.it).uses;
+    it.left = fa&&fb ? def(it).uses : A.it.left+B.it.left+2;
+  }
+  SND.play('merge',it.l); if(B.s==='web') SND.play('unweb');
+  A.it=null; B.it=it; B.s='open';
+  fx[b]='pop';
+  revealAround(b);
+  discover(it);
+  if(!isGen(it) && !isRes(it) && it.l>=5){ const t=nearestEmpty(b); if(t>=0){ S.cells[t].it=mkItem('X',1); fx[t]='spawn'; } }
+  sel=b;
+  save(); render();
+}
+
+function sellValue(it){ return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
+function sell(i){
+  const it=S.cells[i].it, v=sellValue(it);
+  S.coins+=v; S.cells[i].it=null; sel=-1;
+  SND.play('coin');
+  toast(`Sold ${def(it).e} for 🪙${v}`);
+  save(); render();
+}
+
+/* ============================================================ orders & chapters */
+function activeTasks(){
+  if(S.complete) return [];
+  return TASKS.filter(t=>t.ch===S.ch && !S.done[t.id]).slice(0,3);
+}
+function openCount(k,l){ return S.cells.reduce((n,c)=>n+(c.s==='open'&&c.it&&c.it.k===k&&c.it.l===l?1:0),0); }
+function taskStatus(t){
+  const need={}; t.need.forEach(([k,l])=>need[key(k,l)]=(need[key(k,l)]||0)+1);
+  const have=t.need.map(([k,l])=>openCount(k,l)>=need[key(k,l)]);
+  return {have, ready:have.every(Boolean)};
+}
+function completeTask(t){
+  // remove items, preferring ones not currently selected
+  t.need.forEach(([k,l])=>{
+    let idx=S.cells.findIndex((c,i)=>i!==sel&&c.s==='open'&&c.it&&c.it.k===k&&c.it.l===l);
+    if(idx<0) idx=S.cells.findIndex(c=>c.s==='open'&&c.it&&c.it.k===k&&c.it.l===l);
+    if(idx===sel) sel=-1;
+    S.cells[idx].it=null; fx[idx]='pulse';
+  });
+  SND.play('coins');
+  if(t.side){
+    S.side=S.side.filter(o=>o.id!==t.id); dropItems(t.rw); ensureSide();
+    toast(`🏷️ Sold at the jumble sale. Rewards are on the board`);
+    save(); render(); return;
+  }
+  S.done[t.id]=1;
+  dropItems(taskRewards(t));
+  const chTasks=TASKS.filter(x=>x.ch===S.ch);
+  if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat);
+  else if(t.beat) playScene({lines:[t.beat]});
+  save(); render();
+}
+function finishChapter(beat){
+  const c=S.ch;
+  S.journal.push(c);
+  setTimeout(()=>SND.play('fanfare'),350);
+  const queue=[{title:'Chapter '+(c+1)+' complete', sub:CHAPTERS[c].title, lines:(beat?[beat]:[]).concat(CHAPTERS[c].outro)}];
+  S.ch++;
+  if(S.ch>=CHAPTERS.length){ S.complete=true; }
+  else{
+    const nc=CHAPTERS[S.ch];
+    if(nc.zone) unlockZone(nc.zone);
+    nc.gifts.forEach(([k,l])=>S.gifts.push([k,l]));
+    S.seenIntro[S.ch]=1;
+    queue.push({title:'Chapter '+(S.ch+1), sub:nc.title, lines:nc.intro});
+  }
+  save();
+  playQueue(queue, ()=>{ if(S.complete) showComplete(); });
+}
+function unlockZone(z){
+  S.cells.forEach((c,i)=>{ if(c.z===z&&c.s==='sheet'){ c.s=c.ps; if(c.s==='open'&&c.it) discover(c.it,true); fx[i]='reveal'; } });
+  // the row touching the open floor shakes loose straight away
+  S.cells.forEach((c,i)=>{ if(c.z===z && neighbours(i).some(n=>S.cells[n].z<z)) revealCell(i); });
+}
+function placeGift(){
+  if(!S.gifts.length) return;
+  const t=nearestEmpty(59);
+  if(t<0){ toast('No room for your gift. Clear a space first.'); return; }
+  let gi=0;
+  if(moonPending()){ gi=S.gifts.findIndex(g=>g[0]!=='N'); if(gi<0){ SND.play('nope'); toast('Tap the glowing moon on the board first 🌙'); return; } }
+  const [k,l]=S.gifts.splice(gi,1)[0];
+  S.cells[t].it=mkItem(k,l); fx[t]='spawn'; sel=t;
+  SND.play('gift');
+  discover(S.cells[t].it);
+  toast(`${def(S.cells[t].it).e} ${def(S.cells[t].it).n} placed on the board`);
+  save(); render();
+}
+function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&(ch.main===k||ch.rare===k)); }
+function hintTask(t){
+  const ks=new Set(t.need.map(n=>n[0]));
+  S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
+  const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=genFor(k); return `${d.e} ${d.n}${g?` <small>(${CHAINS[k].rare?'rare from ':''}${g.items[0].e} ${g.name})</small>`:''}`; });
+  toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs: ${parts.join(' + ')}`, 4200);
+  render();
+}
+
+/* ============================================================ rendering */
+const board=$('board');
+function buildBoard(){
+  board.innerHTML='';
+  for(let i=0;i<63;i++){
+    const d=document.createElement('div');
+    const [r,c]=rc(i);
+    d.className='cell'+((r+c)%2?' alt':'');
+    d.dataset.i=i;
+    board.appendChild(d);
+  }
+}
+function render(){
+  tickEnergy();
+  const tasks=activeTasks();
+  ensureSide();
+  const needed=new Set(), sideNeeded=new Set(); tasks.forEach(t=>t.need.forEach(([k,l])=>needed.add(key(k,l)))); S.side.forEach(t=>t.need.forEach(([k,l])=>sideNeeded.add(key(k,l))));
+  const cellEls=board.children;
+  S.cells.forEach((c,i)=>{
+    const el=cellEls[i]; const [r,cc]=rc(i);
+    let cls='cell'+((r+cc)%2?' alt':'');
+    let html='';
+    if(c.s==='sheet'){
+      cls+=' sheet';
+      const zr=[6,4,2,0][c.z];
+      if(r===zr && cc===3){ const chN=CHAPTERS.findIndex(ch=>ch.zone===c.z)+1; html=`<span class="lock">🔒 Chapter ${chN}</span>`; }
+    } else if(c.s==='box'){ cls+=' box'; }
+    else if(c.it){
+      const d=def(c.it);
+      if(c.s==='web') cls+=' web';
+      html=`<span class="em">${d.e}</span>`;
+      if(c.s==='open'){
+        if(isGen(c.it)){
+          cls+=' isgen';
+          if(d.charges){
+            refreshCharges(c.it);
+            html+=`<i class="gen">${c.it.ch}/${d.charges}</i>`;
+            if(c.it.ch<d.charges){
+              const p=Math.min(1,(now()-c.it.t)/d.rechargeMs), C=2*Math.PI*44;
+              html+=`<svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc" cx="50" cy="50" r="44" stroke-dasharray="${(p*C).toFixed(1)} ${C.toFixed(1)}"/></svg>`;
+              if(c.it.ch===0) cls+=' cool';
+            }
+          }
+          else if(d.want){ const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="want">${w.e}</i>`; }
+          else if(d.fuelled){ html+=`<i class="gen">🔥${c.it.fuel||0}</i>`; if(!c.it.fuel) cls+=' cool'; }
+          else if(d.uses) html+=`<i class="gen">${d.free?'':'⚡'}${c.it.left}</i>`;
+          else html+=`<i class="gen">⚡</i>`;
+          if(poweredCell(i) && !d.want) cls+=' powered';
+        } else {
+          if(isRes(c.it)) cls+=' res';
+          if(def(c.it).pw) cls+=' battery';
+          if(c.it.st){ cls+=' must'; html+=`<b class="musttag">Tap</b>`; }
+          else if(c.it.l===maxL(c.it.k)) cls+=' maxed';
+          if(needed.has(key(c.it.k,c.it.l))) html+=`<b class="chk">✓</b>`;
+          else if(sideNeeded.has(key(c.it.k,c.it.l))) html+=`<b class="chk side">✓</b>`;
+        }
+      }
+    }
+    if(i===sel) cls+=' sel';
+    if(fx[i]) cls+=' '+fx[i];
+    if(el.className!==cls) el.className=cls;
+    if(el._h!==html){ el.innerHTML=html; el._h=html; }
+  });
+  // replay animations: force reflow for fx cells then clear
+  if(Object.keys(fx).length){
+    const f=fx; fx={};
+    setTimeout(()=>{ Object.keys(f).forEach(i=>cellEls[i]&&cellEls[i].classList.remove(f[i])); }, f && Object.values(f).includes('hint')?2400:420);
+  }
+  renderHud(); renderOrders(tasks); renderInfo();
+}
+function renderHud(){
+  $('energy').textContent=S.energy;
+  $('eTimer').textContent = S.energy<CONFIG.energyMax ? fmt(Math.ceil((CONFIG.energyRegenMs-(now()-S.eT))/1000)) : '';
+  $('coins').textContent=S.coins;
+  $('pts').textContent=S.pts||0; $('passDot').hidden=!passReady();
+  { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
+    $('xpLv').textContent=l; $('xpTxt').textContent=`${S.xp-lo}/${hi-lo}`; $('xpBar').style.width=((S.xp-lo)/(hi-lo)*100)+'%'; }
+  $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length;
+  $('chNum').textContent='Sandbox'; $('chName').textContent='Mechanics test bench'; $('chCount').textContent=''; $('chBar').style.width='0%';
+}
+function fmt(s){ s=Math.max(0,s); return s>=60? Math.floor(s/60)+':'+String(s%60).padStart(2,'0') : '0:'+String(s).padStart(2,'0'); }
+const readySince={};
+function renderOrders(tasks){
+  const box=$('orders');
+  if(S.complete){
+    const has=S.disc['M8'];
+    box.innerHTML=`<div class="empty"><div><b>The attic is yours</b>${has?'You found the Vanishing Moon. Odile would be smug.':'Keep merging. The Circus Trunk still hides one last secret.'}</div></div>`;
+    return;
+  }
+  box.innerHTML='';
+  ensureSide();
+  /* two groups, Story then Jumble Sale; a ready order jumps to the front of its own group only */
+  const tnow=now(); let storyNewlyReady=false;
+  const group=arr=>{
+    const list=arr.map((t,i)=>({t,i,ready:taskStatus(t).ready}));
+    list.forEach(o=>{ if(o.ready){ if(!readySince[o.t.id]){ readySince[o.t.id]=tnow; if(!o.t.side) storyNewlyReady=true; } } else delete readySince[o.t.id]; });
+    list.sort((a,b)=>(b.ready-a.ready) || (a.ready ? readySince[a.t.id]-readySince[b.t.id] : 0) || (a.i-b.i));
+    return list.map(o=>o.t);
+  };
+  const story=group(tasks), side=group(S.side);
+  const label=(txt,cls)=>{ const l=document.createElement('div'); l.className='grp '+cls; l.innerHTML=`<span>${txt}</span>`; box.appendChild(l); };
+  if(storyNewlyReady) box.scrollTo({left:0,behavior:'smooth'});
+  const rows=[];
+  if(story.length){ rows.push(['label','Story','g-story']); story.forEach(t=>rows.push(t)); }
+  if(side.length){ rows.push(['label','Jumble Sale','g-side']); side.forEach(t=>rows.push(t)); }
+  rows.forEach(t=>{
+    if(Array.isArray(t)){ label(t[1],t[2]); return; }
+    const st=taskStatus(t);
+    const el=document.createElement('div');
+    el.className='order'+(st.ready?' ready':'')+(t.side?' side':'');
+    el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${CAST[t.who].name}</span></div>
+      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
+      <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
+    el.onclick=()=>{ if(taskStatus(t).ready) completeTask(t); else hintTask(t); };
+    box.appendChild(el);
+  });
+}
+let sellArm=false;
+function renderInfo(){
+  const box=$('info');
+  const c=S.cells[sel];
+  if(sel<0||!c||!c.it||c.s!=='open'){
+    const tip = S.gifts.length ? 'You have a gift waiting. Tap 🎁 to put it on the board.'
+      : 'Tap a generator twice to make something. Drag matching items together to merge.';
+    box.innerHTML=`<div class="big">🐈‍⬛</div><div class="txt hintline">${tip}</div>`;
+    return;
+  }
+  const it=c.it, d=def(it), ch=CHAINS[it.k];
+  let ds='';
+  if(ch.gen){
+    if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1]; ds=`Wants ${w.e} ${w.n}. Drag one onto it to get a seed 🌱. It asks for something new each time.`; }
+    else if(d.fuelled) ds = it.fuel>0 ? `Tap again to cook. Uses fuel, not energy. ${it.fuel} fuel left.` : `Cold. Drag a 🪵 log (4 fuel) or papers (1 per level) onto it.`;
+    else if(d.uses) ds=`Tap again${d.free?' (free)':` (⚡${CONFIG.energyCost})`}. ${it.left} left, then it ${d.after?'withers into a 🪵 log':'is gone for good'}.${it.k==='Q'&&it.l===1?' Merge two unopened crates for a 14-use Big Crate.':''}`;
+    else if(d.charges){ refreshCharges(it); ds = it.ch>0 ? `Tap again to brew tea. Free. ${it.ch} left.` : `Boiling… ready in ${nextChargeIn(it)}s.`; }
+    else ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}. Costs ⚡${CONFIG.energyCost}.`;
+    if(it.l<maxL(it.k) && !d.want && !d.fuelled && it.k!=='Q') ds+=` Merge two to get a ${ch.items[it.l].n}.`;
+    if(poweredCell(sel) && !d.want) ds+=' ⚡ Powered: drops come out one level higher.';
+  } else if(d.pw){
+    ds = d.pw===1 ? 'Powers generators beside it (not diagonals): their drops come out one level higher. Merge two for a Tesla Coil.' : 'Powers all 8 tiles around it: generators there drop one level higher.';
+  } else if(it.st){
+    ds='A page from Odile’s moon notebook is folded inside. Tap it to read. It can’t be merged until you do.';
+  } else if(ch.type==='res'){
+    const unit = ch.claim==='energy'?'⚡' : ch.claim==='coins'?'🪙' : ch.claim==='skip'?'min time skip' : ch.claim==='points'?'Moon Pass points' : '⭐ applause';
+    if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min: refills energy and generator timers.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
+    else ds=`Tap again to collect +${d.v} ${unit}.`+(it.l<maxL(it.k)?` Merge two for +${ch.items[it.l].v}.`:' Top of the chain.');
+  } else {
+    ds = (fuelValue(it)?`Burns in the stove for ${fuelValue(it)} fuel. `:'') + (ch.rare?`Rare find from the ${genFor(it.k).name}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
+  }
+  const sv=sellValue(it);
+  box.innerHTML=`<div class="big">${d.e}</div>
+    <div class="txt"><div class="nm">${d.n}<small>${ch.name} · Lv ${it.l}</small></div><div class="ds">${ds}</div></div>
+    <div class="btns"><button class="sbtn" id="chainBtn">Chain</button>${sv?`<button class="sbtn${sellArm?' warn':''}" id="sellBtn">${sellArm?'Sure?':'Sell 🪙'+sv}</button>`:''}</div>`;
+  $('chainBtn').onclick=()=>showChain(it.k, it.l);
+  if(sv) $('sellBtn').onclick=()=>{ if(sellArm){ sellArm=false; sell(sel); } else { sellArm=true; renderInfo(); } };
+}
+
+/* ============================================================ input: tap / drag */
+const ghost=$('ghost');
+let press=null;
+board.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.cell'); if(!el) return;
+  const i=+el.dataset.i;
+  press={i,x:e.clientX,y:e.clientY,drag:false,id:e.pointerId};
+  board.setPointerCapture?.(e.pointerId);
+});
+board.addEventListener('pointermove',e=>{
+  if(!press) return;
+  const c=S.cells[press.i];
+  if(!press.drag){
+    if(Math.hypot(e.clientX-press.x,e.clientY-press.y)<8) return;
+    if(c.s!=='open'||!c.it){ press=null; return; }
+    if(c.it.st){ press=null; toast('Tap the glowing moon to read it 🌙'); return; }
+    press.drag=true; sellArm=false;
+    ghost.textContent=def(c.it).e;
+    board.children[press.i].classList.add('lift');
+  }
+  ghost.style.transform=`translate(${e.clientX}px,${e.clientY}px) translate(-50%,-60%) scale(1.1)`;
+  const t=cellAt(e.clientX,e.clientY);
+  [...board.querySelectorAll('.drop')].forEach(x=>x.classList.remove('drop'));
+  if(t>=0&&t!==press.i) board.children[t].classList.add('drop');
+});
+function endPress(e,cancel){
+  if(!press) return;
+  const p=press; press=null;
+  ghost.style.transform='translate(-999px,-999px)';
+  [...board.querySelectorAll('.drop,.lift')].forEach(x=>x.classList.remove('drop','lift'));
+  if(cancel) return;
+  if(p.drag){ drop(p.i, cellAt(e.clientX,e.clientY)); }
+  else tap(p.i);
+}
+board.addEventListener('pointerup',e=>endPress(e,false));
+board.addEventListener('pointercancel',e=>endPress(e,true));
+function cellAt(x,y){
+  const r=board.getBoundingClientRect();
+  if(x<r.left||x>=r.right||y<r.top||y>=r.bottom) return -1;
+  const cs=r.width/7;
+  return Math.floor((y-r.top)/cs)*7+Math.floor((x-r.left)/cs);
+}
+function tap(i){
+  const c=S.cells[i];
+  SND.play('tap');
+  if(c.s==='sheet'){ const n=CHAPTERS.findIndex(ch=>ch.zone===c.z)+1; toast(`Still under dust sheets. Opens in Chapter ${n}.`); return; }
+  if(c.s==='box'){ toast('Merge something next to this box to open it.'); return; }
+  if(c.s==='web'){ const d=def(c.it); toast(`${d.e} ${d.n} is stuck in cobwebs. Drop a matching one on it.`); sel=-1; render(); return; }
+  if(!c.it){ sel=-1; sellArm=false; render(); return; }
+  if(c.it.st){ sel=i; claim(i); return; } // story moon: one tap reads it
+  if(sel===i){
+    if(isGen(c.it)){ produce(i); return; }
+    if(isRes(c.it)){ const ch=CHAINS[c.it.k]; if(ch.claimMax && c.it.l<maxL(c.it.k)){ SND.play('nope'); toast(`Merge up to a ${ch.items[maxL(c.it.k)-1].e} ${ch.items[maxL(c.it.k)-1].n} to claim Moon Pass points`); return; } claim(i); return; }
+    return;
+  }
+  sel=i; sellArm=false; render();
+}
+
+/* ============================================================ overlays */
+/* toasts never cover story dialogue: while a scene is open they wait, then show once it closes */
+let heldToasts=[];
+function flushToasts(){
+  const list=heldToasts.filter((t,i,a)=>a.findIndex(x=>x[0]===t[0])===i).slice(-3); heldToasts=[];
+  list.forEach(([h,ms],i)=>setTimeout(()=>toast(h,ms),250+i*450));
+}
+function storyOpen(){ return !$('scene').hidden || $('modal').dataset.story==='1'; }
+function hideToasts(){ [...$('toast').children].forEach(t=>{ if(t._h) heldToasts.push([t._h,t._ms]); t.remove(); }); }
+function toast(html,ms=2200){
+  if(storyOpen()){ heldToasts.push([html,ms]); return; }
+  const t=document.createElement('div'); t.className='t'; t.innerHTML=html; t._h=html; t._ms=ms;
+  const box=$('toast'); box.appendChild(t);
+  while(box.children.length>3) box.firstChild.remove();
+  setTimeout(()=>t.remove(),ms);
+}
+function playQueue(q,done){
+  if(!q.length){ done&&done(); return; }
+  const s=q.shift();
+  playScene(s, ()=>playQueue(q,done));
+}
+function playScene(sc,done){
+  const ov=$('scene'); let i=0;
+  hideToasts();
+  ov.hidden=false;
+  const show=()=>{
+    if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; if(done) done(); if(!storyOpen()) flushToasts(); return; }
+    const [who,txt]=sc.lines[i], cst=CAST[who];
+    const cls = who==='N'?'narr': (who==='O'||who==='F')?'note':'';
+    ov.innerHTML=`${i===0&&sc.title?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:'<div style="margin:auto"></div>'}
+      <div class="dlg ${cls}" id="dlg" role="button" tabindex="0">
+        ${cst.name?`<div class="spk"><span class="av">${cst.av}</span><b>${cst.name}</b></div>`:''}
+        <p>${txt}</p>
+        <div class="foot"><span>${i+1} / ${sc.lines.length}</span><span>Tap to continue ›</span></div>
+      </div>
+      <button class="sbtn" id="skipBtn" style="margin-top:10px">Skip scene</button>`;
+    $('dlg').onclick=()=>{ SND.play('page'); i++; show(); };
+    $('dlg').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); SND.play('page'); i++; show(); } };
+    $('skipBtn').onclick=()=>{ i=sc.lines.length; show(); };
+    $('dlg').focus();
+  };
+  show();
+}
+function openModal(html,story){ $('modalBody').innerHTML=html; $('modal').hidden=false; $('modal').dataset.story=story?'1':''; if(story) hideToasts(); }
+function closeModal(){ const was=$('modal').dataset.story==='1'; $('modal').hidden=true; $('modal').dataset.story=''; if(was && !storyOpen()) flushToasts(); }
+$('modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
+
+function chainHtml(k,cur){
+  const ch=CHAINS[k];
+  return `<div class="chain">${ch.items.map((d,j)=>{
+    const known=S.disc[key(k,j+1)];
+    return `<div class="ci${known?'':' unk'}${cur===j+1?' cur':''}"><span>${known?d.e:'?'}</span>${known?d.n:'Lv '+(j+1)}</div>`;
+  }).join('')}</div>`;
+}
+function showChain(k,cur){
+  const ch=CHAINS[k];
+  let extra='';
+  if(ch.gen){ const d=ch.items[0]; extra=`<p class="ds">Makes: ${[...new Set(d.drop.map(x=>x[0]))].map(x=>CHAINS[x].name).join(', ')}.</p>${chainHtml(d.drop[0][0])}`; }
+  else { const g=genFor(k); if(g) extra=`<p style="color:var(--muted);font-size:13px">Comes from the ${g.items[0].e} ${g.name}.</p>`; }
+  openModal(`<h2>${ch.name}</h2>${chainHtml(k,cur)}${extra}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
+}
+function showLore(it){
+  const d=def(it);
+  SND.play('magic');
+  openModal(`<h3 style="margin-top:0">Found in the Circus Trunk</h3><div style="font-size:54px;text-align:center">${d.e}</div><h2 style="text-align:center">${d.n}</h2><p style="font-style:italic;text-align:center">${d.lore}</p><div class="row-btns" style="justify-content:center"><button class="bigbtn gold" onclick="closeModal()">Into the journal</button></div>`,true);
+}
+function showJournal(){
+  let html=`<h2>Odile’s Attic</h2><p style="color:var(--muted)">Everything you’ve uncovered so far.</p><h3>Chapters</h3>`;
+  const upto=S.complete?CHAPTERS.length:S.ch+1;
+  for(let c=0;c<upto;c++){
+    const fin=S.journal.includes(c);
+    html+=`<div class="entry"><b>${c+1}. ${CHAPTERS[c].title}</b><div class="row-btns" style="margin-top:6px">
+      <button class="sbtn" data-scene="i${c}">Replay opening</button>${fin?`<button class="sbtn" data-scene="o${c}">Replay ending</button>`:''}</div></div>`;
+  }
+  html+=`<h3>The Great Odelia</h3>`;
+  const lore=CHAINS.M.items.map((d,j)=>S.disc[key('M',j+1)]?`<div class="lore"><span>${d.e}</span><div><b>${d.n}</b>${d.lore}</div></div>`:'').join('');
+  html+= lore || `<p style="color:var(--muted)">Nothing yet. Somewhere up here is a trunk with no keyhole.</p>`;
+  const mn=MOON_NOTES.filter((_,j)=>(S.moonSeen||{})[j+1]), fx=FELIX.filter((_,j)=>S.passGot[j*3+2]);
+  if(mn.length||fx.length){
+    html+=`<h3>Letters & notes</h3>`;
+    mn.forEach(ls=>html+=`<div class="lore"><span>🌙</span><div>${ls[ls.length-1][1]}</div></div>`);
+    fx.forEach(ls=>html+=`<div class="lore"><span>✉️</span><div>${ls.find(l=>l[0]==='F')[1]}</div></div>`);
+  }
+  html+=`<h3>Collections</h3>`;
+  ['P','F','T','L','E','M'].forEach(k=>html+=`<p style="margin:10px 0 6px;font-weight:800">${CHAINS[k].name}</p>${chainHtml(k)}`);
+  html+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
+  openModal(html);
+  $('modalBody').querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{
+    const s=b.dataset.scene, c=+s.slice(1), ch=CHAPTERS[c];
+    closeModal();
+    playScene({title:'Chapter '+(c+1), sub:ch.title, lines: s[0]==='i'?ch.intro:ch.outro});
+  });
+}
+let resetArm=false;
+function showMenu(){
+  const b=CONFIG.buyEnergy;
+  openModal(`<h2>Larkspur Attic</h2><p style="color:var(--muted)">Event 1 · no timer · version ${VERSION}</p>
+    <h3>Energy</h3><p>⚡ ${S.energy} · refills 1 every ${CONFIG.energyRegenMs/60000} min up to ${CONFIG.energyMax}. Tea on the board tops you up past the cap. Price rises each time you buy.</p>
+    <div class="row-btns"><button class="bigbtn gold" id="buyE" ${S.coins<energyPrice()?'disabled style="opacity:.5"':''}>Buy ⚡${b.amount} for 🪙${energyPrice()}</button></div>
+    <h3>Sound</h3>
+    <div class="row-btns" style="margin-top:0"><button class="bigbtn${SND.pref.music?' gold':''}" id="musBtn">♪ Music: ${SND.pref.music?'On':'Off'}</button><button class="bigbtn${SND.pref.sfx?' gold':''}" id="sfxBtn">Sound effects: ${SND.pref.sfx?'On':'Off'}</button></div>
+    <h3>Save</h3><p style="color:var(--muted);font-size:13px">Progress saves in this browser automatically.</p>
+    <div class="row-btns"><button class="bigbtn warn" id="resetBtn">${resetArm?'Tap again to wipe everything':'Restart event'}</button><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
+  $('buyE').onclick=()=>{ const c=energyPrice(); if(S.coins<c) return; S.coins-=c; S.buys=(S.buys||0)+1; S.energy+=b.amount; SND.play('coin'); save(); render(); showMenu(); toast(`+${b.amount} ⚡`); };
+  $('musBtn').onclick=()=>{ SND.setMusic(!SND.pref.music); showMenu(); };
+  $('sfxBtn').onclick=()=>{ SND.setSfx(!SND.pref.sfx); showMenu(); SND.play('tap'); };
+  $('resetBtn').onclick=()=>{ if(!resetArm){ resetArm=true; showMenu(); return; } resetArm=false; S=freshState(); sel=-1; save(); closeModal(); render(); startIntro(); };
+}
+function showPass(){
+  const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;
+  let h=`<h2>Moon Pass</h2><p style="color:var(--muted);font-size:13px">• Moon tokens 🌑 drop from generators and orders<br>• Tap twice to claim them any time: 🌑 1 · 🌒 3 · 🌓 7 · 🌕 16 points<br>• Merging first is worth more, but takes board space<br>• Every 3rd reward comes with a letter from Felix ✉️</p>
+    <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">🌕 ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
+  PASS.forEach((t,i)=>{
+    const got=S.passGot[i], ok=S.pts>=t.pts;
+    h+=`<div class="tier${ok?'':' locked'}"><span class="tp">${t.pts}</span><span class="tr">${t.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span>${got?'<span style="color:var(--ok);font-weight:800">✓</span>':ok?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-tier="${i}">Claim</button>`:''}</div>`;
+  });
+  h+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
+  openModal(h);
+  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>S.gifts.push(r)); SND.play('gift'); toast('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:'Felix’s letters', sub:`Letter ${(i+1)/3} of 5`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
+}
+function showComplete(){
+  openModal(`<h3 style="margin-top:0">Event complete</h3><h2>The Vanishing Moon</h2><p>You restored Odile’s attic and found out who she really was.</p><p style="color:var(--muted)">The board stays open. Merge as long as you like. The Circus Trunk chain has one level nobody has reached yet.</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button></div>`);
+}
+
+$('journalBtn').onclick=showJournal;
+$('menuBtn').onclick=()=>{ resetArm=false; showMenu(); };
+$('giftBtn').onclick=placeGift;
+$('passBtn').onclick=showPass;
+$('xpRow').onclick=()=>{ const l=stageOf(S.xp); toast(`⭐ Stage ${l}. Next level gives: ${stageReward(l+1).map(([k,lv])=>CHAINS[k].items[lv-1].e).join(' ')}<br><small>Claim stars ⭐ on the board to fill it</small>`,3200); };
+
+/* full screen toggle */
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+$('fsBtn').onclick=async()=>{
+  try{
+    if(fsEl()){ await (document.exitFullscreen||document.webkitExitFullscreen).call(document); return; }
+    const el=document.documentElement, req=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(!req) throw 0;
+    await req.call(el,{navigationUI:'hide'});
+  }catch(e){ toast('Full screen isn’t allowed in this view. Open the page in your browser, or add it to your home screen.',3800); }
+};
+const fsSync=()=>{ $('fsPath').setAttribute('d', fsEl()?'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4':'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4'); setTimeout(fit,60); };
+document.addEventListener('fullscreenchange',fsSync);
+document.addEventListener('webkitfullscreenchange',fsSync);
+
+/* ============================================================ sizing & loop */
+function fit(){
+  const r=$('wrap').getBoundingClientRect();
+  const cs=Math.max(32,Math.floor(Math.min((r.width-8)/7,(r.height-8)/9)));
+  document.documentElement.style.setProperty('--cs',cs+'px');
+}
+window.addEventListener('resize',fit);
+setInterval(()=>{
+  const before=S.energy; tickEnergy(); renderHud();
+  // refresh kettle counters + info text once a second
+  let any=false;
+  S.cells.forEach((c,i)=>{
+    if(c.s!=='open'||!c.it) return; const d=def(c.it); if(!d.charges) return;
+    const o=c.it.ch; refreshCharges(c.it); if(o!==c.it.ch){ any=true; return; }
+    // advance the cooldown ring in place (no full re-render, so taps aren't interrupted)
+    const arc=board.children[i].querySelector('.arc');
+    if(arc){ const C=2*Math.PI*44, p=Math.min(1,(now()-c.it.t)/d.rechargeMs); arc.setAttribute('stroke-dasharray',`${(p*C).toFixed(1)} ${C.toFixed(1)}`); board.children[i]._h=null; }
+  });
+  if(any){ SND.play('unweb'); }
+  if(any||before!==S.energy){ save(); render(); }
+  else if(sel>=0 && S.cells[sel].it && def(S.cells[sel].it).charges) renderInfo();
+},1000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) render(); });
+
+function startIntro(){
+  if(!S.seenIntro[S.ch] && !S.complete){
+    S.seenIntro[S.ch]=1; save();
+    const c=CHAPTERS[S.ch];
+    playScene({title:'Chapter '+(S.ch+1), sub:c.title, lines:c.intro});
+  }
+}
+
+S=load();
+buildBoard();
+fit();
+render();
+requestAnimationFrame(fit);
+
+/* title screen → first Play tap goes full screen */
+$('ver').textContent=`Version ${VERSION}`;
+const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent) && !(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+if(isIOS && !navigator.standalone) $('iosHint').hidden=false;
+$('playBtn').onclick=()=>{
+  if(!fsEl()){ try{ const el=document.documentElement, r=el.requestFullscreen||el.webkitRequestFullscreen; const p=r&&r.call(el,{navigationUI:'hide'}); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }
+  $('title').hidden=true;
+  setTimeout(fit,80);
+  startIntro();
+};
+
+/* self-update: compare VERSION with the live file */
+async function checkUpdate(){
+  try{
+    if(location.protocol==='file:') return;
+    const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+    const m=(await r.text()).match(/const VERSION='([^']+)'/);
+    if(m && m[1]!==VERSION){
+      const box=$('updBox');
+      box.innerHTML=`🔄 New version ${m[1]} <button id="updGo">Update now</button>`; box.hidden=false;
+      $('updGo').onclick=()=>{ location.href=location.pathname+'?v='+encodeURIComponent(m[1].split(' ')[0]); };
+    }
+  }catch(e){}
+}
+checkUpdate(); setInterval(checkUpdate,4*60*1000);
+</script>
+</body>
+</html>
