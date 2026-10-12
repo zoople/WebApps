@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Larkspur Attic</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="larkspur-attic.webmanifest">
+<meta name="theme-color" content="#1a1316">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Larkspur Attic">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Limelight&family=Karla:wght@400;600;800&display=swap">
+<style>
+/* Layout: one-screen portrait game — HUD, chapter strip, three order cards, 7×9 attic board, info bar */
+:root{
+  --bg:#1a1316;        /* night attic */
+  --panel:#271c1f;
+  --panel2:#30232a;
+  --wood:#4a3427;
+  --wood2:#3f2c21;
+  --ink:#f4e8d3;
+  --muted:#b8a387;
+  --gold:#e4b84c;
+  --velvet:#a3303d;
+  --ok:#78c27c;
+  --card:#c48a54;
+  --display:"Limelight","Didot","Bodoni 72",Georgia,serif;
+  --body:"Karla",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cs:50px;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+/* title screen */
+#title{position:fixed;inset:0;z-index:70;background:var(--bg);background-image:radial-gradient(90% 55% at 50% 30%,#4a2c36 0%,transparent 70%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+#title .logo{width:120px;height:120px;border-radius:26px;box-shadow:0 12px 30px #000a}
+#title h1{font-family:var(--display);font-weight:400;font-size:44px;color:var(--gold);margin:0;line-height:1}
+#title .sub{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+#title ul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--ink);text-align:left}
+#title ul li::before{content:"✦";color:var(--gold);margin-right:8px}
+#playBtn{background:var(--gold);color:#2a1a10;font-weight:800;font-size:18px;border-radius:14px;padding:14px 46px;box-shadow:0 6px 0 #9a7426}
+#playBtn:active{transform:translateY(3px);box-shadow:0 3px 0 #9a7426}
+#title .ver{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#title .best{font-size:12px;color:var(--muted);margin:0}
+#updBox{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:80;background:var(--panel);border:1px solid var(--gold);border-radius:12px;padding:8px 10px 8px 14px;font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 20px #0009;white-space:nowrap}
+#updBox button{background:var(--gold);color:#2a1a10;font-weight:800;border-radius:8px;padding:6px 10px}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  background-image:radial-gradient(120% 60% at 50% -10%, #3a2530 0%, transparent 60%);}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+#app{height:100%;max-width:520px;margin:0 auto;padding-inline:16px;padding-block:8px 10px;display:flex;flex-direction:column;gap:8px}
+
+/* HUD */
+.top{display:flex;align-items:center;gap:8px}
+.pill{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid #ffffff14;border-radius:999px;padding:5px 11px 5px 8px;font-variant-numeric:tabular-nums;font-weight:800}
+.pill small{font-weight:400;color:var(--muted);font-size:11px}
+.pill.gift{background:var(--velvet);border-color:#ffffff30;animation:nudge 1.6s ease-in-out infinite}
+.spacer{flex:1}
+.iconbtn{width:36px;height:36px;border-radius:50%;background:var(--panel);border:1px solid #ffffff14;font-size:17px;display:grid;place-items:center}
+
+/* chapter strip */
+.chapter{display:flex;flex-direction:column;gap:5px}
+.ch-row{display:flex;align-items:baseline;gap:10px}
+.ch-num{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:800;white-space:nowrap}
+.ch-name{font-family:var(--display);font-weight:400;font-size:21px;margin:0;line-height:1.1;text-wrap:balance;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-count{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--velvet),var(--gold));width:0;transition:width .5s}
+
+/* orders */
+.orders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;min-height:104px}
+.order{background:var(--panel);border:1px solid #ffffff12;border-radius:12px;padding:7px 7px 6px;display:flex;flex-direction:column;gap:5px;cursor:pointer;min-width:0}
+.order.ready{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
+.who{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);min-width:0}
+.who .av{font-size:18px;line-height:1}
+.who span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.needs{display:flex;gap:4px;flex:1;align-items:center;justify-content:center}
+.need{position:relative;width:34px;height:34px;border-radius:9px;background:var(--panel2);display:grid;place-items:center;font-size:21px}
+.need.have{background:#2f4430}
+.need i{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;border-radius:50%;background:var(--ok);color:#10200f;font-size:9px;font-style:normal;font-weight:800;display:grid;place-items:center}
+.order .act{height:24px;border-radius:7px;font-size:12px;font-weight:800;display:grid;place-items:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.order.ready .act{background:var(--ok);color:#10200f}
+.orders .empty{grid-column:1/-1;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:13px;background:var(--panel);border-radius:12px;padding:10px}
+.orders .empty b{font-family:var(--display);font-weight:400;color:var(--gold);font-size:18px;display:block}
+
+/* board */
+.boardwrap{flex:1;min-height:0;display:grid;place-items:center}
+#board{display:grid;grid-template-columns:repeat(7,var(--cs));grid-auto-rows:var(--cs);border-radius:14px;overflow:hidden;
+  box-shadow:0 0 0 3px #2a1d16,0 0 0 4px #6b4a33,0 14px 30px #0008;touch-action:none;user-select:none;-webkit-user-select:none}
+.cell{position:relative;display:grid;place-items:center;background:var(--wood)}
+.cell.alt{background:var(--wood2)}
+.cell .em{font-size:calc(var(--cs)*.6);line-height:1;pointer-events:none;filter:drop-shadow(0 2px 1px #0006);transition:transform .12s}
+.cell.sel{box-shadow:inset 0 0 0 3px var(--gold);z-index:1}
+.cell.sel .em{transform:scale(1.08)}
+.cell.hint{animation:hint 1.2s ease-in-out 2}
+.cell.lift .em{opacity:.25}
+.cell.drop{box-shadow:inset 0 0 0 3px #fff8}
+.lv{position:absolute;right:3px;bottom:2px;font-size:9px;font-style:normal;font-weight:800;color:#f4e8d3aa;pointer-events:none}
+.chk{position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:var(--ok);color:#10200f;font-size:9px;font-weight:800;display:grid;place-items:center;pointer-events:none}
+.gen{position:absolute;left:2px;top:2px;font-size:9px;font-style:normal;font-weight:800;background:#0007;color:var(--gold);border-radius:6px;padding:1px 4px;pointer-events:none;font-variant-numeric:tabular-nums}
+.cell.isgen{background-image:radial-gradient(circle at 50% 55%,#e4b84c33,transparent 65%)}
+/* cobweb: visible but stuck */
+.cell.web .em{filter:grayscale(.85) brightness(.75) sepia(.3);opacity:.85}
+.cell.web::after{content:"";position:absolute;inset:0;pointer-events:none;background-size:100% 100%;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='none' stroke='%23f4e8d3' stroke-opacity='.5' stroke-width='.7'%3E%3Cpath d='M0 0L40 40M0 0L40 15M0 0L15 40M0 0L40 0M0 0L0 40M40 40L40 22M40 40L22 40M0 9Q5 5 9 0M0 19Q11 11 19 0M0 29Q16 16 29 0M40 31Q35 35 31 40M40 21Q30 30 21 40'/%3E%3C/svg%3E")}
+/* cardboard box: hidden */
+.cell.box::before{content:"";position:absolute;inset:12%;border-radius:4px;
+  background:linear-gradient(90deg,transparent 42%,#e9d2a066 42% 58%,transparent 58%),linear-gradient(160deg,#d29a63,var(--card) 55%,#9c6a3e);
+  box-shadow:0 2px 0 #6e4a2b,inset 0 0 0 1px #0002}
+.cell.box::after{content:"?";position:absolute;font-weight:800;color:#5a3a1f99;font-size:calc(var(--cs)*.26);top:52%;left:50%;transform:translate(-50%,-50%)}
+/* dust sheet: locked until a chapter opens it */
+.cell.sheet{background:repeating-linear-gradient(115deg,#5e5248 0 7px,#544940 7px 15px)}
+.cell.sheet .lock{font-size:10px;font-weight:800;letter-spacing:.08em;color:#e9dcc6cc;white-space:nowrap;text-transform:uppercase;pointer-events:none;position:absolute;z-index:2}
+.cell.pop .em{animation:pop .32s cubic-bezier(.3,1.6,.5,1)}
+.cell.spawn .em{animation:spawn .35s cubic-bezier(.3,1.5,.5,1)}
+.cell.reveal::before,.cell.reveal .em{animation:pop .35s ease-out}
+.cell.pulse .em{animation:pulse .25s ease-out}
+
+/* info bar */
+.info{background:var(--panel);border:1px solid #ffffff12;border-radius:14px;padding:9px 10px;display:flex;align-items:center;gap:10px;min-height:76px}
+.info .big{font-size:36px;width:48px;text-align:center;flex:none}
+.info .txt{flex:1;min-width:0}
+.info .nm{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.info .nm small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+.info .ds{font-size:12.5px;color:var(--muted);line-height:1.35}
+.info .btns{display:flex;flex-direction:column;gap:5px;flex:none}
+.sbtn{background:var(--panel2);border:1px solid #ffffff1a;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap}
+.sbtn.warn{background:var(--velvet)}
+.info .hintline{color:var(--muted);font-size:13px;line-height:1.4}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:#0d080acc;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.dlg{width:100%;max-width:488px;background:linear-gradient(180deg,#2e2125,#241a1d);border:1px solid #e4b84c55;border-radius:16px;padding:16px 16px 12px;box-shadow:0 20px 50px #000a;cursor:pointer;animation:rise .25s ease-out}
+.dlg .spk{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dlg .spk .av{font-size:30px;width:46px;height:46px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;border:1px solid #e4b84c55}
+.dlg .spk b{font-family:var(--display);font-weight:400;font-size:19px;color:var(--gold)}
+.dlg p{margin:0;font-size:16px;line-height:1.5;min-height:3em}
+.dlg p em{color:var(--muted)}
+.dlg.narr p{font-style:italic;color:#e9dcc6}
+.dlg.note{background:#efe1c2;color:#3a2a1c;border-color:#b08a55}
+.dlg.note p{font-family:Georgia,serif;font-style:italic}
+.dlg.note .spk b{color:#7a2a33}
+.dlg .foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.dlg.note .foot{color:#7a6248}
+.scene-title{font-family:var(--display);font-size:28px;color:var(--gold);text-align:center;margin:auto 0 18px;text-wrap:balance;animation:rise .4s ease-out}
+.scene-title small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+
+.modal{justify-content:center}
+.sheetbox{width:100%;max-width:488px;max-height:82%;overflow:auto;background:var(--panel);border:1px solid #ffffff1a;border-radius:16px;padding:16px;animation:rise .22s ease-out}
+.sheetbox h2{font-family:var(--display);font-weight:400;color:var(--gold);margin:0 0 4px;font-size:24px}
+.sheetbox h3{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.sheetbox p{color:var(--ink);line-height:1.5;margin:6px 0}
+.chain{display:flex;flex-wrap:wrap;gap:6px}
+.chain .ci{width:58px;text-align:center;font-size:10px;color:var(--muted);line-height:1.2}
+.chain .ci span{display:grid;place-items:center;height:44px;border-radius:9px;background:var(--panel2);font-size:26px;margin-bottom:3px}
+.chain .ci.unk span{color:#ffffff30;font-size:20px;font-weight:800}
+.chain .ci.cur span{box-shadow:inset 0 0 0 2px var(--gold)}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.bigbtn{background:var(--panel2);border:1px solid #ffffff1a;border-radius:10px;padding:10px 14px;font-weight:800}
+.bigbtn.gold{background:var(--gold);color:#2a1a10}
+.bigbtn.warn{background:var(--velvet)}
+.entry{border-top:1px solid #ffffff12;padding:10px 0}
+.entry b{font-family:var(--display);font-weight:400;font-size:17px}
+.lore{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
+.lore span{font-size:24px}
+.lore div{font-size:13.5px;line-height:1.45}
+.lore div b{display:block;font-size:13px}
+
+#toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));flex-direction:column-reverse!important;transform:translateX(-50%);z-index:60;pointer-events:none;display:flex;flex-direction:column;gap:6px;align-items:center;width:min(92vw,440px)}
+.t{background:#120c0ee8;border:1px solid #e4b84c55;color:var(--ink);padding:8px 14px;border-radius:12px;font-size:13.5px;text-align:center;animation:rise .2s ease-out;box-shadow:0 8px 20px #0008}
+#ghost{position:fixed;left:0;top:0;z-index:40;pointer-events:none;font-size:calc(var(--cs)*.75);line-height:1;transform:translate(-999px,-999px);filter:drop-shadow(0 8px 6px #0009)}
+
+@keyframes pop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+@keyframes spawn{0%{transform:scale(0) translateY(30%)}100%{transform:scale(1)}}
+@keyframes pulse{50%{transform:scale(.85)}}
+@keyframes hint{50%{box-shadow:inset 0 0 0 3px var(--ok)}}
+@keyframes rise{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes nudge{50%{transform:scale(1.07)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="title">
+  <img class="logo" src="icons/icon-192.png" alt="">
+  <div class="sub">Event 1 · The Vanishing Moon</div>
+  <h1>Larkspur Attic</h1>
+  <ul>
+    <li>Tap a generator twice to make items</li>
+    <li>Drag two matching items together to merge</li>
+    <li>Merges open the boxes next to them</li>
+    <li>Fill orders to uncover Odile’s story</li>
+    <li>No timer. Play at your own pace</li>
+  </ul>
+  <button id="playBtn">Play</button>
+  <p id="iosHint" class="best" hidden>📱 Full screen on iPhone: Share → Add to Home Screen</p>
+  <div class="ver" id="ver"></div>
+</div>
+<div id="updBox" hidden></div>
+
+<div id="app">
+  <header class="top">
+    <div class="pill" title="Energy"><span>⚡</span><b id="energy">100</b><small id="eTimer"></small></div>
+    <div class="pill" title="Coins"><span>🪙</span><b id="coins">0</b></div>
+    <span class="spacer"></span>
+    <button class="pill gift" id="giftBtn" hidden>🎁 <b id="giftCount">1</b></button>
+    <button class="iconbtn" id="fsBtn" aria-label="Full screen" title="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path id="fsPath" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
+    <button class="iconbtn" id="journalBtn" aria-label="Journal">📖</button>
+    <button class="iconbtn" id="menuBtn" aria-label="Menu">⋯</button>
+  </header>
+  <section class="chapter">
+    <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Dust Sheets</h1><span class="ch-count" id="chCount">0/5</span></div>
+    <div class="bar"><i id="chBar"></i></div>
+  </section>
+  <section class="orders" id="orders"></section>
+  <main class="boardwrap" id="wrap"><div id="board"></div></main>
+  <footer class="info" id="info"></footer>
+</div>
+<div class="overlay" id="scene" hidden></div>
+<div class="overlay modal" id="modal" hidden><div class="sheetbox" id="modalBody"></div></div>
+<div id="toast"></div>
+<div id="ghost"></div>
+
+<script>
+const VERSION='v1 · 12 Oct 2026';
+/* ============================================================
+   LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
+   All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
+   ============================================================ */
+const CONFIG = {
+  cols: 7, rows: 9,
+  energyMax: 100,
+  energyRegenMs: 20000,   // 1 energy every 20s (no event timer, so this is just pacing)
+  energyCost: 1,
+  buyEnergy: { cost: 60, amount: 50 },
+  saveKey: 'larkspur-attic-v1',
+};
+
+/* ---------- merge chains ---------- */
+const CHAINS = {
+  P:{name:'Papers', items:[
+    {e:'📄',n:'Torn Scrap'},{e:'📃',n:'Note'},{e:'✉️',n:'Envelope'},{e:'📨',n:'Letter Bundle'},
+    {e:'📔',n:'Diary'},{e:'📚',n:'Diary Stack'},{e:'🗃️',n:'Archive Box'}]},
+  F:{name:'Fabric', items:[
+    {e:'🧵',n:'Thread'},{e:'🧶',n:'Yarn'},{e:'🧦',n:'Odd Sock'},{e:'🧤',n:'Opera Gloves'},
+    {e:'🧣',n:'Silk Scarf'},{e:'👗',n:'Stage Gown'},{e:'🎭',n:'Costume Masks'}]},
+  T:{name:'Tools', items:[
+    {e:'🔩',n:'Bolt'},{e:'🔧',n:'Wrench'},{e:'🔨',n:'Hammer'},{e:'🪛',n:'Screwdriver'},
+    {e:'🪚',n:'Saw'},{e:'🛠️',n:'Tool Roll'},{e:'⚒️',n:"Stagehand's Tools"}]},
+  L:{name:'Lights', items:[
+    {e:'🕯️',n:'Candle Stub'},{e:'💡',n:'Bulb'},{e:'🔦',n:'Torch'},{e:'🏮',n:'Paper Lantern'},
+    {e:'🪔',n:'Oil Lamp'},{e:'🌟',n:'Spotlight'}]},
+  E:{name:'Tea Time', type:'energy', items:[
+    {e:'🍬',n:'Sugar Lump',v:1},{e:'🍪',n:'Biscuit',v:3},{e:'☕',n:'Cuppa',v:7},
+    {e:'🧁',n:'Cupcake',v:15},{e:'🍰',n:'Victoria Sponge',v:30}]},
+  M:{name:'The Great Odelia', story:true, items:[
+    {e:'🃏',n:'Playing Card', lore:'The ace of moons. There is no such card. This one was printed for a single show, in 1968.'},
+    {e:'🎴',n:'Trick Deck', lore:'Fifty-two cards, every one the ace of moons. A note in the box: “Nobody checks. Nobody ever checks.”'},
+    {e:'🪄',n:'Wand', lore:'Ebony with a silver cap. Her initials, O.L., are worn almost smooth where her thumb rested.'},
+    {e:'🎩',n:'Top Hat', lore:'Felix’s. The label says “If found, return to the better magician.” It is crossed out. Underneath, in Odile’s hand: “I have.”'},
+    {e:'🐇',n:'White Rabbit', lore:'A programme note: “The rabbit is played by Bertrand.” Bertrand had a pension and his own dressing room.'},
+    {e:'🕊️',n:'Paper Dove', lore:'Folded from one of Felix’s letters. You can still read the word “sorry” along one wing.'},
+    {e:'🔮',n:'Crystal Ball', lore:'Not crystal. Glass, polished by hand until it holds the whole attic upside down.'},
+    {e:'🌙',n:'The Vanishing Moon', lore:'The full method, written out. Two pages. The second page is a drawing of a black cat.'}]},
+  /* generators */
+  gD:{name:'Paper Tray', gen:true, items:[
+    {e:'🗂️',n:'Paper Tray', drop:[['P',1,85],['P',2,15]]},
+    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,50],['P',2,35],['P',3,15]]}]},
+  gS:{name:'Sewing Basket', gen:true, items:[
+    {e:'🧺',n:'Sewing Basket', drop:[['F',1,85],['F',2,15]]},
+    {e:'🪡',n:'Sewing Kit', drop:[['F',1,50],['F',2,35],['F',3,15]]}]},
+  gT:{name:'Toolbox', gen:true, items:[
+    {e:'🧰',n:'Toolbox', drop:[['T',1,85],['T',2,15]]},
+    {e:'🗜️',n:'Workbench', drop:[['T',1,50],['T',2,35],['T',3,15]]}]},
+  gL:{name:'Fuse Box', gen:true, items:[
+    {e:'🔌',n:'Fuse Box', drop:[['L',1,85],['L',2,15]]},
+    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,50],['L',2,35],['L',3,15]]}]},
+  gM:{name:'Circus Trunk', gen:true, items:[
+    {e:'🎪',n:'Circus Trunk', drop:[['M',1,88],['M',2,12]]},
+    {e:'🪞',n:'Magic Mirror', drop:[['M',1,55],['M',2,32],['M',3,13]]}]},
+  gK:{name:'Kettle', gen:true, items:[
+    {e:'🫖',n:'Kettle', free:true, charges:5, rechargeMs:40000, drop:[['E',1,65],['E',2,28],['E',3,7]]}]},
+};
+
+/* ---------- board: o=open, w=cobweb (visible, merge onto it to free), b=box (hidden until a merge next to it) ---------- */
+const LAYOUT = [
+  'bM4 bF5 bE4 bP5 bgT1 bL4 bM3',   // zone 3 — opens chapter 4
+  'bP3 wM2 bT4 bgM1 bF2 wL2 bE3',
+  'bM2 bL3 bgD1 bF4 bT3 bgL1 bP4',  // zone 2 — opens chapter 3
+  'wM1 bE3 bT1 bP2 wL1 bF3 bM1',
+  'bF3 bP2 bL1 bgS1 bT2 bE2 bF1',   // zone 1 — opens chapter 2
+  'wT1 bL2 bP1 wE3 bF2 wT2 bP3',
+  'bP1 bgT1 wP1 bF2 wF1 bE2 bT1',   // zone 0 — start
+  'wF2 oP1 o. o. o. oF1 wP2',
+  'oE1 ogD1 o. ogK1 o. ogS1 oE1',
+];
+const zoneOfRow = r => r>=6?0 : r>=4?1 : r>=2?2 : 3;
+
+/* ---------- cast ---------- */
+const CAST = {
+  N:{name:'', av:''},
+  T:{name:'Theo', av:'🧔'},
+  P:{name:'Mrs Pike', av:'👵'},
+  M:{name:'Mothball', av:'🐈‍⬛'},
+  O:{name:'Odile’s note', av:'📜'},
+};
+
+/* ---------- story ---------- */
+const CHAPTERS = [
+  { title:'Dust Sheets', zone:0, gifts:[],
+    intro:[
+      ['N','Great-Aunt Odile left you three things: a tall, thin house on Larkspur Lane, a black cat called Mothball, and a note.'],
+      ['O','“Start in the attic. Mind the dust. — O.”'],
+      ['T','I’ve brought bin bags and very low expectations. She was a seamstress, Nell. It’ll be buttons all the way down.'],
+      ['M','Mrrp. <em>(He sits on a dust sheet and refuses to move.)</em>'],
+      ['N','Tap a generator, then tap it again to make something. Drag two matching things together to merge them. Every merge shakes open the boxes beside it.'],
+    ],
+    outro:[
+      ['T','Right. That’s one corner of floor I can actually see.'],
+      ['N','Under the last dust sheet, pinned to a rafter with a hatpin: a playing card. The ace of moons. There is no such card.'],
+      ['M','<em>(He bats it once, then looks at you as though you ought to know what it means.)</em>'],
+      ['P','Coo-ee! Door was open. Oh, you’ve started on her attic. Brave.'],
+      ['P','Forty years next door and Odile never let me past the hatch. Mind if I have a nose?'],
+    ]},
+  { title:'Letters in the Rafters', zone:1, gifts:[['gL',1],['E',2]],
+    intro:[
+      ['T','There’s a fuse box up here. Why is there a fuse box in an attic?'],
+      ['N','Theo flips the switch. A row of bulbs along the beam stutters on, then off, then on again. It sounds a bit like applause.'],
+      ['N','The dust sheets over the next stretch of floor slide away. <em>(A Fuse Box is waiting in your gifts.)</em>'],
+    ],
+    outro:[
+      ['N','The letters are tied in red ribbon, all addressed to the same name. Not Odile. “The Great Odelia.”'],
+      ['P','Paris. Vienna. The Palladium. Those are theatre letterheads, love.'],
+      ['T','Your quiet seamstress aunt was on the stage?'],
+      ['N','One letter is shorter than the rest. “The trunk is yours, if you can find it. I never could open it without you. — F.”'],
+    ]},
+  { title:'The Circus Trunk', zone:2, gifts:[['gM',1]],
+    intro:[
+      ['N','Behind the next dust sheet sits a striped trunk with brass corners. No keyhole. No hinges.'],
+      ['T','It’s a trunk designed by someone who hates trunks.'],
+      ['M','<em>(He taps the lid twice with one paw. It clicks open.)</em>'],
+      ['T','…Did your cat just—'],
+      ['N','<em>(The Circus Trunk is in your gifts. Whatever comes out of it tells Odile’s story.)</em>'],
+    ],
+    outro:[
+      ['P','I remember now. Summer of ’68 she went away. Said she was nursing a sister in Lyon.'],
+      ['P','Came back ten years later with that trunk and never said one word about it.'],
+      ['N','Inside the lid, a programme: “The Great Odelia & Felix Marchetti present THE VANISHING MOON.”'],
+      ['T','Felix. “F.”'],
+    ]},
+  { title:'The Great Odelia', zone:3, gifts:[['E',3]],
+    intro:[
+      ['N','The last corner of the attic is darker than the rest, as if the light doesn’t quite want to go there.'],
+      ['P','I’m not superstitious. I’m just going to stand here. By the hatch.'],
+    ],
+    outro:[
+      ['N','Odile’s diary, spring 1968: “Felix says the Moon can’t be done. A whole moon, gone, in front of two thousand people. I say it’s only a question of where you make them look.”'],
+      ['N','Autumn 1969: “We did it. Then he took the method and ran. Let him. He only has half.”'],
+      ['T','Half a trick?'],
+    ]},
+  { title:'Smoke and Mirrors', zone:null, gifts:[['E',3],['E',3]],
+    intro:[
+      ['T','These aren’t shelves. Look at the joins. This whole wall is a stage flat.'],
+      ['N','The attic isn’t an attic. Or not only. Odile built a little theatre up here, then hid it under dust sheets.'],
+    ],
+    outro:[
+      ['N','Behind the false wall: a tall mirror on a swivel, angled at the round window. A second diary: “The other half of the Moon is a window, a mirror, and patience.”'],
+      ['M','<em>(He jumps onto the sill and sits very straight, like an assistant waiting for a cue.)</em>'],
+      ['P','There was always a black cat. Always called Mothball. I assumed it was the same one, for a while there.'],
+    ]},
+  { title:'The Vanishing Moon', zone:null, gifts:[['E',4]],
+    intro:[
+      ['O','“Light, cloth, a crystal, and someone who looks.” <em>(Pinned to the mirror.)</em>'],
+      ['T','That’s a shopping list. She’s left us a shopping list for a magic trick.'],
+    ],
+    outro:[
+      ['N','You set the crystal ball on its stand. Theo kills the bulbs. Mrs Pike, despite herself, climbs the ladder.'],
+      ['N','The full moon sits in the round window. You tilt the mirror. For one long breath the window is empty: just dark sky where the moon should be.'],
+      ['T','Where did it go?'],
+      ['N','You tilt it back. The moon is where it always was. Mothball purrs like a drum roll.'],
+      ['O','“Felix had the trick. I had the reason. It was never about the moon, Nell. It was about two thousand people looking up at once. Keep the attic. Keep the cat. — O.”'],
+      ['N','The attic is yours. Merge as long as you like. Somewhere in the Circus Trunk’s chain there is still one thing nobody has seen.'],
+    ]},
+];
+
+/* ---------- orders ---------- */
+const TASKS = [
+  // ch1 — zone 0 only
+  {ch:0, who:'T', need:[['F',2]], coins:8,  say:'Got any yarn? I want to tie these bin bags shut properly.'},
+  {ch:0, who:'M', need:[['F',1],['P',1]], coins:8, say:'Mrrp. (He wants something to bat about. Thread and paper will do.)'},
+  {ch:0, who:'T', need:[['P',3]], coins:10, say:'Find me an envelope for the receipts. There are… a lot of receipts.'},
+  {ch:0, who:'M', need:[['E',2]], coins:8, say:'(He is sitting by the kettle. He is staring at the biscuit tin.)'},
+  {ch:0, who:'T', need:[['T',2],['F',3]], coins:12, say:'Wrench for the hatch hinge, and a sock to stop it squeaking. Don’t ask.'},
+  // ch2 — zone 1, fuse box
+  {ch:1, who:'T', need:[['L',2]], coins:12, say:'Half these bulbs are dead. Spare one?'},
+  {ch:1, who:'P', need:[['P',4]], coins:14, say:'Bundle up those letters, dear. Letters want keeping together.'},
+  {ch:1, who:'M', need:[['F',4]], coins:12, say:'(He has claimed a pair of opera gloves. Or he would like to.)'},
+  {ch:1, who:'T', need:[['T',3],['L',1]], coins:14, say:'Hammer and a candle. The fuse box has opinions.'},
+  {ch:1, who:'P', need:[['P',4],['F',3]], coins:16, say:'Another bundle, and something to wrap it in. Odile would hate them getting dusty.'},
+  // ch3 — zone 2, circus trunk
+  {ch:2, who:'M', need:[['M',2]], coins:16, say:'(He drops a playing card at your feet. Then another. He wants the whole deck.)'},
+  {ch:2, who:'T', need:[['L',3],['T',3]], coins:18, say:'Torch and hammer. I’m going to look behind that panel whether it likes it or not.'},
+  {ch:2, who:'P', need:[['F',5]], coins:18, say:'Is that silk? Let me see. Oh, that’s real silk.'},
+  {ch:2, who:'T', need:[['M',3]], coins:20, say:'If there’s a wand in that trunk I am absolutely going to wave it.'},
+  {ch:2, who:'M', need:[['P',5]], coins:18, say:'(He is sitting on a stack of nothing, waiting for a diary to sit on instead.)'},
+  // ch4 — zone 3
+  {ch:3, who:'P', need:[['M',4]], coins:22, say:'A top hat! Bring it here, I want to try it on. Don’t tell anyone.'},
+  {ch:3, who:'T', need:[['T',4],['L',4]], coins:22, say:'Screwdriver and a lantern. That corner is too dark to be an accident.'},
+  {ch:3, who:'M', need:[['F',5],['P',4]], coins:22, say:'(He has made a nest of letters. It needs a scarf.)'},
+  {ch:3, who:'T', need:[['M',5]], coins:26, say:'The programme says there was a rabbit. I need to see the rabbit.'},
+  {ch:3, who:'P', need:[['E',4]], coins:20, say:'All this excitement. I could murder a cupcake.'},
+  // ch5
+  {ch:4, who:'T', need:[['T',5]], coins:28, say:'A saw. This false wall comes down today.'},
+  {ch:4, who:'P', need:[['F',6]], coins:30, say:'Her stage gown. I want to see it in the light.'},
+  {ch:4, who:'M', need:[['M',5],['L',4]], coins:30, say:'(He and the rabbit are having a standoff. A lantern would help the rabbit.)'},
+  {ch:4, who:'T', need:[['P',6]], coins:30, say:'All her diaries, in order. Every year.'},
+  // ch6
+  {ch:5, who:'T', need:[['T',6],['L',5]], coins:34, say:'Light. Tools to angle the mirror. Let’s do this properly.'},
+  {ch:5, who:'P', need:[['M',6]], coins:34, say:'The dove. It belongs with the trick.'},
+  {ch:5, who:'M', need:[['F',6],['P',6]], coins:34, say:'(Cloth. Diaries. He is laying out the set like he’s done it before.)'},
+  {ch:5, who:'O', need:[['M',7]], coins:50, say:'“…a crystal, and someone who looks.”'},
+];
+TASKS.forEach((t,i)=>t.id=i);
+
+/* ============================================================ sound — all synthesised with Web Audio, no files */
+const SND = (()=>{
+  const PREF_KEY='larkspur-attic-audio';
+  let pref={music:true,sfx:true};
+  try{ const p=JSON.parse(localStorage.getItem(PREF_KEY)||'null'); if(p) pref={...pref,...p}; }catch(e){}
+  let ctx=null, master, sfxG, musG, rev, noiseBuf, timer=null, nextT=0, step=0, lastNote=4;
+  const mtof=m=>440*Math.pow(2,(m-69)/12);
+
+  function init(){
+    if(ctx) { if(ctx.state==='suspended') ctx.resume(); return; }
+    try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
+    master=ctx.createGain(); master.gain.value=.9; master.connect(ctx.destination);
+    // small room reverb from decaying noise
+    rev=ctx.createConvolver();
+    const len=ctx.sampleRate*2.4, ir=ctx.createBuffer(2,len,ctx.sampleRate);
+    for(let c=0;c<2;c++){ const d=ir.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2); }
+    rev.buffer=ir;
+    const revG=ctx.createGain(); revG.gain.value=.32; rev.connect(revG); revG.connect(master);
+    sfxG=ctx.createGain(); sfxG.gain.value=pref.sfx?.55:0; sfxG.connect(master); sfxG.connect(rev);
+    musG=ctx.createGain(); musG.gain.value=0; musG.connect(master); musG.connect(rev);
+    noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
+    const nd=noiseBuf.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1;
+    if(pref.music) startMusic();
+  }
+  function tone({f,t=0,dur=.2,type='sine',g=.3,a=.005,dest=sfxG,glide=0,lp=0}){
+    if(!ctx) return;
+    const t0=ctx.currentTime+t, o=ctx.createOscillator(), e=ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t0);
+    if(glide) o.frequency.exponentialRampToValueAtTime(glide,t0+dur);
+    e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+a); e.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    let out=e;
+    if(lp){ const fl=ctx.createBiquadFilter(); fl.type='lowpass'; fl.frequency.value=lp; e.connect(fl); out=fl; }
+    o.connect(e); out.connect(dest); o.start(t0); o.stop(t0+dur+.05);
+  }
+  function noise({t=0,dur=.15,g=.2,f=2000,q=1,type='bandpass',sweep=0}){
+    if(!ctx) return;
+    const t0=ctx.currentTime+t, s=ctx.createBufferSource(), fl=ctx.createBiquadFilter(), e=ctx.createGain();
+    s.buffer=noiseBuf; fl.type=type; fl.frequency.setValueAtTime(f,t0); fl.Q.value=q;
+    if(sweep) fl.frequency.exponentialRampToValueAtTime(sweep,t0+dur);
+    e.gain.setValueAtTime(g,t0); e.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    s.connect(fl); fl.connect(e); e.connect(sfxG); s.start(t0); s.stop(t0+dur+.05);
+  }
+  const bell=(m,t,g=.22,dur=.6)=>{ tone({f:mtof(m),t,dur,g}); tone({f:mtof(m)*2.01,t,dur:dur*.5,g:g*.35}); tone({f:mtof(m)*3.98,t,dur:dur*.25,g:g*.12}); };
+  let lastPlay={};
+  function play(name,lv=1){
+    if(!ctx||!pref.sfx) return;
+    const n=performance.now(); if(lastPlay[name]&&n-lastPlay[name]<45) return; lastPlay[name]=n;
+    switch(name){
+      case 'tap': tone({f:900,dur:.05,type:'triangle',g:.12}); break;
+      case 'move': noise({dur:.06,g:.12,f:1200,q:.8}); tone({f:220,dur:.07,type:'triangle',g:.1}); break;
+      case 'spawn': tone({f:300+lv*60,glide:700+lv*120,dur:.13,type:'sine',g:.28}); tone({f:1200,t:.05,dur:.08,type:'triangle',g:.06}); break;
+      case 'merge': { const base=[72,74,76,79,81,84,86,88][Math.min(lv-2,7)]||72;
+        bell(base-12,0,.18,.35); bell(base,.07,.22,.7); tone({f:mtof(base-24),dur:.18,type:'triangle',g:.18}); break; }
+      case 'reveal': noise({dur:.22,g:.16,f:3000,q:.6,sweep:900}); tone({f:160,dur:.12,type:'triangle',g:.12}); break;
+      case 'unweb': [88,91,95].forEach((m,i)=>tone({f:mtof(m),t:i*.04,dur:.25,g:.07})); break;
+      case 'coins': [76,79,83,88].forEach((m,i)=>{ bell(m,i*.07,.16,.4); }); noise({t:.02,dur:.3,g:.06,f:7000,q:2}); break;
+      case 'coin': bell(88,0,.14,.3); bell(91,.06,.12,.35); break;
+      case 'drink': noise({dur:.28,g:.12,f:500,q:3,sweep:1800}); tone({f:420,glide:620,dur:.2,type:'sine',g:.1,t:.05}); break;
+      case 'nope': tone({f:180,glide:120,dur:.16,type:'triangle',g:.22,lp:900}); break;
+      case 'page': noise({dur:.09,g:.1,f:2500,q:.7,sweep:5000}); break;
+      case 'gift': [79,83,86,91].forEach((m,i)=>bell(m,i*.06,.14,.5)); break;
+      case 'magic': [72,76,79,83,86,88,91,95].forEach((m,i)=>tone({f:mtof(m),t:i*.05,dur:.6,g:.08})); noise({dur:.9,g:.04,f:8000,q:4}); break;
+      case 'fanfare': [[67,0],[72,.14],[76,.28],[79,.42],[84,.62]].forEach(([m,t])=>{ tone({f:mtof(m),t,dur:.5,type:'triangle',g:.14,lp:3000}); bell(m+12,t,.08,.5); });
+        tone({f:mtof(48),t:.62,dur:1.4,type:'triangle',g:.2}); break;
+    }
+  }
+
+  /* --- background music: a slow music-box waltz that wanders through two progressions --- */
+  const BPM=78, BEAT=60/BPM;
+  const PROGS=[
+    [[57,[69,72,76]],[53,[69,72,77]],[48,[67,72,76]],[55,[67,71,74]],[57,[69,72,76]],[50,[69,74,77]],[52,[68,71,74]],[52,[68,71,76]]], // Am F C G Am Dm E E
+    [[48,[67,72,76]],[45,[69,72,76]],[53,[69,72,77]],[55,[67,71,74]],[48,[67,72,76]],[52,[67,71,76]],[53,[69,72,77]],[55,[67,71,74]]], // C Am F G C Em F G
+  ];
+  const SCALE=[69,71,72,74,76,77,79,81,83,84];
+  function musicNote(m,t,g,dur){ // music box: bright sine + soft overtone, quick decay
+    const o=ctx.createOscillator(), o2=ctx.createOscillator(), e=ctx.createGain();
+    o.type='sine'; o2.type='sine'; o.frequency.value=mtof(m); o2.frequency.value=mtof(m)*3.01;
+    const e2=ctx.createGain(); e2.gain.value=.12;
+    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(g,t+.004); e.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(e); o2.connect(e2); e2.connect(e); e.connect(musG); o.start(t); o2.start(t); o.stop(t+dur+.05); o2.stop(t+dur+.05);
+  }
+  function pad(notes,t,dur){
+    notes.forEach(m=>{ const o=ctx.createOscillator(), e=ctx.createGain(), fl=ctx.createBiquadFilter();
+      o.type='triangle'; o.frequency.value=mtof(m-12); o.detune.value=(Math.random()-.5)*8;
+      fl.type='lowpass'; fl.frequency.value=900;
+      e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(.035,t+.6); e.gain.linearRampToValueAtTime(.0001,t+dur);
+      o.connect(fl); fl.connect(e); e.connect(musG); o.start(t); o.stop(t+dur+.05); });
+  }
+  function bass(m,t){ const o=ctx.createOscillator(), e=ctx.createGain(); o.type='triangle'; o.frequency.value=mtof(m-12);
+    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(.16,t+.01); e.gain.exponentialRampToValueAtTime(.0001,t+BEAT*1.6);
+    o.connect(e); e.connect(musG); o.start(t); o.stop(t+BEAT*1.7); }
+  function scheduleBeat(t){
+    const bar=Math.floor(step/3), beat=step%3, cycle=Math.floor(bar/8);
+    const prog=PROGS[cycle%2], [root,chord]=prog[bar%8];
+    if(beat===0){ bass(root,t); pad(chord,t,BEAT*3.2); }
+    else if(Math.random()<.5) bass(root+(beat===1?7:12),t);
+    // melody: wander between chord tones and scale, with rests
+    const rest = (bar%8===7 && beat>0) || Math.random()<.22;
+    if(!rest){
+      const pool = beat===0 ? chord.map(c=>c+12).concat(chord) : SCALE;
+      let target=pool[Math.floor(Math.random()*pool.length)];
+      if(Math.abs(target-lastNote)>9) target = pool.reduce((a,b)=>Math.abs(b-lastNote)<Math.abs(a-lastNote)?b:a);
+      lastNote=target;
+      musicNote(target,t,.11,1.6);
+      if(Math.random()<.18){ const nx=SCALE[Math.max(0,Math.min(SCALE.length-1,SCALE.indexOf(target)+(Math.random()<.5?1:-1)))]||target; musicNote(nx,t+BEAT/2,.07,1.1); }
+    }
+    step++;
+  }
+  function startMusic(){
+    if(!ctx||timer) return;
+    musG.gain.cancelScheduledValues(ctx.currentTime);
+    musG.gain.setValueAtTime(musG.gain.value,ctx.currentTime);
+    musG.gain.linearRampToValueAtTime(.55,ctx.currentTime+2.5);
+    nextT=ctx.currentTime+.1;
+    timer=setInterval(()=>{ while(nextT<ctx.currentTime+.25){ scheduleBeat(nextT); nextT+=BEAT; } },60);
+  }
+  function stopMusic(){
+    if(!ctx) return;
+    musG.gain.cancelScheduledValues(ctx.currentTime);
+    musG.gain.setValueAtTime(musG.gain.value,ctx.currentTime);
+    musG.gain.linearRampToValueAtTime(0,ctx.currentTime+.6);
+    clearInterval(timer); timer=null;
+  }
+  function savePref(){ try{ localStorage.setItem(PREF_KEY,JSON.stringify(pref)); }catch(e){} }
+  function setMusic(on){ pref.music=on; savePref(); if(!ctx) return; on?startMusic():stopMusic(); }
+  function setSfx(on){ pref.sfx=on; savePref(); if(sfxG) sfxG.gain.value=on?.55:0; }
+  document.addEventListener('visibilitychange',()=>{ if(!ctx) return; document.hidden?ctx.suspend():ctx.resume(); });
+  // browsers only allow audio after the first touch
+  const unlock=()=>{ init(); };
+  document.addEventListener('pointerdown',unlock,{once:false,capture:true});
+  document.addEventListener('keydown',unlock,{once:false,capture:true});
+  return {play,setMusic,setSfx,get pref(){return pref;}};
+})();
+
+/* ============================================================ state */
+let S, sel = -1, fx = {};
+const $ = id => document.getElementById(id);
+const now = () => Date.now();
+const def = it => CHAINS[it.k].items[it.l-1];
+const maxL = k => CHAINS[k].items.length;
+const isGen = it => !!CHAINS[it.k].gen;
+const key = (k,l) => k+l;
+
+function mkItem(k,l){
+  const it={k,l};
+  const d=CHAINS[k].items[l-1];
+  if(CHAINS[k].gen && d.charges){ it.ch=d.charges; it.t=now(); }
+  return it;
+}
+function freshState(){
+  const cells=[];
+  const map={o:'open',w:'web',b:'box'};
+  LAYOUT.forEach((row,r)=>row.trim().split(/\s+/).forEach(tok=>{
+    const st=map[tok[0]], rest=tok.slice(1);
+    let it=null;
+    if(rest!=='.'){ const m=rest.match(/^([a-zA-Z]+?)(\d)$/); it=mkItem(m[1],+m[2]); }
+    const z=zoneOfRow(r);
+    cells.push({s: z>0?'sheet':st, ps:st, it, z});
+  }));
+  const disc={};
+  cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
+  return {v:1, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
+}
+function load(){
+  try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63) return s; } }catch(e){}
+  return freshState();
+}
+function save(){ try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} }
+
+/* ============================================================ energy & charges */
+function tickEnergy(){
+  const M=CONFIG.energyMax, R=CONFIG.energyRegenMs;
+  if(S.energy>=M){ S.eT=now(); return; }
+  const g=Math.floor((now()-S.eT)/R);
+  if(g>0){ S.energy=Math.min(M,S.energy+g); S.eT+=g*R; if(S.energy>=M) S.eT=now(); }
+}
+function spendEnergy(n){ if(S.energy>=CONFIG.energyMax) S.eT=now(); S.energy-=n; }
+function refreshCharges(it){
+  const d=def(it); if(!d.charges) return;
+  if(it.ch>=d.charges){ it.t=now(); return; }
+  const g=Math.floor((now()-it.t)/d.rechargeMs);
+  if(g>0){ it.ch=Math.min(d.charges,it.ch+g); it.t+=g*d.rechargeMs; if(it.ch>=d.charges) it.t=now(); }
+}
+function nextChargeIn(it){ const d=def(it); return Math.max(0, Math.ceil((d.rechargeMs-(now()-it.t))/1000)); }
+
+/* ============================================================ board logic */
+const rc = i => [Math.floor(i/CONFIG.cols), i%CONFIG.cols];
+function neighbours(i){
+  const [r,c]=rc(i), out=[];
+  if(r>0) out.push(i-7); if(r<8) out.push(i+7); if(c>0) out.push(i-1); if(c<6) out.push(i+1);
+  return out;
+}
+function revealCell(i){
+  const c=S.cells[i];
+  if(c.s!=='box') return false;
+  c.s = (c.it && !isGen(c.it)) ? 'web' : 'open';
+  if(c.s==='open' && c.it) discover(c.it, true);
+  fx[i]='reveal';
+  SND.play('reveal');
+  return true;
+}
+function revealAround(i){ neighbours(i).forEach(revealCell); }
+
+function nearestEmpty(from){
+  const [r0,c0]=rc(from); let best=-1, bd=1e9;
+  S.cells.forEach((c,i)=>{
+    if(c.s!=='open'||c.it) return;
+    const [r,cc]=rc(i); const d=(r-r0)**2+(cc-c0)**2 + Math.random()*.01;
+    if(d<bd){bd=d;best=i;}
+  });
+  return best;
+}
+function pickDrop(drop){
+  const tot=drop.reduce((a,d)=>a+d[2],0); let x=Math.random()*tot;
+  for(const d of drop){ x-=d[2]; if(x<=0) return d; }
+  return drop[0];
+}
+function discover(it, quiet){
+  const k=key(it.k,it.l);
+  if(S.disc[k]) return;
+  S.disc[k]=1;
+  if(quiet) return;
+  const d=def(it), ch=CHAINS[it.k];
+  if(ch.story && d.lore){ setTimeout(()=>showLore(it),350); }
+  else toast(`New: ${d.e} <b>${d.n}</b>`);
+}
+
+function produce(i){
+  const it=S.cells[i].it, d=def(it);
+  if(d.charges){
+    refreshCharges(it);
+    if(it.ch<=0){ SND.play('nope'); toast(`${d.e} The ${d.n.toLowerCase()} is boiling. Ready in ${nextChargeIn(it)}s.`); return; }
+  } else if(S.energy<CONFIG.energyCost){
+    SND.play('nope'); toast('Out of energy. Drink some tea, or buy a top-up from the ⋯ menu.'); return;
+  }
+  const t=nearestEmpty(i);
+  if(t<0){ SND.play('nope'); toast('No room left. Merge or sell something first.'); fx[i]='pulse'; render(); return; }
+  if(d.charges){ if(it.ch>=d.charges) it.t=now(); it.ch--; }
+  else spendEnergy(CONFIG.energyCost);
+  const [k,l]=pickDrop(d.drop);
+  S.cells[t].it=mkItem(k,l);
+  fx[i]='pulse'; fx[t]='spawn';
+  SND.play('spawn',l);
+  discover(S.cells[t].it);
+  save(); render();
+}
+
+function drink(i){
+  const it=S.cells[i].it, d=def(it);
+  S.energy+=d.v; S.cells[i].it=null; sel=-1;
+  SND.play('drink');
+  toast(`${d.e} +${d.v} ⚡`);
+  save(); render();
+}
+
+function canMerge(a,b){ return a&&b&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
+
+function drop(a,b){
+  if(b<0||a===b){ return; }
+  const A=S.cells[a], B=S.cells[b];
+  if(B.s==='sheet'){ SND.play('nope'); toast('That part of the attic is still under dust sheets.'); return; }
+  if(B.s==='box'){ SND.play('nope'); toast('Merge something next to that box to open it.'); return; }
+  if(B.s==='web'){
+    if(canMerge(A.it,B.it)){ doMerge(a,b); }
+    else { SND.play('nope'); toast(`Stuck in cobwebs. Drop another ${def(B.it).e} ${def(B.it).n} on it to free it.`); }
+    return;
+  }
+  // open
+  if(!B.it){ B.it=A.it; A.it=null; sel=b; SND.play('move'); save(); render(); return; }
+  if(canMerge(A.it,B.it)){ doMerge(a,b); return; }
+  const tmp=B.it; B.it=A.it; A.it=tmp; sel=b; SND.play('move'); save(); render();
+}
+function doMerge(a,b){
+  const A=S.cells[a], B=S.cells[b];
+  const it=mkItem(A.it.k, A.it.l+1);
+  SND.play('merge',it.l); if(B.s==='web') SND.play('unweb');
+  A.it=null; B.it=it; B.s='open';
+  fx[b]='pop';
+  revealAround(b);
+  discover(it);
+  sel=b;
+  save(); render();
+}
+
+function sellValue(it){ return isGen(it)?0 : CHAINS[it.k].story ? it.l*4 : it.l*2; }
+function sell(i){
+  const it=S.cells[i].it, v=sellValue(it);
+  S.coins+=v; S.cells[i].it=null; sel=-1;
+  SND.play('coin');
+  toast(`Sold ${def(it).e} for 🪙${v}`);
+  save(); render();
+}
+
+/* ============================================================ orders & chapters */
+function activeTasks(){
+  if(S.complete) return [];
+  return TASKS.filter(t=>t.ch===S.ch && !S.done[t.id]).slice(0,3);
+}
+function openCount(k,l){ return S.cells.reduce((n,c)=>n+(c.s==='open'&&c.it&&c.it.k===k&&c.it.l===l?1:0),0); }
+function taskStatus(t){
+  const need={}; t.need.forEach(([k,l])=>need[key(k,l)]=(need[key(k,l)]||0)+1);
+  const have=t.need.map(([k,l])=>openCount(k,l)>=need[key(k,l)]);
+  return {have, ready:have.every(Boolean)};
+}
+function completeTask(t){
+  // remove items, preferring ones not currently selected
+  t.need.forEach(([k,l])=>{
+    let idx=S.cells.findIndex((c,i)=>i!==sel&&c.s==='open'&&c.it&&c.it.k===k&&c.it.l===l);
+    if(idx<0) idx=S.cells.findIndex(c=>c.s==='open'&&c.it&&c.it.k===k&&c.it.l===l);
+    if(idx===sel) sel=-1;
+    S.cells[idx].it=null; fx[idx]='pulse';
+  });
+  S.done[t.id]=1; S.coins+=t.coins;
+  SND.play('coins');
+  toast(`${CAST[t.who].av} Thanks! +🪙${t.coins}`);
+  const chTasks=TASKS.filter(x=>x.ch===S.ch);
+  if(chTasks.every(x=>S.done[x.id])) finishChapter();
+  save(); render();
+}
+function finishChapter(){
+  const c=S.ch;
+  S.journal.push(c);
+  setTimeout(()=>SND.play('fanfare'),350);
+  const queue=[{title:'Chapter '+(c+1)+' complete', sub:CHAPTERS[c].title, lines:CHAPTERS[c].outro}];
+  S.ch++;
+  if(S.ch>=CHAPTERS.length){ S.complete=true; }
+  else{
+    const nc=CHAPTERS[S.ch];
+    if(nc.zone) unlockZone(nc.zone);
+    nc.gifts.forEach(([k,l])=>S.gifts.push([k,l]));
+    S.seenIntro[S.ch]=1;
+    queue.push({title:'Chapter '+(S.ch+1), sub:nc.title, lines:nc.intro});
+  }
+  save();
+  playQueue(queue, ()=>{ if(S.complete) showComplete(); });
+}
+function unlockZone(z){
+  S.cells.forEach((c,i)=>{ if(c.z===z&&c.s==='sheet'){ c.s=c.ps; if(c.s==='open'&&c.it) discover(c.it,true); fx[i]='reveal'; } });
+  // the row touching the open floor shakes loose straight away
+  S.cells.forEach((c,i)=>{ if(c.z===z && neighbours(i).some(n=>S.cells[n].z<z)) revealCell(i); });
+}
+function placeGift(){
+  if(!S.gifts.length) return;
+  const t=nearestEmpty(59);
+  if(t<0){ toast('No room for your gift. Clear a space first.'); return; }
+  const [k,l]=S.gifts.shift();
+  S.cells[t].it=mkItem(k,l); fx[t]='spawn'; sel=t;
+  SND.play('gift');
+  discover(S.cells[t].it);
+  toast(`${def(S.cells[t].it).e} ${def(S.cells[t].it).n} placed on the board`);
+  save(); render();
+}
+function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&ch.items[0].drop.some(d=>d[0]===k)); }
+function hintTask(t){
+  const ks=new Set(t.need.map(n=>n[0]));
+  S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&def(c.it).drop.some(d=>ks.has(d[0]))))) fx[i]='hint'; });
+  const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=genFor(k); return `${d.e} ${d.n}${g?` <small>(${g.items[0].e} ${g.name})</small>`:''}`; });
+  toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs: ${parts.join(' + ')}`, 4200);
+  render();
+}
+
+/* ============================================================ rendering */
+const board=$('board');
+function buildBoard(){
+  board.innerHTML='';
+  for(let i=0;i<63;i++){
+    const d=document.createElement('div');
+    const [r,c]=rc(i);
+    d.className='cell'+((r+c)%2?' alt':'');
+    d.dataset.i=i;
+    board.appendChild(d);
+  }
+}
+function render(){
+  tickEnergy();
+  const tasks=activeTasks();
+  const needed=new Set(); tasks.forEach(t=>t.need.forEach(([k,l])=>needed.add(key(k,l))));
+  const cellEls=board.children;
+  S.cells.forEach((c,i)=>{
+    const el=cellEls[i]; const [r,cc]=rc(i);
+    let cls='cell'+((r+cc)%2?' alt':'');
+    let html='';
+    if(c.s==='sheet'){
+      cls+=' sheet';
+      const zr=[6,4,2,0][c.z];
+      if(r===zr && cc===3){ const chN=CHAPTERS.findIndex(ch=>ch.zone===c.z)+1; html=`<span class="lock">🔒 Chapter ${chN}</span>`; }
+    } else if(c.s==='box'){ cls+=' box'; }
+    else if(c.it){
+      const d=def(c.it);
+      if(c.s==='web') cls+=' web';
+      html=`<span class="em">${d.e}</span>`;
+      if(c.s==='open'){
+        if(isGen(c.it)){
+          cls+=' isgen';
+          if(d.charges){ refreshCharges(c.it); html+=`<i class="gen">${c.it.ch}/${d.charges}</i>`; }
+          else html+=`<i class="gen">⚡</i>`;
+        } else {
+          html+=`<i class="lv">${c.it.l}</i>`;
+          if(needed.has(key(c.it.k,c.it.l))) html+=`<b class="chk">✓</b>`;
+        }
+      } else html+=`<i class="lv">${c.it.l}</i>`;
+    }
+    if(i===sel) cls+=' sel';
+    if(fx[i]) cls+=' '+fx[i];
+    if(el.className!==cls) el.className=cls;
+    if(el._h!==html){ el.innerHTML=html; el._h=html; }
+  });
+  // replay animations: force reflow for fx cells then clear
+  if(Object.keys(fx).length){
+    const f=fx; fx={};
+    setTimeout(()=>{ Object.keys(f).forEach(i=>cellEls[i]&&cellEls[i].classList.remove(f[i])); }, f && Object.values(f).includes('hint')?2400:420);
+  }
+  renderHud(); renderOrders(tasks); renderInfo();
+}
+function renderHud(){
+  $('energy').textContent=S.energy;
+  $('eTimer').textContent = S.energy<CONFIG.energyMax ? fmt(Math.ceil((CONFIG.energyRegenMs-(now()-S.eT))/1000)) : '';
+  $('coins').textContent=S.coins;
+  $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length;
+  const ci=Math.min(S.ch,CHAPTERS.length-1);
+  const chT=TASKS.filter(t=>t.ch===ci), dn=chT.filter(t=>S.done[t.id]).length;
+  $('chNum').textContent = S.complete?'Event complete':'Chapter '+(ci+1);
+  $('chName').textContent = CHAPTERS[ci].title;
+  $('chCount').textContent = S.complete?'✨':`${dn}/${chT.length}`;
+  $('chBar').style.width = (S.complete?100:dn/chT.length*100)+'%';
+}
+function fmt(s){ s=Math.max(0,s); return s>=60? Math.floor(s/60)+':'+String(s%60).padStart(2,'0') : '0:'+String(s).padStart(2,'0'); }
+function renderOrders(tasks){
+  const box=$('orders');
+  if(S.complete){
+    const has=S.disc['M8'];
+    box.innerHTML=`<div class="empty"><div><b>The attic is yours</b>${has?'You found the Vanishing Moon. Odile would be smug.':'Keep merging. The Circus Trunk still hides one last secret.'}</div></div>`;
+    return;
+  }
+  box.innerHTML='';
+  tasks.forEach(t=>{
+    const st=taskStatus(t);
+    const el=document.createElement('div');
+    el.className='order'+(st.ready?' ready':'');
+    el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${CAST[t.who].name}</span></div>
+      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
+      <div class="act">${st.ready?'Hand over':'🪙 '+t.coins}</div>`;
+    el.onclick=()=>{ if(taskStatus(t).ready) completeTask(t); else hintTask(t); };
+    box.appendChild(el);
+  });
+}
+let sellArm=false;
+function renderInfo(){
+  const box=$('info');
+  const c=S.cells[sel];
+  if(sel<0||!c||!c.it||c.s!=='open'){
+    const tip = S.gifts.length ? 'You have a gift waiting. Tap 🎁 to put it on the board.'
+      : 'Tap a generator twice to make something. Drag matching items together to merge.';
+    box.innerHTML=`<div class="big">🐈‍⬛</div><div class="txt hintline">${tip}</div>`;
+    return;
+  }
+  const it=c.it, d=def(it), ch=CHAINS[it.k];
+  let ds='';
+  if(ch.gen){
+    if(d.charges){ refreshCharges(it); ds = it.ch>0 ? `Tap again to brew tea. Free. ${it.ch} left.` : `Boiling… ready in ${nextChargeIn(it)}s.`; }
+    else ds=`Tap again to make ${CHAINS[d.drop[0][0]].name.toLowerCase()}. Costs ⚡${CONFIG.energyCost}.`;
+    if(it.l<maxL(it.k)) ds+=` Merge two to get a ${ch.items[it.l].n}.`;
+  } else if(ch.type==='energy'){
+    ds=`Tap again to have it: +${d.v} ⚡.`+(it.l<maxL(it.k)?` Or merge for a ${ch.items[it.l].n}.`:'');
+  } else {
+    ds = it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.';
+  }
+  const sv=sellValue(it);
+  box.innerHTML=`<div class="big">${d.e}</div>
+    <div class="txt"><div class="nm">${d.n}<small>${ch.name} · Lv ${it.l}</small></div><div class="ds">${ds}</div></div>
+    <div class="btns"><button class="sbtn" id="chainBtn">Chain</button>${sv?`<button class="sbtn${sellArm?' warn':''}" id="sellBtn">${sellArm?'Sure?':'Sell 🪙'+sv}</button>`:''}</div>`;
+  $('chainBtn').onclick=()=>showChain(it.k, it.l);
+  if(sv) $('sellBtn').onclick=()=>{ if(sellArm){ sellArm=false; sell(sel); } else { sellArm=true; renderInfo(); } };
+}
+
+/* ============================================================ input: tap / drag */
+const ghost=$('ghost');
+let press=null;
+board.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.cell'); if(!el) return;
+  const i=+el.dataset.i;
+  press={i,x:e.clientX,y:e.clientY,drag:false,id:e.pointerId};
+  board.setPointerCapture?.(e.pointerId);
+});
+board.addEventListener('pointermove',e=>{
+  if(!press) return;
+  const c=S.cells[press.i];
+  if(!press.drag){
+    if(Math.hypot(e.clientX-press.x,e.clientY-press.y)<8) return;
+    if(c.s!=='open'||!c.it){ press=null; return; }
+    press.drag=true; sellArm=false;
+    ghost.textContent=def(c.it).e;
+    board.children[press.i].classList.add('lift');
+  }
+  ghost.style.transform=`translate(${e.clientX}px,${e.clientY}px) translate(-50%,-60%) scale(1.1)`;
+  const t=cellAt(e.clientX,e.clientY);
+  [...board.querySelectorAll('.drop')].forEach(x=>x.classList.remove('drop'));
+  if(t>=0&&t!==press.i) board.children[t].classList.add('drop');
+});
+function endPress(e,cancel){
+  if(!press) return;
+  const p=press; press=null;
+  ghost.style.transform='translate(-999px,-999px)';
+  [...board.querySelectorAll('.drop,.lift')].forEach(x=>x.classList.remove('drop','lift'));
+  if(cancel) return;
+  if(p.drag){ drop(p.i, cellAt(e.clientX,e.clientY)); }
+  else tap(p.i);
+}
+board.addEventListener('pointerup',e=>endPress(e,false));
+board.addEventListener('pointercancel',e=>endPress(e,true));
+function cellAt(x,y){
+  const r=board.getBoundingClientRect();
+  if(x<r.left||x>=r.right||y<r.top||y>=r.bottom) return -1;
+  const cs=r.width/7;
+  return Math.floor((y-r.top)/cs)*7+Math.floor((x-r.left)/cs);
+}
+function tap(i){
+  const c=S.cells[i];
+  SND.play('tap');
+  if(c.s==='sheet'){ const n=CHAPTERS.findIndex(ch=>ch.zone===c.z)+1; toast(`Still under dust sheets. Opens in Chapter ${n}.`); return; }
+  if(c.s==='box'){ toast('Merge something next to this box to open it.'); return; }
+  if(c.s==='web'){ const d=def(c.it); toast(`${d.e} ${d.n} is stuck in cobwebs. Drop a matching one on it.`); sel=-1; render(); return; }
+  if(!c.it){ sel=-1; sellArm=false; render(); return; }
+  if(sel===i){
+    if(isGen(c.it)){ produce(i); return; }
+    if(CHAINS[c.it.k].type==='energy'){ drink(i); return; }
+    return;
+  }
+  sel=i; sellArm=false; render();
+}
+
+/* ============================================================ overlays */
+function toast(html,ms=2200){
+  const t=document.createElement('div'); t.className='t'; t.innerHTML=html;
+  const box=$('toast'); box.appendChild(t);
+  while(box.children.length>3) box.firstChild.remove();
+  setTimeout(()=>t.remove(),ms);
+}
+function playQueue(q,done){
+  if(!q.length){ done&&done(); return; }
+  const s=q.shift();
+  playScene(s, ()=>playQueue(q,done));
+}
+function playScene(sc,done){
+  const ov=$('scene'); let i=0;
+  ov.hidden=false;
+  const show=()=>{
+    if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; done&&done(); return; }
+    const [who,txt]=sc.lines[i], cst=CAST[who];
+    const cls = who==='N'?'narr': who==='O'?'note':'';
+    ov.innerHTML=`${i===0&&sc.title?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:'<div style="margin:auto"></div>'}
+      <div class="dlg ${cls}" id="dlg" role="button" tabindex="0">
+        ${cst.name?`<div class="spk"><span class="av">${cst.av}</span><b>${cst.name}</b></div>`:''}
+        <p>${txt}</p>
+        <div class="foot"><span>${i+1} / ${sc.lines.length}</span><span>Tap to continue ›</span></div>
+      </div>
+      <button class="sbtn" id="skipBtn" style="margin-top:10px">Skip scene</button>`;
+    $('dlg').onclick=()=>{ SND.play('page'); i++; show(); };
+    $('dlg').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); SND.play('page'); i++; show(); } };
+    $('skipBtn').onclick=()=>{ i=sc.lines.length; show(); };
+    $('dlg').focus();
+  };
+  show();
+}
+function openModal(html){ $('modalBody').innerHTML=html; $('modal').hidden=false; }
+function closeModal(){ $('modal').hidden=true; }
+$('modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
+
+function chainHtml(k,cur){
+  const ch=CHAINS[k];
+  return `<div class="chain">${ch.items.map((d,j)=>{
+    const known=S.disc[key(k,j+1)];
+    return `<div class="ci${known?'':' unk'}${cur===j+1?' cur':''}"><span>${known?d.e:'?'}</span>${known?d.n:'Lv '+(j+1)}</div>`;
+  }).join('')}</div>`;
+}
+function showChain(k,cur){
+  const ch=CHAINS[k];
+  let extra='';
+  if(ch.gen){ const d=ch.items[0]; extra=`<p class="ds">Makes: ${[...new Set(d.drop.map(x=>x[0]))].map(x=>CHAINS[x].name).join(', ')}.</p>${chainHtml(d.drop[0][0])}`; }
+  else { const g=genFor(k); if(g) extra=`<p style="color:var(--muted);font-size:13px">Comes from the ${g.items[0].e} ${g.name}.</p>`; }
+  openModal(`<h2>${ch.name}</h2>${chainHtml(k,cur)}${extra}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
+}
+function showLore(it){
+  const d=def(it);
+  SND.play('magic');
+  openModal(`<h3 style="margin-top:0">Found in the Circus Trunk</h3><div style="font-size:54px;text-align:center">${d.e}</div><h2 style="text-align:center">${d.n}</h2><p style="font-style:italic;text-align:center">${d.lore}</p><div class="row-btns" style="justify-content:center"><button class="bigbtn gold" onclick="closeModal()">Into the journal</button></div>`);
+}
+function showJournal(){
+  let html=`<h2>Odile’s Attic</h2><p style="color:var(--muted)">Everything you’ve uncovered so far.</p><h3>Chapters</h3>`;
+  const upto=S.complete?CHAPTERS.length:S.ch+1;
+  for(let c=0;c<upto;c++){
+    const fin=S.journal.includes(c);
+    html+=`<div class="entry"><b>${c+1}. ${CHAPTERS[c].title}</b><div class="row-btns" style="margin-top:6px">
+      <button class="sbtn" data-scene="i${c}">Replay opening</button>${fin?`<button class="sbtn" data-scene="o${c}">Replay ending</button>`:''}</div></div>`;
+  }
+  html+=`<h3>The Great Odelia</h3>`;
+  const lore=CHAINS.M.items.map((d,j)=>S.disc[key('M',j+1)]?`<div class="lore"><span>${d.e}</span><div><b>${d.n}</b>${d.lore}</div></div>`:'').join('');
+  html+= lore || `<p style="color:var(--muted)">Nothing yet. Somewhere up here is a trunk with no keyhole.</p>`;
+  html+=`<h3>Collections</h3>`;
+  ['P','F','T','L','E','M'].forEach(k=>html+=`<p style="margin:10px 0 6px;font-weight:800">${CHAINS[k].name}</p>${chainHtml(k)}`);
+  html+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
+  openModal(html);
+  $('modalBody').querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{
+    const s=b.dataset.scene, c=+s.slice(1), ch=CHAPTERS[c];
+    closeModal();
+    playScene({title:'Chapter '+(c+1), sub:ch.title, lines: s[0]==='i'?ch.intro:ch.outro});
+  });
+}
+let resetArm=false;
+function showMenu(){
+  const b=CONFIG.buyEnergy;
+  openModal(`<h2>Larkspur Attic</h2><p style="color:var(--muted)">Event 1 · no timer · version ${VERSION}</p>
+    <h3>Energy</h3><p>⚡ ${S.energy} · refills 1 every ${CONFIG.energyRegenMs/1000}s up to ${CONFIG.energyMax}. Tea items on the board top you up past the cap.</p>
+    <div class="row-btns"><button class="bigbtn gold" id="buyE" ${S.coins<b.cost?'disabled style="opacity:.5"':''}>Buy ⚡${b.amount} for 🪙${b.cost}</button></div>
+    <h3>Sound</h3>
+    <div class="row-btns" style="margin-top:0"><button class="bigbtn${SND.pref.music?' gold':''}" id="musBtn">♪ Music: ${SND.pref.music?'On':'Off'}</button><button class="bigbtn${SND.pref.sfx?' gold':''}" id="sfxBtn">Sound effects: ${SND.pref.sfx?'On':'Off'}</button></div>
+    <h3>Save</h3><p style="color:var(--muted);font-size:13px">Progress saves in this browser automatically.</p>
+    <div class="row-btns"><button class="bigbtn warn" id="resetBtn">${resetArm?'Tap again to wipe everything':'Restart event'}</button><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
+  $('buyE').onclick=()=>{ if(S.coins<b.cost) return; S.coins-=b.cost; S.energy+=b.amount; SND.play('coin'); save(); render(); showMenu(); toast(`+${b.amount} ⚡`); };
+  $('musBtn').onclick=()=>{ SND.setMusic(!SND.pref.music); showMenu(); };
+  $('sfxBtn').onclick=()=>{ SND.setSfx(!SND.pref.sfx); showMenu(); SND.play('tap'); };
+  $('resetBtn').onclick=()=>{ if(!resetArm){ resetArm=true; showMenu(); return; } resetArm=false; S=freshState(); sel=-1; save(); closeModal(); render(); startIntro(); };
+}
+function showComplete(){
+  openModal(`<h3 style="margin-top:0">Event complete</h3><h2>The Vanishing Moon</h2><p>You restored Odile’s attic and found out who she really was.</p><p style="color:var(--muted)">The board stays open. Merge as long as you like. The Circus Trunk chain has one level nobody has reached yet.</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button></div>`);
+}
+
+$('journalBtn').onclick=showJournal;
+$('menuBtn').onclick=()=>{ resetArm=false; showMenu(); };
+$('giftBtn').onclick=placeGift;
+
+/* full screen toggle */
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+$('fsBtn').onclick=async()=>{
+  try{
+    if(fsEl()){ await (document.exitFullscreen||document.webkitExitFullscreen).call(document); return; }
+    const el=document.documentElement, req=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(!req) throw 0;
+    await req.call(el,{navigationUI:'hide'});
+  }catch(e){ toast('Full screen isn’t allowed in this view. Open the page in your browser, or add it to your home screen.',3800); }
+};
+const fsSync=()=>{ $('fsPath').setAttribute('d', fsEl()?'M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4':'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4'); setTimeout(fit,60); };
+document.addEventListener('fullscreenchange',fsSync);
+document.addEventListener('webkitfullscreenchange',fsSync);
+
+/* ============================================================ sizing & loop */
+function fit(){
+  const r=$('wrap').getBoundingClientRect();
+  const cs=Math.max(32,Math.floor(Math.min((r.width-8)/7,(r.height-8)/9)));
+  document.documentElement.style.setProperty('--cs',cs+'px');
+}
+window.addEventListener('resize',fit);
+setInterval(()=>{
+  const before=S.energy; tickEnergy(); renderHud();
+  // refresh kettle counters + info text once a second
+  let any=false; S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&def(c.it).charges){ const o=c.it.ch; refreshCharges(c.it); if(o!==c.it.ch) any=true; } });
+  if(any||before!==S.energy){ save(); render(); }
+  else if(sel>=0 && S.cells[sel].it && def(S.cells[sel].it).charges) renderInfo();
+},1000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) render(); });
+
+function startIntro(){
+  if(!S.seenIntro[S.ch] && !S.complete){
+    S.seenIntro[S.ch]=1; save();
+    const c=CHAPTERS[S.ch];
+    playScene({title:'Chapter '+(S.ch+1), sub:c.title, lines:c.intro});
+  }
+}
+
+S=load();
+buildBoard();
+fit();
+render();
+requestAnimationFrame(fit);
+
+/* title screen → first Play tap goes full screen */
+$('ver').textContent=`Version ${VERSION}`;
+const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent) && !(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+if(isIOS && !navigator.standalone) $('iosHint').hidden=false;
+$('playBtn').onclick=()=>{
+  if(!fsEl()){ try{ const el=document.documentElement, r=el.requestFullscreen||el.webkitRequestFullscreen; const p=r&&r.call(el,{navigationUI:'hide'}); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }
+  $('title').hidden=true;
+  setTimeout(fit,80);
+  startIntro();
+};
+
+/* self-update: compare VERSION with the live file */
+async function checkUpdate(){
+  try{
+    if(location.protocol==='file:') return;
+    const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+    const m=(await r.text()).match(/const VERSION='([^']+)'/);
+    if(m && m[1]!==VERSION){
+      const box=$('updBox');
+      box.innerHTML=`🔄 New version ${m[1]} <button id="updGo">Update now</button>`; box.hidden=false;
+      $('updGo').onclick=()=>{ location.href=location.pathname+'?v='+encodeURIComponent(m[1].split(' ')[0]); };
+    }
+  }catch(e){}
+}
+checkUpdate(); setInterval(checkUpdate,4*60*1000);
+</script>
+</body>
+</html>
