@@ -336,7 +336,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v26 · 11 Oct 2026';
+const VERSION='v27 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -350,21 +350,29 @@ try{muted=localStorage.getItem('hh.muted')==='1'}catch(e){}
 function audio(){
   if(AC){if(AC.state==='suspended')AC.resume();return AC}
   try{
-    AC=new (window.AudioContext||window.webkitAudioContext)();
-    const comp=AC.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=3.5;comp.attack.value=.004;comp.release.value=.2;
-    master=AC.createGain();master.gain.value=.9;master.connect(comp);comp.connect(AC.destination);
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    try{AC=new Ctx({latencyHint:'playback'})}catch(e){AC=new Ctx()}
+    // master chain: high-pass (phone speakers distort below ~90 Hz) -> high-shelf cut -> gentle compressor -> out
+    const hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=90;hp.Q.value=.6;
+    const hs=AC.createBiquadFilter();hs.type='highshelf';hs.frequency.value=5500;hs.gain.value=-5;
+    const comp=AC.createDynamicsCompressor();comp.threshold.value=-22;comp.knee.value=18;comp.ratio.value=3;comp.attack.value=.025;comp.release.value=.25;
+    hp.connect(hs);hs.connect(comp);comp.connect(AC.destination);
+    master=AC.createGain();master.gain.value=.6;master.connect(hp);
     const len=Math.floor(AC.sampleRate*1.5),ir=AC.createBuffer(2,len,AC.sampleRate);
     for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.8)}
-    const conv=AC.createConvolver();conv.buffer=ir;const vg=AC.createGain();vg.gain.value=.5;conv.connect(vg);vg.connect(comp);verbIn=conv;
+    const conv=AC.createConvolver();conv.buffer=ir;const vg=AC.createGain();vg.gain.value=.5;conv.connect(vg);vg.connect(hp);verbIn=conv;
     noiseBuf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const nd=noiseBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
   }catch(e){AC=null}
   return AC;
 }
 function route(node,send){node.connect(master);if(send&&verbIn){const s=AC.createGain();s.gain.value=send;node.connect(s);s.connect(verbIn)}}
+let liveVoices=0;
 function voice(f,o={}){
-  if(muted||!audio())return;
-  const{d=.3,type='sine',v=.1,at=.006,when=0,slide=0,lp=0,send=.3,det=0}=o;
-  const t=AC.currentTime+when,osc=AC.createOscillator(),g=AC.createGain();
+  if(muted||!audio()||liveVoices>=28)return;
+  const{d=.3,type='sine',v:v0=.1,at:at0=.006,when=0,slide=0,lp=0,send=.3,det=0}=o;
+  const v=Math.min(v0,.3),at=Math.max(at0,.008);
+  const t=AC.currentTime+.02+when,osc=AC.createOscillator(),g=AC.createGain();liveVoices++;
+  osc.onended=()=>{liveVoices--;try{osc.disconnect();g.disconnect()}catch(e){}};
   osc.type=type;osc.frequency.setValueAtTime(f,t);if(slide)osc.frequency.exponentialRampToValueAtTime(Math.max(30,f*slide),t+d);if(det)osc.detune.value=det;
   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+at);g.gain.exponentialRampToValueAtTime(.0001,t+d);
   let n=osc;if(lp){const fl=AC.createBiquadFilter();fl.type='lowpass';fl.frequency.value=lp;osc.connect(fl);n=fl}
@@ -372,10 +380,12 @@ function voice(f,o={}){
 }
 function noise(o={}){
   if(muted||!audio())return;
-  const{d=.06,v=.08,f=900,q=1,type='bandpass',when=0,send=.1}=o;
-  const t=AC.currentTime+when,src=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();
+  const{d=.06,v:nv=.08,f=900,q=1,type='bandpass',when=0,send=.1}=o;const v=Math.min(nv,.07);
+  if(liveVoices>=28)return;
+  const t=AC.currentTime+.02+when,src=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();liveVoices++;
+  src.onended=()=>{liveVoices--;try{src.disconnect();g.disconnect()}catch(e){}};
   src.buffer=noiseBuf;fl.type=type;fl.frequency.value=f;fl.Q.value=q;
-  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+d);
   src.connect(fl);fl.connect(g);route(g,send);src.start(t,Math.random()*.5);src.stop(t+d+.02);
 }
 // glassy bell / marimba-ish chime: fundamental + soft inharmonic partials
@@ -401,7 +411,7 @@ const sfx={
 
 /* ---------- tiny helpers: save, toast, panels ---------- */
 const SAVE_KEY='harvestHollow.v1';
-const MAXE=5,ERGEN=60000;
+const MAXE=20,ERGEN=30000;
 const ITEMS={
   wood:{n:'Wood',e:'🪵'},stone:{n:'Stone',e:'🪨'},berries:{n:'Berries',e:'🫐'},wheat:{n:'Wheat',e:'🌾'},
   plank:{n:'Planks',e:'🟫'},brick:{n:'Bricks',e:'🧱'},jam:{n:'Jam',e:'🍯'},bread:{n:'Bread',e:'🍞'}
@@ -533,10 +543,12 @@ const NODE_T={
   tree:{item:'wood',max:4,time:1.7,regrow:22,sfx:'chop',verb:'Chopping'},
   rock:{item:'stone',max:4,time:2.1,regrow:26,sfx:'chop',verb:'Mining'},
   bush:{item:'berries',max:3,time:1.3,regrow:18,sfx:'get',verb:'Picking'},
-  wheat:{item:'wheat',max:3,time:1.4,regrow:20,sfx:'get',verb:'Reaping'}
+  wheat:{item:'wheat',max:3,time:1.4,regrow:20,sfx:'get',verb:'Reaping'},
+  crystal:{item:'energy',max:1,time:2,regrow:30,sfx:'chop',verb:'Mining'}
 };
 
-const TOOL_OF={tree:'axe',rock:'pick',bush:'basket',wheat:'basket'};
+const TOOL_OF={tree:'axe',rock:'pick',bush:'basket',wheat:'basket',crystal:'pick'};
+const ENERGY_COST={tree:1,rock:1};   // chopping and mining cost ⚡; foraging is light work; crystals give ⚡ back
 const gatherTime=type=>NODE_T[type].time*(1-.14*(((S.tools||{})[TOOL_OF[type]]||1)-1));
 
 /* ---- map ---- */
@@ -578,6 +590,7 @@ function buildMap(){
   scatter('tree',3,11,15,21,15,2);
   scatter('rock',24,31,8,13,10,2);
   scatter('bush',12,21,17,21,9,2);
+  scatter('crystal',17,22,14,20,6,2);
   for(let y=16;y<=19;y++)for(let x=23;x<=28;x++){if(grid[y][x]!==0||block[y*MW+x])continue;const n={type:'wheat',x,y,ch:3,t:0,acc:0,v:(x+y)%3};nodes.push(n);nodeAt[x+','+y]=n}
   // scattered non-blocking decor
   for(let i=0;i<150;i++){
@@ -695,6 +708,19 @@ function makeSprites(){
       g.fillStyle='rgba(255,255,255,.85)';g.beginPath();g.arc(x-1.4,y-1.5,1.2,0,7);g.fill();
     }
   }));
+  const crystal=full=>[0,1,2].map(v=>spr(70,70,35,62,(g)=>{
+    const r=mulberry(520+v);shadowEll(g,35,62,24,7,.3);
+    if(!full){g.fillStyle='#8f979e';for(let k=0;k<4;k++){g.beginPath();g.ellipse(24+k*7,56+r()*3,4,2.6,0,0,7);g.fill()}return}
+    const glow=rg(g,35,40,2,35,40,34,[[0,'rgba(140,230,255,.55)'],[1,'rgba(140,230,255,0)']]);g.fillStyle=glow;g.fillRect(0,0,70,70);
+    [[35,58,10,44,-.05],[24,58,7,30,-.3],[46,58,8,34,.28],[16,60,5,20,-.5]].forEach(([x,y,w2,h,lean])=>{
+      g.save();g.translate(x,y);g.rotate(lean);
+      g.fillStyle=lg(g,-w2,0,w2,-h,[[0,'#2a82c8'],[.5,'#7fe0ff'],[1,'#d9fbff']]);
+      g.beginPath();g.moveTo(-w2,0);g.lineTo(-w2*.8,-h*.8);g.lineTo(0,-h);g.lineTo(w2*.8,-h*.8);g.lineTo(w2,0);g.closePath();g.fill();
+      g.strokeStyle='rgba(10,50,100,.7)';g.lineWidth=1.3;g.stroke();
+      g.fillStyle='rgba(255,255,255,.55)';g.beginPath();g.moveTo(-w2*.5,-4);g.lineTo(-w2*.45,-h*.75);g.lineTo(-w2*.1,-h*.9);g.lineTo(-w2*.1,-4);g.closePath();g.fill();
+      g.restore()});
+  }));
+  SP.crystal=crystal(true);SP.crystalGone=crystal(false);
   SP.bush=bush(true);SP.bushGone=bush(false);
   /* wheat */
   const wheat=(full)=>[0,1,2].map(v=>spr(TS,TS+14,TS/2,TS+4,(g)=>{
@@ -811,7 +837,7 @@ const DIRS={u:[0,-1],d:[0,1],l:[-1,0],r:[1,0]};
 const floats=[];
 const parts=[];
 function burst(x,y,cols,n,spd=60,up=70,life=.6,size=3){for(let i=0;i<n;i++){const a=Math.random()*6.283,s=spd*(.3+Math.random()*.7);parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s*.5-up*(.4+Math.random()*.6),t:0,life:life*(.7+Math.random()*.6),c:cols[i%cols.length],r:size*(.6+Math.random()*.8)})}}
-const CHIP={tree:['#8a5a2b','#5cae3f','#a8703a'],rock:['#9aa3ab','#c9d0d6','#6c737a'],bush:['#6a4fc0','#c0392b','#4fae3f'],wheat:['#e8c040','#f4dc7a','#b89a30']};
+const CHIP={crystal:['#7fe0ff','#c9f4ff','#3aa0d8'],tree:['#8a5a2b','#5cae3f','#a8703a'],rock:['#9aa3ab','#c9d0d6','#6c737a'],bush:['#6a4fc0','#c0392b','#4fae3f'],wheat:['#e8c040','#f4dc7a','#b89a30']};
 const doorAt={};
 BLD.forEach(b=>doorAt[b.door.join(',')]=b);doorAt[BOARD.door.join(',')]=BOARD;
 BOARD.kind='board';BOARD.name='Quest Board';
@@ -991,14 +1017,18 @@ function update(dt){
   const nd=nodeAt[P.x+','+P.y];
   if(!P.moving&&nd&&nd.ch>0){
     const T=NODE_T[nd.type];
-    if(carryN()>=S.cap){P.gather=0;if(!P.fullToast||performance.now()-P.fullToast>2500){P.fullToast=performance.now();toast('Bag full — drop it at the Barn 📦')}}
+    if(nd.type!=='crystal'&&carryN()>=S.cap){P.gather=0;if(!P.fullToast||performance.now()-P.fullToast>2500){P.fullToast=performance.now();toast('Bag full — drop it at the Barn 📦')}}
+    else if(ENERGY_COST[nd.type]&&S.energy<ENERGY_COST[nd.type]){P.gather=0;if(!P.fullToast||performance.now()-P.fullToast>2500){P.fullToast=performance.now();toast('Out of ⚡ energy! Mine 💎 crystals, eat bread/jam, or rest')}}
     else{
       P.gather+=dt;P.swing=(P.swing||0)+dt;
       {const per=isForage(nd.type)?.9:.62,c=Math.floor(P.swing/per),u=(P.swing%per)/per,hit=isForage(nd.type)?.25:.58;
        if(u>=hit&&P.lastImpact!==c){P.lastImpact=c;impactFx(nd)}}
       if(P.gather>=gatherTime(nd.type)){
-        P.gather=0;nd.ch--;nd.t=0;S.carry[T.item]=(S.carry[T.item]||0)+1;burst(P.px,P.py+4,CHIP[nd.type],10,70,80);stat('g_'+T.item);sfx.get();
-        fl(P.x*TS+24,P.y*TS-14,`+1 ${ITEMS[T.item].e}`,'#fff');hud();checkQuestBadge();save();
+        P.gather=0;nd.ch--;nd.t=0;burst(P.px,P.py+4,CHIP[nd.type],10,70,80);stat('g_'+T.item);sfx.get();
+        if(T.item==='energy'){const gain=3;S.energy=Math.min(MAXE,S.energy+gain);if(S.energy>=MAXE)S.eT=Date.now();fl(P.x*TS+24,P.y*TS-14,`+${gain} ⚡`,'#9fe8ff')}
+        else{S.carry[T.item]=(S.carry[T.item]||0)+1;fl(P.x*TS+24,P.y*TS-14,`+1 ${ITEMS[T.item].e}`,'#fff');
+          if(ENERGY_COST[nd.type]){spendEnergy();fl(P.x*TS+24,P.y*TS-34,`-${ENERGY_COST[nd.type]} ⚡`,'#ffd36a')}}
+        hud();checkQuestBadge();save();
       }
     }
   }else{P.gather=0;P.swing=0;P.lastImpact=-1}
@@ -1073,6 +1103,7 @@ function drawEnt(g,e,time){
     if(full&&n.type!=='wheat'){g.save();g.globalAlpha=.55+.2*Math.sin(time*3+n.x);g.fillStyle='rgba(255,236,150,.28)';g.strokeStyle='rgba(255,226,110,.9)';g.lineWidth=2.5;g.beginPath();g.ellipse(x,y-1,24,10,0,0,7);g.fill();g.stroke();g.restore()}
     if(n.type==='tree'){if(full)putSway(g,SP.tree[n.v],x,y,time,.012,n.x*.7+n.y);else put(g,SP.stump,x,y)}
     else if(n.type==='rock')put(g,full?SP.rock[n.v]:SP.rockGone,x,y);
+    else if(n.type==='crystal'){put(g,full?SP.crystal[n.v]:SP.crystalGone[n.v],x,y);if(full){g.save();g.globalAlpha=.5+.3*Math.sin(time*3+n.x);g.font='14px sans-serif';g.textAlign='center';g.fillText('✨',x+10+Math.sin(time*2+n.y)*3,y-34-Math.sin(time*2.4+n.x)*4);g.restore()}}
     else if(n.type==='bush'){if(full)putSway(g,SP.bush[n.v],x,y,time,.008,n.x+n.y*.3);else put(g,SP.bushGone[n.v],x,y)}
     else{
       if(full)putSway(g,SP.wheat[n.v],x,y,time,.05,n.x*.5+n.y*.4);else put(g,SP.wheatGone[n.v],x,y);
@@ -1371,6 +1402,9 @@ const QUESTS=[
   {id:'q28',t:'Hold the line at The Watch',g:()=>[sget('siegeWins'),1],r:{coins:40,plank:2}},
   {id:'q29',t:'Upgrade The Watch',g:()=>[sget('up_watch'),1],r:{coins:30,brick:2}},
   {id:'q30',t:'Beat 5 Gloom waves',g:()=>[sget('siegeWaves'),5],r:{coins:50,energy:2}},
+  {id:'q31',t:'Mine 4 energy crystals 💎',g:()=>[sget('g_energy'),4],r:{coins:25}},
+  {id:'q32',t:'Defend the Frontier ⚔️',g:()=>[sget('frontWins'),1],r:{coins:60,energy:4}},
+  {id:'q33',t:'Beat 15 Gloom waves in total',g:()=>[sget('siegeWaves')+sget('frontWaves'),15],r:{coins:90,energy:3}},
   {id:'q16',t:'Stitch a bigger backpack',g:()=>[sget('packUp'),1],r:{coins:40,jam:2}},
   {id:'q19',t:'Sharpen a tool (axe, pickaxe or basket)',g:()=>[sget('toolUp'),1],r:{coins:30}},
   {id:'q20',t:'Upgrade your tools 4 times',g:()=>[sget('toolUp'),4],r:{coins:80,energy:2}},
@@ -1430,15 +1464,15 @@ function packCost(){const k=(S.cap-6)/2+1;return{coins:20*k,plank:2*k,brick:k}}
 function openStorage(){
   const draw=()=>{
     const items=Object.keys(ITEMS).map(k=>`<div class="row"><span style="font-size:26px">${ITEMS[k].e}</span><div class="grow"><b>${ITEMS[k].n}</b></div><b style="font-size:20px">${S.store[k]||0}</b>
-      ${k==='bread'?`<button class="btn small green" data-eat="bread" ${(S.store.bread||0)&&S.energy<MAXE?'':'disabled'}>Eat +2⚡</button>`:''}
-      ${k==='jam'?`<button class="btn small green" data-eat="jam" ${(S.store.jam||0)&&S.energy<MAXE?'':'disabled'}>Eat +3⚡</button>`:''}</div>`).join('');
+      ${k==='bread'?`<button class="btn small green" data-eat="bread" ${(S.store.bread||0)&&S.energy<MAXE?'':'disabled'}>Eat +4⚡</button>`:''}
+      ${k==='jam'?`<button class="btn small green" data-eat="jam" ${(S.store.jam||0)&&S.energy<MAXE?'':'disabled'}>Eat +6⚡</button>`:''}</div>`).join('');
     return `<h2>🧺 Barn Storage</h2><div class="muted">Everything you drop off at the Barn lives here. Upgrades are paid from it.</div><div style="margin:6px 0"><span class="cost">⚡ Energy ${S.energy}/${MAXE}</span><span class="cost">🪙 ${S.coins}</span></div>${items}
       <div style="margin-top:10px"><button class="btn" id="stUp">⬆ Upgrade backpack &amp; tools</button></div>`;
   };
   const wire=()=>{
     const sh=$('#modal .sheet');
     const redraw=()=>{sh.innerHTML=`<button class="x">✕</button>`+draw();sh.querySelector('.x').onclick=closeModal;wire()};
-    sh.querySelectorAll('[data-eat]').forEach(b=>b.onclick=()=>{const k=b.dataset.eat;if(!(S.store[k]>0)||S.energy>=MAXE)return;S.store[k]--;S.energy=Math.min(MAXE,S.energy+(k==='bread'?2:3));if(S.energy>=MAXE)S.eT=Date.now();sfx.get();save(true);hud();redraw()});
+    sh.querySelectorAll('[data-eat]').forEach(b=>b.onclick=()=>{const k=b.dataset.eat;if(!(S.store[k]>0)||S.energy>=MAXE)return;S.store[k]--;S.energy=Math.min(MAXE,S.energy+(k==='bread'?4:6));if(S.energy>=MAXE)S.eT=Date.now();sfx.get();save(true);hud();redraw()});
     $('#stUp').onclick=()=>{closeModal();openUpgrades()};
   };
   openModal(draw());wire();
@@ -1489,8 +1523,8 @@ GAMES.lights={name:'Lantern Loft',icon:'💡',desc:'Tap a lamp to flip it and it
   perks:lv=>[`${3+2*(lv-1)} undos per puzzle`,`${lv} hint${lv>1?'s':''} per puzzle`,lv>=3?'Hints show 2 lamps':null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
 GAMES.match={name:'Match Hall',icon:'🎴',desc:'Flip cards to find sets of 3 matching fruit. Fewer tries earns more stars.',
   perks:lv=>[`Peek at all cards for ${matchPeek(lv).toFixed(1)}s`,matchFree(lv)?`${matchFree(lv)} forgiven miss${matchFree(lv)>1?'es':''}`:null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
-GAMES.watch={name:'The Watch',icon:'🛡️',desc:'Defend the Barn from the Gloom. Build with what you gathered, craft fast, hold every wave.',
-  perks:lv=>[`Barn strength ${10+2*lv}`,`${2+lv} free fences per battle`,lv>=3?'Archers shoot faster':null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
+GAMES.watch={name:'The Watch',icon:'🛡️',desc:'Defend the Barn from the Gloom. Hold the Line is a lane puzzle; the Frontier is a real-time base battle.',
+  perks:lv=>[`Barn strength ${10+2*lv}`,`${2+lv} free fences per battle`,`Frontier: Hall ${30+6*lv} strength`,lv>=3?'Archers shoot faster':null,`Coin reward ×${(1+.15*(lv-1)).toFixed(2)}`].filter(Boolean)};
 const matchPeek=lv=>.8+.6*(lv-1),matchFree=lv=>Math.floor(lv/2);
 const cardTrades=lv=>1+Math.floor((lv-1)/2);
 const MAXLV=5;
@@ -1508,6 +1542,7 @@ function openBuilding(b){
       ${max?'':`<b>Upgrade to Level ${lv+1}:</b><ul class="perks">${perks}</ul><div class="muted">Pay from your Barn storage (the number in brackets is what you have):</div><div>${costHTML(upCost(lv),true)}</div>`}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn green" data-play ${S.energy<1?'disabled':''}>▶ Play · costs ⚡1 <small>(you have ${S.energy})</small></button>
+        ${b.game==='watch'?`<button class="btn" style="background:linear-gradient(#f0a090,#d0543c);color:#fff" data-front ${S.energy<3?'disabled':''}>⚔️ Frontier · ⚡3</button>`:''}
         <button class="btn blue" data-free>🎮 Free Play</button>
         <button class="btn grey" data-help>❓ How to play</button>
         ${max?'':`<button class="btn" data-up ${canPay(upCost(lv))?'':'disabled'}>⬆ Upgrade</button>`}
@@ -1518,13 +1553,14 @@ function openBuilding(b){
     const sh=$('#modal .sheet');
     const redraw=()=>{sh.innerHTML=`<button class="x">✕</button>`+draw();sh.querySelector('.x').onclick=closeModal;wire()};
     sh.querySelector('[data-play]').onclick=()=>{if(S.energy<1)return;closeModal();spendEnergy();START[b.game]('play')};
+    const fr=sh.querySelector('[data-front]');if(fr)fr.onclick=()=>{if(S.energy<3)return;closeModal();spendEnergy(3);startFront('play')};
     sh.querySelector('[data-free]').onclick=()=>{closeModal();openFreeSetup(b.game)};
     sh.querySelector('[data-help]').onclick=()=>openRules(b.game);
     const up=sh.querySelector('[data-up]');if(up)up.onclick=()=>{const lv=S.bld[b.game];const c=upCost(lv);if(!canPay(c))return;pay(c);S.bld[b.game]++;stat('up_'+b.game);sfx.win();toast(`${gm.icon} ${gm.name} is now Level ${lv+1}!`);save(true);hud();redraw()};
   };
   openModal(draw());wire();
 }
-function spendEnergy(){if(S.energy>=MAXE)S.eT=Date.now();S.energy--;save(true);hud()}
+function spendEnergy(n=1){if(S.energy>=MAXE)S.eT=Date.now();S.energy=Math.max(0,S.energy-n);save(true);hud()}
 
 /* ---- free play setup ---- */
 function openFreeSetup(game){
@@ -1549,11 +1585,14 @@ function openFreeSetup(game){
     if(!full)$('#o1').oninput=()=>{$('#o1v').textContent=$('#o1').value};
     $('#go').onclick=()=>{const o={full,scramble:full?0:+$('#o1').value};closeModal();startLights('free',o)};
   }else if(game==='watch'){
+    const fr=arguments[1]==='front';
     openModal(`<h2>🛡️ The Watch — Free Play</h2><div class="muted">Practice with a spare kit: nothing of yours is used, no rewards, no progress.</div>
-      <div class="field"><label>Waves <span id="o1v">5</span></label><input type="range" id="o1" min="2" max="10" value="5"></div>
+      <div style="display:flex;gap:8px;margin:10px 0"><button class="btn ${fr?'grey':'green'}" data-md="lane">🛡️ Hold the Line</button><button class="btn ${fr?'green':'grey'}" data-md="front">⚔️ Frontier</button></div>
+      <div class="field"><label>Waves <span id="o1v">${fr?4:5}</span></label><input type="range" id="o1" min="2" max="${fr?8:10}" value="${fr?4:5}"></div>
       <div style="margin-top:10px"><button class="btn green" id="go">▶ Start</button></div>`);
+    $('#modal').querySelectorAll('[data-md]').forEach(b=>b.onclick=()=>openFreeSetup('watch',b.dataset.md));
     $('#o1').oninput=()=>{$('#o1v').textContent=$('#o1').value};
-    $('#go').onclick=()=>{const o={waves:+$('#o1').value};closeModal();startWatch('free',o)};
+    $('#go').onclick=()=>{const o={waves:+$('#o1').value};closeModal();fr?startFront('free',o):startWatch('free',o)};
   }else if(game==='match'){
     openModal(`<h2>🎴 Match Hall — Free Play</h2><div class="muted">Practice only: no energy used, no rewards, no progress.</div>
       <div class="field"><label>Sets of 3 <span id="o1v">6</span></label><input type="range" id="o1" min="3" max="10" value="6"></div>
@@ -1630,7 +1669,9 @@ const STORY=[
   {who:'rowan',goal:'Hold the line at The Watch 🛡️ (east side, red roof). Stock the Barn first!',prog:()=>[sget('siegeWins'),1],done:()=>sget('siegeWins')>=1,r:{coins:40,energy:2},
    say:["Captain Rowan. The Gloom is on the ridge — they come at dusk.", "<b>Everything in your Barn is your arsenal:</b> 🪵 fences, 🟫 archers, 🧱 walls, 🍯 traps, 🪨 boulders, 🍞 repairs.", "In the fight you can craft fast: wood ➜ planks, stone ➜ bricks and more.", "Step on the red mat under The Watch and press ▶ Play (costs ⚡1)."]},
   {who:'rowan',goal:'Upgrade The Watch ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_watch')>=1,r:{coins:30,energy:2},
-   say:["A stronger Watch means a tougher Barn and free fences.", "It also pays more coins for every siege you win.", "Open The Watch and press ⬆ Upgrade."]}
+   say:["A stronger Watch means a tougher Barn and free fences.", "It also pays more coins for every siege you win.", "Open The Watch and press ⬆ Upgrade."]},
+  {who:'rowan',goal:'Defend the Frontier ⚔️ (The Watch ➜ ⚔️ Frontier, costs ⚡3)',prog:()=>[sget('frontWins'),1],done:()=>sget('frontWins')>=1,r:{coins:60,energy:4},
+   say:["This time the Gloom attacks <b>while you work</b>.", "At the Frontier there are no turns: chop 🌳, mine ⛰️, drop it at the 📦 Hall, craft at the 🛠 Workshop.", "Build 🏹 towers and 🪵 fences on the marked spots, and hire help at the 🍺 Tavern.", "Hold every wave until dawn!"]}
 ];
 const END_SAY=["Harvest Hollow is thriving, thanks to you!","The workshops are humming and the Barn is full.","Free Play and the Quest Board are always open.","Thank you, dear!"];
 
@@ -1690,7 +1731,7 @@ function buildingBlurb(game){
   const plays=sget(GPLAYS[game]),ups=sget('up_'+game);
   let t;
   if(game==='watch'){
-    t=plays===0?["Press <b>▶ Play</b> (costs ⚡1) to defend the Barn.","What you spend comes from your <b>Barn storage</b> — stock up first!","Place fences, archers and walls, and craft on the fly.","Win waves to earn <b>coins</b>."]
+    t=plays===0?["<b>▶ Play</b> (⚡1): a lane defence using your <b>Barn storage</b> — stock up first!","<b>⚔️ Frontier</b> (⚡3): a real-time battle where you gather, craft, hire and build while the Gloom attacks.","Win waves to earn <b>coins</b>."]
       :ups===0?["Coins + planks + bricks from your Barn <b>upgrade</b> The Watch.","Each level: a tougher Barn, free fences, bigger payouts."]
       :["Higher levels give a tougher Barn, free fences and bigger payouts."];
   }else if(game==='lights'){
@@ -1720,6 +1761,14 @@ const RULES={
     <li><b>Grey “?” nuts</b> hide their colour until the nuts above them are moved away.</li>
     <li><b>Undo</b> takes back a move, <b>Hint</b> shows a good next move (green = from, blue = to), <b>Restart</b> resets the puzzle.</li>
     <li>Every puzzle is guaranteed solvable. Fewer moves earns more stars and coins.</li></ul>`,
+  front:`<h2>⚔️ How to play The Frontier</h2><ul class="perks">
+    <li><b>Goal:</b> keep the 📦 Hall alive until every wave of the Gloom is beaten. <b>Nothing waits</b> — it's all real time.</li>
+    <li><b>Walk:</b> touch and drag anywhere to steer (or arrow keys).</li>
+    <li><b>Gather:</b> stand still on a 🌳 tree or ⛰️ rock. Carry 4 at a time. Step on the red mat in front of the Hall to drop it off.</li>
+    <li><b>Craft:</b> stand on the 🛠 Workshop mat: 🪵🪵 ➜ 🟫 and 🪨🪨 ➜ 🧱.</li>
+    <li><b>Build:</b> walk next to a ⬜ spot and press 🏹 Tower. Press 🪵 Fence or 🧱 Wall on the ▭ spots on the path to block the way. 🔧 Repair heals what's next to you.</li>
+    <li><b>Hire:</b> stand on the 🍺 Tavern mat. Woodcutters and miners gather for you; guards fight. Pay with 🪙 won from defeated Gloom.</li>
+    <li>Waves keep coming on a timer. ⏩ Call wave early for bonus 🪙.</li></ul>`,
   watch:`<h2>🛡️ How to play The Watch</h2><ul class="perks">
     <li><b>Goal:</b> stop the Gloom reaching your 🏚 Barn (left side) for every wave.</li>
     <li><b>Pick a tool</b> in the bottom bar, then <b>tap a square</b> to build. Items come from your Barn storage.</li>
@@ -1806,6 +1855,7 @@ function nextAction(){
     case 7:return upgradeAction('card');
     case 10:return doorT(bldBy('watch'),'🛡️','Stock your Barn, then step on the red mat under The Watch and press ▶ Play');
     case 11:return upgradeAction('watch');
+    case 12:return doorT(bldBy('watch'),'⚔️','Open The Watch and press ⚔️ Frontier (costs ⚡3)');
     default:return upgradeAction(['bolt','card','lights','match'].sort((a,b)=>S.bld[a]-S.bld[b])[0]);
   }
 }
@@ -1861,7 +1911,7 @@ function openHowTo(){
       <li><b>Craft</b> — feed goods into the Sawmill, Kiln, Jam Kitchen or Bakery by stepping on their mats. Step on again later to collect.</li>
       <li><b>Play</b> — step on the red mat under a workshop (⚙️ 🃏 💡 🎴 🛡️) and press ▶ Play (costs ⚡1) to earn 🪙 coins.</li>
       <li><b>Upgrade</b> — spend coins and goods from the Barn on workshop levels, and on the ⬆ Upgrades screen for a bigger 🎒 backpack and a faster 🪓 axe, ⛏️ pickaxe and 🧺 forage basket.</li>
-      <li><b>Eat</b> — bread and jam (🧺 Storage) refill your ⚡ energy.</li></ol>
+      <li><b>Energy ⚡</b> — chopping and mining cost 1 ⚡ each. Mine blue 💎 crystals (south of the Barn trail) for +3 ⚡, eat bread or jam (🧺 Storage), or just rest.</li></ol>
     <div class="muted">Move: arrow keys / WASD, or the thumbstick. Walk up to a character and press 💬 Talk.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       <button class="btn blue" id="hGuide">🧭 Guide arrows: ${S.guide===false?'OFF — turn on':'ON — turn off'}</button>
@@ -1986,7 +2036,7 @@ function startBolt(mode,opts){
     if(!S.seen.rb){S.seen.rb=1;save();openRules('bolt')}
   },30);
 }
-function leaveMG(){const mg=$('#mg');mg.classList.add('hidden');mg.innerHTML='';B=null;C=null;L=null;M=null;if(typeof W!=='undefined'&&W)cancelAnimationFrame(W.raf);W=null;if(!worldOn)return;hud()}
+function leaveMG(){const mg=$('#mg');mg.classList.add('hidden');mg.innerHTML='';B=null;C=null;L=null;M=null;if(typeof W!=='undefined'&&W)cancelAnimationFrame(W.raf);W=null;if(typeof F!=='undefined'&&F)stopFront();if(!worldOn)return;hud()}
 const topOf=a=>a[a.length-1];
 function pegDone(a){return a.length===B.cap&&a.every(x=>x===a[0])}
 function renderBolt(anim){
@@ -2585,6 +2635,360 @@ function watchEnd(win){
   $('#wNext').onclick=()=>{stopWatch();if(mode==='play'){if(S.energy<1)return;spendEnergy();startWatch('play')}else startWatch('free',opts)};
 }
 /* =====================================================================
+   THE FRONTIER — real-time base defence. No turns: gather, craft, hire
+   and build while the Gloom marches in. Reached from The Watch.
+   ===================================================================== */
+document.head.appendChild(Object.assign(document.createElement('style'),{textContent:`
+#front{background:radial-gradient(ellipse at 50% 0%,rgba(255,200,120,.18),transparent 65%),var(--tex-bench),#2e3a2a;display:flex;flex-direction:column}
+#fInv{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:0 8px 4px}
+#fInv .it{padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.4);color:#fff3cf;font-weight:800;font-size:13px;border:1px solid rgba(255,230,160,.25)}
+#fArea{flex:1;position:relative;overflow:hidden;touch-action:none;margin:0 6px;border-radius:14px;border:3px solid #5a3b1e;box-shadow:0 6px 16px rgba(0,0,0,.5)}
+#fCv{display:block;width:100%;height:100%;touch-action:none}
+#fHire{position:absolute;left:4px;right:4px;bottom:4px;background:rgba(40,25,10,.88);border:2px solid #ffe27a;border-radius:12px;padding:4px;display:flex;gap:4px;justify-content:center;align-items:center;flex-wrap:wrap;color:#fff3cf;font-weight:800;font-size:12px}
+#fBuild{display:flex;gap:6px;overflow-x:auto;padding:6px 8px calc(8px + var(--safe-b));justify-content:safe center}
+.fb{flex:none;min-width:66px;border:2px solid rgba(255,230,160,.35);border-radius:12px;background:rgba(0,0,0,.45);color:#fff3cf;padding:4px 6px;text-align:center;font-weight:800;font-size:12px;line-height:1.15}
+.fb .e{font-size:24px;display:block}.fb.no{opacity:.45}.fb.go{background:linear-gradient(#9be08a,#4ea83f);color:#10300a;border-color:#fff}
+.fh{border:0;border-radius:10px;padding:5px 7px;font-size:12px;font-weight:800;background:linear-gradient(#ffd96a,#e8a720);color:#3a2606}.fh.no{opacity:.45}
+`}));
+let F=null;
+const FW=24,FH=14,FTS=TS;
+const FPATH=[[23,3],[17,3],[17,9],[9,9],[9,6],[4,6]];
+const FBLD=[
+  {id:'tav',x:1,y:1,door:[2,4],name:'Tavern'},
+  {id:'hall',x:1,y:5,door:[2,8],name:'Hall'},
+  {id:'shop',x:1,y:9,door:[2,12],name:'Workshop'}
+];
+const FCOST={tower:{plank:2,wood:1},fence:{wood:3},wall:{brick:2}};
+const FFOE={imp:{e:'👺',hp:4,sp:1.0,dps:.8,g:1,sz:.6},bat:{e:'🦇',hp:3,sp:1.6,dps:.8,g:1,sz:.55},brute:{e:'🧌',hp:24,sp:.5,dps:3,g:3,sz:.85},giant:{e:'👹',hp:130,sp:.35,dps:6,g:20,sz:1.2}};
+const fIcon={wood:'🪵',stone:'🪨',plank:'🟫',brick:'🧱',gold:'🪙'};
+let fSfxT=0;const fsfx=n=>{const t=performance.now();if(t-fSfxT<90)return;fSfxT=t;sfx[n]&&sfx[n]()};
+// path geometry
+const FSEG=[];let FLEN=0;
+(function(){let acc=0;for(let i=0;i<FPATH.length-1;i++){const a=FPATH[i],b=FPATH[i+1],l=Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1]);FSEG.push({a,b,l,s:acc});acc+=l}FLEN=acc})();
+function fPathPos(d){
+  d=clamp(d,0,FLEN);
+  for(const s of FSEG)if(d<=s.s+s.l+1e-6){const u=(d-s.s)/s.l;return[s.a[0]+(s.b[0]-s.a[0])*u+.5,s.a[1]+(s.b[1]-s.a[1])*u+.5]}
+  const e=FPATH[FPATH.length-1];return[e[0]+.5,e[1]+.5];
+}
+function fPathD(x,y){let best=0,bd=1e9;for(let d=0;d<=FLEN;d+=.1){const p=fPathPos(d),k=Math.hypot(p[0]-x-.5,p[1]-y-.5);if(k<bd){bd=k;best=d}}return best}
+const fOnPath=new Set();
+FSEG.forEach(s=>{const dx=Math.sign(s.b[0]-s.a[0]),dy=Math.sign(s.b[1]-s.a[1]);for(let i=0;i<=s.l;i++)fOnPath.add((s.a[0]+dx*i)+','+(s.a[1]+dy*i))});
+const FPADS_T=[[15,4],[19,5],[16,7],[13,10],[11,8],[8,8],[6,5]],FPADS_B=[[14,3],[17,6],[13,9],[9,7]];
+function fMakeWorld(){
+  const rnd=mulberry(4242);
+  const nodes=[],taken=new Set();
+  const solid=new Uint8Array(FW*FH);
+  FBLD.forEach(b=>{for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++){solid[(b.y+dy)*FW+b.x+dx]=1;taken.add((b.x+dx)+','+(b.y+dy))}FBLD.forEach(()=>{});taken.add(b.door.join(','))});
+  fOnPath.forEach(k=>taken.add(k));
+  const pads=[];
+  FPADS_T.forEach(([x,y])=>{pads.push({x,y,type:'tower',st:null});taken.add(x+','+y)});
+  FPADS_B.forEach(([x,y])=>{pads.push({x,y,type:'block',pd:fPathD(x,y),st:null});});
+  const scatter=(type,x0,x1,y0,y1,n,gap)=>{let tries=0;while(n>0&&tries++<500){const x=x0+Math.floor(rnd()*(x1-x0+1)),y=y0+Math.floor(rnd()*(y1-y0+1));
+    if(taken.has(x+','+y)||nodes.some(q=>Math.abs(q.x-x)<gap&&Math.abs(q.y-y)<gap))continue;nodes.push({type,x,y,ch:3,max:3,t:0,v:Math.floor(rnd()*3),claim:null});n--}};
+  scatter('tree',5,9,0,4,7,2);scatter('tree',11,16,5,8,5,2);scatter('tree',19,22,10,13,4,2);
+  scatter('rock',11,16,11,13,5,2);scatter('rock',19,22,0,2,3,2);
+  const decor=[];for(let i=0;i<70;i++){const x=Math.floor(rnd()*FW),y=Math.floor(rnd()*FH);if(taken.has(x+','+y))continue;const k=rnd();decor.push({k:k<.55?'flower':k<.8?'tuft':'pebble',x,y,v:Math.floor(rnd()*4),ox:rnd()*30+9,oy:rnd()*20+20})}
+  return{nodes,pads,solid,decor};
+}
+let fGround=null;
+function fBuildGround(){
+  const c=mk(FW*FTS,FH*FTS),g=c.getContext('2d');
+  for(let y=0;y<FH;y++)for(let x=0;x<FW;x++){
+    if(fOnPath.has(x+','+y))g.drawImage(SP.path[Math.floor(hash(x,y)*3)],x*FTS,y*FTS);
+    else g.drawImage(SP.grass[Math.floor(hash(x,y,1)*4)],x*FTS,y*FTS);
+  }
+  const r=mulberry(91);for(let i=0;i<40;i++){const x=r()*FW*FTS,y=r()*FH*FTS,rad=70+r()*120;g.fillStyle=rg(g,x,y,0,x,y,rad,[[0,r()<.5?'rgba(190,230,110,.13)':'rgba(20,70,30,.13)'],[1,'rgba(0,0,0,0)']]);g.fillRect(x-rad,y-rad,rad*2,rad*2)}
+  FBLD.forEach(b=>{g.drawImage(SP.mat,b.door[0]*FTS,b.door[1]*FTS)});
+  fGround=c;
+}
+function startFront(mode,opts){
+  const lv=S.bld.watch;
+  const waves=mode==='free'?opts.waves:clamp(4+Math.floor(sget('frontWins')/2),4,8);
+  const mg=$('#mg');mg.className='screen';mg.id='mg';
+  mg.innerHTML=`<div id="front" class="screen">
+    <div class="mgbar"><button class="btn small grey" id="fBack">←<span class="lbl"> Village</span></button><h3>⚔️ The Frontier</h3>
+      ${mode==='free'?'<span class="tag free">FREE PLAY</span>':''}<span class="sp"></span>${mode==='play'?`<span class="tag" id="mgEnergy">${energyTxt()}</span><span class="tag" id="mgCoins">🪙 ${S.coins}</span>`:''}<button class="btn small grey" id="fHelp">❓</button><span class="tag" id="fWave"></span><span class="tag" id="fHp"></span></div>
+    <div id="fInv"></div>
+    <div id="fArea"><canvas id="fCv"></canvas><div id="fHire" class="hidden"></div></div>
+    <div id="fBuild"></div></div>`;
+  mg.classList.remove('hidden');
+  if(!fGround)fBuildGround();
+  const world=fMakeWorld();
+  const hp=30+6*lv;
+  F=Object.assign({mode,lv,opts,waves,wave:0,t:0,nextWave:50,spawnQ:[],foes:[],units:[],st:[],hp,maxhp:hp,over:false,
+    inv:{wood:4+lv,stone:2,plank:2,brick:0,gold:5+(mode==='free'?6:0)},carry:{wood:0,stone:0},cap:4+Math.floor((S.cap-6)/2),
+    px:3.5,py:8.5,dir:'d',walk:0,moving:false,keys:{},stick:null,fx:[],floats:[],gather:0,swing:0,craftT:0,dropT:0,hireOpen:false,last:performance.now(),raf:0,kills:0,cleared:0,uiT:0,cam:{x:0,y:0}},world);
+  F.pads[0].st={kind:'tower',hp:10,max:10,cd:0}; // a free starter tower
+  $('#fBack').onclick=()=>{if(!F.over&&F.t>5&&mode==='play'&&!confirm('Leave the battle? The energy you spent is lost.'))return;stopFront();leaveMG()};
+  $('#fHelp').onclick=()=>openRules('front');
+  fUI();fFit();fBindInput();setTimeout(()=>{if(F)fFit()},250);
+  if(!S.seen.rf){S.seen.rf=1;save();openRules('front')}
+  F.raf=requestAnimationFrame(fLoop);
+}
+function stopFront(){if(F){cancelAnimationFrame(F.raf);removeEventListener('keydown',F.kd);removeEventListener('keyup',F.ku)}F=null}
+let fView={w:300,h:300,z:1,d:1};
+function fFit(){
+  const a=$('#fArea'),cv=$('#fCv');if(!a||!cv||!F)return;
+  const d=Math.min(2,devicePixelRatio||1),w=a.clientWidth,h=a.clientHeight;
+  cv.width=Math.round(w*d);cv.height=Math.round(h*d);
+  fView={w,h,z:clamp(Math.max(w/(12*FTS),h/(FH*FTS)),.5,1),d};
+}
+addEventListener('resize',()=>{if(F)fFit()});
+function fBindInput(){
+  const KM={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r',w:'u',s:'d',a:'l',d:'r',W:'u',S:'d',A:'l',D:'r'};
+  F.kd=e=>{const k=KM[e.key];if(k&&F){F.keys[k]=1;e.preventDefault()}};F.ku=e=>{const k=KM[e.key];if(k&&F)F.keys[k]=0};
+  addEventListener('keydown',F.kd);addEventListener('keyup',F.ku);
+  const cv=$('#fCv');let id=null,sx=0,sy=0;const R=48;
+  cv.addEventListener('pointerdown',e=>{if(id!==null||!F)return;e.preventDefault();id=e.pointerId;try{cv.setPointerCapture(id)}catch(_){}const r=cv.getBoundingClientRect();sx=e.clientX-r.left;sy=e.clientY-r.top;F.stick={sx,sy,dx:0,dy:0}});
+  cv.addEventListener('pointermove',e=>{if(e.pointerId!==id||!F||!F.stick)return;const r=cv.getBoundingClientRect();let dx=e.clientX-r.left-sx,dy=e.clientY-r.top-sy;const d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d}F.stick.dx=dx;F.stick.dy=dy});
+  const up=e=>{if(e.pointerId!==id)return;id=null;if(F)F.stick=null};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+}
+function fUI(){
+  if(!F)return;
+  const nextIn=Math.max(0,Math.ceil(F.nextWave-F.t));
+  $('#fWave').textContent=F.wave>=F.waves?`Wave ${F.wave}/${F.waves}`:`Wave ${F.wave}/${F.waves} · next ${nextIn}s`;
+  $('#fHp').textContent=`📦 ${Math.max(0,Math.ceil(F.hp))}/${F.maxhp}`;
+  const cn=F.carry.wood+F.carry.stone;
+  $('#fInv').innerHTML=Object.keys(fIcon).map(k=>`<span class="it">${fIcon[k]} ${F.inv[k]||0}</span>`).join('')+`<span class="it">🎒 ${cn}/${F.cap}</span>`;
+  const can=c=>Object.entries(c).every(([k,v])=>(F.inv[k]||0)>=v);
+  const btn=(k,e,n,c)=>`<button class="fb${can(c)?'':' no'}" data-b="${k}"><span class="e">${e}</span>${n}<br>${Object.entries(c).map(([i,v])=>fIcon[i]+v).join(' ')}</button>`;
+  $('#fBuild').innerHTML=btn('tower','🏹','Tower',FCOST.tower)+btn('fence','🪵','Fence',FCOST.fence)+btn('wall','🧱','Wall',FCOST.wall)+btn('repair','🔧','Repair',{plank:1})+
+    (F.wave<F.waves?`<button class="fb go" data-b="call"><span class="e">⏩</span>Call wave<br>+3🪙</button>`:'');
+  $('#fBuild').querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>fAct(b.dataset.b));
+  const hh=$('#fHire');
+  if(F.hireOpen){
+    const cnt=r=>F.units.filter(u=>u.role===r).length,cost=r=>({cut:5,mine:6,guard:8}[r]+2*cnt(r));
+    const hb=(r,e,n)=>`<button class="fh${(F.inv.gold||0)>=cost(r)&&cnt(r)<3?'':' no'}" data-h="${r}">${e} ${n} ${cnt(r)}/3 · 🪙${cost(r)}</button>`;
+    hh.innerHTML=`<span>🍺 Hire:</span>`+hb('cut','🪓','Cutter')+hb('mine','⛏️','Miner')+hb('guard','🛡️','Guard');
+    hh.classList.remove('hidden');
+    hh.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>fHire(b.dataset.h));
+  }else hh.classList.add('hidden');
+}
+function fHire(r){
+  const cnt=F.units.filter(u=>u.role===r).length,cost={cut:5,mine:6,guard:8}[r]+2*cnt;
+  if(cnt>=3||(F.inv.gold||0)<cost){sfx.bad();return}
+  F.inv.gold-=cost;F.units.push({role:r,x:2.5,y:4.5,dir:'d',walk:0,moving:false,state:'idle',t:0,carry:0,node:null,hp:12,max:12,seed:F.units.length+1});
+  fsfx('coin');F.floats.push({x:2.5,y:3.8,text:'Hired!',col:'#ffe27a',t:0});fUI();
+}
+function fAct(k){
+  if(!F||F.over)return;
+  const inv=F.inv;
+  if(k==='call'){if(F.wave<F.waves){F.nextWave=F.t;inv.gold+=3;fsfx('pick');fUI()}return}
+  if(k==='repair'){
+    if((inv.plank||0)<1){sfx.bad();toast('Repairs need 🟫1');return}
+    let best=null,bd=3;
+    F.pads.forEach(p=>{if(p.st&&p.st.hp<p.st.max){const d=Math.hypot(p.x+.5-F.px,p.y+.5-F.py);if(d<bd){bd=d;best={st:p.st,x:p.x+.5,y:p.y+.5}}}});
+    const hd=Math.hypot(3-F.px,6.5-F.py);if(F.hp<F.maxhp&&hd<bd){best={hall:1,x:3,y:6.5}}
+    if(!best){sfx.bad();toast('Stand next to something damaged');return}
+    inv.plank--;if(best.hall)F.hp=Math.min(F.maxhp,F.hp+8);else best.st.hp=Math.min(best.st.max,best.st.hp+8);
+    F.floats.push({x:best.x,y:best.y-.6,text:'+8 ❤',col:'#9be08a',t:0});fsfx('get');fUI();return;
+  }
+  const kind=k==='tower'?'tower':'block',c=FCOST[k];
+  if(!Object.entries(c).every(([i,v])=>(inv[i]||0)>=v)){sfx.bad();toast(`Need ${Object.entries(c).map(([i,v])=>fIcon[i]+v).join(' ')}`);return}
+  let best=null,bd=2.8;
+  F.pads.forEach(p=>{if(p.type!==kind||p.st)return;const d=Math.hypot(p.x+.5-F.px,p.y+.5-F.py);if(d<bd){bd=d;best=p}});
+  if(!best){sfx.bad();toast(k==='tower'?'Walk next to an empty ⬜ tower spot':'Walk next to an empty ▭ spot on the path');return}
+  Object.entries(c).forEach(([i,v])=>inv[i]-=v);
+  const hp=k==='tower'?10:k==='fence'?18:40;best.st={kind:k,hp,max:hp,cd:0,age:0};
+  fsfx('chop');F.fx.push({k:'puff',x:best.x+.5,y:best.y+.5,t:0,e:'✨'});fUI();
+}
+function fSolid(x,y){const tx=Math.floor(x),ty=Math.floor(y);if(tx<0||ty<0||tx>=FW||ty>=FH)return true;if(F.solid[ty*FW+tx])return true;const p=F.pads.find(p=>p.x===tx&&p.y===ty);return !!(p&&p.st&&p.st.kind!=='tower')}
+function fNodeAt(x,y){return F.nodes.find(n=>n.x===Math.floor(x)&&n.y===Math.floor(y))}
+function fLoop(now){
+  if(!F)return;
+  const dt=Math.min(.05,(now-F.last)/1000);F.last=now;
+  fUpdate(dt);fDraw(now/1000);
+  F.raf=requestAnimationFrame(fLoop);
+}
+function fUpdate(dt){
+  if(F.over)return;
+  F.t+=dt;
+  // ---- waves ----
+  if(F.wave<F.waves&&F.t>=F.nextWave){
+    F.wave++;F.nextWave=F.t+32;const w=F.wave,q=[];
+    const n=3+4*w;for(let i=0;i<n;i++)q.push(w>=3&&i%4===3?'bat':'imp');
+    for(let i=0;i<Math.floor((w+1)/2);i++)q.push('brute');
+    if(w===F.waves)q.push('giant');
+    shuffle(q);if(q.includes('giant')){q.splice(q.indexOf('giant'),1);q.push('giant')}
+    let tt=0;q.forEach(k=>{tt+=.9+Math.random()*.8;F.spawnQ.push({k,at:F.t+tt})});
+    toast(`🌑 Wave ${w} of ${F.waves} — the Gloom is coming!`);fsfx('bad');fUI();
+  }
+  while(F.spawnQ.length&&F.spawnQ[0].at<=F.t){const s=F.spawnQ.shift(),T=FFOE[s.k];F.foes.push({k:s.k,d:0,hp:T.hp,max:T.hp,hit:0,wob:Math.random()*6,eng:null})}
+  // ---- player ----
+  let vx=0,vy=0;
+  if(F.stick){const d=Math.hypot(F.stick.dx,F.stick.dy);if(d>48*[.5,.38,.27,.18,.1][(S.stickSens||3)-1]){vx=F.stick.dx/48;vy=F.stick.dy/48}}
+  if(F.keys.l)vx-=1;if(F.keys.r)vx+=1;if(F.keys.u)vy-=1;if(F.keys.d)vy+=1;
+  const m=Math.hypot(vx,vy);if(m>1){vx/=m;vy/=m}
+  F.moving=m>.05;
+  if(F.moving){
+    const sp=3.9,nx=F.px+vx*sp*dt,ny=F.py+vy*sp*dt;
+    if(!fSolid(nx,F.py))F.px=nx;if(!fSolid(F.px,ny))F.py=ny;
+    F.px=clamp(F.px,.5,FW-.5);F.py=clamp(F.py,.5,FH-.5);
+    F.dir=Math.abs(vx)>Math.abs(vy)?(vx>0?'r':'l'):(vy>0?'d':'u');F.walk+=dt*9;F.gather=0;
+  }
+  const tx=Math.floor(F.px),ty=Math.floor(F.py);
+  const nd=!F.moving?fNodeAt(F.px,F.py):null;
+  // gather
+  const cn=F.carry.wood+F.carry.stone;
+  if(nd&&nd.ch>0&&cn<F.cap){
+    F.gather+=dt;F.swing+=dt;const T=nd.type==='tree'?1.5:1.9,k=1-.14*(((S.tools||{})[nd.type==='tree'?'axe':'pick']||1)-1);
+    if(F.gather>=T*k){F.gather=0;nd.ch--;nd.t=0;F.carry[nd.type==='tree'?'wood':'stone']++;fsfx('get');F.floats.push({x:F.px,y:F.py-.7,text:`+1 ${nd.type==='tree'?'🪵':'🪨'}`,col:'#fff',t:0});fUI()}
+  }else{F.gather=0;if(nd&&nd.ch>0&&cn>=F.cap&&(!F.fullT||F.t-F.fullT>3)){F.fullT=F.t;F.floats.push({x:F.px,y:F.py-.7,text:'Bag full — drop at 📦',col:'#ffd36a',t:0})}}
+  if(!nd)F.swing=0;
+  // mats
+  const onDrop=tx===2&&ty===8,onShop=tx===2&&ty===12,onTav=tx===2&&ty===4;
+  if(onDrop&&!F.moving){F.dropT-=dt;if(F.dropT<=0&&cn>0){F.dropT=.18;const k=F.carry.wood>0?'wood':'stone';F.carry[k]--;F.inv[k]++;fsfx('pick');F.floats.push({x:2.5,y:7.9,text:`+1 ${fIcon[k]}`,col:'#ffe9a8',t:0});fUI()}}
+  if(onShop&&!F.moving){
+    const canC=F.inv.wood>=2||F.inv.stone>=2;
+    if(canC){F.craftT+=dt;if(F.craftT>=1.3){F.craftT=0;if(F.inv.wood>=2){F.inv.wood-=2;F.inv.plank++;F.floats.push({x:2.5,y:11.8,text:'+1 🟫',col:'#fff',t:0})}else{F.inv.stone-=2;F.inv.brick++;F.floats.push({x:2.5,y:11.8,text:'+1 🧱',col:'#fff',t:0})}fsfx('get');fUI()}}else F.craftT=0;
+  }else F.craftT=0;
+  if(onTav!==F.hireOpen){F.hireOpen=onTav;fUI()}
+  // nodes regrow
+  F.nodes.forEach(n=>{if(n.ch<n.max){n.t+=dt;if(n.t>=(n.type==='tree'?16:20)){n.ch=n.max;n.t=0}}});
+  // ---- workers & guards ----
+  F.units.forEach(u=>fUnit(u,dt));
+  // ---- enemies ----
+  const aliveGuards=F.units.filter(u=>u.role==='guard');
+  for(const e of F.foes){
+    const T=FFOE[e.k];e.hit=Math.max(0,e.hit-dt);e.wob+=dt*6;
+    const pos=fPathPos(e.d);let hold=false;
+    // blocked by fences/walls
+    for(const p of F.pads)if(p.type==='block'&&p.st&&e.d>=p.pd-.6&&e.d<=p.pd+.1){e.d=Math.min(e.d,p.pd-.55);p.st.hp-=T.dps*dt;hold=true;if(p.st.hp<=0){p.st=null;fsfx('bad')}}
+    // engaged with a guard
+    if(!hold)for(const g of aliveGuards){if(Math.hypot(g.x-pos[0],g.y-pos[1])<.85){hold=true;g.hp-=T.dps*dt;e.hp-=(2.4+.3*F.lv)*dt;e.hit=.1;break}}
+    // chip damage to towers they pass
+    for(const p of F.pads)if(p.type==='tower'&&p.st&&Math.hypot(p.x+.5-pos[0],p.y+.5-pos[1])<1.1){p.st.hp-=T.dps*.5*dt;if(p.st.hp<=0){p.st=null;fsfx('bad');F.floats.push({x:p.x+.5,y:p.y,text:'Tower lost!',col:'#ff9a8a',t:0})}}
+    if(!hold){
+      if(e.d>=FLEN-.2){F.hp-=T.dps*dt;if(!e.hallFx||F.t-e.hallFx>.7){e.hallFx=F.t;fsfx('chop');F.floats.push({x:3.4,y:6.3,text:'💥',col:'#fff',t:0})}}
+      else e.d=Math.min(FLEN,e.d+T.sp*dt);
+    }
+  }
+  // towers shoot
+  F.pads.forEach(p=>{
+    const s=p.st;if(!s||s.kind!=='tower')return;s.cd-=dt;if(s.cd>0)return;
+    let tgt=null,tp=null;for(const e of F.foes){const pp=fPathPos(e.d);if(Math.hypot(pp[0]-p.x-.5,pp[1]-p.y-.5)<=3.6&&(!tgt||e.d>tgt.d)){tgt=e;tp=pp}}
+    if(tgt){tgt.hp-=1.3;tgt.hit=.12;s.cd=F.lv>=3?.7:.95;fsfx('pick');F.fx.push({k:'arrow',x0:p.x+.5,y0:p.y+.3,x1:tp[0],y1:tp[1],t:0})}
+  });
+  // deaths
+  for(const e of F.foes)if(e.hp<=0){e.dead=1;const T=FFOE[e.k];F.inv.gold+=T.g;F.kills++;const pp=fPathPos(e.d);F.fx.push({k:'puff',x:pp[0],y:pp[1],t:0,e:'💨'});F.floats.push({x:pp[0],y:pp[1]-.5,text:`+${T.g}🪙`,col:'#ffe27a',t:0});fsfx('coin');fUI()}
+  F.foes=F.foes.filter(e=>!e.dead);
+  F.units=F.units.filter(u=>{if(u.hp<=0){fsfx('bad');toast(`A ${u.role==='guard'?'guard':'worker'} was lost`);return false}return true});
+  F.fx.forEach(f=>f.t+=dt);F.fx=F.fx.filter(f=>f.t<(f.k==='arrow'?.12:.5));
+  F.floats.forEach(f=>f.t+=dt);F.floats=F.floats.filter(f=>f.t<1.1);
+  if((F.uiT+=dt)>.5){F.uiT=0;fUI()}
+  // end
+  if(F.hp<=0){fEnd(false);return}
+  if(F.wave>=F.waves&&!F.spawnQ.length&&!F.foes.length){F.cleared=F.waves;fEnd(true)}
+}
+function fUnit(u,dt){
+  const sp=2.3;
+  const goTo=(tx,ty)=>{const dx=tx-u.x,dy=ty-u.y,d=Math.hypot(dx,dy);if(d<.08){u.moving=false;return true}u.moving=true;u.walk+=dt*9;u.x+=dx/d*Math.min(d,sp*dt);u.y+=dy/d*Math.min(d,sp*dt);u.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'r':'l'):(dy>0?'d':'u');return false};
+  if(u.role==='guard'){
+    let tgt=null;for(const e of F.foes){if(!tgt||e.d>tgt.d)tgt=e}
+    if(tgt){const p=fPathPos(tgt.d);if(p[0]<14||tgt.d>FLEN*.55)goTo(p[0]+.5,p[1]);else goTo(5.5,6.5)}else goTo(5.2,6.5+((u.seed%3)-1)*.7);
+    return;
+  }
+  const type=u.role==='cut'?'tree':'rock';
+  if(u.state==='idle'){
+    let best=null,bd=1e9;F.nodes.forEach(n=>{if(n.type!==type||n.ch<=0||(n.claim&&n.claim!==u))return;const d=Math.hypot(n.x+.5-u.x,n.y+.5-u.y);if(d<bd){bd=d;best=n}});
+    if(best){u.node=best;best.claim=u;u.state='go'}else u.moving=false;
+  }else if(u.state==='go'){if(u.node.ch<=0){u.node.claim=null;u.state='idle';return}if(goTo(u.node.x+.5,u.node.y+.5)){u.state='work';u.t=0}}
+  else if(u.state==='work'){u.moving=false;u.t+=dt;if(u.t>=2.4){if(u.node.ch>0){u.node.ch--;u.node.t=0;u.carry=2}u.node.claim=null;u.state='home'}}
+  else if(u.state==='home'){if(goTo(2.5,8.7)){F.inv[type==='tree'?'wood':'stone']+=u.carry;F.floats.push({x:2.5,y:8,text:`+${u.carry} ${type==='tree'?'🪵':'🪨'}`,col:'#ffe9a8',t:0});u.carry=0;u.state='idle';fsfx('pick');fUI()}}
+}
+function fDraw(time){
+  const cv=$('#fCv');if(!cv||!F)return;const g=cv.getContext('2d'),{w,h,z,d}=fView;
+  g.setTransform(d,0,0,d,0,0);g.fillStyle='#4d8a3a';g.fillRect(0,0,w,h);
+  const vw=w/z,vh=h/z,tx=clamp(F.px*FTS-vw/2,0,Math.max(0,FW*FTS-vw)),ty=clamp(F.py*FTS-vh/2,0,Math.max(0,FH*FTS-vh));
+  const k=1-Math.pow(.001,1/60);F.cam.x+=(tx-F.cam.x)*k;F.cam.y+=(ty-F.cam.y)*k;
+  g.setTransform(d*z,0,0,d*z,0,0);g.translate(-Math.round(F.cam.x),-Math.round(F.cam.y));
+  g.drawImage(fGround,0,0);
+  // mats + pads
+  const pulse=(Math.sin(time*3)+1)/2;
+  FBLD.forEach(b=>{g.strokeStyle=`rgba(255,235,150,${.35+.5*pulse})`;g.lineWidth=2.5;g.beginPath();g.roundRect(b.door[0]*FTS+3,b.door[1]*FTS+3,FTS-6,FTS-6,9);g.stroke()});
+  F.pads.forEach(p=>{if(p.st)return;const x=p.x*FTS,y=p.y*FTS;g.save();g.setLineDash([6,5]);g.strokeStyle=`rgba(255,248,200,${.5+.3*pulse})`;g.fillStyle='rgba(255,255,255,.12)';g.lineWidth=2.5;
+    if(p.type==='tower'){g.beginPath();g.roundRect(x+6,y+6,FTS-12,FTS-12,8);g.fill();g.stroke()}else{g.beginPath();g.roundRect(x+3,y+14,FTS-6,FTS-28,6);g.fill();g.stroke()}g.restore()});
+  // entities, y-sorted
+  const ents=[];
+  F.nodes.forEach(n=>ents.push({by:n.y*FTS+FTS-3,n}));
+  F.decor.forEach(dc=>ents.push({by:dc.y*FTS+dc.oy,dc}));
+  FBLD.forEach(b=>ents.push({by:(b.y+3)*FTS-4,b}));
+  F.pads.forEach(p=>{if(p.st)ents.push({by:p.y*FTS+FTS-2,p})});
+  F.units.forEach(u=>ents.push({by:u.y*FTS+FTS/2,u}));
+  F.foes.forEach(e=>{const pp=fPathPos(e.d);ents.push({by:pp[1]*FTS+FTS/2,e,pp})});
+  ents.push({by:F.py*FTS+FTS/2,pl:1});
+  ents.sort((a,b)=>a.by-b.by);
+  const em=(t,x,y,sz)=>{g.font=`${sz}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText(t,x,y)};
+  const bar=(x,y,w2,u,col)=>{g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x-w2/2,y,w2,5);g.fillStyle=col;g.fillRect(x-w2/2,y,w2*clamp(u,0,1),5)};
+  const look={cut:{hair:['#6b3a1c','#40210d'],tunic:['#c98a4a','#a8672a','#7a4618'],pants:['#5a4a3a','#3a2e22'],hat:'cap',capCol:'#b0702a'},mine:{hair:['#3a2418','#20120a'],tunic:['#8e97a1','#6c7680','#4a525a'],pants:['#4a5a6e','#2e3a4c'],hat:'cap',capCol:'#e8b230'},guard:{hair:['#8a8a8a','#5a5a5a'],tunic:['#d9503e','#b03a2e','#7a2218'],pants:['#3a4a5a','#26323e'],hat:'cap',capCol:'#8a8f96'}};
+  for(const e of ents){
+    if(e.n){const n=e.n,x=n.x*FTS+FTS/2,y=n.y*FTS+FTS-3,full=n.ch>0;
+      if(n.type==='tree'){if(full)putSway(g,SP.tree[n.v],x,y,time,.012,n.x*.7+n.y);else put(g,SP.stump,x,y)}else put(g,full?SP.rock[n.v]:SP.rockGone,x,y);
+      if(full&&n.ch<n.max)for(let i=0;i<n.ch;i++){g.fillStyle='rgba(255,255,255,.85)';g.fillRect(n.x*FTS+FTS/2-(n.ch*5)/2+i*5,n.y*FTS+FTS-2,3.5,3.5)}}
+    else if(e.dc){const dc=e.dc;put(g,SP[dc.k][dc.v],dc.x*FTS+dc.ox,dc.y*FTS+dc.oy)}
+    else if(e.b){const b=e.b,spr=b.id==='hall'?bldBy('barn').spr:b.id==='tav'?bldBy('jam').spr:bldBy('sawmill').spr;put(g,spr,b.x*FTS+72,(b.y+3)*FTS-2);
+      if(b.id==='hall'){bar(b.x*FTS+72,b.y*FTS-12,90,F.hp/F.maxhp,F.hp<F.maxhp*.35?'#ff7a5a':'#7ee37a');em('📦',b.x*FTS+72,b.y*FTS-24,18)}
+      else{g.save();g.font='bold 12px "Trebuchet MS",sans-serif';g.textAlign='center';g.fillStyle='rgba(255,246,222,.95)';g.strokeStyle='#7a5530';g.lineWidth=2;const t=b.id==='tav'?'🍺 Hire':'🛠 Craft';const tw=g.measureText(t).width+14;g.beginPath();g.roundRect(b.x*FTS+72-tw/2,b.y*FTS-16,tw,20,10);g.fill();g.stroke();g.fillStyle='#2b2118';g.fillText(t,b.x*FTS+72,b.y*FTS-5);g.restore()}}
+    else if(e.p){const p=e.p,s=p.st,x=p.x*FTS+FTS/2,y=p.y*FTS+FTS;
+      if(s.kind==='tower'){g.fillStyle='#7b8791';g.fillRect(x-15,y-26,30,26);g.strokeStyle='#3a434b';g.lineWidth=2;g.strokeRect(x-15,y-26,30,26);g.fillStyle='#8a5a2b';g.beginPath();g.moveTo(x-19,y-26);g.lineTo(x,y-44);g.lineTo(x+19,y-26);g.closePath();g.fill();g.stroke();em('🏹',x,y-16,20)}
+      else if(s.kind==='fence'){g.fillStyle='#8a5a2b';g.fillRect(x-20,y-30,40,26);g.strokeStyle='#4a2c12';g.lineWidth=2;g.strokeRect(x-20,y-30,40,26);g.fillStyle='#a8703a';for(let q=0;q<3;q++)g.fillRect(x-17,y-27+q*8,34,5)}
+      else{g.fillStyle='#9aa3ab';g.fillRect(x-21,y-34,42,32);g.strokeStyle='#4a5058';g.lineWidth=2;g.strokeRect(x-21,y-34,42,32);g.fillStyle='#6c737a';for(let q=0;q<4;q++)g.fillRect(x-21,y-34+q*8,42,2)}
+      if(s.hp<s.max)bar(x,y-(s.kind==='tower'?50:40),36,s.hp/s.max,s.hp/s.max>.4?'#7ee37a':'#ff7a5a')}
+    else if(e.u){const u=e.u,x=u.x*FTS,y=u.y*FTS+FTS/2-6;const act=u.state==='work'?{type:u.role==='cut'?'chop':'mine',u:(u.t%.62)/.62}:null;
+      person(g,x,y,Object.assign({dir:act?(u.dir==='l'?'l':'r'):u.dir,act,moving:u.moving,walk:u.walk,time,seed:u.seed},look[u.role]));
+      if(u.role==='guard')em('🛡️',x,y-52,16);if(u.hp<u.max)bar(x,y-48,30,u.hp/u.max,'#7ee37a')}
+    else if(e.e){const f=e.e,T=FFOE[f.k],x=e.pp[0]*FTS,y=e.pp[1]*FTS+Math.sin(f.wob)*FTS*.04;g.save();if(f.hit>0)g.globalAlpha=.55;em(T.e,x,y,FTS*T.sz);g.restore();
+      if(f.hp<f.max)bar(x,y-FTS*T.sz*.6,34,f.hp/f.max,'#ff7a5a')}
+    else if(e.pl){
+      const x=F.px*FTS,y=F.py*FTS+FTS/2-6,nd=!F.moving?fNodeAt(F.px,F.py):null,gat=nd&&nd.ch>0&&F.gather>0;
+      const act=gat?{type:nd.type==='tree'?'chop':'mine',u:(F.swing%.62)/.62}:null;
+      person(g,x,y,{dir:act?(F.dir==='l'?'l':'r'):F.dir,act,moving:F.moving,walk:F.walk,time,pack:true,carry:{wood:F.carry.wood,stone:F.carry.stone},carryN:F.carry.wood+F.carry.stone,cap:F.cap,hat:'straw',hair:['#8a5a2f','#52311a'],tunic:['#5fc4d6','#3a93b0','#245f7a'],pants:['#7a62a8','#4d3d78'],seed:0});
+      const ring=(u,col)=>{g.lineCap='round';g.strokeStyle='rgba(0,0,0,.38)';g.lineWidth=6;g.beginPath();g.arc(x,y+8,16,0,7);g.stroke();g.strokeStyle=col;g.beginPath();g.arc(x,y+8,16,-Math.PI/2,-Math.PI/2+6.283*u);g.stroke()};
+      if(gat)ring(F.gather/(nd.type==='tree'?1.5:1.9),'#ffe27a');else if(F.craftT>0)ring(F.craftT/1.3,'#9be08a');
+    }
+  }
+  // effects
+  for(const f of F.fx){if(f.k==='arrow'){g.strokeStyle='#fff3cf';g.lineWidth=2;const u=f.t/.12;const x=(f.x0+(f.x1-f.x0)*u)*FTS,y=(f.y0+(f.y1-f.y0)*u)*FTS;g.beginPath();g.moveTo(x-(f.x1-f.x0)*FTS*.1,y-(f.y1-f.y0)*FTS*.1);g.lineTo(x,y);g.stroke()}
+    else if(f.k==='puff'){g.globalAlpha=1-f.t/.5;em(f.e,f.x*FTS,f.y*FTS-f.t*24,FTS*.5);g.globalAlpha=1}}
+  for(const f of F.floats){g.globalAlpha=1-f.t/1.1;g.font='bold 16px "Trebuchet MS",sans-serif';g.textAlign='center';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.65)';g.strokeText(f.text,f.x*FTS,f.y*FTS-f.t*34);g.fillStyle=f.col;g.fillText(f.text,f.x*FTS,f.y*FTS-f.t*34);g.globalAlpha=1}
+  // dusk deepens with each wave; the Gloom is thicker on the right
+  g.setTransform(d,0,0,d,0,0);
+  const dusk=Math.min(.38,F.wave*.055);if(dusk>0){g.fillStyle=`rgba(25,15,70,${dusk})`;g.fillRect(0,0,w,h)}
+  g.fillStyle=lg(g,0,0,w,0,[[0,'rgba(0,0,0,0)'],[.7,'rgba(0,0,0,0)'],[1,'rgba(40,20,80,.22)']]);g.fillRect(0,0,w,h);
+  g.fillStyle=rg(g,w/2,h/2,Math.min(w,h)*.5,w/2,h/2,Math.max(w,h)*.8,[[0,'rgba(0,0,0,0)'],[1,'rgba(10,25,5,.35)']]);g.fillRect(0,0,w,h);
+  {const mw=FW*5,mh=FH*5,mx=w-mw-6,my=6;g.fillStyle='rgba(20,30,15,.62)';g.strokeStyle='rgba(255,230,160,.5)';g.lineWidth=1.5;g.beginPath();g.roundRect(mx-3,my-3,mw+6,mh+6,6);g.fill();g.stroke();
+    g.strokeStyle='#cdb17a';g.lineWidth=3;g.beginPath();FPATH.forEach(([x,y],i)=>{const X=mx+(x+.5)*5,Y=my+(y+.5)*5;i?g.lineTo(X,Y):g.moveTo(X,Y)});g.stroke();
+    g.fillStyle='#d9503e';g.fillRect(mx+5,my+25,15,15);
+    F.pads.forEach(p=>{if(p.st){g.fillStyle=p.st.kind==='tower'?'#9fb0c0':'#c98a4a';g.fillRect(mx+p.x*5,my+p.y*5,5,5)}});
+    F.foes.forEach(e=>{const pp=fPathPos(e.d);g.fillStyle=e.k==='giant'||e.k==='brute'?'#ff3a3a':'#ff8a5a';g.beginPath();g.arc(mx+pp[0]*5,my+pp[1]*5,e.k==='giant'?4:2.4,0,7);g.fill()});
+    F.units.forEach(u=>{g.fillStyle='#7ee37a';g.fillRect(mx+u.x*5-1.5,my+u.y*5-1.5,3,3)});
+    g.fillStyle='#7ac8ff';g.beginPath();g.arc(mx+F.px*5,my+F.py*5,3,0,7);g.fill();}
+  if(F.stick){const s=F.stick;g.fillStyle='rgba(255,255,255,.16)';g.strokeStyle='rgba(255,255,255,.4)';g.lineWidth=2;g.beginPath();g.arc(s.sx,s.sy,48,0,7);g.fill();g.stroke();g.fillStyle='rgba(255,226,122,.75)';g.beginPath();g.arc(s.sx+s.dx,s.sy+s.dy,20,0,7);g.fill()}
+  else if(F.t<8){g.font='bold 13px "Trebuchet MS",sans-serif';g.textAlign='center';g.fillStyle='rgba(255,246,222,.9)';g.fillText('Touch and drag to walk',w/2,h-12)}
+}
+function fEnd(win){
+  F.over=true;
+  const lv=F.lv,cl=win?F.waves:Math.max(0,F.wave-1),ratio=F.hp/F.maxhp,stars=win?(ratio>=.7?3:ratio>=.35?2:1):0;
+  let coins=0;
+  if(F.mode==='play'){
+    coins=win?Math.round((12*F.waves+Math.ceil(F.hp))*(1+.15*(lv-1))):Math.round(4*cl*(1+.15*(lv-1)));
+    S.coins+=coins;stat('earned',coins);stat('frontWaves',cl);if(win){stat('frontWins');if(stars===3)stat('threeStars')}save(true);hud();
+  }
+  win?sfx.win():sfx.bad();
+  const sh=el(`<div class="overlay"><div class="sheet"><h2>${win?'🌅 Dawn breaks — the Frontier holds!':'💥 The Hall fell!'}</h2>
+    ${win?`<div class="stars">${[1,2,3].map(i=>`<span class="${i<=stars?'':'off'}">⭐</span>`).join('')}</div>`:''}
+    <div class="muted">${win?`All ${F.waves} waves beaten · ${F.kills} Gloom defeated`:`You survived ${cl} of ${F.waves} waves · ${F.kills} defeated`}</div>
+    ${F.mode==='play'?`<div class="reward">🪙 +${coins}</div>`:'<div class="reward" style="font-size:16px">Free play — no rewards</div>'}
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+      ${F.mode==='play'?`<button class="btn green" id="wNext" ${S.energy<3?'disabled':''}>Again · costs ⚡3 <small>(you have ${S.energy})</small></button>`:`<button class="btn green" id="wNext">Again</button>`}
+      <button class="btn grey" id="wBack">Back to village</button></div></div></div>`);
+  $('#front').appendChild(sh);
+  const mode=F.mode,opts=F.opts;
+  $('#wBack').onclick=()=>{stopFront();leaveMG()};
+  $('#wNext').onclick=()=>{stopFront();if(mode==='play'){if(S.energy<3)return;spendEnergy(3);startFront('play')}else startFront('free',opts)};
+}
+/* =====================================================================
    MINI-GAME 2: BEAN HARVEST — a short solo take on bean-planting card games
    • Your hand is a queue: you MUST plant the first card, MAY plant the second.
    • Then two market cards flip: plant each one or trade it away.
@@ -3106,6 +3510,7 @@ function showTitle(){
     <p>Gather wood, stone, berries and wheat. Craft goods. Then step into the workshops and play puzzles and card games to earn the coins that grow your village.</p>
     <div class="menu">
       <button class="btn green" id="tPlay">${has?'▶ Continue village':'▶ Start village'}</button>
+      <button class="btn blue" id="tFF">⚔️ Free Play — The Frontier</button>
       <button class="btn blue" id="tFW">🛡️ Free Play — The Watch</button>
       <button class="btn blue" id="tFL">💡 Free Play — Lights Out</button>
       <button class="btn blue" id="tFM">🎴 Free Play — Triple Match</button>
@@ -3118,6 +3523,7 @@ function showTitle(){
     ${iosHint()}<div id="updBox"></div>`;
   $('#tPlay').onclick=()=>{sfx.click();goFull();startWorld()};
   $('#tFB').onclick=()=>{goFull();openFreeSetup('bolt')};
+  $('#tFF').onclick=()=>{goFull();openFreeSetup('watch','front')};
   $('#tFW').onclick=()=>{goFull();openFreeSetup('watch')};
   $('#tFL').onclick=()=>{goFull();openFreeSetup('lights')};
   $('#tFM').onclick=()=>{goFull();openFreeSetup('match')};
@@ -3170,7 +3576,7 @@ addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
 load();
 checkStory(true);
 setInterval(()=>save(true),8000);
-addEventListener('visibilitychange',()=>{if(document.hidden){flushFlyers();save(true)}});
+addEventListener('visibilitychange',()=>{if(document.hidden){flushFlyers();save(true);try{if(AC&&AC.state==='running')AC.suspend()}catch(e){}}else{try{if(AC&&AC.state==='suspended')AC.resume()}catch(e){}}});
 addEventListener('beforeunload',()=>{flushFlyers();save(true)});
 showTitle();
 </script>
