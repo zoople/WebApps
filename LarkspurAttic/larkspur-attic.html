@@ -94,8 +94,13 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* orders */
 .orders{display:flex;gap:7px;min-height:104px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px}
 .orders::-webkit-scrollbar{display:none}
-.orders>.order{flex:0 0 calc((100% - 32px - 14px)/3.25);scroll-snap-align:start}
+.orders>.order{flex:0 0 calc((100% - 32px - 14px - 25px)/3.15);scroll-snap-align:start}
 .order.side{background:#2a2420;border:1px dashed #e4b84c55}
+.orders>.grp{flex:0 0 18px;display:flex;align-items:center;justify-content:center;border-radius:8px;scroll-snap-align:start}
+.orders>.grp span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
+.orders>.grp.g-story{background:#e4b84c22;color:var(--gold)}
+.orders>.grp.g-side{background:#ffffff0d;color:#d9c49a;margin-left:6px}
+.chk.side{background:#d9c49a;color:#2a1a10}
 .order.side .who{color:#d9c49a}
 .order{background:var(--panel);border:1px solid #ffffff12;border-radius:12px;padding:7px 7px 6px;display:flex;flex-direction:column;gap:5px;cursor:pointer;min-width:0}
 .order.ready{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
@@ -258,7 +263,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v9 · 12 Oct 2026';
+const VERSION='v10 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -984,7 +989,7 @@ function render(){
   tickEnergy();
   const tasks=activeTasks();
   ensureSide();
-  const needed=new Set(); tasks.concat(S.side).forEach(t=>t.need.forEach(([k,l])=>needed.add(key(k,l))));
+  const needed=new Set(), sideNeeded=new Set(); tasks.forEach(t=>t.need.forEach(([k,l])=>needed.add(key(k,l)))); S.side.forEach(t=>t.need.forEach(([k,l])=>sideNeeded.add(key(k,l))));
   const cellEls=board.children;
   S.cells.forEach((c,i)=>{
     const el=cellEls[i]; const [r,cc]=rc(i);
@@ -1015,6 +1020,7 @@ function render(){
         } else {
           if(isRes(c.it)) cls+=' res';
           if(needed.has(key(c.it.k,c.it.l))) html+=`<b class="chk">✓</b>`;
+          else if(sideNeeded.has(key(c.it.k,c.it.l))) html+=`<b class="chk side">✓</b>`;
         }
       }
     }
@@ -1056,15 +1062,22 @@ function renderOrders(tasks){
   }
   box.innerHTML='';
   ensureSide();
-  const tnow=now(), list=tasks.concat(S.side).map((t,i)=>({t,i,ready:taskStatus(t).ready}));
-  let newlyReady=false;
-  list.forEach(o=>{ if(o.ready){ if(!readySince[o.t.id]){ readySince[o.t.id]=tnow; newlyReady=true; } } else delete readySince[o.t.id]; });
-  list.sort((a,b)=> (b.ready-a.ready)
-    || (a.ready ? readySince[a.t.id]-readySince[b.t.id] : 0)
-    || ((a.t.side?1:0)-(b.t.side?1:0))
-    || (a.i-b.i));
-  if(newlyReady) box.scrollTo({left:0,behavior:'smooth'});
-  list.map(o=>o.t).forEach(t=>{
+  /* two groups, Story then Jumble Sale; a ready order jumps to the front of its own group only */
+  const tnow=now(); let storyNewlyReady=false;
+  const group=arr=>{
+    const list=arr.map((t,i)=>({t,i,ready:taskStatus(t).ready}));
+    list.forEach(o=>{ if(o.ready){ if(!readySince[o.t.id]){ readySince[o.t.id]=tnow; if(!o.t.side) storyNewlyReady=true; } } else delete readySince[o.t.id]; });
+    list.sort((a,b)=>(b.ready-a.ready) || (a.ready ? readySince[a.t.id]-readySince[b.t.id] : 0) || (a.i-b.i));
+    return list.map(o=>o.t);
+  };
+  const story=group(tasks), side=group(S.side);
+  const label=(txt,cls)=>{ const l=document.createElement('div'); l.className='grp '+cls; l.innerHTML=`<span>${txt}</span>`; box.appendChild(l); };
+  if(storyNewlyReady) box.scrollTo({left:0,behavior:'smooth'});
+  const rows=[];
+  if(story.length){ rows.push(['label','Story','g-story']); story.forEach(t=>rows.push(t)); }
+  if(side.length){ rows.push(['label','Jumble Sale','g-side']); side.forEach(t=>rows.push(t)); }
+  rows.forEach(t=>{
+    if(Array.isArray(t)){ label(t[1],t[2]); return; }
     const st=taskStatus(t);
     const el=document.createElement('div');
     el.className='order'+(st.ready?' ready':'')+(t.side?' side':'');
