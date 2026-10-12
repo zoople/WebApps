@@ -76,6 +76,10 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .ch-name{font-family:var(--display);font-weight:400;font-size:21px;margin:0;line-height:1.1;text-wrap:balance;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ch-count{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .bar{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.xprow{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;padding:0;text-align:left}
+.xprow .xpl{white-space:nowrap;font-weight:600}.xprow .xpl b{color:var(--ink)}
+.xprow .xb{flex:1;height:4px}.xprow .xb i{background:linear-gradient(90deg,#c9a24a,#fff0b0)}
+.cell.res .em{filter:drop-shadow(0 0 4px #e4b84c99) drop-shadow(0 2px 1px #0006)}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--velvet),var(--gold));width:0;transition:width .5s}
 
 /* orders */
@@ -205,6 +209,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <li>Drag two matching items together to merge</li>
     <li>Merges open the boxes next to them</li>
     <li>Fill orders to uncover Odile’s story</li>
+    <li>Tap coins, tea and stars twice to claim</li>
     <li>No timer. Play at your own pace</li>
   </ul>
   <button id="playBtn">Play</button>
@@ -226,6 +231,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <section class="chapter">
     <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Dust Sheets</h1><span class="ch-count" id="chCount">0/5</span></div>
     <div class="bar"><i id="chBar"></i></div>
+    <button class="xprow" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button>
   </section>
   <section class="orders" id="orders"></section>
   <main class="boardwrap" id="wrap"><div id="board"></div></main>
@@ -237,7 +243,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v4 · 12 Oct 2026';
+const VERSION='v5 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -245,9 +251,9 @@ const VERSION='v4 · 12 Oct 2026';
 const CONFIG = {
   cols: 7, rows: 9,
   energyMax: 100,
-  energyRegenMs: 20000,   // 1 energy every 20s (no event timer, so this is just pacing)
+  energyRegenMs: 120000,  // 1 energy every 2 min, same as Merge Mansion
   energyCost: 1,
-  buyEnergy: { cost: 60, amount: 50 },
+  buyEnergy: { cost: 120, step: 40, amount: 40 },  // price rises by `step` after each purchase
   saveKey: 'larkspur-attic-v1',
 };
 
@@ -264,10 +270,22 @@ const CHAINS = {
     {e:'🪚',n:'Saw'},{e:'🛠️',n:'Tool Roll'},{e:'⚒️',n:"Stagehand's Tools"}]},
   L:{name:'Lights', items:[
     {e:'🕯️',n:'Candle Stub'},{e:'💡',n:'Bulb'},{e:'🔦',n:'Torch'},{e:'🏮',n:'Paper Lantern'},
-    {e:'🪔',n:'Oil Lamp'},{e:'🌟',n:'Spotlight'}]},
-  E:{name:'Tea Time', type:'energy', items:[
-    {e:'🍬',n:'Sugar Lump',v:1},{e:'🍪',n:'Biscuit',v:3},{e:'☕',n:'Cuppa',v:7},
-    {e:'🧁',n:'Cupcake',v:15},{e:'🍰',n:'Victoria Sponge',v:30}]},
+    {e:'🪔',n:'Oil Lamp'},{e:'🔆',n:'Spotlight'}]},
+  /* resource chains: tap twice to claim, or merge first for a bigger payout (values follow Merge Mansion's 2/6/16/40/100 curve) */
+  E:{name:'Tea Time', type:'res', claim:'energy', items:[
+    {e:'🍬',n:'Sugar Lump',v:2},{e:'🍪',n:'Biscuit',v:6},{e:'☕',n:'Cuppa',v:16},
+    {e:'🧁',n:'Cupcake',v:40},{e:'🍰',n:'Victoria Sponge',v:100}]},
+  C:{name:'Coins', type:'res', claim:'coins', items:[
+    {e:'🪙',n:'Old Penny',v:2},{e:'💷',n:'Banknote',v:5},{e:'👛',n:'Coin Purse',v:12},
+    {e:'💰',n:'Money Bag',v:30},{e:'💎',n:'Heirloom Jewel',v:75}]},
+  X:{name:'Applause', type:'res', claim:'xp', items:[
+    {e:'⭐',n:'Star',v:1},{e:'🌟',n:'Bright Star',v:3},{e:'💫',n:'Shooting Star',v:8},
+    {e:'🌠',n:'Star Shower',v:20},{e:'🏆',n:'Standing Ovation',v:50}]},
+  /* rare chains: each generator's occasional bonus drop */
+  K:{name:'Keepsakes', rare:true, items:[{e:'🔖',n:'Bookmark'},{e:'🎟️',n:'Ticket Stub'},{e:'🖼️',n:'Photograph'},{e:'📸',n:'Box Camera'}]},
+  B:{name:'Haberdashery', rare:true, items:[{e:'🔘',n:'Button'},{e:'🎀',n:'Silk Bow'},{e:'👒',n:'Bonnet'},{e:'👑',n:'Paste Tiara'}]},
+  W:{name:'Clockwork', rare:true, items:[{e:'⚙️',n:'Cog'},{e:'🗝️',n:'Wind-up Key'},{e:'⏱️',n:'Stopwatch'},{e:'🕰️',n:'Mantel Clock'}]},
+  R:{name:'Music', rare:true, items:[{e:'🎵',n:'Sheet Music'},{e:'🎶',n:'Duet Score'},{e:'📻',n:'Wireless Set'},{e:'🎻',n:'Violin'}]},
   M:{name:'The Great Odelia', story:true, items:[
     {e:'🃏',n:'Playing Card', lore:'The ace of moons. There is no such card. This one was printed for a single show, in 1968.'},
     {e:'🎴',n:'Trick Deck', lore:'Fifty-two cards, every one the ace of moons. A note in the box: “Nobody checks. Nobody ever checks.”'},
@@ -278,34 +296,34 @@ const CHAINS = {
     {e:'🔮',n:'Crystal Ball', lore:'Not crystal. Glass, polished by hand until it holds the whole attic upside down.'},
     {e:'🌙',n:'The Vanishing Moon', lore:'The full method, written out. Two pages. The second page is a drawing of a black cat.'}]},
   /* generators */
-  gD:{name:'Paper Tray', gen:true, items:[
-    {e:'🗂️',n:'Paper Tray', drop:[['P',1,85],['P',2,15]]},
-    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,50],['P',2,35],['P',3,15]]}]},
-  gS:{name:'Sewing Basket', gen:true, items:[
-    {e:'🧺',n:'Sewing Basket', drop:[['F',1,85],['F',2,15]]},
-    {e:'🪡',n:'Sewing Kit', drop:[['F',1,50],['F',2,35],['F',3,15]]}]},
-  gT:{name:'Toolbox', gen:true, items:[
-    {e:'🧰',n:'Toolbox', drop:[['T',1,85],['T',2,15]]},
-    {e:'🗜️',n:'Workbench', drop:[['T',1,50],['T',2,35],['T',3,15]]}]},
-  gL:{name:'Fuse Box', gen:true, items:[
-    {e:'🔌',n:'Fuse Box', drop:[['L',1,85],['L',2,15]]},
-    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,50],['L',2,35],['L',3,15]]}]},
-  gM:{name:'Circus Trunk', gen:true, items:[
-    {e:'🎪',n:'Circus Trunk', drop:[['M',1,88],['M',2,12]]},
-    {e:'🪞',n:'Magic Mirror', drop:[['M',1,55],['M',2,32],['M',3,13]]}]},
-  gK:{name:'Kettle', gen:true, items:[
-    {e:'🫖',n:'Kettle', free:true, charges:4, rechargeMs:60000, drop:[['E',1,45],['E',2,42],['E',3,13]]}]},
+  gD:{name:'Paper Tray', gen:true, main:'P', rare:'K', items:[
+    {e:'🗂️',n:'Paper Tray', drop:[['P',1,75],['P',2,10],['K',1,8],['E',1,2],['C',1,3],['X',1,2]]},
+    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,44],['P',2,28],['P',3,10],['K',1,9],['K',2,3],['E',1,2],['C',1,2],['X',1,2]]}]},
+  gS:{name:'Sewing Basket', gen:true, main:'F', rare:'B', items:[
+    {e:'🧺',n:'Sewing Basket', drop:[['F',1,75],['F',2,10],['B',1,8],['E',1,2],['C',1,3],['X',1,2]]},
+    {e:'🪡',n:'Sewing Kit', drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2]]}]},
+  gT:{name:'Toolbox', gen:true, main:'T', rare:'W', items:[
+    {e:'🧰',n:'Toolbox', drop:[['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2]]},
+    {e:'🗜️',n:'Workbench', drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2]]}]},
+  gL:{name:'Fuse Box', gen:true, main:'L', rare:'R', items:[
+    {e:'🔌',n:'Fuse Box', drop:[['L',1,75],['L',2,10],['R',1,8],['E',1,2],['C',1,3],['X',1,2]]},
+    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,44],['L',2,28],['L',3,10],['R',1,9],['R',2,3],['E',1,2],['C',1,2],['X',1,2]]}]},
+  gM:{name:'Circus Trunk', gen:true, main:'M', rare:'X', items:[
+    {e:'🎪',n:'Circus Trunk', drop:[['M',1,80],['M',2,8],['X',1,7],['C',1,5]]},
+    {e:'🪞',n:'Magic Mirror', drop:[['M',1,50],['M',2,26],['M',3,10],['X',1,8],['X',2,3],['C',1,3]]}]},
+  gK:{name:'Kettle', gen:true, main:'E', items:[
+    {e:'🫖',n:'Kettle', free:true, charges:3, rechargeMs:480000, drop:[['E',1,70],['E',2,25],['E',3,5]]}]},
 };
 
 /* ---------- board: o=open, w=cobweb (visible, merge onto it to free), b=box (hidden until a merge next to it) ---------- */
 const LAYOUT = [
-  'bM4 bF5 bE4 bP5 bgT1 bL4 bM3',   // zone 3 — opens chapter 4
-  'bP3 wM2 bT4 bgM1 bF2 wL2 bE3',
+  'bM4 bF5 bC3 bP5 bgT1 bL4 bM3',   // zone 3 — opens chapter 4
+  'bP3 wM2 bT4 bgM1 bF2 wL2 bX2',
   'bM2 bL3 bgD1 bF4 bT3 bgL1 bP4',  // zone 2 — opens chapter 3
-  'wM1 bE3 bT1 bP2 wL1 bF3 bM1',
-  'bF3 bP2 bL1 bgS1 bT2 bE2 bF1',   // zone 1 — opens chapter 2
-  'wT1 bL2 bP1 wE3 bF2 wT2 bP3',
-  'bP1 bgT1 wP1 bF2 wF1 bE2 bT1',   // zone 0 — start
+  'wM1 bE2 bT1 bP2 wL1 bF3 bM1',
+  'bF3 bP2 bL1 bgS1 bT2 bC2 bF1',   // zone 1 — opens chapter 2
+  'wT1 bL2 bP1 wE2 bF2 wT2 bP3',
+  'bP1 bgT1 wP1 bF2 wF1 bX1 bT1',   // zone 0 — start
   'wF2 oP1 o. o. o. oF1 wP2',
   'oE1 ogD1 o. ogK1 o. ogS1 oE1',
 ];
@@ -363,7 +381,7 @@ const CHAPTERS = [
       ['N','Inside the lid, a programme: “The Great Odelia & Felix Marchetti present THE VANISHING MOON.”'],
       ['T','Felix. “F.”'],
     ]},
-  { title:'The Great Odelia', zone:3, gifts:[['E',3]],
+  { title:'The Great Odelia', zone:3, gifts:[['E',2]],
     intro:[
       ['N','The last corner of the attic is darker than the rest, as if the light doesn’t quite want to go there.'],
       ['P','I’m not superstitious. I’m just going to stand here. By the hatch.'],
@@ -373,7 +391,7 @@ const CHAPTERS = [
       ['N','Autumn 1969: “We did it. Then he took the method and ran. Let him. He only has half.”'],
       ['T','Half a trick?'],
     ]},
-  { title:'Smoke and Mirrors', zone:null, gifts:[['E',3],['E',3]],
+  { title:'Smoke and Mirrors', zone:null, gifts:[['E',3]],
     intro:[
       ['T','These aren’t shelves. Look at the joins. This whole wall is a stage flat.'],
       ['N','The attic isn’t an attic. Or not only. Odile built a little theatre up here, then hid it under dust sheets.'],
@@ -383,7 +401,7 @@ const CHAPTERS = [
       ['M','<em>(He jumps onto the sill and sits very straight, like an assistant waiting for a cue.)</em>'],
       ['P','There was always a black cat. Always called Mothball. I assumed it was the same one, for a while there.'],
     ]},
-  { title:'The Vanishing Moon', zone:null, gifts:[['E',4]],
+  { title:'The Vanishing Moon', zone:null, gifts:[['E',3]],
     intro:[
       ['O','“Light, cloth, a crystal, and someone who looks.” <em>(Pinned to the mirror.)</em>'],
       ['T','That’s a shopping list. She’s left us a shopping list for a magic trick.'],
@@ -411,31 +429,48 @@ const TASKS = [
   {ch:1, who:'P', need:[['P',4]], coins:14, say:'Bundle up those letters, dear. Letters want keeping together.'},
   {ch:1, who:'M', need:[['F',4]], coins:12, say:'(He has claimed a pair of opera gloves. Or he would like to.)'},
   {ch:1, who:'T', need:[['T',3],['L',1]], coins:14, say:'Hammer and a candle. The fuse box has opinions.'},
-  {ch:1, who:'P', need:[['P',4],['F',3]], coins:16, say:'Another bundle, and something to wrap it in. Odile would hate them getting dusty.'},
+  {ch:1, who:'P', need:[['P',4],['K',2]], coins:16, say:'Another bundle. And look for ticket stubs tucked in them, I want to see where she played.'},
+  {x:1, ch:1, who:'M', need:[['F',4],['L',3]], coins:14, say:'(He wants gloves to sleep on and a torch to guard them with.)'},
   // ch3 — zone 2, circus trunk
   {ch:2, who:'M', need:[['M',2]], coins:16, say:'(He drops a playing card at your feet. Then another. He wants the whole deck.)'},
-  {ch:2, who:'T', need:[['L',3],['T',3]], coins:18, say:'Torch and hammer. I’m going to look behind that panel whether it likes it or not.'},
+  {ch:2, who:'T', need:[['L',3],['W',2]], coins:18, say:'A torch and a wind-up key. That panel has a keyhole, and I’m not leaving it alone.'},
   {ch:2, who:'P', need:[['F',5]], coins:18, say:'Is that silk? Let me see. Oh, that’s real silk.'},
   {ch:2, who:'T', need:[['M',3]], coins:20, say:'If there’s a wand in that trunk I am absolutely going to wave it.'},
   {ch:2, who:'M', need:[['P',5]], coins:18, say:'(He is sitting on a stack of nothing, waiting for a diary to sit on instead.)'},
+  {x:1, ch:2, who:'P', need:[['P',5],['B',2]], coins:20, say:'A diary and a silk bow to tie it shut. Some secrets want a ribbon.'},
   // ch4 — zone 3
   {ch:3, who:'P', need:[['M',4]], coins:22, say:'A top hat! Bring it here, I want to try it on. Don’t tell anyone.'},
-  {ch:3, who:'T', need:[['T',4],['L',4]], coins:22, say:'Screwdriver and a lantern. That corner is too dark to be an accident.'},
+  {ch:3, who:'T', need:[['T',4],['W',3]], coins:22, say:'Screwdriver and a stopwatch. Every trick in that corner is timed.'},
   {ch:3, who:'M', need:[['F',5],['P',4]], coins:22, say:'(He has made a nest of letters. It needs a scarf.)'},
   {ch:3, who:'T', need:[['M',5]], coins:26, say:'The programme says there was a rabbit. I need to see the rabbit.'},
-  {ch:3, who:'P', need:[['E',4]], coins:20, say:'All this excitement. I could murder a cupcake.'},
+  {ch:3, who:'P', need:[['B',3]], coins:20, say:'A bonnet! I had one just like it. Well. Nearly.'},
+  {x:1, ch:3, who:'M', need:[['T',5],['K',2]], coins:24, say:'(He is batting a ticket stub around a saw. He wants both.)'},
   // ch5
   {ch:4, who:'T', need:[['T',5]], coins:28, say:'A saw. This false wall comes down today.'},
   {ch:4, who:'P', need:[['F',6]], coins:30, say:'Her stage gown. I want to see it in the light.'},
-  {ch:4, who:'M', need:[['M',5],['L',4]], coins:30, say:'(He and the rabbit are having a standoff. A lantern would help the rabbit.)'},
-  {ch:4, who:'T', need:[['P',6]], coins:30, say:'All her diaries, in order. Every year.'},
+  {ch:4, who:'M', need:[['M',5],['R',2]], coins:30, say:'(He and the rabbit are having a standoff. Music might calm everyone down.)'},
+  {ch:4, who:'T', need:[['P',6],['K',3]], coins:30, say:'All her diaries, in order. And the photographs that go with them.'},
+  {x:1, ch:4, who:'P', need:[['F',6],['L',4]], coins:30, say:'Hold the gown up to the lantern, love. I want to see the beading.'},
   // ch6
-  {ch:5, who:'T', need:[['T',6],['L',5]], coins:34, say:'Light. Tools to angle the mirror. Let’s do this properly.'},
+  {ch:5, who:'T', need:[['T',6],['R',3]], coins:34, say:'Tools to angle the mirror, and the wireless for the overture. Let’s do this properly.'},
   {ch:5, who:'P', need:[['M',6]], coins:34, say:'The dove. It belongs with the trick.'},
-  {ch:5, who:'M', need:[['F',6],['P',6]], coins:34, say:'(Cloth. Diaries. He is laying out the set like he’s done it before.)'},
+  {ch:5, who:'M', need:[['F',6],['B',3]], coins:34, say:'(A gown and a bonnet. He is dressing the set like he’s done it before.)'},
+  {x:1, ch:5, who:'P', need:[['M',6],['R',3]], coins:34, say:'The dove, and the wireless. She’d have wanted music.'},
   {ch:5, who:'O', need:[['M',7]], coins:50, say:'“…a crystal, and someone who looks.”'},
 ];
-TASKS.forEach((t,i)=>t.id=i);
+/* stable ids: original orders keep 0..27 so existing saves line up; orders added later (x:1) get 100+ */
+{ let n=0, m=100; TASKS.forEach(t=>{ t.id = t.x ? m++ : n++; }); }
+/* order rewards land on the board as claimable items (coins + applause), like Merge Mansion */
+function taskRewards(t){
+  const c = t.coins>=30?3 : t.coins>=14?2 : 1;
+  const x = t.ch>=4?3 : t.ch>=2?2 : 1;
+  return t.who==='O' ? [['C',4],['X',4]] : [['C',c],['X',x]];
+}
+/* stage level: claimed applause (XP) fills it; each level-up drops a gift */
+const STAGE_XP=[0,6,15,28,45,66,92,124,162,206,256,316,386,466];
+function stageOf(xp){ let l=1; while(l<60 && xp>=stageNeed(l)) l++; return l; }
+function stageNeed(l){ return l<STAGE_XP.length ? STAGE_XP[l] : STAGE_XP[STAGE_XP.length-1]+(l-STAGE_XP.length+1)*80; }
+function stageReward(l){ return l%5===0 ? [['E',3],['C',2]] : l%2 ? [['C',2]] : [['E',2]]; }
 
 /* ============================================================ sound — all synthesised with Web Audio, no files
    Everything runs through a soft master chain (high-shelf cut, gentle compressor) so it stays
@@ -633,10 +668,10 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, xp:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
-  try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63) return s; } }catch(e){}
+  try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ s.xp=s.xp||0; return s; } } }catch(e){}
   return freshState();
 }
 function save(){ try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} }
@@ -719,12 +754,28 @@ function produce(i){
   save(); render();
 }
 
-function drink(i){
-  const it=S.cells[i].it, d=def(it);
-  S.energy+=d.v; S.cells[i].it=null; sel=-1;
-  SND.play('drink');
-  toast(`${d.e} +${d.v} ⚡`);
+function claim(i){
+  const it=S.cells[i].it, d=def(it), kind=CHAINS[it.k].claim;
+  S.cells[i].it=null; sel=-1; fx[i]='pulse';
+  if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
+  else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
+  else { SND.play('unweb'); toast(`${d.e} +${d.v} applause`); addXP(d.v); }
   save(); render();
+}
+function addXP(v){
+  const before=stageOf(S.xp); S.xp+=v; const after=stageOf(S.xp);
+  for(let l=before+1;l<=after;l++){
+    stageReward(l).forEach(r=>S.gifts.push(r));
+    setTimeout(()=>{ SND.play('gift'); toast(`⭐ Stage level ${l}! A gift is waiting 🎁`,3000); },300);
+  }
+}
+function energyPrice(){ const b=CONFIG.buyEnergy; return b.cost+(S.buys||0)*b.step; }
+function isRes(it){ return CHAINS[it.k].type==='res'; }
+/* put items on the board near the bottom; anything that doesn't fit goes to gifts */
+function dropItems(list, near=59){
+  let overflow=0;
+  list.forEach(([k,l])=>{ const t=nearestEmpty(near); if(t<0){ S.gifts.push([k,l]); overflow++; return; } S.cells[t].it=mkItem(k,l); fx[t]='spawn'; discover(S.cells[t].it); });
+  if(overflow) toast(`No room for ${overflow} reward${overflow>1?'s':''}. Find ${overflow>1?'them':'it'} in 🎁`);
 }
 
 function canMerge(a,b){ return a&&b&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
@@ -752,11 +803,12 @@ function doMerge(a,b){
   fx[b]='pop';
   revealAround(b);
   discover(it);
+  if(!isGen(it) && !isRes(it) && it.l>=5){ const t=nearestEmpty(b); if(t>=0){ S.cells[t].it=mkItem('X',1); fx[t]='spawn'; } }
   sel=b;
   save(); render();
 }
 
-function sellValue(it){ return isGen(it)?0 : CHAINS[it.k].story ? it.l*4 : it.l*2; }
+function sellValue(it){ return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
   S.coins+=v; S.cells[i].it=null; sel=-1;
@@ -784,9 +836,10 @@ function completeTask(t){
     if(idx===sel) sel=-1;
     S.cells[idx].it=null; fx[idx]='pulse';
   });
-  S.done[t.id]=1; S.coins+=t.coins;
+  S.done[t.id]=1;
   SND.play('coins');
-  toast(`${CAST[t.who].av} Thanks! +🪙${t.coins}`);
+  dropItems(taskRewards(t));
+  toast(`${CAST[t.who].av} Thanks! Rewards are on the board`);
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
   if(chTasks.every(x=>S.done[x.id])) finishChapter();
   save(); render();
@@ -824,11 +877,11 @@ function placeGift(){
   toast(`${def(S.cells[t].it).e} ${def(S.cells[t].it).n} placed on the board`);
   save(); render();
 }
-function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&ch.items[0].drop.some(d=>d[0]===k)); }
+function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&(ch.main===k||ch.rare===k)); }
 function hintTask(t){
   const ks=new Set(t.need.map(n=>n[0]));
-  S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&def(c.it).drop.some(d=>ks.has(d[0]))))) fx[i]='hint'; });
-  const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=genFor(k); return `${d.e} ${d.n}${g?` <small>(${g.items[0].e} ${g.name})</small>`:''}`; });
+  S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
+  const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=genFor(k); return `${d.e} ${d.n}${g?` <small>(${CHAINS[k].rare?'rare from ':''}${g.items[0].e} ${g.name})</small>`:''}`; });
   toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs: ${parts.join(' + ')}`, 4200);
   render();
 }
@@ -877,10 +930,10 @@ function render(){
           }
           else html+=`<i class="gen">⚡</i>`;
         } else {
-          html+=`<i class="lv">${c.it.l}</i>`;
+          if(isRes(c.it)) cls+=' res';
           if(needed.has(key(c.it.k,c.it.l))) html+=`<b class="chk">✓</b>`;
         }
-      } else html+=`<i class="lv">${c.it.l}</i>`;
+      }
     }
     if(i===sel) cls+=' sel';
     if(fx[i]) cls+=' '+fx[i];
@@ -898,6 +951,8 @@ function renderHud(){
   $('energy').textContent=S.energy;
   $('eTimer').textContent = S.energy<CONFIG.energyMax ? fmt(Math.ceil((CONFIG.energyRegenMs-(now()-S.eT))/1000)) : '';
   $('coins').textContent=S.coins;
+  { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
+    $('xpLv').textContent=l; $('xpTxt').textContent=`${S.xp-lo}/${hi-lo}`; $('xpBar').style.width=((S.xp-lo)/(hi-lo)*100)+'%'; }
   $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length;
   const ci=Math.min(S.ch,CHAPTERS.length-1);
   const chT=TASKS.filter(t=>t.ch===ci), dn=chT.filter(t=>S.done[t.id]).length;
@@ -921,7 +976,7 @@ function renderOrders(tasks){
     el.className='order'+(st.ready?' ready':'');
     el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
-      <div class="act">${st.ready?'Hand over':'🪙 '+t.coins}</div>`;
+      <div class="act">${st.ready?'Hand over':taskRewards(t).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     el.onclick=()=>{ if(taskStatus(t).ready) completeTask(t); else hintTask(t); };
     box.appendChild(el);
   });
@@ -940,12 +995,13 @@ function renderInfo(){
   let ds='';
   if(ch.gen){
     if(d.charges){ refreshCharges(it); ds = it.ch>0 ? `Tap again to brew tea. Free. ${it.ch} left.` : `Boiling… ready in ${nextChargeIn(it)}s.`; }
-    else ds=`Tap again to make ${CHAINS[d.drop[0][0]].name.toLowerCase()}. Costs ⚡${CONFIG.energyCost}.`;
+    else ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}. Costs ⚡${CONFIG.energyCost}.`;
     if(it.l<maxL(it.k)) ds+=` Merge two to get a ${ch.items[it.l].n}.`;
-  } else if(ch.type==='energy'){
-    ds=`Tap again to have it: +${d.v} ⚡.`+(it.l<maxL(it.k)?` Or merge for a ${ch.items[it.l].n}.`:'');
+  } else if(ch.type==='res'){
+    const unit = ch.claim==='energy'?'⚡' : ch.claim==='coins'?'🪙' : '⭐ applause';
+    ds=`Tap again to collect +${d.v} ${unit}.`+(it.l<maxL(it.k)?` Merge two for +${ch.items[it.l].v}.`:' Top of the chain.');
   } else {
-    ds = it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.';
+    ds = (ch.rare?`Rare find from the ${genFor(it.k).name}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
   }
   const sv=sellValue(it);
   box.innerHTML=`<div class="big">${d.e}</div>
@@ -1005,7 +1061,7 @@ function tap(i){
   if(!c.it){ sel=-1; sellArm=false; render(); return; }
   if(sel===i){
     if(isGen(c.it)){ produce(i); return; }
-    if(CHAINS[c.it.k].type==='energy'){ drink(i); return; }
+    if(isRes(c.it)){ claim(i); return; }
     return;
   }
   sel=i; sellArm=false; render();
@@ -1092,13 +1148,13 @@ let resetArm=false;
 function showMenu(){
   const b=CONFIG.buyEnergy;
   openModal(`<h2>Larkspur Attic</h2><p style="color:var(--muted)">Event 1 · no timer · version ${VERSION}</p>
-    <h3>Energy</h3><p>⚡ ${S.energy} · refills 1 every ${CONFIG.energyRegenMs/1000}s up to ${CONFIG.energyMax}. Tea items on the board top you up past the cap.</p>
-    <div class="row-btns"><button class="bigbtn gold" id="buyE" ${S.coins<b.cost?'disabled style="opacity:.5"':''}>Buy ⚡${b.amount} for 🪙${b.cost}</button></div>
+    <h3>Energy</h3><p>⚡ ${S.energy} · refills 1 every ${CONFIG.energyRegenMs/60000} min up to ${CONFIG.energyMax}. Tea on the board tops you up past the cap. Price rises each time you buy.</p>
+    <div class="row-btns"><button class="bigbtn gold" id="buyE" ${S.coins<energyPrice()?'disabled style="opacity:.5"':''}>Buy ⚡${b.amount} for 🪙${energyPrice()}</button></div>
     <h3>Sound</h3>
     <div class="row-btns" style="margin-top:0"><button class="bigbtn${SND.pref.music?' gold':''}" id="musBtn">♪ Music: ${SND.pref.music?'On':'Off'}</button><button class="bigbtn${SND.pref.sfx?' gold':''}" id="sfxBtn">Sound effects: ${SND.pref.sfx?'On':'Off'}</button></div>
     <h3>Save</h3><p style="color:var(--muted);font-size:13px">Progress saves in this browser automatically.</p>
     <div class="row-btns"><button class="bigbtn warn" id="resetBtn">${resetArm?'Tap again to wipe everything':'Restart event'}</button><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
-  $('buyE').onclick=()=>{ if(S.coins<b.cost) return; S.coins-=b.cost; S.energy+=b.amount; SND.play('coin'); save(); render(); showMenu(); toast(`+${b.amount} ⚡`); };
+  $('buyE').onclick=()=>{ const c=energyPrice(); if(S.coins<c) return; S.coins-=c; S.buys=(S.buys||0)+1; S.energy+=b.amount; SND.play('coin'); save(); render(); showMenu(); toast(`+${b.amount} ⚡`); };
   $('musBtn').onclick=()=>{ SND.setMusic(!SND.pref.music); showMenu(); };
   $('sfxBtn').onclick=()=>{ SND.setSfx(!SND.pref.sfx); showMenu(); SND.play('tap'); };
   $('resetBtn').onclick=()=>{ if(!resetArm){ resetArm=true; showMenu(); return; } resetArm=false; S=freshState(); sel=-1; save(); closeModal(); render(); startIntro(); };
@@ -1110,6 +1166,7 @@ function showComplete(){
 $('journalBtn').onclick=showJournal;
 $('menuBtn').onclick=()=>{ resetArm=false; showMenu(); };
 $('giftBtn').onclick=placeGift;
+$('xpRow').onclick=()=>{ const l=stageOf(S.xp); toast(`⭐ Stage ${l}. Next level gives: ${stageReward(l+1).map(([k,lv])=>CHAINS[k].items[lv-1].e).join(' ')}<br><small>Claim stars ⭐ on the board to fill it</small>`,3200); };
 
 /* full screen toggle */
 const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
