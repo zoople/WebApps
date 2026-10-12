@@ -232,7 +232,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v1 · 12 Oct 2026';
+const VERSION='v2 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -451,7 +451,13 @@ const SND = (()=>{
     rev.buffer=ir;
     const revG=ctx.createGain(); revG.gain.value=.32; rev.connect(revG); revG.connect(master);
     sfxG=ctx.createGain(); sfxG.gain.value=pref.sfx?.55:0; sfxG.connect(master); sfxG.connect(rev);
-    musG=ctx.createGain(); musG.gain.value=0; musG.connect(master); musG.connect(rev);
+    // music bus: warm low-pass, plate-ish reverb and a soft tape-style echo
+    musG=ctx.createGain(); musG.gain.value=0;
+    const warm=ctx.createBiquadFilter(); warm.type='lowpass'; warm.frequency.value=2600; warm.Q.value=.4;
+    musG.connect(warm); warm.connect(master); warm.connect(rev);
+    const dly=ctx.createDelay(2), fb=ctx.createGain(), dlp=ctx.createBiquadFilter(), wet=ctx.createGain();
+    dly.delayTime.value=(60/72)*.75; fb.gain.value=.32; dlp.type='lowpass'; dlp.frequency.value=1600; wet.gain.value=.24;
+    warm.connect(dly); dly.connect(dlp); dlp.connect(fb); fb.connect(dly); dlp.connect(wet); wet.connect(master); wet.connect(rev);
     noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
     const nd=noiseBuf.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1;
     if(pref.music) startMusic();
@@ -499,35 +505,52 @@ const SND = (()=>{
     }
   }
 
-  /* --- background music: a slow music-box waltz that wanders through two progressions --- */
-  const BPM=78, BEAT=60/BPM;
+  /* --- background music: a slow synth waltz that wanders through two progressions --- */
+  const BPM=72, BEAT=60/BPM;
   const PROGS=[
     [[57,[69,72,76]],[53,[69,72,77]],[48,[67,72,76]],[55,[67,71,74]],[57,[69,72,76]],[50,[69,74,77]],[52,[68,71,74]],[52,[68,71,76]]], // Am F C G Am Dm E E
     [[48,[67,72,76]],[45,[69,72,76]],[53,[69,72,77]],[55,[67,71,74]],[48,[67,72,76]],[52,[67,71,76]],[53,[69,72,77]],[55,[67,71,74]]], // C Am F G C Em F G
   ];
   const SCALE=[69,71,72,74,76,77,79,81,83,84];
-  function musicNote(m,t,g,dur){ // music box: bright sine + soft overtone, quick decay
-    const o=ctx.createOscillator(), o2=ctx.createOscillator(), e=ctx.createGain();
-    o.type='sine'; o2.type='sine'; o.frequency.value=mtof(m); o2.frequency.value=mtof(m)*3.01;
-    const e2=ctx.createGain(); e2.gain.value=.12;
-    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(g,t+.004); e.gain.exponentialRampToValueAtTime(.0001,t+dur);
-    o.connect(e); o2.connect(e2); e2.connect(e); e.connect(musG); o.start(t); o2.start(t); o.stop(t+dur+.05); o2.stop(t+dur+.05);
+  // soft analog lead: two detuned saws + a sine body through an enveloped low-pass filter
+  function musicNote(m,t,g,dur){
+    const f=mtof(m), e=ctx.createGain(), fl=ctx.createBiquadFilter(), stop=t+dur+.1;
+    fl.type='lowpass'; fl.Q.value=1.2;
+    fl.frequency.setValueAtTime(400,t); fl.frequency.linearRampToValueAtTime(1900,t+.06); fl.frequency.exponentialRampToValueAtTime(520,t+dur*.8);
+    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(g,t+.035); e.gain.setTargetAtTime(g*.55,t+.08,.25); e.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    [[-7,'sawtooth',.5],[7,'sawtooth',.5],[0,'sine',.9]].forEach(([dt,type,lvl])=>{
+      const o=ctx.createOscillator(), og=ctx.createGain();
+      o.type=type; o.frequency.value=f; o.detune.value=dt; og.gain.value=lvl;
+      o.connect(og); og.connect(fl); o.start(t); o.stop(stop);
+    });
+    fl.connect(e); e.connect(musG);
   }
+  // warm pad: detuned saw pairs, slow attack, filter that breathes open and closed across the bar
   function pad(notes,t,dur){
-    notes.forEach(m=>{ const o=ctx.createOscillator(), e=ctx.createGain(), fl=ctx.createBiquadFilter();
-      o.type='triangle'; o.frequency.value=mtof(m-12); o.detune.value=(Math.random()-.5)*8;
-      fl.type='lowpass'; fl.frequency.value=900;
-      e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(.035,t+.6); e.gain.linearRampToValueAtTime(.0001,t+dur);
-      o.connect(fl); fl.connect(e); e.connect(musG); o.start(t); o.stop(t+dur+.05); });
+    const fl=ctx.createBiquadFilter(), e=ctx.createGain();
+    fl.type='lowpass'; fl.Q.value=.7;
+    fl.frequency.setValueAtTime(420,t); fl.frequency.linearRampToValueAtTime(1100,t+dur*.45); fl.frequency.linearRampToValueAtTime(500,t+dur);
+    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(.05,t+1.1); e.gain.setValueAtTime(.05,t+dur-.9); e.gain.linearRampToValueAtTime(.0001,t+dur+.4);
+    notes.forEach(m=>[-11,10].forEach(dt=>{
+      const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=mtof(m-12); o.detune.value=dt+(Math.random()-.5)*4;
+      o.connect(fl); o.start(t); o.stop(t+dur+.5);
+    }));
+    fl.connect(e); e.connect(musG);
   }
-  function bass(m,t){ const o=ctx.createOscillator(), e=ctx.createGain(); o.type='triangle'; o.frequency.value=mtof(m-12);
-    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(.16,t+.01); e.gain.exponentialRampToValueAtTime(.0001,t+BEAT*1.6);
-    o.connect(e); e.connect(musG); o.start(t); o.stop(t+BEAT*1.7); }
+  // round bass: sine sub with a touch of filtered saw for definition
+  function bass(m,t,g=.2){
+    const f=mtof(m-12), e=ctx.createGain(), fl=ctx.createBiquadFilter(), stop=t+BEAT*1.9;
+    fl.type='lowpass'; fl.frequency.setValueAtTime(600,t); fl.frequency.exponentialRampToValueAtTime(180,t+.3);
+    e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(g,t+.02); e.gain.exponentialRampToValueAtTime(.0001,t+BEAT*1.8);
+    const s=ctx.createOscillator(); s.type='sine'; s.frequency.value=f; s.connect(e);
+    const w=ctx.createOscillator(), wg=ctx.createGain(); w.type='sawtooth'; w.frequency.value=f; wg.gain.value=.35; w.connect(wg); wg.connect(fl); fl.connect(e);
+    e.connect(musG); s.start(t); w.start(t); s.stop(stop); w.stop(stop);
+  }
   function scheduleBeat(t){
     const bar=Math.floor(step/3), beat=step%3, cycle=Math.floor(bar/8);
     const prog=PROGS[cycle%2], [root,chord]=prog[bar%8];
-    if(beat===0){ bass(root,t); pad(chord,t,BEAT*3.2); }
-    else if(Math.random()<.5) bass(root+(beat===1?7:12),t);
+    if(beat===0){ bass(root,t); pad(chord,t,BEAT*3.4); }
+    else if(Math.random()<.4) bass(root+(beat===1?7:12),t,.11);
     // melody: wander between chord tones and scale, with rests
     const rest = (bar%8===7 && beat>0) || Math.random()<.22;
     if(!rest){
@@ -535,8 +558,8 @@ const SND = (()=>{
       let target=pool[Math.floor(Math.random()*pool.length)];
       if(Math.abs(target-lastNote)>9) target = pool.reduce((a,b)=>Math.abs(b-lastNote)<Math.abs(a-lastNote)?b:a);
       lastNote=target;
-      musicNote(target,t,.11,1.6);
-      if(Math.random()<.18){ const nx=SCALE[Math.max(0,Math.min(SCALE.length-1,SCALE.indexOf(target)+(Math.random()<.5?1:-1)))]||target; musicNote(nx,t+BEAT/2,.07,1.1); }
+      musicNote(target,t,.075,BEAT*1.9);
+      if(Math.random()<.18){ const nx=SCALE[Math.max(0,Math.min(SCALE.length-1,SCALE.indexOf(target)+(Math.random()<.5?1:-1)))]||target; musicNote(nx,t+BEAT/2,.05,BEAT*1.3); }
     }
     step++;
   }
@@ -544,7 +567,7 @@ const SND = (()=>{
     if(!ctx||timer) return;
     musG.gain.cancelScheduledValues(ctx.currentTime);
     musG.gain.setValueAtTime(musG.gain.value,ctx.currentTime);
-    musG.gain.linearRampToValueAtTime(.55,ctx.currentTime+2.5);
+    musG.gain.linearRampToValueAtTime(.9,ctx.currentTime+2.5);
     nextT=ctx.currentTime+.1;
     timer=setInterval(()=>{ while(nextT<ctx.currentTime+.25){ scheduleBeat(nextT); nextT+=BEAT; } },60);
   }
