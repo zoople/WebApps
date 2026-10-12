@@ -213,6 +213,8 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
 /* action bar (only things that are tappable pulse) */
 .abar{flex:none;display:flex;gap:8px;justify-content:center;align-items:center;min-height:42px;flex-wrap:wrap}
 .abar .btn{padding:9px 16px;font-size:14px;animation:bp 1.1s infinite}
+.askrow{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;color:#fff3cf;font-weight:800;font-size:14px;width:100%}
+.askc{font-size:22px!important;padding:3px 12px!important;border:2px solid rgba(255,230,160,.4);border-radius:12px;background:rgba(0,0,0,.35);color:#fff}.askc.on{border-color:#fff;background:linear-gradient(#ffe9a0,#e3a935);box-shadow:0 0 10px #ffe27a}
 .reply{width:100%;display:flex;flex-direction:column;gap:4px}
 .reply .rh{font-size:14px;font-weight:800;color:#fff3cf;text-align:center}
 .reply .rrow{display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.32);border:1px solid rgba(255,230,160,.25);border-radius:10px;padding:4px 8px;color:#fff;font-size:14px;font-weight:700}
@@ -334,7 +336,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v25 · 11 Oct 2026';
+const VERSION='v26 · 11 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -1563,8 +1565,8 @@ function openFreeSetup(game){
     const classic=(typeof arguments[1]==='undefined'?'classic':arguments[1])==='classic';
     openModal(`<h2>🃏 Free Play</h2><div class="muted">Practice only: no ⚡, no 🪙, no progress.</div>
       <div style="display:flex;gap:8px;margin:10px 0"><button class="btn ${classic?'green':'grey'}" data-md="classic">🫘 Classic</button><button class="btn ${classic?'grey':'green'}" data-md="quick">⚡ Quick</button></div>
-      <div class="muted">${classic?'Plays like the original bean-trading card game with 2 computer players who trade with you: 10 bean types, 150 cards, the real bean-o-meter, no upgrades. Passes = times through the deck (the real game uses 3).':'The village set: 5 crops, 30 cards a round.'}</div>
-      <div class="field"><label>${classic?'Passes through the deck':'Rounds'} <span id="o1v">${classic?1:2}</span></label><input type="range" id="o1" min="1" max="3" value="${classic?1:2}"></div>
+      <div class="muted">${classic?'Plays like the original bean-trading card game with 2 computer players who trade with you: 10 bean types, 150 cards, the real bean-o-meter, no upgrades. Passes = times through the deck. The real game uses 3; each pass is only ~10 turns for you, so 1 pass is too short to grow big harvests.':'The village set: 5 crops, 30 cards a round.'}</div>
+      <div class="field"><label>${classic?'Passes through the deck':'Rounds'} <span id="o1v">${classic?3:2}</span></label><input type="range" id="o1" min="1" max="3" value="${classic?3:2}"></div>
       ${classic?'<input type="hidden" id="o2" value="1"><span id="o2v" class="hidden"></span>':`<div class="field"><label>Trades per round <span id="o2v">2</span></label><input type="range" id="o2" min="0" max="4" value="2"></div>`}
       <div class="field"><label>Start with a 3rd field <span id="o3v">No</span></label><input type="range" id="o3" min="0" max="1" value="0"></div>
       <div style="display:flex;gap:8px;margin-top:10px"><button class="btn green" id="go">▶ Start</button></div>`);
@@ -1748,6 +1750,7 @@ const RULES={
     <li><b>Classic (free play):</b> you play against 2 computer players.</li>
     <li><b>Your turn:</b> plant your first card (you may plant the 2nd), then <b>2 cards flip from the deck</b>.</li>
     <li><b>Trade:</b> tap any flipped card <i>or any card in your hand</i> to offer it. Each bot answers: a <b>swap</b> (you get a named card) or <b>takes it</b> (nothing back) or <b>no thanks</b>. Tap Accept on one you like.</li>
+    <li><b>Ask:</b> tap 🙋 and a bean you're growing to ask the bots for it. They swap for a card they want, or give it free if they don't need it.</li>
     <li>You must plant every flipped card you don't trade away, and every card you receive.</li>
     <li>On their own turns the bots may offer you a free card — accept or decline.</li>
     <li>A field with only 1 bean can't be harvested while another field has 2+, and the deck is reshuffled for extra passes.</li></ul>`
@@ -2686,7 +2689,7 @@ function stepsHTML(){
 }
 function renderCards(flipIdx){
   if(!C)return;
-  if(C.phase!=='market')C.offerHand=null;
+  if(C.phase!=='market'){C.offerHand=null;C.ask=null}
   const cur=curCard(),inPlant=C.phase==='plant1'||C.phase==='plant2'||C.phase==='final';
   $('#cRound').textContent=`🔄 ${C.round}/${C.o.rounds} · ⏱ ${C.turn+1}`;$('#cRound').title=C.classic?'Pass through the deck · Turn':'Round · Turn';
   $('#cCoins').textContent=`🪙 +${C.coins}`;$('#cCoins').title='Coins harvested this game';
@@ -2724,7 +2727,11 @@ function renderCards(flipIdx){
   const bar=[];
   if(C.phase==='plant2')bar.push(`<button class="btn grey" id="cSkip">⏭ Skip</button>`);
   if(C.phase==='market'&&!C.classic)bar.push(`<button class="btn blue" data-trade="${C.sel}" ${C.trades>0?'':'disabled'}>🔁 Trade ·${C.trades}</button>`);
-  if(C.phase==='market'&&C.classic)bar.push(replyHTML());
+  if(C.phase==='market'&&C.classic){
+    const mine=[...new Set(C.fields.slice(0,C.nFields).filter(f=>f.t!==null).map(f=>f.t))];
+    if(mine.length)bar.push(`<div class="askrow"><span>🙋 Ask the bots for:</span>${mine.map(t=>`<button class="chip askc${C.ask===t?' on':''}" data-ask="${t}">${CROPS[t].e}</button>`).join('')}</div>`);
+    bar.push(replyHTML());
+  }
   if(C.phase==='aigift'&&C.gift){
     C.gift.opts.forEach((o,n)=>bar.push(`<button class="btn green" data-gift="${n}">${o.give?`Give your ${CROPS[o.give.t].e} · get ${CROPS[o.get.t].e}`:`Accept ${CROPS[o.get.t].e} (free)`}</button>`));
     bar.push(`<button class="btn grey" data-gift="-1">No thanks</button>`);
@@ -2740,8 +2747,10 @@ function renderCards(flipIdx){
   // wire
   $('#cTable').querySelectorAll('[data-f]').forEach(p=>p.onclick=e=>{if(e.target.closest('[data-h]'))return;cardPlant(+p.dataset.f)});
   $('#cTable').querySelectorAll('[data-h]').forEach(b=>b.onclick=e=>{e.stopPropagation();cardHarvest(+b.dataset.h,true);renderCards()});
-  $('#cTable').querySelectorAll('[data-m]').forEach(m=>m.onclick=()=>{if(C.phase==='market'){C.sel=+m.dataset.m;C.offerHand=null;sfx.pick();renderCards()}});
-  $('#cTable').querySelectorAll('[data-q]').forEach(m=>m.onclick=()=>{if(C.phase==='market'&&C.classic){const q=+m.dataset.q;C.offerHand=C.offerHand===q?null:q;sfx.pick();renderCards()}});
+  $('#cTable').querySelectorAll('[data-m]').forEach(m=>m.onclick=()=>{if(C.phase==='market'){C.sel=+m.dataset.m;C.offerHand=null;C.ask=null;sfx.pick();renderCards()}});
+  $('#cTable').querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{const t=+b.dataset.ask;C.ask=C.ask===t?null:t;C.offerHand=null;sfx.pick();renderCards()});
+  $('#cTable').querySelectorAll('[data-arep]').forEach(b=>b.onclick=e=>{e.stopPropagation();acceptAsk(+b.dataset.arep)});
+  $('#cTable').querySelectorAll('[data-q]').forEach(m=>m.onclick=()=>{if(C.phase==='market'&&C.classic){const q=+m.dataset.q;C.offerHand=C.offerHand===q?null:q;C.ask=null;sfx.pick();renderCards()}});
   $('#cTable').querySelectorAll('[data-trade]').forEach(b=>b.onclick=()=>cardTrade(+b.dataset.trade));
   $('#cTable').querySelectorAll('[data-ofr]').forEach(b=>b.onclick=e=>{e.stopPropagation();const[i,k]=b.dataset.ofr.split(':').map(Number);acceptOffer(i,k)});
   $('#cTable').querySelectorAll('[data-hofr]').forEach(b=>b.onclick=e=>{e.stopPropagation();const[j,k]=b.dataset.hofr.split(':').map(Number);acceptHandOffer(j,k)});
@@ -2924,7 +2933,43 @@ function botReplies(t){
     return{k,ok:false};
   });
 }
+// I ask the bots for a bean type I'm growing (any card from their hand can be traded in the real game)
+function askReplies(t){
+  return C.ai.map((a,k)=>{
+    const hi=a.hand.findIndex(x=>x.t===t),w=aiWant(a,t);
+    if(hi<0)return{k,ok:false,why:`no ${CROPS[t].e}`};
+    if(w>=3)return{k,ok:false,why:'is growing it'};
+    const give=C.hand.find(x=>x.t!==t&&aiWant(a,x.t)>=2&&aiFits(a,x.t))||C.market.find(x=>!x.locked&&x.t!==t&&aiWant(a,x.t)>=2&&aiFits(a,x.t))||null;
+    if(!give&&w!==0)return{k,ok:false,why:'wants to keep it'};
+    return{k,ok:true,hi,give,card:a.hand[hi]};
+  });
+}
+function acceptAsk(k){
+  const t=C.ask;if(t==null)return;const o=askReplies(t)[k];if(!o||!o.ok)return;
+  const a=C.ai[k];
+  if(o.give){
+    const hx=C.hand.indexOf(o.give);let cp=null;
+    if(hx>=0){cp=capCard(`.grp.q .card[data-q="${hx}"]`,o.give.t);C.hand.splice(hx,1)}
+    else{const mx=C.market.indexOf(o.give);cp=capCard(`.crow .grp.tbl .card[data-m="${mx}"]`,o.give.t);C.market.splice(mx,1)}
+    if(cp)addAnim({from:cp,toBot:k,html:cp.html});aiPlant(a,o.give);
+  }
+  a.hand.splice(o.hi,1);
+  C.market.push({t,locked:true});C.mTotal++;C.sel=C.market.length-1;C.ask=null;
+  addAnim({from:{bot:k},dst:`.crow .grp.tbl .card[data-m="${C.market.length-1}"]`,html:faceHTML(t),label:`Bot ${k+1}`,delay:.45});
+  C.msg=o.give?`Bot ${k+1} gave you ${CROPS[t].e} for your ${CROPS[o.give.t].e}`:`Bot ${k+1} gave you ${CROPS[t].e}`;
+  sfx.coin();renderCards();
+}
 function replyHTML(){
+  if(C.ask!=null){
+    const t=C.ask,rows=askReplies(t).map(o=>{
+      if(!o.ok)return `<div class="rrow"><span>Bot ${o.k+1}</span><span class="noo">${o.why==='is growing it'||o.why==='wants to keep it'?'Needs it':'No '+CROPS[t].e}</span></div>`;
+      return `<div class="rrow"><span>Bot ${o.k+1}</span><span class="what">${o.give?`gives ${CROPS[t].e} for your ${CROPS[o.give.t].e}`:`gives you ${CROPS[t].e} free`}</span><button class="btn small green" data-arep="${o.k}">Accept</button></div>`;
+    }).join('');
+    return `<div class="reply"><div class="rh">You ask for ${CROPS[t].e}:</div>${rows}</div>`;
+  }
+  return replyHTML0();
+}
+function replyHTML0(){
   const hand=C.offerHand!=null?C.hand[C.offerHand]:null,mc=C.market[C.sel];
   const card=hand||(mc&&!mc.locked?mc:null);
   if(!card)return `<div class="reply"><div class="rh">${mc&&mc.locked?'You got this card in a trade — plant it.':'Tap a card to offer it to the bots.'}</div></div>`;
