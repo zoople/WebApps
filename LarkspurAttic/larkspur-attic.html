@@ -258,7 +258,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v6 · 12 Oct 2026';
+const VERSION='v7 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1129,7 +1129,14 @@ function tap(i){
 }
 
 /* ============================================================ overlays */
+/* toasts never cover story dialogue: while a scene is open they wait, then show once it closes */
+let heldToasts=[];
+function flushToasts(){
+  const list=heldToasts.filter((t,i,a)=>a.findIndex(x=>x[0]===t[0])===i).slice(-3); heldToasts=[];
+  list.forEach(([h,ms],i)=>setTimeout(()=>toast(h,ms),250+i*450));
+}
 function toast(html,ms=2200){
+  if(!$('scene').hidden){ heldToasts.push([html,ms]); return; }
   const t=document.createElement('div'); t.className='t'; t.innerHTML=html;
   const box=$('toast'); box.appendChild(t);
   while(box.children.length>3) box.firstChild.remove();
@@ -1144,7 +1151,7 @@ function playScene(sc,done){
   const ov=$('scene'); let i=0;
   ov.hidden=false;
   const show=()=>{
-    if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; done&&done(); return; }
+    if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; if(done) done(); if($('scene').hidden) flushToasts(); return; }
     const [who,txt]=sc.lines[i], cst=CAST[who];
     const cls = who==='N'?'narr': who==='O'?'note':'';
     ov.innerHTML=`${i===0&&sc.title?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:'<div style="margin:auto"></div>'}
