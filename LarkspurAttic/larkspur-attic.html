@@ -224,7 +224,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <li>Fill orders to uncover Odile’s story</li>
     <li>Tap coins, tea and stars twice to claim</li>
     <li>Jumble Sale orders are always open</li>
-    <li>Merge moons 🌑→🌕 for Moon Pass rewards</li>
+    <li>Claim moons 🌑 for Moon Pass rewards; merged moons are worth more</li>
     <li>No timer. Play at your own pace</li>
   </ul>
   <button id="playBtn">Play</button>
@@ -258,7 +258,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v8 · 12 Oct 2026';
+const VERSION='v9 · 12 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -296,8 +296,8 @@ const CHAINS = {
   X:{name:'Applause', type:'res', claim:'xp', items:[
     {e:'⭐',n:'Star',v:1},{e:'🌟',n:'Bright Star',v:3},{e:'💫',n:'Shooting Star',v:8},
     {e:'🌠',n:'Star Shower',v:20},{e:'🏆',n:'Standing Ovation',v:50}]},
-  N:{name:'Moon Tokens', type:'res', claim:'points', claimMax:true, items:[
-    {e:'🌑',n:'New Moon',v:0},{e:'🌒',n:'Crescent Moon',v:0},{e:'🌓',n:'Half Moon',v:0},{e:'🌕',n:'Full Moon',v:10}]},
+  N:{name:'Moon Tokens', type:'res', claim:'points', items:[
+    {e:'🌑',n:'New Moon',v:1},{e:'🌒',n:'Crescent Moon',v:3},{e:'🌓',n:'Half Moon',v:7},{e:'🌕',n:'Full Moon',v:16}]},
   H:{name:'Time Skips', type:'res', claim:'skip', items:[{e:'⏳',n:'Hourglass',v:15},{e:'⌛',n:'Sand Timer',v:60}]},
   /* rare chains: each generator's occasional bonus drop */
   K:{name:'Keepsakes', rare:true, items:[{e:'🔖',n:'Bookmark'},{e:'🎟️',n:'Ticket Stub'},{e:'🖼️',n:'Photograph'},{e:'📸',n:'Box Camera'}]},
@@ -354,6 +354,7 @@ const CAST = {
   P:{name:'Mrs Pike', av:'👵'},
   M:{name:'Mothball', av:'🐈‍⬛'},
   O:{name:'Odile’s note', av:'📜'},
+  F:{name:'Felix’s letter', av:'✉️'},
   S:{name:'Jumble Sale', av:'🏷️'},
 };
 
@@ -507,10 +508,25 @@ function makeSide(){
 function ensureSide(){ S.side=S.side||[]; while(S.side.length<2){ const o=makeSide(); if(!o) break; S.side.push(o); } }
 
 /* Moon Pass: event points from Full Moons unlock tiers of rewards outside the board */
+/* every third tier also unlocks one of Felix's letters (a side story told from his end) */
 const PASS=[
-  {pts:10, rw:[['E',2]]},{pts:20, rw:[['H',1]]},{pts:30, rw:[['C',2]]},{pts:40, rw:[['E',3]]},{pts:50, rw:[['H',1]]},
-  {pts:60, rw:[['X',2]]},{pts:70, rw:[['E',3]]},{pts:80, rw:[['C',3]]},{pts:90, rw:[['H',2]]},{pts:100, rw:[['E',4]]},
-  {pts:115, rw:[['C',3],['X',2]]},{pts:130, rw:[['H',2]]},{pts:145, rw:[['E',4]]},{pts:160, rw:[['C',4]]},{pts:180, rw:[['E',5],['H',2]]},
+  {pts:15, rw:[['E',2]]},{pts:30, rw:[['H',1]]},{pts:50, rw:[['C',2]]},{pts:65, rw:[['E',3]]},{pts:80, rw:[['H',1]]},
+  {pts:95, rw:[['X',2]]},{pts:110, rw:[['E',3]]},{pts:130, rw:[['C',3]]},{pts:145, rw:[['H',2]]},{pts:160, rw:[['E',4]]},
+  {pts:185, rw:[['C',3],['X',2]]},{pts:210, rw:[['H',2]]},{pts:230, rw:[['E',4]]},{pts:255, rw:[['C',4]]},{pts:290, rw:[['E',5],['H',2]]},
+];
+const FELIX=[
+  [['N','A letter is tucked into the reward bundle. Vienna, 1970.'],['F','“Odelia. I have the method and no idea what to do with it. When I make the moon vanish, they look at me. They’re supposed to look up.” — F.']],
+  [['F','“Paris, 1973. I did the Moon tonight. It vanished perfectly and nobody gasped. I don’t understand. It’s the same trick.” — F.']],
+  [['F','“London, 1979. I came to the stage door. You’d gone. They said you’d given it all up for sewing. I bought a ticket for a show that wasn’t on.” — F.']],
+  [['F','“1985. I have a theory. You never hid the moon. You hid the audience from themselves for a second, then gave them back. I can’t do that part.” — F.']],
+  [['F','“Last one, I think. I’m keeping seat A1 warm. If you ever do it again, I’ll be looking up.” — F.'],['M','<em>(Mothball sits on the letter until you’ve finished reading it.)</em>']],
+];
+/* the first time you claim each moon level, Odile's moon notebook has something to say */
+const MOON_NOTES=[
+  [['N','Folded inside the token: a strip of paper in Odile’s hand.'],['O','“New moon. Nothing to see. That’s the best time to set up.”']],
+  [['O','“Crescent. Show them a sliver and they fill in the rest themselves. People love to finish a picture.”']],
+  [['O','“Half moon. Half the trick is the method. The other half is the reason. Felix only ever had the first half.”']],
+  [['O','“Full moon. Everyone looks up at once. That’s the moment, Nell. Not the vanishing. The looking.”']],
 ];
 function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i]).length; }
 
@@ -808,7 +824,11 @@ function claim(i){
   S.cells[i].it=null; sel=-1; fx[i]='pulse';
   if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
   else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
-  else if(kind==='points'){ S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} Moon Pass points${passReady()?' · a reward is ready 🌕':''}`); }
+  else if(kind==='points'){
+    S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} Moon Pass points${passReady()?' · a reward is ready 🌕':''}`);
+    S.moonSeen=S.moonSeen||{};
+    if(!S.moonSeen[it.l]){ S.moonSeen[it.l]=1; save(); setTimeout(()=>playScene({title:'Odile’s moon notebook', sub:d.n, lines:MOON_NOTES[it.l-1]}),250); }
+  }
   else if(kind==='skip'){ timeSkip(d.v); SND.play('unweb'); toast(`${d.e} Skipped ${d.v} minutes`); }
   else { SND.play('unweb'); toast(`${d.e} +${d.v} applause`); addXP(d.v); }
   save(); render();
@@ -1073,8 +1093,7 @@ function renderInfo(){
     if(it.l<maxL(it.k)) ds+=` Merge two to get a ${ch.items[it.l].n}.`;
   } else if(ch.type==='res'){
     const unit = ch.claim==='energy'?'⚡' : ch.claim==='coins'?'🪙' : ch.claim==='skip'?'min time skip' : ch.claim==='points'?'Moon Pass points' : '⭐ applause';
-    if(ch.claimMax) ds = it.l<maxL(it.k) ? `Merge up to a ${ch.items[maxL(it.k)-1].e} Full Moon to claim ${ch.items[maxL(it.k)-1].v} Moon Pass points.` : `Tap again to claim +${d.v} Moon Pass points.`;
-    else if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min: refills energy and generator timers.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
+    if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min: refills energy and generator timers.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
     else ds=`Tap again to collect +${d.v} ${unit}.`+(it.l<maxL(it.k)?` Merge two for +${ch.items[it.l].v}.`:' Top of the chain.');
   } else {
     ds = (ch.rare?`Rare find from the ${genFor(it.k).name}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
@@ -1150,9 +1169,11 @@ function flushToasts(){
   const list=heldToasts.filter((t,i,a)=>a.findIndex(x=>x[0]===t[0])===i).slice(-3); heldToasts=[];
   list.forEach(([h,ms],i)=>setTimeout(()=>toast(h,ms),250+i*450));
 }
+function storyOpen(){ return !$('scene').hidden || $('modal').dataset.story==='1'; }
+function hideToasts(){ [...$('toast').children].forEach(t=>{ if(t._h) heldToasts.push([t._h,t._ms]); t.remove(); }); }
 function toast(html,ms=2200){
-  if(!$('scene').hidden){ heldToasts.push([html,ms]); return; }
-  const t=document.createElement('div'); t.className='t'; t.innerHTML=html;
+  if(storyOpen()){ heldToasts.push([html,ms]); return; }
+  const t=document.createElement('div'); t.className='t'; t.innerHTML=html; t._h=html; t._ms=ms;
   const box=$('toast'); box.appendChild(t);
   while(box.children.length>3) box.firstChild.remove();
   setTimeout(()=>t.remove(),ms);
@@ -1164,11 +1185,12 @@ function playQueue(q,done){
 }
 function playScene(sc,done){
   const ov=$('scene'); let i=0;
+  hideToasts();
   ov.hidden=false;
   const show=()=>{
-    if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; if(done) done(); if($('scene').hidden) flushToasts(); return; }
+    if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; if(done) done(); if(!storyOpen()) flushToasts(); return; }
     const [who,txt]=sc.lines[i], cst=CAST[who];
-    const cls = who==='N'?'narr': who==='O'?'note':'';
+    const cls = who==='N'?'narr': (who==='O'||who==='F')?'note':'';
     ov.innerHTML=`${i===0&&sc.title?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:'<div style="margin:auto"></div>'}
       <div class="dlg ${cls}" id="dlg" role="button" tabindex="0">
         ${cst.name?`<div class="spk"><span class="av">${cst.av}</span><b>${cst.name}</b></div>`:''}
@@ -1183,8 +1205,8 @@ function playScene(sc,done){
   };
   show();
 }
-function openModal(html){ $('modalBody').innerHTML=html; $('modal').hidden=false; }
-function closeModal(){ $('modal').hidden=true; }
+function openModal(html,story){ $('modalBody').innerHTML=html; $('modal').hidden=false; $('modal').dataset.story=story?'1':''; if(story) hideToasts(); }
+function closeModal(){ const was=$('modal').dataset.story==='1'; $('modal').hidden=true; $('modal').dataset.story=''; if(was && !storyOpen()) flushToasts(); }
 $('modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
 
 function chainHtml(k,cur){
@@ -1204,7 +1226,7 @@ function showChain(k,cur){
 function showLore(it){
   const d=def(it);
   SND.play('magic');
-  openModal(`<h3 style="margin-top:0">Found in the Circus Trunk</h3><div style="font-size:54px;text-align:center">${d.e}</div><h2 style="text-align:center">${d.n}</h2><p style="font-style:italic;text-align:center">${d.lore}</p><div class="row-btns" style="justify-content:center"><button class="bigbtn gold" onclick="closeModal()">Into the journal</button></div>`);
+  openModal(`<h3 style="margin-top:0">Found in the Circus Trunk</h3><div style="font-size:54px;text-align:center">${d.e}</div><h2 style="text-align:center">${d.n}</h2><p style="font-style:italic;text-align:center">${d.lore}</p><div class="row-btns" style="justify-content:center"><button class="bigbtn gold" onclick="closeModal()">Into the journal</button></div>`,true);
 }
 function showJournal(){
   let html=`<h2>Odile’s Attic</h2><p style="color:var(--muted)">Everything you’ve uncovered so far.</p><h3>Chapters</h3>`;
@@ -1217,6 +1239,12 @@ function showJournal(){
   html+=`<h3>The Great Odelia</h3>`;
   const lore=CHAINS.M.items.map((d,j)=>S.disc[key('M',j+1)]?`<div class="lore"><span>${d.e}</span><div><b>${d.n}</b>${d.lore}</div></div>`:'').join('');
   html+= lore || `<p style="color:var(--muted)">Nothing yet. Somewhere up here is a trunk with no keyhole.</p>`;
+  const mn=MOON_NOTES.filter((_,j)=>(S.moonSeen||{})[j+1]), fx=FELIX.filter((_,j)=>S.passGot[j*3+2]);
+  if(mn.length||fx.length){
+    html+=`<h3>Letters & notes</h3>`;
+    mn.forEach(ls=>html+=`<div class="lore"><span>🌙</span><div>${ls[ls.length-1][1]}</div></div>`);
+    fx.forEach(ls=>html+=`<div class="lore"><span>✉️</span><div>${ls.find(l=>l[0]==='F')[1]}</div></div>`);
+  }
   html+=`<h3>Collections</h3>`;
   ['P','F','T','L','E','M'].forEach(k=>html+=`<p style="margin:10px 0 6px;font-weight:800">${CHAINS[k].name}</p>${chainHtml(k)}`);
   html+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
@@ -1244,7 +1272,7 @@ function showMenu(){
 }
 function showPass(){
   const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;
-  let h=`<h2>Moon Pass</h2><p style="color:var(--muted);font-size:13px">• Moon tokens 🌑 drop from generators and orders<br>• Merge them up to a Full Moon 🌕, then tap twice to claim points<br>• Points unlock the rewards below</p>
+  let h=`<h2>Moon Pass</h2><p style="color:var(--muted);font-size:13px">• Moon tokens 🌑 drop from generators and orders<br>• Tap twice to claim them any time: 🌑 1 · 🌒 3 · 🌓 7 · 🌕 16 points<br>• Merging first is worth more, but takes board space<br>• Every 3rd reward comes with a letter from Felix ✉️</p>
     <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">🌕 ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
   PASS.forEach((t,i)=>{
     const got=S.passGot[i], ok=S.pts>=t.pts;
@@ -1252,7 +1280,7 @@ function showPass(){
   });
   h+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
   openModal(h);
-  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>S.gifts.push(r)); SND.play('gift'); toast('Added to your gifts 🎁'); save(); render(); showPass(); });
+  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>S.gifts.push(r)); SND.play('gift'); toast('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:'Felix’s letters', sub:`Letter ${(i+1)/3} of 5`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
 }
 function showComplete(){
   openModal(`<h3 style="margin-top:0">Event complete</h3><h2>The Vanishing Moon</h2><p>You restored Odile’s attic and found out who she really was.</p><p style="color:var(--muted)">The board stays open. Merge as long as you like. The Circus Trunk chain has one level nobody has reached yet.</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button></div>`);
