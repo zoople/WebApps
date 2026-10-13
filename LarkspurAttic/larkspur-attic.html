@@ -270,7 +270,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v11 · 12 Oct 2026';
+const VERSION='v12 · 13 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -281,7 +281,7 @@ const CONFIG = {
   energyRegenMs: 120000,  // 1 energy every 2 min, same as Merge Mansion
   energyCost: 1,
   buyEnergy: { cost: 120, step: 40, amount: 40 },  // price rises by `step` after each purchase
-  saveKey: 'larkspur-attic-v1',
+  saveKey: 'larkspur-attic-v2',  // v12: order list rebalanced, fresh start
 };
 
 /* ---------- merge chains ---------- */
@@ -310,7 +310,7 @@ const CHAINS = {
     {e:'🌠',n:'Star Shower',v:20},{e:'🏆',n:'Standing Ovation',v:50}]},
   N:{name:'Moon Tokens', type:'res', claim:'points', items:[
     {e:'🌑',n:'New Moon',v:1},{e:'🌒',n:'Crescent Moon',v:3},{e:'🌓',n:'Half Moon',v:7},{e:'🌕',n:'Full Moon',v:16}]},
-  H:{name:'Time Skips', type:'res', claim:'skip', items:[{e:'⏳',n:'Hourglass',v:15},{e:'⌛',n:'Sand Timer',v:60}]},
+  H:{name:'Time Skips', type:'res', claim:'skip', items:[{e:'⏳',n:'Hourglass',v:15},{e:'⌛',n:'Sand Timer',v:60},{e:'🗓️',n:'Calendar Page',v:240}]},
   /* rare chains: each generator's occasional bonus drop */
   K:{name:'Keepsakes', rare:true, items:[{e:'🔖',n:'Bookmark'},{e:'🎟️',n:'Ticket Stub'},{e:'🖼️',n:'Photograph'},{e:'📸',n:'Box Camera'}]},
   B:{name:'Haberdashery', rare:true, items:[{e:'🔘',n:'Button'},{e:'🎀',n:'Silk Bow'},{e:'👒',n:'Bonnet'},{e:'👑',n:'Paste Tiara'}]},
@@ -328,19 +328,24 @@ const CHAINS = {
   /* generators */
   gD:{name:'Paper Tray', gen:true, main:'P', rare:'K', items:[
     {e:'🗂️',n:'Paper Tray', drop:[['P',1,75],['P',2,10],['K',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
-    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,44],['P',2,28],['P',3,10],['K',1,9],['K',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
+    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,44],['P',2,28],['P',3,10],['K',1,9],['K',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
+    {e:'🖨️',n:'Printing Press', drop:[['P',1,22],['P',2,30],['P',3,22],['P',4,6],['K',1,8],['K',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
   gS:{name:'Sewing Basket', gen:true, main:'F', rare:'B', items:[
     {e:'🧺',n:'Sewing Basket', drop:[['F',1,75],['F',2,10],['B',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
-    {e:'🪡',n:'Sewing Kit', drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
+    {e:'🪡',n:'Sewing Kit', drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
+    {e:'🧷',n:'Tailor’s Studio', drop:[['F',1,22],['F',2,30],['F',3,22],['F',4,6],['B',1,8],['B',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
   gT:{name:'Toolbox', gen:true, main:'T', rare:'W', items:[
     {e:'🧰',n:'Toolbox', drop:[['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
-    {e:'🗜️',n:'Workbench', drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
+    {e:'🗜️',n:'Workbench', drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
+    {e:'🏭',n:'Stage Workshop', drop:[['T',1,22],['T',2,30],['T',3,22],['T',4,6],['W',1,8],['W',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
   gL:{name:'Fuse Box', gen:true, main:'L', rare:'R', items:[
     {e:'🔌',n:'Fuse Box', drop:[['L',1,75],['L',2,10],['R',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
-    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,44],['L',2,28],['L',3,10],['R',1,9],['R',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
+    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,44],['L',2,28],['L',3,10],['R',1,9],['R',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
+    {e:'🎇',n:'Stage Lights', drop:[['L',1,22],['L',2,30],['L',3,22],['L',4,6],['R',1,8],['R',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
   gM:{name:'Circus Trunk', gen:true, main:'M', rare:'X', items:[
     {e:'🎪',n:'Circus Trunk', drop:[['M',1,80],['M',2,8],['X',1,7],['C',1,5],['N',1,5]]},
-    {e:'🪞',n:'Magic Mirror', drop:[['M',1,50],['M',2,26],['M',3,10],['X',1,8],['X',2,3],['C',1,3],['N',1,5]]}]},
+    {e:'🪞',n:'Magic Mirror', drop:[['M',1,50],['M',2,26],['M',3,10],['X',1,8],['X',2,3],['C',1,3],['N',1,5]]},
+    {e:'✨',n:'Grand Illusion', drop:[['M',1,26],['M',2,30],['M',3,20],['M',4,6],['X',1,8],['X',2,4],['C',1,2],['N',1,6]]}]},
   gK:{name:'Kettle', gen:true, main:'E', items:[
     {e:'🫖',n:'Kettle', free:true, charges:3, rechargeMs:480000, drop:[['E',1,70],['E',2,25],['E',3,5]]}]},
 };
@@ -466,29 +471,29 @@ const TASKS = [
   {beat:['N','Mothball has found the warmest spot in the attic. It is directly above the dust sheet with the trunk under it.'], x:1, ch:1, who:'M', need:[['F',4],['L',3]], coins:14, say:'(He wants gloves to sleep on and a torch to guard them with.)'},
   // ch3 — zone 2, circus trunk
   {beat:['N','Every card in the deck is the same card. The ace of moons.'], ch:2, who:'M', need:[['M',2]], coins:16, say:'(He drops a playing card at your feet. Then another. He wants the whole deck.)'},
-  {beat:['T','The panel opens on a tiny clockwork stage. Little moon, little curtains. It still works.'], ch:2, who:'T', need:[['L',3],['W',2]], coins:18, say:'A torch and a wind-up key. That panel has a keyhole, and I’m not leaving it alone.'},
+  {beat:['T','The panel opens on a tiny clockwork stage. Little moon, little curtains. It still works.'], ch:2, who:'T', need:[['L',4],['W',2]], coins:18, say:'A lantern and a wind-up key. That panel has a keyhole, and I’m not leaving it alone.'},
   {beat:['P','This silk was a costume once. You can see where the sequins were unpicked.'], ch:2, who:'P', need:[['F',5]], coins:18, say:'Is that silk? Let me see. Oh, that’s real silk.'},
   {beat:['T','I waved it. Nothing happened. I’m a bit gutted, honestly.'], ch:2, who:'T', need:[['M',3]], coins:20, say:'If there’s a wand in that trunk I am absolutely going to wave it.'},
   {beat:['N','The diary he chooses to sit on is the one from 1968.'], ch:2, who:'M', need:[['P',5]], coins:18, say:'(He is sitting on a stack of nothing, waiting for a diary to sit on instead.)'},
   {beat:['P','She tied her letters with silk bows. I used to see them on her doormat.'], x:1, ch:2, who:'P', need:[['P',5],['B',2]], coins:20, say:'A diary and a silk bow to tie it shut. Some secrets want a ribbon.'},
   // ch4 — zone 3
   {beat:['P','It fits. Don’t you dare laugh.'], ch:3, who:'P', need:[['M',4]], coins:22, say:'A top hat! Bring it here, I want to try it on. Don’t tell anyone.'},
-  {beat:['T','The stopwatch is stopped at four minutes twelve. The exact length of the Moon act on the programme.'], ch:3, who:'T', need:[['T',4],['W',3]], coins:22, say:'Screwdriver and a stopwatch. Every trick in that corner is timed.'},
-  {beat:['N','In the nest of letters: one from Felix. Never opened.'], ch:3, who:'M', need:[['F',5],['P',4]], coins:22, say:'(He has made a nest of letters. It needs a scarf.)'},
+  {beat:['T','The stopwatch is stopped at four minutes twelve. The exact length of the Moon act on the programme.'], ch:3, who:'T', need:[['T',5],['W',3]], coins:22, say:'A saw and a stopwatch. Every trick in that corner is timed.'},
+  {beat:['N','In the nest of letters: one from Felix. Never opened.'], ch:3, who:'M', need:[['F',5],['P',6]], coins:22, say:'(He has made a nest of letters. It needs a scarf.)'},
   {beat:['T','It’s not a real rabbit. It’s a very good puppet. I’m not crying, it’s dusty.'], ch:3, who:'T', need:[['M',5]], coins:26, say:'The programme says there was a rabbit. I need to see the rabbit.'},
-  {beat:['P','She wore this to my wedding. I never knew it was a costume.'], ch:3, who:'P', need:[['B',3]], coins:20, say:'A bonnet! I had one just like it. Well. Nearly.'},
-  {beat:['N','The stub is for the last night of the Vanishing Moon. Seat A1, reserved for “F.” It was never torn.'], x:1, ch:3, who:'M', need:[['T',5],['K',2]], coins:24, say:'(He is batting a ticket stub around a saw. He wants both.)'},
+  {beat:['P','She wore this to my wedding. I never knew it was a costume.'], ch:3, who:'P', need:[['B',3],['F',6]], coins:20, say:'A bonnet! And the gown she wore with it. I had one just like it. Well. Nearly.'},
+  {beat:['N','The photograph is of the last night of the Vanishing Moon. Seat A1 is empty. It was reserved for “F.”'], x:1, ch:3, who:'M', need:[['T',6],['K',3]], coins:24, say:'(He is batting a photograph around her tool roll. He wants both.)'},
   // ch5
-  {beat:['T','The false wall comes away. Behind it, a mirror. Of course there’s a mirror.'], ch:4, who:'T', need:[['T',5]], coins:28, say:'A saw. This false wall comes down today.'},
-  {beat:['P','Oh, Odile. You were magnificent.'], ch:4, who:'P', need:[['F',6]], coins:30, say:'Her stage gown. I want to see it in the light.'},
-  {beat:['N','The music settles it. Cat and rabbit share the windowsill.'], ch:4, who:'M', need:[['M',5],['R',2]], coins:30, say:'(He and the rabbit are having a standoff. Music might calm everyone down.)'},
-  {beat:['T','The photos line up with the diaries. Every city, every year. Then nothing after 1969.'], ch:4, who:'T', need:[['P',6],['K',3]], coins:30, say:'All her diaries, in order. And the photographs that go with them.'},
-  {beat:['P','Every bead stitched by hand. That’s months of work, love.'], x:1, ch:4, who:'P', need:[['F',6],['L',4]], coins:30, say:'Hold the gown up to the lantern, love. I want to see the beading.'},
+  {beat:['T','The false wall comes away. Behind it, a mirror. Of course there’s a mirror.'], ch:4, who:'T', need:[['T',6],['L',5]], coins:28, say:'Her tool roll and the oil lamp. This false wall comes down today.'},
+  {beat:['P','Oh, Odile. You were magnificent.'], ch:4, who:'P', need:[['F',6],['L',6]], coins:30, say:'Her stage gown, under the spotlight. I want to see it properly.'},
+  {beat:['N','The music settles it. Cat and rabbit share the windowsill.'], ch:4, who:'M', need:[['M',5],['R',3]], coins:30, say:'(He and the rabbit are having a standoff. Music might calm everyone down.)'},
+  {beat:['T','The photos line up with the diaries. Every city, every year. Then nothing after 1969.'], ch:4, who:'T', need:[['P',7],['K',3]], coins:30, say:'The whole archive, in order. And the photographs that go with it.'},
+  {beat:['P','Every bead stitched by hand. That’s months of work, love.'], x:1, ch:4, who:'P', need:[['F',6],['T',6]], coins:30, say:'Hold the gown still while I fix the beading, love. Pass me the tool roll.'},
   // ch6
-  {beat:['T','Mirror angled. Wireless tuned. All we need now is the moon.'], ch:5, who:'T', need:[['T',6],['R',3]], coins:34, say:'Tools to angle the mirror, and the wireless for the overture. Let’s do this properly.'},
+  {beat:['T','Mirror angled. Wireless tuned. All we need now is the moon.'], ch:5, who:'T', need:[['T',7],['R',4]], coins:34, say:'Stagehand’s tools to angle the mirror, and the violin for the overture.'},
   {beat:['P','She forgave him, you know. She just never told him.'], ch:5, who:'P', need:[['M',6]], coins:34, say:'The dove. It belongs with the trick.'},
-  {beat:['N','The set is dressed. Mothball takes his mark.'], ch:5, who:'M', need:[['F',6],['B',3]], coins:34, say:'(A gown and a bonnet. He is dressing the set like he’s done it before.)'},
-  {beat:['P','A bit of music for the finale. She’d insist.'], x:1, ch:5, who:'P', need:[['M',6],['R',3]], coins:34, say:'The dove, and the wireless. She’d have wanted music.'},
+  {beat:['N','The set is dressed. Mothball takes his mark.'], ch:5, who:'M', need:[['F',7],['B',4]], coins:34, say:'(The masks and the tiara. He is dressing the set like he’s done it before.)'},
+  {beat:['P','A bit of music for the finale. She’d insist.'], x:1, ch:5, who:'P', need:[['L',6],['R',4]], coins:34, say:'The spotlight and the violin. She’d have wanted music.'},
   {ch:5, who:'O', need:[['M',7]], coins:50, say:'“…a crystal, and someone who looks.”'},
 ];
 /* stable ids: original orders keep 0..27 so existing saves line up; orders added later (x:1) get 100+ */
@@ -522,9 +527,9 @@ function ensureSide(){ S.side=S.side||[]; while(S.side.length<2){ const o=makeSi
 /* Moon Pass: event points from Full Moons unlock tiers of rewards outside the board */
 /* every third tier also unlocks one of Felix's letters (a side story told from his end) */
 const PASS=[
-  {pts:15, rw:[['E',2]]},{pts:30, rw:[['H',1]]},{pts:50, rw:[['C',2]]},{pts:65, rw:[['E',3]]},{pts:80, rw:[['H',1]]},
-  {pts:95, rw:[['X',2]]},{pts:110, rw:[['E',3]]},{pts:130, rw:[['C',3]]},{pts:145, rw:[['H',2]]},{pts:160, rw:[['E',4]]},
-  {pts:185, rw:[['C',3],['X',2]]},{pts:210, rw:[['H',2]]},{pts:230, rw:[['E',4]]},{pts:255, rw:[['C',4]]},{pts:290, rw:[['E',5],['H',2]]},
+  {pts:15, rw:[['E',2]]},{pts:30, rw:[['H',1]]},{pts:50, rw:[['C',2],['X',2]]},{pts:65, rw:[['E',3]]},{pts:80, rw:[['gD',2]]},
+  {pts:95, rw:[['H',2]]},{pts:110, rw:[['E',3],['C',3]]},{pts:130, rw:[['gS',2]]},{pts:145, rw:[['H',2]]},{pts:160, rw:[['E',4]]},
+  {pts:185, rw:[['gT',2]]},{pts:210, rw:[['H',2],['X',3]]},{pts:230, rw:[['E',4],['C',3]]},{pts:255, rw:[['H',3]]},{pts:290, rw:[['E',5],['H',3]]},
 ];
 const FELIX=[
   [['N','A letter is tucked into the reward bundle. Vienna, 1970.'],['F','“Odelia. I have the method and no idea what to do with it. When I make the moon vanish, they look at me. They’re supposed to look up.” — F.']],
@@ -546,7 +551,7 @@ function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i]).l
 const STAGE_XP=[0,6,15,28,45,66,92,124,162,206,256,316,386,466];
 function stageOf(xp){ let l=1; while(l<60 && xp>=stageNeed(l)) l++; return l; }
 function stageNeed(l){ return l<STAGE_XP.length ? STAGE_XP[l] : STAGE_XP[STAGE_XP.length-1]+(l-STAGE_XP.length+1)*80; }
-function stageReward(l){ return l%5===0 ? [['E',3],['C',2]] : l%2 ? [['C',2]] : [['E',2]]; }
+function stageReward(l){ return l%4===0 ? [['H',1],['C',2]] : l%2 ? [['C',2]] : [['E',2]]; }
 
 /* ============================================================ sound — all synthesised with Web Audio, no files
    Everything runs through a soft master chain (high-shelf cut, gentle compressor) so it stays
@@ -1297,12 +1302,27 @@ function showMenu(){
     <div class="row-btns"><button class="bigbtn gold" id="buyE" ${S.coins<energyPrice()?'disabled style="opacity:.5"':''}>Buy ⚡${b.amount} for 🪙${energyPrice()}</button></div>
     <h3>Sound</h3>
     <div class="row-btns" style="margin-top:0"><button class="bigbtn${SND.pref.music?' gold':''}" id="musBtn">♪ Music: ${SND.pref.music?'On':'Off'}</button><button class="bigbtn${SND.pref.sfx?' gold':''}" id="sfxBtn">Sound effects: ${SND.pref.sfx?'On':'Off'}</button></div>
+    <h3>Help</h3><div class="row-btns" style="margin-top:0"><button class="bigbtn" id="sosOpen">I’m stuck…</button></div>
     <h3>Save</h3><p style="color:var(--muted);font-size:13px">Progress saves in this browser automatically.</p>
     <div class="row-btns"><button class="bigbtn warn" id="resetBtn">${resetArm?'Tap again to wipe everything':'Restart event'}</button><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('buyE').onclick=()=>{ const c=energyPrice(); if(S.coins<c) return; S.coins-=c; S.buys=(S.buys||0)+1; S.energy+=b.amount; SND.play('coin'); save(); render(); showMenu(); toast(`+${b.amount} ⚡`); };
   $('musBtn').onclick=()=>{ SND.setMusic(!SND.pref.music); showMenu(); };
+  $('sosOpen').onclick=showSOS;
   $('sfxBtn').onclick=()=>{ SND.setSfx(!SND.pref.sfx); showMenu(); SND.play('tap'); };
   $('resetBtn').onclick=()=>{ if(!resetArm){ resetArm=true; showMenu(); return; } resetArm=false; S=freshState(); sel=-1; save(); closeModal(); render(); startIntro(); };
+}
+/* emergency help: small, slow to refill, a couple of taps deep so it stays a last resort */
+const SOS_COOLDOWN=30*60000;
+function showSOS(){
+  const left=k=>Math.max(0,Math.ceil(((S[k]||0)+SOS_COOLDOWN-now())/1000));
+  const tl=left('sosT'), el=left('sosE');
+  openModal(`<h2>I’m stuck</h2><p style="color:var(--muted);font-size:13px">• For when there’s genuinely nothing to do<br>• Each one refills every 30 minutes<br>• Time skips and tea on the board are the better way</p>
+    <div class="row-btns"><button class="bigbtn${tl?'':' gold'}" id="sosT" ${tl?'disabled style="opacity:.5"':''}>⏳ Skip 5 minutes${tl?` · ${fmt(tl)}`:''}</button>
+    <button class="bigbtn${el?'':' gold'}" id="sosE" ${el?'disabled style="opacity:.5"':''}>⚡ +10 energy${el?` · ${fmt(el)}`:''}</button></div>
+    <div class="row-btns"><button class="bigbtn" id="sosBack">Back</button></div>`);
+  $('sosBack').onclick=showMenu;
+  if(!tl) $('sosT').onclick=()=>{ S.sosT=now(); timeSkip(5); SND.play('unweb'); toast('⏳ Skipped 5 minutes'); save(); render(); showSOS(); };
+  if(!el) $('sosE').onclick=()=>{ S.sosE=now(); S.energy+=10; SND.play('drink'); toast('⚡ +10 energy'); save(); render(); showSOS(); };
 }
 function showPass(){
   const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;

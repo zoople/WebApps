@@ -247,6 +247,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <li>🗑️ Compost Bin: feed it what it asks for, get seeds</li>
     <li>♨️ Stove: feed it logs or papers, it cooks tea</li>
     <li>⏲️ Time Chargers double the recharge speed of timed generators around them, then run out</li>
+    <li>🌕 Points event: swaps give moon tokens, points hit story milestones</li>
     <li>Separate save. Larkspur Attic is untouched</li>
   </ul>
   <button id="playBtn">Play</button>
@@ -280,7 +281,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v2 · 13 Oct 2026';
+const VERSION='v3 · 13 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -291,7 +292,7 @@ const CONFIG = {
   energyRegenMs: 30000,   // sandbox: fast refill so mechanics can be tried freely
   energyCost: 1,
   buyEnergy: { cost: 0, step: 0, amount: 100 },  // sandbox: free refills
-  saveKey: 'larkspur-sandbox-v2',
+  saveKey: 'larkspur-sandbox-v3',
   chargerScale: 1/12,     // sandbox: 2h in Merge Mansion = 10 min here
 };
 
@@ -436,33 +437,42 @@ function makeSide(){
     if(!need.every(([k,l])=>openCount(k,l)>0)) break;
   }
   const size=need.reduce((a,[,l])=>a+(1<<(l-1)),0);
-  const rw=[['C', size>=6?2:1]]; if(Math.random()<.25) rw.push(['N',1]); else if(Math.random()<.4) rw.push(['X',1]);
+  const rw=[['N', size>=6?2:1]]; if(Math.random()<.35) rw.push(['C',1]); else if(Math.random()<.3) rw.push(['E',1]);
   S.sideN=(S.sideN||0)+1;
   return {id:'s'+S.sideN, who:'S', side:true, need, rw, say:'For the church jumble sale. Anything you can spare.'};
 }
-function ensureSide(){ S.side=S.side||[]; while(S.side.length<2){ const o=makeSide(); if(!o) break; S.side.push(o); } }
+function ensureSide(){ S.side=S.side||[]; while(S.side.length<3){ const o=makeSide(); if(!o) break; S.side.push(o); } }
 
-/* Moon Pass: event points from Full Moons unlock tiers of rewards outside the board */
-/* every third tier also unlocks one of Felix's letters (a side story told from his end) */
+/* POINTS EVENT (sandbox test): no story orders. Swaps (jumble sale) and generators spawn moon tokens;
+   claiming each new level for the first time plays a log entry; total points hit milestones that
+   award rewards automatically and play the next part of the story. */
 const PASS=[
-  {pts:15, rw:[['E',2]]},{pts:30, rw:[['H',1]]},{pts:50, rw:[['C',2]]},{pts:65, rw:[['E',3]]},{pts:80, rw:[['H',1]]},
-  {pts:95, rw:[['X',2]]},{pts:110, rw:[['E',3]]},{pts:130, rw:[['C',3]]},{pts:145, rw:[['H',2]]},{pts:160, rw:[['E',4]]},
-  {pts:185, rw:[['C',3],['X',2]]},{pts:210, rw:[['H',2]]},{pts:230, rw:[['E',4]]},{pts:255, rw:[['C',4]]},{pts:290, rw:[['E',5],['H',2]]},
+  {pts:10, rw:[['E',2]]},{pts:25, rw:[['H',1]]},{pts:45, rw:[['C',2],['E',2]]},{pts:70, rw:[['H',2]]},
+  {pts:100, rw:[['E',3],['C',3]]},{pts:140, rw:[['H',2],['X',2]]},{pts:190, rw:[['E',4]]},{pts:250, rw:[['H',3],['E',4]]},
 ];
-const FELIX=[
-  [['N','A letter is tucked into the reward bundle. Vienna, 1970.'],['F','“Odelia. I have the method and no idea what to do with it. When I make the moon vanish, they look at me. They’re supposed to look up.” — F.']],
-  [['F','“Paris, 1973. I did the Moon tonight. It vanished perfectly and nobody gasped. I don’t understand. It’s the same trick.” — F.']],
-  [['F','“London, 1979. I came to the stage door. You’d gone. They said you’d given it all up for sewing. I bought a ticket for a show that wasn’t on.” — F.']],
-  [['F','“1985. I have a theory. You never hid the moon. You hid the audience from themselves for a second, then gave them back. I can’t do that part.” — F.']],
-  [['F','“Last one, I think. I’m keeping seat A1 warm. If you ever do it again, I’ll be looking up.” — F.'],['M','<em>(Mothball sits on the letter until you’ve finished reading it.)</em>']],
+const MILESTONES=[
+  [['N','The Keeper’s Log, entry 1. “Lamp lit. Fog thick as wool. A ship’s bell somewhere out there, then nothing.”']],
+  [['N','Entry 2. “The fog stayed three days. I keep the lamp burning anyway. Someone has to.”']],
+  [['N','Entry 3. “A rowing boat at dawn. Empty, except for a tin box with a moon painted on the lid.”']],
+  [['N','Entry 4. “The box holds letters, all addressed to this lighthouse. All unopened. The oldest is from 1912.”']],
+  [['N','Entry 5. “I opened one. It says only: Keep the light on. We are nearly home.”']],
+  [['N','Entry 6. “Ships on the horizon tonight. Seven of them. None on any chart I own.”']],
+  [['N','Entry 7. “They anchored in the bay at midnight, lanterns lit, and simply waited. As if for permission.”']],
+  [['N','Entry 8. “I dipped the lamp three times. One by one, they came home.” <em>(Points event complete.)</em>']],
 ];
-/* the first time you claim each moon level, Odile's moon notebook has something to say */
+const FELIX=[]; // not used in the sandbox
 const MOON_NOTES=[
-  [['N','Folded inside the token: a strip of paper in Odile’s hand.'],['O','“New moon. Nothing to see. That’s the best time to set up.”']],
-  [['O','“Crescent. Show them a sliver and they fill in the rest themselves. People love to finish a picture.”']],
-  [['O','“Half moon. Half the trick is the method. The other half is the reason. Felix only ever had the first half.”']],
-  [['O','“Full moon. Everyone looks up at once. That’s the moment, Nell. Not the vanishing. The looking.”']],
+  [['N','A new moon token. Scratched on the back: “The first light is the hardest to keep.”']],
+  [['N','A crescent. On the back: “Ships steer by what they can see, not by what is there.”']],
+  [['N','A half moon. On the back: “Half the bay is always in shadow. That is where the boats wait.”']],
+  [['N','A full moon. On the back: “When it is full, everyone looks up. That is when you signal.”']],
 ];
+/* milestones award themselves: rewards go to gifts and the next log entry plays */
+function checkMilestones(){
+  const scenes=[];
+  PASS.forEach((t,i)=>{ if(S.pts>=t.pts && !S.passGot[i]){ S.passGot[i]=1; t.rw.forEach(r=>S.gifts.push(r)); scenes.push({title:`Milestone ${i+1} of ${PASS.length}`, sub:`${t.pts} points · rewards in 🎁`, lines:MILESTONES[i]}); } });
+  return scenes;
+}
 function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i]).length; }
 
 /* stage level: claimed applause (XP) fills it; each level-up drops a gift */
@@ -832,9 +842,12 @@ function claim(i){
   if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
   else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
   else if(kind==='points'){
-    S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} Moon Pass points${passReady()?' · a reward is ready 🌕':''}`);
+    S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} event points`);
     S.moonSeen=S.moonSeen||{};
-    if(!S.moonSeen[it.l]){ S.moonSeen[it.l]=1; save(); setTimeout(()=>playScene({title:'Odile’s moon notebook', sub:d.n, lines:MOON_NOTES[it.l-1]}),250); }
+    const q=[];
+    if(!S.moonSeen[it.l]){ S.moonSeen[it.l]=1; q.push({title:'A new token', sub:d.n, lines:MOON_NOTES[it.l-1]}); }
+    q.push(...checkMilestones());
+    if(q.length){ save(); setTimeout(()=>playQueue(q),250); }
   }
   else if(kind==='skip'){ timeSkip(d.v); SND.play('unweb'); toast(`${d.e} Skipped ${d.v} minutes`); }
   else { SND.play('unweb'); toast(`${d.e} +${d.v} applause`); addXP(d.v); }
@@ -1066,7 +1079,11 @@ function renderHud(){
   { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
     $('xpLv').textContent=l; $('xpTxt').textContent=`${S.xp-lo}/${hi-lo}`; $('xpBar').style.width=((S.xp-lo)/(hi-lo)*100)+'%'; }
   $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length;
-  $('chNum').textContent='Sandbox'; $('chName').textContent='Mechanics test bench'; $('chCount').textContent=''; $('chBar').style.width='0%';
+  { const nx=PASS.find(t=>S.pts<t.pts), prev=[...PASS].reverse().find(t=>S.pts>=t.pts);
+    const lo=prev?prev.pts:0, hi=nx?nx.pts:lo||1;
+    $('chNum').textContent='Points event'; $('chName').textContent='The Keeper’s Log';
+    $('chCount').textContent = nx ? `🌕 ${S.pts}/${nx.pts}` : '✨ complete';
+    $('chBar').style.width = (nx ? (S.pts-lo)/(hi-lo)*100 : 100)+'%'; }
 }
 function fmt(s){ s=Math.max(0,s); return s>=60? Math.floor(s/60)+':'+String(s%60).padStart(2,'0') : '0:'+String(s).padStart(2,'0'); }
 const readySince={};
@@ -1315,7 +1332,7 @@ function showMenu(){
 }
 function showPass(){
   const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;
-  let h=`<h2>Moon Pass</h2><p style="color:var(--muted);font-size:13px">• Moon tokens 🌑 drop from generators and orders<br>• Tap twice to claim them any time: 🌑 1 · 🌒 3 · 🌓 7 · 🌕 16 points<br>• Merging first is worth more, but takes board space<br>• Every 3rd reward comes with a letter from Felix ✉️</p>
+  let h=`<h2>Points event</h2><p style="color:var(--muted);font-size:13px">• Jumble Sale swaps and generators give moon tokens<br>• Claim any time: 🌑 1 · 🌒 3 · 🌓 7 · 🌕 16 points<br>• The first of each moon tells a bit of the story<br>• Milestones pay out automatically, with the next log entry</p>
     <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">🌕 ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
   PASS.forEach((t,i)=>{
     const got=S.passGot[i], ok=S.pts>=t.pts;
