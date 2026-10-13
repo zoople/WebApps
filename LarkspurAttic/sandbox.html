@@ -97,6 +97,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .wheelwrap{position:relative;width:min(280px,78vw);aspect-ratio:1;margin:10px auto 4px}
 .wheelspin{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 4px #e4b84c,0 10px 24px #0009}
 .wheelptr{position:absolute;left:50%;top:-14px;transform:translateX(-50%);z-index:2;color:#f4e8d3;font-size:24px;text-shadow:0 2px 3px #000}
+.chapter#evHead{cursor:pointer}
+.tiersbar{display:flex;gap:3px;height:7px}
+.tiersbar .seg{flex:1;border-radius:3px;background:var(--panel2);overflow:hidden}
+.tiersbar .seg i{display:block;height:100%;background:linear-gradient(90deg,#5b6bd6,#c9d0ff)}
+.tiersbar .seg.got i{background:linear-gradient(90deg,var(--velvet),var(--gold))}
+.alltiers{font-weight:800;color:#c9d0ff;margin-left:4px;font-size:11px;white-space:nowrap}
 .slotlv{position:absolute;right:0;top:0;width:22px;height:22px;display:grid;place-items:center;padding-top:2px;font-size:10px;font-weight:800;font-style:normal;color:#3a2410;pointer-events:none;z-index:2;
   background:linear-gradient(#ffe48a,#e4b84c);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);filter:drop-shadow(0 1px 1px #0008)}
 .slotchips{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);font-size:9.5px;font-weight:800;font-style:normal;background:#000a;color:#fff;border-radius:6px;padding:0 4px;white-space:nowrap;pointer-events:none;font-variant-numeric:tabular-nums}
@@ -292,9 +298,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <button class="iconbtn" id="journalBtn" aria-label="Journal" hidden>📖</button>
     <button class="iconbtn" id="menuBtn" aria-label="Menu">⋯</button>
   </header>
-  <section class="chapter">
+  <section class="chapter" id="evHead" role="button" tabindex="0" aria-label="Points event: all tiers">
     <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Dust Sheets</h1><span class="ch-count" id="chCount">0/5</span></div>
-    <div class="bar"><i id="chBar"></i></div>
+    <div class="bar" hidden><i id="chBar"></i></div><div class="tiersbar" id="tiersBar"></div>
     <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button><button class="passbtn" id="passBtn" aria-label="Moon Pass">🌕 <b id="pts">0</b><i class="dot" id="passDot" hidden></i></button></div>
   </section>
   <section class="orders" id="orders"></section>
@@ -308,7 +314,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v9 · 13 Oct 2026';
+const VERSION='v10 · 13 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1297,8 +1303,10 @@ function renderHud(){
   { const nx=PASS.find(t=>S.pts<t.pts), prev=[...PASS].reverse().find(t=>S.pts>=t.pts);
     const lo=prev?prev.pts:0, hi=nx?nx.pts:lo||1;
     $('chNum').textContent='Points event'; $('chName').textContent='The Keeper’s Log';
-    $('chCount').textContent = nx ? `🌕 ${S.pts}/${nx.pts}` : '✨ complete';
-    $('chBar').style.width = (nx ? (S.pts-lo)/(hi-lo)*100 : 100)+'%'; }
+    $('chCount').innerHTML = (nx ? `🌕 ${S.pts}/${nx.pts}` : '✨ complete')+' <b class="alltiers">All tiers ›</b>';
+    // one segment per milestone, each filling as you approach it
+    $('tiersBar').innerHTML = PASS.map((t,i)=>{ const a=i?PASS[i-1].pts:0, f=Math.max(0,Math.min(1,(S.pts-a)/(t.pts-a)));
+      return `<span class="seg${S.passGot[i]?' got':''}"><i style="width:${(f*100).toFixed(0)}%"></i></span>`; }).join(''); }
 }
 function fmt(s){ s=Math.max(0,s); return s>=60? Math.floor(s/60)+':'+String(s%60).padStart(2,'0') : '0:'+String(s).padStart(2,'0'); }
 const readySince={};
@@ -1590,6 +1598,7 @@ function showComplete(){
 $('journalBtn').onclick=showJournal;
 $('menuBtn').onclick=()=>{ resetArm=false; showMenu(); };
 $('giftBtn').onclick=placeGift;
+$('evHead').onclick=showPass; $('evHead').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); showPass(); } };
 $('passBtn').onclick=showPass;
 $('xpRow').onclick=()=>{ const l=stageOf(S.xp); toast(`⭐ Stage ${l}. Next level gives: ${stageReward(l+1).map(([k,lv])=>CHAINS[k].items[lv-1].e).join(' ')}<br><small>Claim stars ⭐ on the board to fill it</small>`,3200); };
 
