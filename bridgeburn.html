@@ -169,7 +169,14 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .coachbar{height:62px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
 .coachbar .cb-who{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);flex:none}
 .coachbar .cb-text{font-size:14px;font-weight:800;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;transition:color .4s}
+.coachbar .cb-text.good{color:#86e0a2} .coachbar .cb-text.bad{color:#ffa39a}
+.coachbar .cb-who.good{color:#86e0a2} .coachbar .cb-who.bad{color:#ffa39a}
 .coachbar .cb-text.old{color:var(--muted)}
+.moments summary{cursor:pointer;font-weight:900;font-size:15px}
+.moments ul{list-style:none;padding:0!important;margin:8px 0 0;display:flex;flex-direction:column;gap:6px!important}
+.moments li{display:grid;grid-template-columns:40px 1fr;gap:8px;font-size:14px;line-height:1.4}
+.moments li span{color:var(--muted);font-variant-numeric:tabular-nums}
+.moments li.good{color:#a8e8bb} .moments li.bad{color:#ffb4ac}
 .deck-check{font-size:12px;color:var(--muted);margin:-4px 0 0}
 .deck-check b{color:var(--ink)}
 .coachbox{display:flex;flex-direction:column;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -237,7 +244,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   </div>
 
   <div class="tracker" id="tracker" hidden></div>
-  <div class="coachbar" id="coachBar" hidden><span class="cb-who">Coach</span><span class="cb-text" id="coachText"></span></div>
+  <div class="coachbar" id="coachBar" hidden><span class="cb-who" id="coachWho">Coach</span><span class="cb-text" id="coachText"></span></div>
   <div id="field"><canvas id="arena" aria-label="Arena"></canvas></div>
 
   <div class="tray">
@@ -277,6 +284,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <button data-diff="hard" aria-pressed="false">Hard</button>
       </div>
       <label class="toggle clone"><input type="checkbox" id="cloneToggle"><span>Clone match: the rival plays your exact deck</span></label>
+      <label class="toggle clone"><input type="checkbox" id="coachToggle"><span>Live coach: feedback on your plays as you go</span></label>
       <button class="btn go big" id="startBtn">Start match</button>
       <div class="row">
         <button class="btn" id="academyBtn">Academy<span class="sub">Drills and coaching</span></button>
@@ -300,7 +308,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
         <li>A side tower is worth one crown. The king tower is worth three and ends the match.</li>
         <li>Knock down a side tower and you can deploy deeper on that side of their half.</li>
         <li>The rival's difficulty changes how fast it reacts and how much elixir it gets: Easy is slow, Normal is fair, Hard gets extra.</li>
-        <li>Academy has eleven drills, each teaching one Classic Challenge skill over three rounds, plus a field guide. After every match the coach grades your play and points you to the drill that fixes your biggest mistake.</li>
+        <li>Academy has eleven drills, each teaching one Classic Challenge skill over three rounds, plus a field guide. After every match the coach grades your play and points you to the drill that fixes your biggest mistake. Turn on Live coach on the start screen to get feedback on each play as it happens.</li>
         <li>Classic Challenge plays like the real one: keep going until 8 wins or 3 losses. The Rival gets tougher as you win.</li>
       </ul>
       <button class="btn go" id="helpClose">Got it</button>
@@ -332,7 +340,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <div class="guide" id="guide"></div>
       <div class="lbl-sm">Training aids in matches</div>
       <label class="toggle"><input type="checkbox" id="trackerToggle"><span>Rival card tracker</span></label>
-      <label class="toggle"><input type="checkbox" id="hintsToggle"><span>Coach hints during play</span></label>
+      <label class="toggle"><input type="checkbox" id="hintsToggle"><span>Live coach in matches</span></label>
       <div class="coachbox" id="resetBox">
         <h3>Start the Academy again</h3>
         <p class="plan" id="resetText">Clears your drill rounds and the coach's match history so you can work through the drills from scratch. Your deck, win record and Classic Challenge run are kept.</p>
@@ -675,7 +683,8 @@ function makeEnt(key, team, x, y){
 function newTrack(){
   return { leak:[0,0], spent:[0,0], killed:[0,0], towerDmg:[{ single:0, double:0, ot:0 }, { single:0, double:0, ot:0 }],
     towerHit:{}, towerBy:{}, idleDmg:0, spells:[[],[]], maxKills:[0,0], reactions:[], unanswered:0, threatAt:null,
-    lanes:[0,0], firstPlay:null, plays:[], rivalSeen:[], fullT:0, hintAt:{}, firstCrownT:null };
+    lanes:[0,0], firstPlay:null, plays:[], rivalSeen:[], fullT:0, hintAt:{}, firstCrownT:null,
+    log:[], queue:[], spellChecks:[], ex:null, att:null, punish:null, finishT:0 };
 }
 // opts.drill runs a scripted lesson; opts.challenge marks a Classic Challenge match.
 function newGame(opts = {}){
@@ -700,11 +709,12 @@ function trackPlay(team, key, x, y, before){
     if (T.firstPlay === null) T.firstPlay = { t:G.t, key, before:before ?? G.elixir[0] + c.cost, y };
     if (c.type !== 'spell') T.lanes[x < 9 ? 0 : 1]++;
     if (T.threatAt !== null){ T.reactions.push(G.t - T.threatAt); T.threatAt = null; }
+    if (!G.demo) critiquePlay(key, x, y);
   } else {
     T.rivalSeen.push(key);
     renderTracker();
     // A big commit by the Rival is the moment to hit the other lane.
-    if (c.cost >= 6 && c.type !== 'spell') hint('punish', `The Rival just spent ${c.cost}. Attack the other lane now.`);
+    if (c.cost >= 6 && c.type !== 'spell'){ T.punish = { t:G.t, lane:x < 9 ? 0 : 1 }; hint('punish', `The Rival just spent ${c.cost} on the ${x < 9 ? 'left' : 'right'}. Attack the other lane now.`); }
   }
 }
 
@@ -788,7 +798,10 @@ function deployKey(team, key, x, y, elixirBefore){
     const d = Math.hypot(x-sx, y-sy);
     const flight = c.spell==='lob' ? Math.max(0.4, d/(c.slow ? 8 : 14)) : c.spell==='rain' ? 0.6 : c.spell==='alarm' ? 0.5 : c.spell==='roll' ? 0.05 : 0.12;
     const rec = { team, key, cost:c.cost, value:0, tower:0, kills:0, hits:0 };
-    if (dmgSpell(key)) G.track.spells[team].push(rec);
+    if (dmgSpell(key)){
+      G.track.spells[team].push(rec);
+      if (team === 0) G.track.spellChecks.push({ rec, at:G.t + flight + (c.spell === 'zone' ? c.dur : c.spell === 'roll' ? 1.6 : 0.8) });
+    }
     G.spells.push({ key, team, x, y, sx, sy, t:0, dur:flight, rec });
   } else if (c.type === 'plant'){
     G.ents.push({ id:nextId++, key, team, kind:'plant', x, y, r:c.r, hp:1, maxHp:1, growT:0, grow:c.grow,
@@ -1471,8 +1484,14 @@ function step(dt){
     if (e.team !== 1 || e.kind !== 'unit' || e.crossed || !alive(e) || e.tunnel) continue;
     if (e.y > RIVER_B + 0.5){ e.crossed = true; if (T.threatAt === null) T.threatAt = G.t; }
   }
-  if (T.threatAt !== null && G.t - T.threatAt > 3 && G.elixir[0] >= 3) hint('defend', 'Enemy troops are on your side. Defend now.');
+  if (T.threatAt !== null && G.t - T.threatAt > 3 && G.elixir[0] >= 3){
+    // Stay quiet if you already have troops or a building meeting the attackers.
+    const attackers = G.ents.filter(e => e.team === 1 && e.kind === 'unit' && alive(e) && e.y > RIVER_B);
+    const engaged = attackers.some(a => G.ents.some(m => m.team === 0 && m.kind !== 'tower' && alive(m) && Math.hypot(m.x-a.x, m.y-a.y) < 6));
+    if (attackers.length && !engaged) hint('defend', 'Enemy troops are on your side and nothing is meeting them. Defend now.');
+  }
   if (T.threatAt !== null && G.t - T.threatAt > 8){ T.reactions.push(8); T.unanswered++; T.threatAt = null; }
+  if (!G.demo) exchangeTick(dt);
 
   for (const e of G.ents){
     if (e.hp <= 0 && !e.dead){
@@ -2445,22 +2464,117 @@ const netShow = (T, G) => { const a = aliveValue(G, 0); return a >= 0.5 ? `spent
 // A short line from the coach, shown across the middle of your half.
 // Coach lines go in the strip above the arena, not on the field. A line stays readable
 // for a few seconds, then fades to grey until the next one.
-function say(text, dur = 4.5){
+// Coach lines go in the strip above the arena, not on the field. A line stays readable
+// for a few seconds, then fades to grey until the next one.
+function say(text, dur = 4.5, tone = 'info'){
   if (!G) return;
   G.banner = { text, t0:G.t, dur };
-  const el = $('#coachText'); el.textContent = text; el.classList.remove('old');
+  const el = $('#coachText'); el.textContent = text; el.className = 'cb-text ' + tone;
+  $('#coachWho').textContent = tone === 'good' ? 'Nice' : tone === 'bad' ? 'Fix this' : 'Coach';
+  $('#coachWho').className = 'cb-who ' + tone;
 }
-function hint(id, text){
-  if (!G || !hintsOn || G.demo || G.over) return;
+// Every coach call is logged for the end-of-match report. It is shown live only with Live coach on.
+// id + gap stop the same call repeating; prio decides which waiting line shows first.
+function coach(tone, text, id, prio = 1, gap = 12){
+  if (!G || G.demo || G.over) return;
   const T = G.track;
-  if (T.hintAt[id] !== undefined && G.t - T.hintAt[id] < 15) return;
-  T.hintAt[id] = G.t; say(text, 3.5);
+  if (id){ if (T.hintAt[id] !== undefined && G.t - T.hintAt[id] < gap) return; T.hintAt[id] = G.t; }
+  T.log.push({ t:G.t, tone, text });
+  if (hintsOn) T.queue.push({ tone, text, prio, at:G.t });
 }
+function hint(id, text){ coach('info', text, id, 2, 15); }
 function coachTick(dt){
   const T = G.track;
   if (G.elixir[0] >= 9.99) T.fullT += dt; else T.fullT = 0;
-  if (T.fullT > 2) hint('leak', 'Full elixir. Play something at the back rather than waste it.');
-  if (!G.drill && G.clock <= 60 && !G.ot) hint('double', 'Double elixir: now is the time for big pushes.');
+  if (T.fullT > 2) hint('leak', `Full elixir: you are wasting about 1 elixir every ${(2.8/elixirMult()).toFixed(1)} seconds. Play something at the back.`);
+  if (!G.drill && G.clock <= 60 && !G.ot) hint('double', 'Double elixir: now is the time for big pushes, and for defending with the tower’s help.');
+  for (const sc of T.spellChecks) if (!sc.done && G.t >= sc.at){ sc.done = true; reviewSpell(sc.rec); }
+  // A tower one of your spells could finish right now.
+  T.finishT -= dt;
+  if (T.finishT <= 0){
+    T.finishT = 1;
+    for (const t of towersOf(1)) for (const k of G.deck[0].hand){
+      const c = CARDS[k];
+      if (dmgSpell(k) && c.dmg * c.towerMult >= t.hp) coach('info', `Their ${t.king ? 'king' : t.x < 9 ? 'left' : 'right'} tower is on ${Math.ceil(t.hp)}: your ${c.name} can finish it.`, 'finish' + t.id, 3, 30);
+    }
+  }
+  // Show the most important waiting line once the last one has had time to be read.
+  T.queue = T.queue.filter(q => G.t - q.at < 8);
+  if (T.queue.length && (!G.banner || G.t - G.banner.t0 > 3.2)){
+    T.queue.sort((a, b) => b.prio - a.prio || a.at - b.at);
+    const q = T.queue.shift(); say(q.text, 5, q.tone);
+  }
+}
+function reviewSpell(rec){
+  const c = CARDS[rec.key], v = rec.value + rec.tower/200;
+  if (v >= rec.cost + 1.5) coach('good', `${c.name} got ${v.toFixed(1)} elixir of value for ${rec.cost}. Well timed.`, null, 2);
+  else if (v < rec.cost * 0.5) coach('bad', `${c.name} only got ${v.toFixed(1)} elixir of value for ${rec.cost}. Wait for troops to bunch up, or catch a tower as well.`, null, 2);
+}
+// Exchanges: a defence runs from the moment their troops cross into your half until it has been
+// clear for 1.5s; an attack runs while your troops are on their half. Each is judged when it ends.
+const snapEx = () => { const T = G.track; return { t:G.t, k0:T.killed[0], k1:T.killed[1], taken:towerLoss(G,0), dealt:towerLoss(G,1), clear:0 }; };
+function exchangeTick(dt){
+  const T = G.track;
+  const theirs = G.ents.some(e => e.team === 1 && e.kind === 'unit' && alive(e) && !e.tunnel && e.y > RIVER_B);
+  if (theirs && !T.ex) T.ex = snapEx();
+  if (T.ex){ if (theirs) T.ex.clear = 0; else if ((T.ex.clear += dt) > 1.5){ reviewDefence(T.ex); T.ex = null; } }
+  const mine = G.ents.some(e => e.team === 0 && e.kind === 'unit' && alive(e) && !e.tunnel && e.y < RIVER_T);
+  if (mine && !T.att) T.att = snapEx();
+  if (T.att){ if (mine) T.att.clear = 0; else if ((T.att.clear += dt) > 1.5){ reviewAttack(T.att); T.att = null; } }
+}
+function reviewDefence(s){
+  const T = G.track;
+  const destroyed = T.killed[0] - s.k0, lost = T.killed[1] - s.k1, taken = towerLoss(G,0) - s.taken, d = destroyed - lost;
+  if (destroyed < 1.5 && taken < 100) return;
+  const nums = `destroyed ${destroyed.toFixed(1)}, lost ${lost.toFixed(1)}`;
+  const left = sum(G.ents.filter(e => e.team === 0 && e.kind === 'unit' && alive(e) && e.y > RIVER_B).map(e => (e.value || 0) * e.hp / e.maxHp));
+  if (taken > 700) coach('bad', `That push did ${Math.round(taken)} damage to your towers (${nums}). Answer as soon as it crosses the bridge, close enough that your tower helps.`, null, 3);
+  else if (d >= 2) coach('good', `Good defence, ${signed(d)} elixir (${nums}).` + (left >= 2 ? ` About ${left.toFixed(1)} elixir of your troops survived: counter-push with them.` : ''), null, 2);
+  else if (d <= -2) coach('bad', `Costly defence, ${signed(d)} elixir (${nums}). Use a cheaper answer, or let the tower take a few hits instead.`, null, 2);
+  else coach('info', `Even trade on that defence (${signed(d)}).` + (left >= 2 ? ' Your survivors can start a counter-push.' : ''), null, 1);
+}
+function reviewAttack(s){
+  const T = G.track;
+  const dealt = towerLoss(G,1) - s.dealt, lost = T.killed[1] - s.k1;
+  if (lost < 1.5 && dealt < 100) return;
+  if (dealt >= 400) coach('good', `Your push did ${Math.round(dealt)} tower damage for ${lost.toFixed(1)} elixir of troops. Worth it.`, null, 2);
+  else if (dealt < 100 && lost >= 3) coach('bad', `Your push did ${Math.round(dealt)} tower damage and lost ${lost.toFixed(1)} elixir of troops. Attack with a tank in front, right after the Rival spends, or on the other lane.`, null, 2);
+  else coach('info', `That push did ${Math.round(dealt)} tower damage for ${lost.toFixed(1)} elixir of troops.`, null, 1);
+}
+// Judging a single play the moment you make it.
+function critiquePlay(key, x, y){
+  const c = CARDS[key], T = G.track, phase = phaseOf();
+  const foesMySide = G.ents.filter(e => e.team === 1 && e.kind === 'unit' && alive(e) && !e.tunnel && e.y > RIVER_T);
+  const myPlays = T.plays.filter(p => p.team === 0);
+  if (myPlays.length === 1 && G.t < 25 && phase === 'single' && !foesMySide.length && c.type !== 'spell' && !G.drill){
+    if (y < 21 && !c.anywhere) coach('bad', 'Opening at the bridge gives the Rival a free counter-push. Open with a card behind your king tower instead.', 'open', 2);
+    else if (y >= 26) coach('good', 'Good opening: a card at the back builds a push without giving anything away.', 'open', 1);
+  }
+  const recent = sum(myPlays.filter(p => G.t - p.t < 6).map(p => CARDS[p.key].cost));
+  if (recent >= 9 && G.elixir[0] < 1.5 && phase === 'single' && !foesMySide.length)
+    coach('bad', `You spent ${recent} elixir in a few seconds and have none left. If they counter-push now, you can't defend.`, 'overcommit', 2, 25);
+  if (c.type === 'spell') return;
+  const mineNear = G.ents.filter(e => e.team === 0 && e.kind === 'unit' && alive(e) && Math.hypot(e.x-x, e.y-y) < 4 && e.born < G.t - 0.05);
+  if (isWin(key) && !c.anywhere && y < 21 && !mineNear.length && G.elixir[1] >= 7 && !foesMySide.length)
+    coach('bad', `${c.name} alone at the bridge into a Rival on ${Math.floor(G.elixir[1])} elixir is easy to answer. Wait until they spend, or send support with it.`, 'lonewin', 2, 20);
+  if (c.type === 'unit' && c.hp >= 2500 && y < 22 && phase === 'single' && !c.anywhere)
+    coach('info', `${c.name} at the bridge walks in alone. Start tanks behind your king tower so support can join them.`, 'tankbridge', 1, 25);
+  const near = foesMySide.filter(e => Math.hypot(e.x-x, e.y-y) < 7);
+  if (near.length && near.every(e => e.air) && !c.hitsAir && c.type !== 'plant' && c.targets !== 'none')
+    coach('bad', `${c.name} can't hit air. The ${CARDS[near[0].key].name} needs a card that hits air.`, 'air', 3, 10);
+  if ((c.count || 1) >= 3 && !c.air && G.ents.some(e => e.team === 1 && alive(e) && (e.splash || e.spin) && Math.hypot(e.x-x, e.y-y) < 4.5))
+    coach('bad', `${c.name} next to splash damage will melt. Swarms work against single-target troops and tanks.`, 'swarmsplash', 2, 12);
+  const tank = near.find(e => e.maxHp >= 2500);
+  if (tank && !c.air && (c.ramp || (c.dmg / c.hs >= 250 && (c.count || 1) === 1) || (c.count || 1) >= 3))
+    coach('good', `${c.name} is a strong answer to the ${CARDS[tank.key].name}.`, 'tk', 1, 15);
+  const towerOnly = foesMySide.find(e => e.targets === 'buildings' && !e.air);
+  if (c.type === 'building' && towerOnly){
+    if (x > 5.5 && x < 12.5 && y > 18 && y < 23.5) coach('good', `Good pull: the ${CARDS[towerOnly.key].name} will go for your ${c.name} in the middle.`, 'pull', 1, 15);
+    else coach('info', 'Buildings pull best from the middle, about 4 tiles below the river, between your towers.', 'pullpos', 1, 20);
+  }
+  if (T.punish && G.t - T.punish.t < 7 && (x < 9 ? 0 : 1) !== T.punish.lane && y < 21){
+    coach('good', 'Good punish: you hit the other lane while the Rival was low on elixir.', 'punishgood', 2, 20); T.punish = null;
+  }
 }
 function drawBanner(){
   const b = G && G.banner;
@@ -2841,7 +2955,9 @@ function coachReport(G){
   if (react > 4) pen.push({ p:Math.min(12, (react-4)*4), drill:'counter', title:`Slow to respond (${react.toFixed(1)}s on average)`, text:'You took a while to answer troops that crossed into your half. Have your answer ready and drop it as they cross.' });
   if (sum(lanes) >= 6 && laneShare > 0.85 && G.crowns[0] === 0) pen.push({ p:8, drill:'punish', title:'You attacked one lane only', text:'Every push went down the same side. When the Rival commits on one lane, hit the other one.' });
   if ((G.clock <= 60 || G.ot) && takenDouble > dealtDouble + 600) pen.push({ p:10, drill:'closer', title:'Double elixir went against you', text:'You took far more damage than you dealt once elixir doubled. Defend first, then go for one big push with your tank and support together.' });
-  let score = Math.max(0, 100 - sum(pen.map(x => x.p)));
+  const goodN = T.log.filter(m => m.tone === 'good').length, badN = T.log.filter(m => m.tone === 'bad').length;
+  if (badN >= 4) pen.push({ p:Math.min(15, (badN - 3)*3), drill:'trade', title:`The coach flagged ${badN} mistakes`, text:'See the key moments below for what went wrong and when.' });
+  let score = Math.max(0, Math.min(100, 100 - sum(pen.map(x => x.p)) + Math.min(8, goodN*2)));
   // The result counts too: a heavy loss can't grade above C, a lost tower race above B.
   if (G.result === 'lose' && G.crowns[1] - G.crowns[0] >= 2) score = Math.min(score, 60);
   else if (G.result === 'lose') score = Math.min(score, 75);
@@ -2851,10 +2967,11 @@ function coachReport(G){
     { l:'Elixir wasted', v:leak.toFixed(1), good:leak <= 2 },
     { l:'Elixir trade (destroyed − lost; survivors are not lost)', v:(trade >= 0 ? '+' : '') + trade.toFixed(1), good:trade >= 0 },
     { l:'Tower damage dealt / taken', v:`${Math.round(sum(Object.values(T.towerDmg[0])))} / ${Math.round(sum(Object.values(T.towerDmg[1])))}`, good:sum(Object.values(T.towerDmg[0])) >= sum(Object.values(T.towerDmg[1])) },
-    { l:'Spells with good value', v:spells.length ? `${spells.length - badSpells}/${spells.length}` : 'none', good:!badSpells }
+    { l:'Spells with good value', v:spells.length ? `${spells.length - badSpells}/${spells.length}` : 'none', good:!badSpells },
+    { l:'Coach moments: good / to fix', v:`${goodN} / ${badN}`, good:goodN >= badN }
   ];
   const seenDrill = new Set(), tips = pen.filter(x => !seenDrill.has(x.drill) && seenDrill.add(x.drill)).slice(0,3);
-  return { score, grade, stats, tips, metrics:{ leak, trade, idle:T.idleDmg, react, badSpells } };
+  return { score, grade, stats, tips, moments:T.log.slice(), metrics:{ leak, trade, idle:T.idleDmg, react, badSpells } };
 }
 function renderReport(rep){
   const box = $('#coachReport'); box.hidden = false; box.textContent = '';
@@ -2875,6 +2992,17 @@ function renderReport(rep){
     tips.append(d);
   }
   box.append(tips);
+  if (rep.moments && rep.moments.length){
+    const det = document.createElement('details'); det.className = 'moments'; det.open = rep.moments.length <= 6;
+    const sm = document.createElement('summary'); sm.textContent = `Key moments (${rep.moments.length})`; det.append(sm);
+    const ul = document.createElement('ul');
+    for (const m of rep.moments){
+      const li = document.createElement('li'); li.className = m.tone;
+      const t = document.createElement('span'); t.textContent = `${Math.floor(m.t/60)}:${String(Math.floor(m.t%60)).padStart(2,'0')}`;
+      li.append(t, document.createTextNode((m.tone === 'good' ? '✓ ' : m.tone === 'bad' ? '✕ ' : '') + m.text)); ul.append(li);
+    }
+    det.append(ul); box.append(det);
+  }
 }
 function saveHistory(rep, result, mode){
   const h = loadJSON('bridgeburn-history', []);
@@ -2941,7 +3069,10 @@ function paintReset(asking){
 }
 $('#academyReset').addEventListener('click', () => paintReset(true));
 $('#trackerToggle').addEventListener('change', ev => { trackerOn = ev.target.checked; try { localStorage.setItem('bridgeburn-tracker', trackerOn ? '1' : '0'); } catch(e) {} });
-$('#hintsToggle').addEventListener('change', ev => { hintsOn = ev.target.checked; try { localStorage.setItem('bridgeburn-hints', hintsOn ? '1' : '0'); } catch(e) {} });
+function setCoach(on){ hintsOn = on; try { localStorage.setItem('bridgeburn-hints', on ? '1' : '0'); } catch(e) {} $('#hintsToggle').checked = on; $('#coachToggle').checked = on; }
+$('#hintsToggle').addEventListener('change', ev => setCoach(ev.target.checked));
+$('#coachToggle').addEventListener('change', ev => setCoach(ev.target.checked));
+$('#coachToggle').checked = hintsOn;
 function hideOverlays(){ for (const id of ['startScreen','academyScreen','drillScreen','challengeScreen','endScreen','pauseScreen','helpScreen','deckScreen']) $('#'+id).hidden = true; }
 
 // ---- Classic Challenge practice: 8 wins or 3 losses, Rival gets tougher as you win ----
