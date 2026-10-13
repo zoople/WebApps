@@ -91,6 +91,14 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .ms-story{font-size:13px;line-height:1.45;color:var(--muted);margin-top:4px;font-style:italic}
 .ms.done .ms-story{color:var(--ink)}
 .ms:not(.done) .tr{opacity:.55}
+@media (max-width:390px){ .top #eTimer{display:none} .top .pill{font-size:13px;padding:4px 7px 4px 5px} }
+.top{gap:5px}.top .pill{padding:4px 8px 4px 6px;gap:4px}.top .iconbtn{width:34px;height:34px;flex:none}.top .spacer{min-width:0}
+.slotlv{position:absolute;right:2px;top:1px;min-width:16px;height:16px;border-radius:8px;background:var(--velvet);color:#fff;font-size:10px;font-weight:800;font-style:normal;display:grid;place-items:center;padding:0 3px;pointer-events:none;box-shadow:0 1px 2px #0008}
+.reel{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:45;display:flex;gap:8px;padding:10px 12px;border-radius:16px;background:linear-gradient(#2e2125,#1d1517);border:2px solid var(--gold);box-shadow:0 12px 30px #000c;pointer-events:none}
+.reel span{width:54px;height:62px;border-radius:10px;background:#f4e8d3;display:grid;place-items:center;font-size:34px;box-shadow:inset 0 3px 6px #0004}
+.reel.win{border-color:var(--ok)}.reel.junk{border-color:#8a7a6a;opacity:.92}
+.reel.jackpot{border-color:#ffd75e;animation:jackpot .5s ease-in-out 3}
+@keyframes jackpot{50%{transform:translate(-50%,-50%) scale(1.08);box-shadow:0 0 40px #ffd75e}}
 .passbar{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;margin:8px 0 4px}
 .passbar i{display:block;height:100%;background:linear-gradient(90deg,#5b6bd6,#dfe4ff)}
 .xprow .xpl{white-space:nowrap;font-weight:600}.xprow .xpl b{color:var(--ink)}
@@ -256,6 +264,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <li>⏲️ Time Chargers double the recharge speed of timed generators around them, then run out</li>
     <li>🌕 Points event: swaps give moon tokens, points hit story milestones</li>
     <li>⏱ Every generator has charges that refill on a timer</li>
+    <li>🎰 Slot machine: spend chips 🔴, chase 7️⃣7️⃣7️⃣, merge machines to level up</li>
     <li>Separate save. Larkspur Attic is untouched</li>
   </ul>
   <button id="playBtn">Play</button>
@@ -267,11 +276,11 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="app">
   <header class="top">
     <div class="pill" title="Energy"><span>⚡</span><b id="energy">100</b><small id="eTimer"></small></div>
-    <div class="pill" title="Coins"><span>🪙</span><b id="coins">0</b></div>
+    <div class="pill" title="Coins and casino chips"><span>🪙</span><b id="coins">0</b><span>🔴</span><b id="chips">0</b></div>
     <span class="spacer"></span>
     <button class="pill gift" id="giftBtn" hidden>🎁 <b id="giftCount">1</b></button>
     <button class="iconbtn" id="fsBtn" aria-label="Full screen" title="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path id="fsPath" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
-    <button class="iconbtn" id="journalBtn" aria-label="Journal">📖</button>
+    <button class="iconbtn" id="journalBtn" aria-label="Journal" hidden>📖</button>
     <button class="iconbtn" id="menuBtn" aria-label="Menu">⋯</button>
   </header>
   <section class="chapter">
@@ -286,10 +295,11 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div class="overlay" id="scene" hidden></div>
 <div class="overlay modal" id="modal" hidden><div class="sheetbox" id="modalBody"></div></div>
 <div id="toast"></div>
+<div class="reel" id="reel" hidden><span>🎰</span><span>🎰</span><span>🎰</span></div>
 <div id="ghost"></div>
 
 <script>
-const VERSION='v5 · 13 Oct 2026';
+const VERSION='v6 · 13 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -300,7 +310,7 @@ const CONFIG = {
   energyRegenMs: 30000,   // sandbox: fast refill so mechanics can be tried freely
   energyCost: 1,
   buyEnergy: { cost: 0, step: 0, amount: 100 },  // sandbox: free refills
-  saveKey: 'larkspur-sandbox-v4',  // v5: every generator now has charges
+  saveKey: 'larkspur-sandbox-v5',  // v5: every generator now has charges
   chargerScale: 1/12,     // sandbox: 2h in Merge Mansion = 10 min here
 };
 
@@ -332,9 +342,14 @@ const CHAINS = {
     {e:'🌑',n:'New Moon',v:1},{e:'🌒',n:'Crescent Moon',v:3},{e:'🌓',n:'Half Moon',v:7},{e:'🌕',n:'Full Moon',v:16}]},
   H:{name:'Time Skips', type:'res', claim:'skip', items:[{e:'⏳',n:'Hourglass',v:15},{e:'⌛',n:'Sand Timer',v:60},{e:'🗓️',n:'Calendar Page',v:240}]},
   /* ===== sandbox mechanics ===== */
+  // 0. SLOT MACHINE: spins cost casino chips, pays from a weighted table (SLOT_TABLE). Merge two for a better level (1-5).
+  SL:{name:'Slot Machine', gen:true, slot:true, items:[1,2,3,4,5].map(n=>({e:'🎰',n:'Slot Machine '+n}))},
+  CP:{name:'Casino Chips', type:'res', claim:'chips', items:[{e:'🔴',n:'Casino Chip',v:1},{e:'🟡',n:'Chip Stack',v:3},{e:'🟣',n:'Chip Tower',v:8}]},
+  // junk from bad spins: can't be sold until it is merged up to a Scrap Bale, which recycles into a chip
+  J:{name:'Junk', items:[{e:'🥫',n:'Dented Can'},{e:'📰',n:'Soggy Newspaper'},{e:'🧱',n:'Scrap Bale',recycle:true}]},
   // 1. depleting generators (Merge Mansion chests): free taps, then gone. Two unopened crates merge into a bigger one.
   Q:{name:'Supply Crates', gen:true, items:[
-    {e:'📦',n:'Small Crate', free:true, uses:6, drop:[['C',1,30],['E',1,25],['X',1,20],['P',1,10],['F',1,10],['V',1,5]]},
+    {e:'📦',n:'Small Crate', free:true, uses:6, drop:[['CP',1,15],['C',1,30],['E',1,25],['X',1,20],['P',1,10],['F',1,10],['V',1,5]]},
     {e:'🗳️',n:'Big Crate', free:true, uses:14, drop:[['C',1,22],['C',2,12],['E',1,18],['E',2,10],['X',1,14],['X',2,6],['V',1,8],['H',1,10]]}]},
   // 2. a chain whose top item becomes a limited generator, then withers into fuel
   G:{name:'Garden', main:'Y', items:[{e:'🌱',n:'Seed'},{e:'🌿',n:'Sprout'},{e:'🪴',n:'Potted Plant'},
@@ -392,7 +407,7 @@ const CHAINS = {
 /* sandbox: every tap-generator has charges that refill on a timer, even the energy ones.
    Main generators: 10 / 16 / 22 charges, one back every 3 / 2.5 / 2 min. Fed generators (bin, stove) stay fuel-limited. */
 Object.entries(CHAINS).forEach(([k,ch])=>ch.items.forEach((d,j)=>{
-  if(!(ch.gen||d.gen) || d.want || d.fuelled || d.charges) return;
+  if(!(ch.gen||d.gen) || ch.slot || d.want || d.fuelled || d.charges) return;
   if(k==='Q'){ d.charges=3; d.rechargeMs=300000; return; }
   if(k==='G'){ d.charges=5; d.rechargeMs=360000; return; }
   if(k==='gC'){ d.charges=8; d.rechargeMs=240000; return; }
@@ -402,7 +417,7 @@ const LAYOUT = [
   'oQ1 o. ogR1 ogK1 oQ1 o. oG1',
   'oG1 o. oV5 o. o. o. oG1',
   'o. o. oZ1 o. oU1 o. o.',
-  'o. o. o. o. o. o. o.',
+  'o. o. o. oSL1 o. o. o.',
   'oO1 o. o. o. o. o. oP1',
   'o. o. o. o. o. o. o.',
   'ogC1 o. o. o. o. o. oF1',
@@ -454,7 +469,7 @@ function makeSide(){
     if(!need.every(([k,l])=>openCount(k,l)>0)) break;
   }
   const size=need.reduce((a,[,l])=>a+(1<<(l-1)),0);
-  const rw=[['N', size>=6?2:1]]; if(Math.random()<.35) rw.push(['C',1]); else if(Math.random()<.3) rw.push(['E',1]);
+  const rw=[['N', size>=6?2:1]]; const r=Math.random(); if(r<.3) rw.push(['C',1]); else if(r<.5) rw.push(['CP',1]); else if(r<.65) rw.push(['E',1]);
   S.sideN=(S.sideN||0)+1;
   return {id:'s'+S.sideN, who:'S', side:true, need, rw, say:'For the church jumble sale. Anything you can spare.'};
 }
@@ -732,7 +747,7 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, chips:10, slotsBought:0, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:60, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
@@ -799,7 +814,72 @@ function discover(it, quiet){
   else toast(`New: ${d.e} <b>${d.n}</b>`);
 }
 
+/* SLOT PAY TABLE. L = machine level - 1. Junk shrinks and every prize grows as the machine levels up.
+   Sevens: about 1% at level 1, about 4.5% at level 5. */
+const SLOT_COST=1;
+function slotTable(lvl){
+  const L=lvl-1, up=(base,max)=>Math.min(base+Math.floor(L/2),max);
+  return [
+    {w:40-7*L, sym:'🥫', name:'Junk',      rw:[['J',1]]},
+    {w:24,     sym:'🍒', name:'Cherries',  rw:[['C',up(1,4)]]},
+    {w:14+L,   sym:'🍋', name:'Lemons',    rw:[['E',up(1,4)]]},
+    {w:9+L,    sym:'🔔', name:'Bells',     rw:[['X',up(1,4)]]},
+    {w:6+L,    sym:'🔴', name:'Chips back',rw:[['CP',up(1,3)]]},
+    {w:5+L,    sym:'🌙', name:'Moons',     rw:[['N',up(1,3)]]},
+    {w:1+.75*L,sym:'7️⃣', name:'Jackpot',   rw:[['H',up(1,3)],['C',Math.min(2+L,5)],['E',up(2,5)]]},
+  ];
+}
+let spinning=false;
+function spin(i){
+  const it=S.cells[i].it;
+  if(spinning) return;
+  if(S.chips<SLOT_COST){ SND.play('nope'); toast('Out of casino chips 🔴. Get more from crates, the Jumble Sale, scrap, or the 🛒 Store.'); return; }
+  S.chips-=SLOT_COST; spinning=true;
+  const tab=slotTable(it.l), tot=tab.reduce((a,t)=>a+t.w,0); let x=Math.random()*tot, out=tab[0];
+  for(const t of tab){ x-=t.w; if(x<=0){ out=t; break; } }
+  const syms=tab.map(t=>t.sym), reel=$('reel'), cells=reel.querySelectorAll('span');
+  const final = out.name==='Junk' ? (()=>{ const a=syms.filter(s=>s!=='7️⃣'); let r; do{ r=[0,1,2].map(()=>a[Math.floor(Math.random()*a.length)]); }while(r[0]===r[1]&&r[1]===r[2]); return r; })() : [out.sym,out.sym,out.sym];
+  reel.hidden=false; reel.className='reel'; let n=0;
+  const tick=setInterval(()=>{
+    n++; cells.forEach((c,j)=>{ if(n<6+j*4) c.textContent=syms[Math.floor(Math.random()*syms.length)]; else c.textContent=final[j]; });
+    if(n%2) SND.play('tap');
+    if(n>=14){
+      clearInterval(tick);
+      reel.className='reel '+(out.name==='Jackpot'?'jackpot':out.name==='Junk'?'junk':'win');
+      dropItems(out.rw, i);
+      if(out.name==='Jackpot'){ SND.play('fanfare'); toast('7️⃣7️⃣7️⃣ JACKPOT!'); }
+      else if(out.name==='Junk'){ SND.play('nope'); toast('🥫 Junk. Merge it up to a 🧱 Scrap Bale to get rid of it.'); }
+      else { SND.play('coins'); toast(`${out.sym}${out.sym}${out.sym} ${out.name}!`); }
+      save(); render();
+      setTimeout(()=>{ reel.hidden=true; spinning=false; },900);
+    }
+  },70);
+  save(); renderHud();
+}
+function recycle(i){
+  S.cells[i].it=null; sel=-1; fx[i]='reveal'; S.chips+=1; SND.play('reveal');
+  toast('🧱 Scrap recycled. +1 casino chip 🔴'); save(); render();
+}
+function slotPrice(){ return 40+30*(S.slotsBought||0); }
+function showStore(){
+  const sp=slotPrice();
+  openModal(`<h2>🛒 Store</h2><p style="color:var(--muted);font-size:13px">• Spend coins 🪙 on slot machines and chips<br>• Merge two slot machines for a better one</p>
+    <p>🪙 ${S.coins} · 🔴 ${S.chips} chips</p>
+    <div class="tier"><span class="tp">🎰</span><span class="tr" style="font-size:14px;letter-spacing:0">Slot Machine 1<br><small style="color:var(--muted)">Price rises each time</small></span><button class="sbtn" id="buySlot" ${S.coins<sp?'disabled style="opacity:.5"':''}>🪙 ${sp}</button></div>
+    <div class="tier"><span class="tp">🔴</span><span class="tr" style="font-size:14px;letter-spacing:0">10 Casino Chips</span><button class="sbtn" id="buyChips" ${S.coins<15?'disabled style="opacity:.5"':''}>🪙 15</button></div>
+    <div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
+  $('buySlot').onclick=()=>{ if(S.coins<sp) return; S.coins-=sp; S.slotsBought=(S.slotsBought||0)+1; S.gifts.push(['SL',1]); SND.play('gift'); toast('🎰 Slot machine added to your gifts 🎁'); save(); render(); showStore(); };
+  $('buyChips').onclick=()=>{ if(S.coins<15) return; S.coins-=15; S.chips+=10; SND.play('coin'); toast('+10 casino chips 🔴'); save(); render(); showStore(); };
+}
+function showPaytable(lvl){
+  const tab=slotTable(lvl), tot=tab.reduce((a,t)=>a+t.w,0);
+  openModal(`<h2>🎰 Slot Machine ${lvl}</h2><p style="color:var(--muted);font-size:13px">• Each spin costs ${SLOT_COST} chip 🔴<br>• Merge two of the same level for better odds and prizes (max 5)</p>`+
+    tab.map(t=>`<div class="tier"><span class="tp" style="width:70px">${t.sym}${t.sym}${t.sym}</span><span class="tr" style="font-size:18px">${t.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span><span style="font-variant-numeric:tabular-nums;color:var(--muted)">${(t.w/tot*100).toFixed(1)}%</span></div>`).join('')+
+    `<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button>${lvl<5?`<button class="bigbtn" id="nextLv">Level ${lvl+1} odds</button>`:''}</div>`);
+  if(lvl<5) $('nextLv').onclick=()=>showPaytable(lvl+1);
+}
 function produce(i){
+  if(CHAINS[S.cells[i].it.k].slot){ spin(i); return; }
   const it=S.cells[i].it, d=def(it);
   if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1]; SND.play('nope'); toast(`${d.e} Wants ${w.e} ${w.n}. Drag one onto it for seeds.`); return; }
   if(d.fuelled){ if(!(it.fuel>0)){ SND.play('nope'); toast(`${d.e} The stove is cold. Drag a 🪵 log or some papers onto it.`); return; } }
@@ -863,6 +943,7 @@ function claim(i){
     q.push(...checkMilestones());
     if(q.length){ save(); setTimeout(()=>playQueue(q),250); }
   }
+  else if(kind==='chips'){ S.chips+=d.v; SND.play('coin'); toast(`${d.e} +${d.v} casino chip${d.v>1?'s':''}`); }
   else if(kind==='skip'){ timeSkip(d.v); SND.play('unweb'); toast(`${d.e} Skipped ${d.v} minutes`); }
   else { SND.play('unweb'); toast(`${d.e} +${d.v} applause`); addXP(d.v); }
   save(); render();
@@ -926,7 +1007,7 @@ function doMerge(a,b){
   save(); render();
 }
 
-function sellValue(it){ if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
+function sellValue(it){ if(it.k==='J') return 0; if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
   S.coins+=v; S.cells[i].it=null; sel=-1;
@@ -1056,6 +1137,7 @@ function render(){
           }
           else if(d.want){ const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="bubble">${w.e}<b class="arr">↓</b></i>`; cls+=' hungry'; }
           else if(d.fuelled){ if(c.it.fuel) html+=`<i class="gen">🔥${c.it.fuel}</i>`; else { html+=`<i class="bubble">🪵📄<b class="arr">↓</b></i>`; cls+=' cool hungry'; } }
+          else if(CHAINS[c.it.k].slot) html+=`<i class="slotlv">${c.it.l}</i>`;
           else if(d.uses) html+=`<i class="gen">${d.free?'':'⚡'}${c.it.left}</i>`;
           else html+=`<i class="gen">⚡</i>`;
           if(d.charges && chargedCell(i)){ cls+=' charged'; html+=`<i class="x2">×2</i>`; }
@@ -1088,7 +1170,7 @@ function render(){
 function renderHud(){
   $('energy').textContent=S.energy;
   $('eTimer').textContent = S.energy<CONFIG.energyMax ? fmt(Math.ceil((CONFIG.energyRegenMs-(now()-S.eT))/1000)) : '';
-  $('coins').textContent=S.coins;
+  $('coins').textContent=S.coins; $('chips').textContent=S.chips||0;
   $('pts').textContent=S.pts||0; $('passDot').hidden=!passReady();
   { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
     $('xpLv').textContent=l; $('xpTxt').textContent=`${S.xp-lo}/${hi-lo}`; $('xpBar').style.width=((S.xp-lo)/(hi-lo)*100)+'%'; }
@@ -1148,6 +1230,15 @@ function renderInfo(){
   }
   const it=c.it, d=def(it), ch=CHAINS[it.k];
   let ds='';
+  if(ch.slot){
+    ds=`Tap again to spin for ${SLOT_COST} chip 🔴 (you have ${S.chips}). 7️⃣7️⃣7️⃣ is the jackpot.`+(it.l<5?` Merge two for a Slot Machine ${it.l+1}.`:' Top level.');
+    box.innerHTML=`<div class="big">🎰</div><div class="txt"><div class="nm">Slot Machine ${it.l}<small>pays better each level</small></div><div class="ds">${ds}</div></div>
+      <div class="btns"><button class="sbtn" id="payBtn">Odds</button><button class="sbtn" id="storeBtn">🛒 Store</button></div>`;
+    $('payBtn').onclick=()=>showPaytable(it.l); $('storeBtn').onclick=showStore; return;
+  }
+  if(it.k==='J'){
+    ds = d.recycle ? 'Tap again to recycle it: +1 casino chip 🔴.' : `Junk from the slot machine. Can’t be sold. Merge two up to a 🧱 Scrap Bale to get rid of it.`;
+  } else
   if(ch.gen){
     if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1]; ds=`Wants ${w.e} ${w.n}. Drag one onto it to get a seed 🌱. It asks for something new each time.`; }
     else if(d.fuelled) ds = it.fuel>0 ? `Tap again to cook. Uses fuel, not energy. ${it.fuel} fuel left.` : `Cold. Drag a 🪵 log (4 fuel) or papers (1 per level) onto it.`;
@@ -1228,6 +1319,7 @@ function tap(i){
   if(c.s==='web'){ const d=def(c.it); toast(`${d.e} ${d.n} is stuck in cobwebs. Drop a matching one on it.`); sel=-1; render(); return; }
   if(!c.it){ sel=-1; sellArm=false; render(); return; }
   if(c.it.st){ sel=i; claim(i); return; } // story moon: one tap reads it
+  if(sel===i && def(c.it).recycle){ recycle(i); return; }
   if(sel===i){
     if(isGen(c.it)){ produce(i); return; }
     if(isCharger(c.it) && !c.it.on){ activateCharger(i); return; }
@@ -1336,12 +1428,15 @@ function showMenu(){
   openModal(`<h2>Larkspur Attic</h2><p style="color:var(--muted)">Event 1 · no timer · version ${VERSION}</p>
     <h3>Energy</h3><p>⚡ ${S.energy} · refills 1 every ${CONFIG.energyRegenMs/60000} min up to ${CONFIG.energyMax}. Tea on the board tops you up past the cap. Price rises each time you buy.</p>
     <div class="row-btns"><button class="bigbtn gold" id="buyE" ${S.coins<energyPrice()?'disabled style="opacity:.5"':''}>Buy ⚡${b.amount} for 🪙${energyPrice()}</button></div>
+    <h3>Store</h3><div class="row-btns" style="margin-top:0"><button class="bigbtn gold" id="storeOpen">🛒 Slot machines & chips</button><button class="bigbtn" id="journalOpen">📖 Journal</button></div>
     <h3>Sound</h3>
     <div class="row-btns" style="margin-top:0"><button class="bigbtn${SND.pref.music?' gold':''}" id="musBtn">♪ Music: ${SND.pref.music?'On':'Off'}</button><button class="bigbtn${SND.pref.sfx?' gold':''}" id="sfxBtn">Sound effects: ${SND.pref.sfx?'On':'Off'}</button></div>
     <h3>Save</h3><p style="color:var(--muted);font-size:13px">Progress saves in this browser automatically.</p>
     <div class="row-btns"><button class="bigbtn warn" id="resetBtn">${resetArm?'Tap again to wipe everything':'Restart event'}</button><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('buyE').onclick=()=>{ const c=energyPrice(); if(S.coins<c) return; S.coins-=c; S.buys=(S.buys||0)+1; S.energy+=b.amount; SND.play('coin'); save(); render(); showMenu(); toast(`+${b.amount} ⚡`); };
   $('musBtn').onclick=()=>{ SND.setMusic(!SND.pref.music); showMenu(); };
+  $('storeOpen').onclick=showStore;
+  $('journalOpen').onclick=showJournal;
   $('sfxBtn').onclick=()=>{ SND.setSfx(!SND.pref.sfx); showMenu(); SND.play('tap'); };
   $('resetBtn').onclick=()=>{ if(!resetArm){ resetArm=true; showMenu(); return; } resetArm=false; S=freshState(); sel=-1; save(); closeModal(); render(); startIntro(); };
 }
