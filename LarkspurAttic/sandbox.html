@@ -156,10 +156,18 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .musttag{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:#c9d0ff;color:#1a1d33;border-radius:5px;padding:0 4px;pointer-events:none}
 @keyframes breathe{0%,100%{transform:scale(1);filter:drop-shadow(0 2px 1px #0006)}50%{transform:scale(1.08);filter:drop-shadow(0 0 6px #e4b84ccc) drop-shadow(0 2px 1px #0006)}}
 @keyframes mustring{0%,100%{box-shadow:inset 0 0 0 2px #c9d0ff66}50%{box-shadow:inset 0 0 0 3px #e6eaff}}
-.cell.powered{box-shadow:inset 0 0 0 2px #7fd3ffaa}
-.cell.powered::after{content:"⚡";position:absolute;right:2px;bottom:1px;font-size:10px;pointer-events:none}
-.cell.battery .em{filter:drop-shadow(0 0 6px #7fd3ff) drop-shadow(0 2px 1px #0006)}
-.want{position:absolute;right:1px;top:1px;font-size:calc(var(--cs)*.26);font-style:normal;background:#000a;border-radius:6px;padding:0 2px;line-height:1.2;pointer-events:none}
+.cell.charged{box-shadow:inset 0 0 0 2px #7fd3ffaa}
+.x2{position:absolute;right:2px;bottom:1px;font-size:9px;font-weight:800;font-style:normal;color:#bfe9ff;pointer-events:none}
+.cell.charging .em{filter:drop-shadow(0 0 6px #7fd3ff) drop-shadow(0 2px 1px #0006)}
+.ring .arc.tc{stroke:#7fd3ff}
+.musttag.tc{background:#7fd3ff}
+/* fed generators: a little speech bubble saying what goes in */
+.bubble{position:absolute;left:50%;top:1px;transform:translateX(-50%);display:flex;align-items:center;gap:1px;background:#f4e8d3;color:#3a2a1c;border-radius:8px;padding:0 3px;font-size:calc(var(--cs)*.22);font-style:normal;line-height:1.35;white-space:nowrap;box-shadow:0 2px 4px #0007;pointer-events:none;z-index:2}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);border:4px solid transparent;border-bottom:0;border-top-color:#f4e8d3}
+.bubble .arr{font-size:.9em;color:#a3303d;animation:nudgeDown 1s ease-in-out infinite}
+.cell.hungry .em{transform:translateY(18%) scale(.82)}
+@keyframes nudgeDown{50%{transform:translateY(2px)}}
+.want-old{position:absolute;right:1px;top:1px;font-size:calc(var(--cs)*.26);font-style:normal;background:#000a;border-radius:6px;padding:0 2px;line-height:1.2;pointer-events:none}
 .cell.pop .em{animation:pop .32s cubic-bezier(.3,1.6,.5,1)}
 .cell.spawn .em{animation:spawn .35s cubic-bezier(.3,1.5,.5,1)}
 .cell.reveal::before,.cell.reveal .em{animation:pop .35s ease-out}
@@ -238,7 +246,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <li>🌱→🌳 Grow a Fruit Tree: 10 harvests, then it withers to a log</li>
     <li>🗑️ Compost Bin: feed it what it asks for, get seeds</li>
     <li>♨️ Stove: feed it logs or papers, it cooks tea</li>
-    <li>🔋 Batteries power generators next to them</li>
+    <li>⏲️ Time Chargers double the recharge speed of timed generators around them, then run out</li>
     <li>Separate save. Larkspur Attic is untouched</li>
   </ul>
   <button id="playBtn">Play</button>
@@ -272,7 +280,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v1 · 12 Oct 2026';
+const VERSION='v2 · 13 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -283,7 +291,8 @@ const CONFIG = {
   energyRegenMs: 30000,   // sandbox: fast refill so mechanics can be tried freely
   energyCost: 1,
   buyEnergy: { cost: 0, step: 0, amount: 100 },  // sandbox: free refills
-  saveKey: 'larkspur-sandbox-v1',
+  saveKey: 'larkspur-sandbox-v2',
+  chargerScale: 1/12,     // sandbox: 2h in Merge Mansion = 10 min here
 };
 
 /* ---------- merge chains ---------- */
@@ -327,7 +336,15 @@ const CHAINS = {
   Z:{name:'Compost Bin', gen:true, items:[{e:'🗑️',n:'Compost Bin', want:true}]},
   U:{name:'Stove', gen:true, main:'E', items:[{e:'♨️',n:'Pot-Bellied Stove', fuelled:true, drop:[['E',1,55],['E',2,30],['E',3,10],['Y',2,5]]}]},
   // 4. power: generators next to a battery drop one level higher (coil reaches diagonals too)
-  V:{name:'Power', items:[{e:'🔋',n:'Battery',pw:1},{e:'🌀',n:'Tesla Coil',pw:2}]},
+  // 4. Time Chargers, as in Merge Mansion's Ignatius Boulton event: shards from the Clock Tower merge up into a charger.
+  //    Double-tap to switch on. While it runs it doubles the recharge speed of timed generators in the 8 tiles around it
+  //    (no stacking), then recharges them and disappears. Once on: can be sold, can't be merged.
+  V:{name:'Time Chargers', items:[
+    {e:'🕐',n:'Charger Shard'},{e:'🕒',n:'Shard Pair'},{e:'🕕',n:'Shard Cluster'},{e:'🕘',n:'Charger Core'},
+    {e:'⏲️',n:'Small Time Charger',hours:2},{e:'⏰',n:'Medium Time Charger',hours:4},{e:'⌚',n:'Big Time Charger',hours:8},{e:'🌀',n:'Huge Time Charger',hours:16}]},
+  gC:{name:'Clock Tower', gen:true, main:'V', items:[{e:'🗼',n:'Clock Tower', drop:[['V',1,85],['V',2,15]]}]},
+  // a timed generator like MM's Rotary Phone: free taps, then a recharge timer
+  gR:{name:'Telephone', gen:true, items:[{e:'☎️',n:'Telephone', free:true, charges:6, rechargeMs:600000, drop:[['P',1,35],['F',1,30],['T',1,25],['C',1,10]]}]},
   /* rare chains: each generator's occasional bonus drop */
   K:{name:'Keepsakes', rare:true, items:[{e:'🔖',n:'Bookmark'},{e:'🎟️',n:'Ticket Stub'},{e:'🖼️',n:'Photograph'},{e:'📸',n:'Box Camera'}]},
   B:{name:'Haberdashery', rare:true, items:[{e:'🔘',n:'Button'},{e:'🎀',n:'Silk Bow'},{e:'👒',n:'Bonnet'},{e:'👑',n:'Paste Tiara'}]},
@@ -350,7 +367,7 @@ const CHAINS = {
     {e:'🧺',n:'Sewing Basket', drop:[['F',1,75],['F',2,10],['B',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
     {e:'🪡',n:'Sewing Kit', drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
   gT:{name:'Toolbox', gen:true, main:'T', rare:'W', items:[
-    {e:'🧰',n:'Toolbox', drop:[['V',1,6],['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🧰',n:'Toolbox', drop:[['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
     {e:'🗜️',n:'Workbench', drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]}]},
   gL:{name:'Fuse Box', gen:true, main:'L', rare:'R', items:[
     {e:'🔌',n:'Fuse Box', drop:[['L',1,75],['L',2,10],['R',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
@@ -364,13 +381,13 @@ const CHAINS = {
 
 /* ---------- board: o=open, w=cobweb (visible, merge onto it to free), b=box (hidden until a merge next to it) ---------- */
 const LAYOUT = [
-  'oQ1 o. oV1 o. oQ1 o. oG1',
-  'oG1 o. o. o. o. o. oG1',
+  'oQ1 o. ogR1 ogK1 oQ1 o. oG1',
+  'oG1 o. oV5 o. o. o. oG1',
   'o. o. oZ1 o. oU1 o. o.',
   'o. o. o. o. o. o. o.',
   'oO1 o. o. o. o. o. oP1',
   'o. o. o. o. o. o. o.',
-  'oV1 o. o. o. o. o. oF1',
+  'ogC1 o. o. o. o. o. oF1',
   'oG2 o. o. o. o. o. oT1',
   'oE1 ogD1 o. ogT1 o. ogS1 oE1',
 ];
@@ -390,7 +407,7 @@ const CAST = {
 /* ---------- story ---------- */
 const CHAPTERS = [
   { title:'Mechanics test bench', zone:0, gifts:[],
-    intro:[['N','Sandbox. No story, just mechanics to try:<br>• 📦 crates run out<br>• 🌱 grow a tree, harvest it, it withers to 🪵<br>• 🗑️ feed the bin, ♨️ fuel the stove<br>• 🔋 power the generators next to it']],
+    intro:[['N','Sandbox. No story, just mechanics to try:<br>• 📦 crates run out<br>• 🌱 grow a tree, harvest it, it withers to 🪵<br>• 🗑️ feed the bin, ♨️ fuel the stove<br>• ⏲️ switch on a Time Charger next to the ☎️ and 🫖']],
     outro:[] },
 ];
 
@@ -647,15 +664,33 @@ const WANTS=[['P',1],['P',2],['F',1],['F',2],['T',1],['T',2],['Y',1],['Y',2]];
 function pickWant(){ return WANTS[Math.floor(Math.random()*WANTS.length)]; }
 const FUEL={O:4,P:1};
 function fuelValue(it){ return FUEL[it.k] ? FUEL[it.k]*it.l : 0; }
-/* power: a battery powers the 4 tiles next to it, a Tesla Coil all 8 */
-function poweredCell(i){
-  const [r,c]=rc(i);
-  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
-    if(!dr&&!dc) continue; const rr=r+dr, cc=c+dc; if(rr<0||rr>8||cc<0||cc>6) continue;
-    const n=S.cells[rr*7+cc]; if(n.s!=='open'||!n.it) continue; const d=CHAINS[n.it.k].items[n.it.l-1];
-    if(d.pw===2 || (d.pw===1 && (dr===0||dc===0))) return true;
-  }
-  return false;
+/* Time Chargers */
+const isCharger = it => !!(it && CHAINS[it.k].items[it.l-1].hours);
+const chargerMs = it => CHAINS[it.k].items[it.l-1].hours*3600000*CONFIG.chargerScale;
+function around(i){ const [r,c]=rc(i), out=[]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(!dr&&!dc) continue; const rr=r+dr, cc=c+dc; if(rr>=0&&rr<9&&cc>=0&&cc<7) out.push(rr*7+cc); } return out; }
+/* is this tile inside an active charger's 8-tile area? */
+function chargedCell(i){ return around(i).some(n=>{ const it=S.cells[n].it; return S.cells[n].s==='open' && isCharger(it) && it.on; }); }
+function poweredCell(){ return false; } // old battery boost, retired
+let lastChargeTick=now();
+function chargerTick(){
+  const t=now(), dt=Math.min(t-lastChargeTick, 5000); lastChargeTick=t; let changed=false;
+  // double speed: each covered timed generator gets dt of extra recharge (once, even if two chargers overlap)
+  const boosted=new Set();
+  S.cells.forEach((c,i)=>{ if(c.s==='open'&&isCharger(c.it)&&c.it.on&&t<c.it.end) around(i).forEach(n=>{ const g=S.cells[n].it; if(g&&isGen(g)&&def(g).charges) boosted.add(n); }); });
+  boosted.forEach(n=>{ const g=S.cells[n].it; if(g.ch<def(g).charges) g.t-=dt; });
+  // finished chargers top up their neighbours (not always fully, like MM) and vanish
+  S.cells.forEach((c,i)=>{
+    if(c.s!=='open'||!isCharger(c.it)||!c.it.on||t<c.it.end) return;
+    around(i).forEach(n=>{ const g=S.cells[n].it; if(g&&isGen(g)&&def(g).charges){ refreshCharges(g); const miss=def(g).charges-g.ch; g.ch+=Math.ceil(miss*.75); if(g.ch>=def(g).charges) g.t=now(); fx[n]='pop'; } });
+    toast(`${def(c.it).e} ${def(c.it).n} ran out and topped up the generators around it`);
+    c.it=null; fx[i]='reveal'; if(sel===i) sel=-1; changed=true; SND.play('gift');
+  });
+  return changed;
+}
+function activateCharger(i){
+  const it=S.cells[i].it; it.on=true; it.end=now()+chargerMs(it);
+  SND.play('magic'); toast(`${def(it).e} Switched on. Timed generators around it recharge twice as fast.`);
+  save(); render();
 }
 function moonPending(){ return typeof S!=='undefined' && S && S.cells.some(c=>c.it&&c.it.st); }
 function freshState(){
@@ -829,7 +864,7 @@ function dropItems(list, near=59){
   if(held) toast(`🌙 Moon reward saved in 🎁 until you tap the glowing moon`);
 }
 
-function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
+function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&!a.on&&!b.on&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
 
 function drop(a,b){
   if(b<0||a===b){ return; }
@@ -864,7 +899,7 @@ function doMerge(a,b){
   save(); render();
 }
 
-function sellValue(it){ return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
+function sellValue(it){ if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
   S.coins+=v; S.cells[i].it=null; sel=-1;
@@ -992,14 +1027,18 @@ function render(){
               if(c.it.ch===0) cls+=' cool';
             }
           }
-          else if(d.want){ const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="want">${w.e}</i>`; }
-          else if(d.fuelled){ html+=`<i class="gen">🔥${c.it.fuel||0}</i>`; if(!c.it.fuel) cls+=' cool'; }
+          else if(d.want){ const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="bubble">${w.e}<b class="arr">↓</b></i>`; cls+=' hungry'; }
+          else if(d.fuelled){ if(c.it.fuel) html+=`<i class="gen">🔥${c.it.fuel}</i>`; else { html+=`<i class="bubble">🪵📄<b class="arr">↓</b></i>`; cls+=' cool hungry'; } }
           else if(d.uses) html+=`<i class="gen">${d.free?'':'⚡'}${c.it.left}</i>`;
           else html+=`<i class="gen">⚡</i>`;
-          if(poweredCell(i) && !d.want) cls+=' powered';
+          if(d.charges && chargedCell(i)){ cls+=' charged'; html+=`<i class="x2">×2</i>`; }
         } else {
           if(isRes(c.it)) cls+=' res';
-          if(def(c.it).pw) cls+=' battery';
+          if(isCharger(c.it)){
+            if(c.it.on){ const C=2*Math.PI*44, p=Math.max(0,(c.it.end-now())/chargerMs(c.it)); cls+=' charging';
+              html+=`<svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc tc" cx="50" cy="50" r="44" stroke-dasharray="${(p*C).toFixed(1)} ${C.toFixed(1)}"/></svg><i class="gen">⏳${fmt(Math.ceil((c.it.end-now())/1000))}</i>`; }
+            else html+=`<b class="musttag tc">Tap</b>`;
+          }
           if(c.it.st){ cls+=' must'; html+=`<b class="musttag">Tap</b>`; }
           else if(c.it.l===maxL(c.it.k)) cls+=' maxed';
           if(needed.has(key(c.it.k,c.it.l))) html+=`<b class="chk">✓</b>`;
@@ -1082,12 +1121,14 @@ function renderInfo(){
     if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1]; ds=`Wants ${w.e} ${w.n}. Drag one onto it to get a seed 🌱. It asks for something new each time.`; }
     else if(d.fuelled) ds = it.fuel>0 ? `Tap again to cook. Uses fuel, not energy. ${it.fuel} fuel left.` : `Cold. Drag a 🪵 log (4 fuel) or papers (1 per level) onto it.`;
     else if(d.uses) ds=`Tap again${d.free?' (free)':` (⚡${CONFIG.energyCost})`}. ${it.left} left, then it ${d.after?'withers into a 🪵 log':'is gone for good'}.${it.k==='Q'&&it.l===1?' Merge two unopened crates for a 14-use Big Crate.':''}`;
-    else if(d.charges){ refreshCharges(it); ds = it.ch>0 ? `Tap again to brew tea. Free. ${it.ch} left.` : `Boiling… ready in ${nextChargeIn(it)}s.`; }
+    else if(d.charges){ refreshCharges(it); ds = it.ch>0 ? `Tap again. Free. ${it.ch} of ${d.charges} left.` : `Recharging… next one in ${fmt(nextChargeIn(it))}.`; }
     else ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}. Costs ⚡${CONFIG.energyCost}.`;
     if(it.l<maxL(it.k) && !d.want && !d.fuelled && it.k!=='Q') ds+=` Merge two to get a ${ch.items[it.l].n}.`;
-    if(poweredCell(sel) && !d.want) ds+=' ⚡ Powered: drops come out one level higher.';
-  } else if(d.pw){
-    ds = d.pw===1 ? 'Powers generators beside it (not diagonals): their drops come out one level higher. Merge two for a Tesla Coil.' : 'Powers all 8 tiles around it: generators there drop one level higher.';
+    if(d.charges && chargedCell(sel)) ds+=' ⏲️ A Time Charger is doubling its recharge speed.';
+  } else if(isCharger(it)){
+    const real=d.hours, here=Math.round(d.hours*60*CONFIG.chargerScale);
+    ds = it.on ? `Running: ${fmt(Math.ceil((it.end-now())/1000))} left. Timed generators in the 8 tiles around it recharge twice as fast. When it runs out it tops them up and disappears.`
+               : `Tap again to switch on. Runs ${here} min (${real}h in Merge Mansion), doubling recharge speed of timed generators around it. Can’t be merged once on.`+(it.l<maxL(it.k)?` Merge two for a ${ch.items[it.l].n}.`:'');
   } else if(it.st){
     ds='A page from Odile’s moon notebook is folded inside. Tap it to read. It can’t be merged until you do.';
   } else if(ch.type==='res'){
@@ -1157,6 +1198,7 @@ function tap(i){
   if(c.it.st){ sel=i; claim(i); return; } // story moon: one tap reads it
   if(sel===i){
     if(isGen(c.it)){ produce(i); return; }
+    if(isCharger(c.it) && !c.it.on){ activateCharger(i); return; }
     if(isRes(c.it)){ const ch=CHAINS[c.it.k]; if(ch.claimMax && c.it.l<maxL(c.it.k)){ SND.play('nope'); toast(`Merge up to a ${ch.items[maxL(c.it.k)-1].e} ${ch.items[maxL(c.it.k)-1].n} to claim Moon Pass points`); return; } claim(i); return; }
     return;
   }
@@ -1316,6 +1358,9 @@ function fit(){
 window.addEventListener('resize',fit);
 setInterval(()=>{
   const before=S.energy; tickEnergy(); renderHud();
+  if(chargerTick()){ save(); render(); }
+  // charger countdown badges tick in place
+  S.cells.forEach((c,i)=>{ if(c.s==='open'&&isCharger(c.it)&&c.it.on){ const el=board.children[i].querySelector('.gen'); if(el) el.textContent='⏳'+fmt(Math.ceil((c.it.end-now())/1000)); const arc=board.children[i].querySelector('.arc'); if(arc){ const C=2*Math.PI*44, p=Math.max(0,(c.it.end-now())/chargerMs(c.it)); arc.setAttribute('stroke-dasharray',`${(p*C).toFixed(1)} ${C.toFixed(1)}`); } board.children[i]._h=null; } });
   // refresh kettle counters + info text once a second
   let any=false;
   S.cells.forEach((c,i)=>{
