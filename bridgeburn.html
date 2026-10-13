@@ -166,6 +166,10 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .tracker .tc.cyc{opacity:.35}
 .tracker .tc.cyc b{position:absolute;right:-3px;bottom:-4px;font-size:9px;font-weight:900;color:var(--ink);background:var(--line);border-radius:6px;padding:0 3px;line-height:12px}
 .tracker .tc.unk{color:var(--muted);font-weight:900;font-size:12px}
+.coachbar{height:62px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.coachbar .cb-who{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);flex:none}
+.coachbar .cb-text{font-size:14px;font-weight:800;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;transition:color .4s}
+.coachbar .cb-text.old{color:var(--muted)}
 .deck-check{font-size:12px;color:var(--muted);margin:-4px 0 0}
 .deck-check b{color:var(--ink)}
 .coachbox{display:flex;flex-direction:column;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -233,6 +237,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   </div>
 
   <div class="tracker" id="tracker" hidden></div>
+  <div class="coachbar" id="coachBar" hidden><span class="cb-who">Coach</span><span class="cb-text" id="coachText"></span></div>
   <div id="field"><canvas id="arena" aria-label="Arena"></canvas></div>
 
   <div class="tray">
@@ -2260,8 +2265,8 @@ function updateHud(){
   if (!G) return;
   const time = fmt(G.clock);
   if (lastHud.time !== time){ $('#time').textContent = time; lastHud.time = time; }
-  const lbl = G.ot ? `Sudden death ${G.otLevel}×` : G.clock <= 60 ? '2× elixir' : 'Time left';
-  if (lastHud.lbl !== lbl){ $('#clockLabel').textContent = lbl; $('#clock').className = 'clock' + (G.ot ? ' ot' : G.clock<=60 ? ' hot' : ''); lastHud.lbl = lbl; }
+  const lbl = G.drill ? (G.drill.double ? 'Drill · 2× elixir' : 'Drill time') : G.ot ? `Sudden death ${G.otLevel}×` : G.clock <= 60 ? '2× elixir' : 'Time left';
+  if (lastHud.lbl !== lbl){ $('#clockLabel').textContent = lbl; $('#clock').className = 'clock' + (G.drill ? (G.drill.double ? ' hot' : '') : G.ot ? ' ot' : G.clock<=60 ? ' hot' : ''); lastHud.lbl = lbl; }
   for (const team of [0,1]){
     const key = 'c'+team;
     if (lastHud[key] !== G.crowns[team]){
@@ -2371,7 +2376,7 @@ function showStart(){
   try { const d = localStorage.getItem('bridgeburn-diff'); diffKey = DIFF[d] && d !== 'elite' ? d : 'normal'; } catch(e) { diffKey = 'normal'; }
   if (savedDiff !== null) savedDiff = null;
   paintDiff(); renderRoster(); $('#record').textContent = recordText();
-  $('#tracker').hidden = true;
+  $('#tracker').hidden = true; $('#coachBar').hidden = true;
   $('#startScreen').hidden = false; $('#endScreen').hidden = true;
 }
 function showEnd(){
@@ -2438,7 +2443,13 @@ const netSpent = (T, G, team = 0) => T.spent[team] - aliveValue(G, team);
 const netShow = (T, G) => { const a = aliveValue(G, 0); return a >= 0.5 ? `spent ${T.spent[0]}, ${a.toFixed(1)} still alive, net ${(T.spent[0] - a).toFixed(1)}` : `spent ${T.spent[0]}`; };
 
 // A short line from the coach, shown across the middle of your half.
-function say(text, dur = 4.5){ if (G) G.banner = { text, t0:G.t, dur }; }
+// Coach lines go in the strip above the arena, not on the field. A line stays readable
+// for a few seconds, then fades to grey until the next one.
+function say(text, dur = 4.5){
+  if (!G) return;
+  G.banner = { text, t0:G.t, dur };
+  const el = $('#coachText'); el.textContent = text; el.classList.remove('old');
+}
 function hint(id, text){
   if (!G || !hintsOn || G.demo || G.over) return;
   const T = G.track;
@@ -2453,27 +2464,14 @@ function coachTick(dt){
 }
 function drawBanner(){
   const b = G && G.banner;
-  if (!b) return;
-  const k = (G.t - b.t0) / b.dur;
-  if (k >= 1){ G.banner = null; return; }
-  ctx.save();
-  ctx.globalAlpha = k < 0.08 ? k/0.08 : k > 0.85 ? (1-k)/0.15 : 1;
-  const fs = Math.max(15, Math.round(S*0.62));
-  ctx.font = `800 ${fs}px Nunito, system-ui, sans-serif`;
-  const maxW = 15*S, words = b.text.split(' '), lines = [];
-  let line = '';
-  for (const w of words){ const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line){ lines.push(line); line = w; } else line = t; }
-  lines.push(line);
-  const lh = fs*1.3, h = lines.length*lh + fs*0.9, y0 = 18.6*S;
-  ctx.fillStyle = 'rgba(16,20,28,.88)'; ctx.strokeStyle = 'rgba(242,193,78,.8)'; ctx.lineWidth = Math.max(1, S*0.05);
-  rr(ctx, 1.2*S, y0, 15.6*S, h, S*0.3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#f4efe4'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  lines.forEach((l, i) => ctx.fillText(l, 9*S, y0 + fs*0.45 + lh*(i + 0.5)));
-  ctx.restore();
+  if (b && G.t - b.t0 > b.dur){ G.banner = null; $('#coachText').classList.add('old'); }
 }
 
 // ---- Rival card tracker: in Clash Royale the last four cards played can't be in hand ----
 function renderTracker(){
+  const bar = $('#coachBar');
+  const showBar = !!G && !G.demo && !!(G.drill || hintsOn);
+  if (bar.hidden === showBar){ bar.hidden = !showBar; if (showBar){ $('#coachText').textContent = G.drill ? 'Watching. Tips appear here.' : 'Tips appear here during the match.'; $('#coachText').classList.add('old'); } }
   const el = $('#tracker');
   if (!G || G.demo || !trackerOn){ el.hidden = true; return; }
   el.hidden = false; el.textContent = '';
@@ -2567,6 +2565,8 @@ const markLane = lane => G => { const t = G.ents.find(e => e.team === 1 && !e.ki
 const markAt = at => ({ at, run:G => { G.track.mark = G.track.towerHit[G.markId] || 0; } });
 const lowTower = (team, lane, hp) => G => { const t = G.ents.find(e => e.team === team && !e.king && (e.x < 9 ? 0 : 1) === lane); if (t) t.hp = hp; };
 const CLEAR = 'clear';
+const gNoLoss = { text:'Your towers take no damage at all', test:(T,G) => towerLoss(G,0) < 1, show:(T,G) => `lost ${Math.round(towerLoss(G,0))}` };
+const gAhead = { text:'Deal more tower damage than you take', test:(T,G) => towerLoss(G,1) > towerLoss(G,0), show:(T,G) => `${Math.round(towerLoss(G,1))} vs ${Math.round(towerLoss(G,0))}` };
 
 const DRILLS = [
   { id:'pull', name:'Pull the Charger', skill:'Building placement',
@@ -2576,12 +2576,12 @@ const DRILLS = [
       { label:'Two Chargers', time:40, elixir:7, deck:['turret','imps','squire','frost','spire','longbows','fireball','rattlers'], end:CLEAR,
         script:[ { at:0.3, say:'A Charger is coming on the right. Get your Bolt Turret ready.' }, { at:3, key:'charger', pos:[14.5,12.5] }, { at:19, say:'Another one, left lane this time.' }, { at:21, key:'charger', pos:[3.5,12.5] } ],
         goals:[ gNoHit(['charger'], 'Chargers'), gNet(8), gLoss(300) ] },
-      { label:'Charger with Imps', time:40, elixir:8, deck:['spire','imps','frost','squire','turret','longbows','fireball','log'], end:CLEAR,
-        script:[ { at:0.3, say:'Charger with Imps behind it. Pull the Charger and deal with the Imps cheaply.' }, { at:3, key:'charger', pos:[14.5,12.5] }, { at:3.4, key:'imps', pos:[14.5,10.5] } ],
-        goals:[ gNoHit(['charger'], 'The Charger'), gNet(6), gLoss(400) ] },
-      { label:'Brute, then Charger', time:45, elixir:8, deck:['turret','rattlers','imps','squire','spire','frost','fireball','longbows'], end:CLEAR,
-        script:[ { at:0.3, say:'A Brute on the left, then a Charger on the right. Both only hit buildings.' }, { at:2, key:'brute', pos:[3.5,10] }, { at:14, key:'charger', pos:[14.5,12.5] } ],
-        goals:[ gNoHit(['brute','charger'], 'Brute and Charger'), gNet(9), gLoss(400) ] } ] },
+      { label:'Charger, Imps, then a second Charger', time:45, elixir:7, deck:['spire','imps','frost','squire','turret','longbows','fireball','log'], end:CLEAR,
+        script:[ { at:0.3, say:'Charger with Imps. Another Charger follows on the other lane.' }, { at:3, key:'charger', pos:[14.5,12.5] }, { at:3.4, key:'imps', pos:[14.5,10.5] }, { at:13, key:'charger', pos:[3.5,12.5] } ],
+        goals:[ gNoHit(['charger'], 'Chargers'), gNet(7), gLoss(150) ] },
+      { label:'Mastery: three tower-hitters', time:50, elixir:6, deck:['turret','rattlers','imps','squire','spire','frost','wisp','longbows'], end:CLEAR,
+        script:[ { at:0.3, say:'Mastery. Two Chargers almost together, then a Brute. Not one hit on your towers.' }, { at:2, key:'charger', pos:[14.5,12.5] }, { at:5, key:'charger', pos:[3.5,12.5] }, { at:13, key:'brute', pos:[14.5,9] } ],
+        goals:[ gNoHit(['brute','charger'], 'Chargers and Brute'), gNet(9), gNoLoss ] } ] },
 
   { id:'trade', name:'Win the elixir trade', skill:'Elixir trades',
     brief:'An elixir trade is what you lose against what you destroy. Troops that survive the defence are not lost: spend 8 to stop an 8-elixir push but keep a full-health 3-elixir Squire, and you are really 3 ahead, with a counter-push already walking. Net cost here means what you spent minus what is still alive.',
@@ -2590,12 +2590,13 @@ const DRILLS = [
       { label:'Brute and Longbows', time:45, elixir:8, deck:['rattlers','imps','turret','squire','longbows','frost','fireball','crossbow'], end:CLEAR,
         script:[ { at:0.3, say:'The Rival is building a push: Brute in front, Longbows behind.' }, { at:2, key:'brute', pos:[14.5,9] }, { at:4, key:'longbows', pos:[14.5,6.8] } ],
         goals:[ gClear, gNet(8, true), gLoss(500) ] },
-      { label:'Squire and Sapper', time:40, elixir:7, deck:['cleaver','imps','log','squire','turret','longbows','frost','whirl'], end:CLEAR,
-        script:[ { at:0.3, say:'Squire in front, Sapper lobbing bombs from behind. 6 elixir.' }, { at:2, key:'squire', pos:[3.5,10] }, { at:3, key:'sapper', pos:[3.5,7.5] } ],
-        goals:[ gClear, gNet(6, true), gLoss(500) ] },
-      { label:'Drake and Longbows', time:40, elixir:8, deck:['longbows','crossbow','spire','imps','squire','frost','fireball','gloomwings'], end:CLEAR,
-        script:[ { at:0.3, say:'Flying Drake with Longbows. 7 elixir, and only some of your cards hit air.' }, { at:2, key:'drake', pos:[14.5,10] }, { at:3, key:'longbows', pos:[14.5,7.5] } ],
-        goals:[ gClear, gNet(7, true), gLoss(500) ] } ] },
+      { label:'Squire, Sapper and Imps', time:45, elixir:6, deck:['cleaver','imps','log','squire','turret','longbows','frost','whirl'], end:CLEAR,
+        script:[ { at:0.3, say:'8 elixir: Squire, Sapper behind, Imps after. Beat it for 5 or less.' }, { at:2, key:'squire', pos:[3.5,10] }, { at:3, key:'sapper', pos:[3.5,7.5] }, { at:7, key:'imps', pos:[3.5,12] } ],
+        goals:[ gClear, gNet(5), gLoss(300) ] },
+      { label:'Mastery: 13-elixir double push', time:55, elixir:7, deck:['log','cleaver','imps','whirl','turret','squire','frost','longbows'], end:CLEAR,
+        script:[ { at:0.3, say:'Mastery. Brute, Longbows and Sapper on the right, then Imps on the left. 13 elixir: stop it for 8 or less.' },
+          { at:2, key:'brute', pos:[14.5,9] }, { at:3.5, key:'longbows', pos:behind('brute', 2.5, [14.5,6.5]) }, { at:4.5, key:'sapper', pos:behind('brute', 3, [13.5,6.5]) }, { at:9, key:'imps', pos:[3.5,12] } ],
+        goals:[ gClear, gNet(8), gLoss(300) ] } ] },
 
   { id:'tradepure', name:'Two ways to count a trade', skill:'Raw spend vs value',
     brief:'There are two ways to count an exchange. The raw trade is just what each side spent. The value trade is what you destroyed minus what you actually lost, so troops still standing count in your favour at their remaining health. Each round asks you to win both at once, and the result shows both numbers.',
@@ -2612,10 +2613,10 @@ const DRILLS = [
         goals:[ gRaw(), gValue(2), gAlive(2) ] },
       { label:'Swarm and support', time:40, elixir:7, deck:['log','whirl','squire','imps','volley','turret','frost','longbows'], end:CLEAR,
         script:[ { at:0.3, say:'Rattlers with Longbows behind: 6 elixir that dies to splash.' }, { at:2, key:'rattlers', pos:[3.5,12.5] }, { at:2.6, key:'longbows', pos:[3.5,10] } ],
-        goals:[ gRaw(), gValue(3), gLoss(400) ] },
-      { label:'Charger and Imps', time:40, elixir:8, deck:['squire','turret','imps','cleaver','frost','log','longbows','spire'], end:CLEAR,
-        script:[ { at:0.3, say:'Charger and Imps: 6 elixir. Raw says spend less; value says keep a defender alive.' }, { at:2, key:'charger', pos:[14.5,12.5] }, { at:2.4, key:'imps', pos:[14.5,10.5] } ],
-        goals:[ gRaw(), gValue(2), gAlive(2) ] } ] },
+        goals:[ gRaw(), gValue(4), gLoss(200) ] },
+      { label:'Mastery: three waves', time:50, elixir:7, deck:['squire','turret','imps','cleaver','log','wisp','longbows','whirl'], end:CLEAR,
+        script:[ { at:0.3, say:'Mastery. Charger and Imps, then Rattlers on the other side. Win both counts big.' }, { at:2, key:'charger', pos:[14.5,12.5] }, { at:2.4, key:'imps', pos:[14.5,10.5] }, { at:11, key:'rattlers', pos:[3.5,12.5] } ],
+        goals:[ gRaw(), gValue(5), gAlive(3) ] } ] },
 
   { id:'swarm', name:'Splash versus swarms', skill:'Card matchups',
     brief:'Swarms (Rattlers, Imps and Gloomwings, like Skeleton Army, Goblins and Bats) melt to splash and small spells. One splash card that kills a whole swarm is a big win. Wait for the swarm to bunch up on a target before you hit it.',
@@ -2624,12 +2625,12 @@ const DRILLS = [
       { label:'Mixed waves', time:45, elixir:6, deck:['whirl','log','volley','sapper','squire','pyromancer','frost','turret'], end:CLEAR,
         script:[ { at:0.3, say:'Swarms incoming. One splash card should handle each wave.' }, { at:3, key:'rattlers', pos:[3.5,12.5] }, { at:13, key:'imps', pos:[14.5,12.5] }, { at:24, key:'gloomwings', pos:[14.5,12.5] }, { at:25, key:'imps', pos:[3.5,12.5] } ],
         goals:[ gLoss(400), gNet(9), gKills(3) ] },
-      { label:'Rattlers both lanes', time:45, elixir:7, deck:['log','whirl','volley','squire','sapper','turret','frost','imps'], end:CLEAR,
-        script:[ { at:0.3, say:'Rattlers on both sides. Splash them as they bunch.' }, { at:3, key:'rattlers', pos:[3.5,12.5] }, { at:11, key:'rattlers', pos:[14.5,12.5] }, { at:20, key:'imps', pos:[3.5,12.5] } ],
-        goals:[ gLoss(400), gNet(8), gKills(4) ] },
-      { label:'Air swarm', time:45, elixir:7, deck:['volley','pyromancer','longbows','frost','whirl','log','squire','spire'], end:CLEAR,
-        script:[ { at:0.3, say:'Gloomwings fly over ground splash. You need air splash or a spell.' }, { at:3, key:'gloomwings', pos:[14.5,12] }, { at:10, key:'gloomwings', pos:[3.5,12] }, { at:18, key:'rattlers', pos:[14.5,12.5] } ],
-        goals:[ gLoss(400), gNet(7), gKills(3) ] } ] },
+      { label:'Four quick waves', time:45, elixir:6, deck:['log','whirl','volley','squire','sapper','turret','frost','imps'], end:CLEAR,
+        script:[ { at:0.3, say:'Four swarms, close together. Splash them as they bunch.' }, { at:3, key:'rattlers', pos:[3.5,12.5] }, { at:9, key:'rattlers', pos:[14.5,12.5] }, { at:15, key:'imps', pos:[3.5,12.5] }, { at:19, key:'gloomwings', pos:[14.5,12] } ],
+        goals:[ gLoss(200), gNet(7), gKills(5) ] },
+      { label:'Mastery: both lanes at once', time:45, elixir:7, deck:['volley','log','pyromancer','whirl','frost','squire','longbows','wisp'], end:CLEAR,
+        script:[ { at:0.3, say:'Mastery. Swarms on both lanes at the same time, ground and air. 13 elixir of them.' }, { at:3, key:'rattlers', pos:[3.5,12.5] }, { at:3.2, key:'rattlers', pos:[14.5,12.5] }, { at:8, key:'gloomwings', pos:[3.5,12] }, { at:8.2, key:'gloomwings', pos:[14.5,12] }, { at:12, key:'imps', pos:[14.5,12.5] } ],
+        goals:[ gLoss(250), gNet(8), gKills(6) ] } ] },
 
   { id:'spell', name:'Spell value', skill:'Spell timing',
     brief:'Big spells are worth it when they hit several troops, or troops and a tower together. Let the Rival stack its ranged support behind the tank, wait until they bunch up, then hit them all at once. Never Fireball a lone cheap troop.',
@@ -2640,10 +2641,11 @@ const DRILLS = [
         goals:[ gSpell(4), gLoss(500), gNet(9, true) ] },
       { label:'Tank with Pyromancer', time:55, elixir:9, deck:['fireball','cleaver','imps','turret','meteor','squire','frost','longbows'], end:CLEAR,
         script:[ { at:0.3, say:'Brute up front, Pyromancer and Longbows behind. Spell the support, not the tank.' }, { at:2, key:'brute', pos:[3.5,8] }, { at:3, key:'pyromancer', pos:behind('brute', 2.2) }, { at:4, key:'longbows', pos:behind('brute', 3) } ],
-        goals:[ gSpell(5), gLoss(700), gNet(13, true) ] },
-      { label:'Spell on the tower', time:45, elixir:8, deck:['blight','fireball','squire','imps','turret','log','crossbow','frost'], end:CLEAR,
-        script:[ { at:0.3, say:'Their troops will reach your tower. Catch troops and tower area together.' }, { at:2, key:'longbows', pos:[14.5,10] }, { at:3, key:'sapper', pos:[13.5,10] }, { at:4, key:'imps', pos:[14.5,12] } ],
-        goals:[ gSpell(4), gLoss(600), gNet(8, true) ] } ] },
+        goals:[ gSpell(6), gLoss(500), gNet(11, true) ] },
+      { label:'Mastery: the full stack', time:55, elixir:9, deck:['blight','fireball','squire','cleaver','imps','log','turret','frost'], end:CLEAR,
+        script:[ { at:0.3, say:'Mastery. 15 elixir: Squire, then Longbows, Crossbowman and Pyromancer behind. Wait for the perfect spell.' },
+          { at:2, key:'squire', pos:[14.5,9] }, { at:3, key:'longbows', pos:behind('squire', 2.2, [14.5,6.8]) }, { at:4, key:'crossbow', pos:behind('squire', 2.6, [13.5,6.5]) }, { at:5, key:'pyromancer', pos:behind('squire', 3, [15.5,6.5]) } ],
+        goals:[ gSpell(8), gLoss(400), gNet(10, true) ] } ] },
 
   { id:'air', name:'Air defence', skill:'Defending air',
     brief:'Flying win conditions like the Zeppelin (the Balloon in Clash Royale) ignore ground troops entirely. You need anti-air ready, placed early enough that it shoots before the bomber reaches your tower. Keep your troops out of the death bomb.',
@@ -2652,12 +2654,13 @@ const DRILLS = [
       { label:'Two Zeppelins', time:45, elixir:8, deck:['spire','longbows','crossbow','gloomwings','squire','imps','fireball','frost'], end:CLEAR,
         script:[ { at:0.3, say:'Air attack. Ground troops cannot touch the Zeppelin.' }, { at:3, key:'zeppelin', pos:[14.5,10] }, { at:5, key:'gloomwings', pos:[14.5,12] }, { at:20, say:'Second Zeppelin, left lane.' }, { at:22, key:'zeppelin', pos:[3.5,10] } ],
         goals:[ gNoHit(['zeppelin'], 'Zeppelins'), gNet(10), gLoss(300) ] },
-      { label:'Drake and Zeppelin', time:45, elixir:9, deck:['crossbow','spire','longbows','frost','squire','imps','volley','gloomwings'], end:CLEAR,
-        script:[ { at:0.3, say:'A Drake first, then a Zeppelin behind it. Save anti-air for the bomber.' }, { at:2, key:'drake', pos:[3.5,10] }, { at:7, key:'zeppelin', pos:[3.5,8] } ],
-        goals:[ gNoHit(['zeppelin'], 'The Zeppelin'), gNet(9), gLoss(500) ] },
-      { label:'Brute shields a Zeppelin', time:50, elixir:9, deck:['spire','crossbow','imps','cleaver','longbows','frost','fireball','gloomwings'], end:CLEAR,
-        script:[ { at:0.3, say:'A Brute soaks tower shots while a Zeppelin follows. Kill the Zeppelin first.' }, { at:2, key:'brute', pos:[14.5,9] }, { at:5, key:'zeppelin', pos:behind('brute', 2.5, [14.5,6]) } ],
-        goals:[ gNoHit(['zeppelin'], 'The Zeppelin'), gNet(10), gLoss(700) ] } ] },
+      { label:'Drake, Zeppelin and Gloomwings', time:45, elixir:8, deck:['crossbow','spire','longbows','frost','squire','imps','volley','gloomwings'], end:CLEAR,
+        script:[ { at:0.3, say:'Drake first, then a Zeppelin with Gloomwings. Save anti-air for the bomber.' }, { at:2, key:'drake', pos:[3.5,10] }, { at:7, key:'zeppelin', pos:[3.5,8] }, { at:8, key:'gloomwings', pos:[3.5,10] } ],
+        goals:[ gNoHit(['zeppelin'], 'The Zeppelin'), gNet(8), gLoss(300) ] },
+      { label:'Mastery: Zeppelins on both lanes', time:50, elixir:8, deck:['spire','crossbow','longbows','gloomwings','frost','volley','imps','squire'], end:CLEAR,
+        script:[ { at:0.3, say:'Mastery. Two Zeppelins at once, one per lane, with a Brute shielding one. No bombs on your towers.' },
+          { at:2, key:'brute', pos:[14.5,9] }, { at:3, key:'zeppelin', pos:[3.5,10] }, { at:4, key:'zeppelin', pos:behind('brute', 2.5, [14.5,6]) } ],
+        goals:[ gNoHit(['zeppelin'], 'Zeppelins'), gNet(10), gLoss(300) ] } ] },
 
   { id:'tank', name:'Kill the tank', skill:'Defending beatdown',
     brief:'Huge tanks like the Stone Colossus (Golem) are slow and soak damage. Let them walk to you, meet them with a high-damage card (Cleaver, Ember Pylon, a swarm) near your tower, and save splash for the support behind. The elixir you save becomes your counter-push.',
@@ -2666,12 +2669,13 @@ const DRILLS = [
       { label:'Colossus and Pyromancer', time:60, elixir:9, deck:['cleaver','pylon','imps','rattlers','fireball','longbows','log','squire'], end:CLEAR,
         script:[ { at:0.3, say:'A Stone Colossus is starting at the back. Let it walk to you.' }, { at:1, key:'colossus', pos:[3.5,2.5] }, { at:12, key:'pyromancer', pos:behind('colossus') }, { at:12.5, say:'Support behind the tank. Splash it when it is in range of your tower.' } ],
         goals:[ gKeep, gLoss(1200), gNet(12, true) ] },
-      { label:'Brute and Crossbowman', time:50, elixir:8, deck:['rattlers','cleaver','turret','imps','log','squire','frost','fireball'], end:CLEAR,
-        script:[ { at:0.3, say:'Brute with a Crossbowman behind. Kill the Brute fast, then the shooter.' }, { at:2, key:'brute', pos:[14.5,7] }, { at:5, key:'crossbow', pos:behind('brute', 2.5, [14.5,5]) } ],
-        goals:[ gKeep, gLoss(700), gNet(9, true) ] },
-      { label:'Colossus on the right', time:60, elixir:9, deck:['pylon','imps','rattlers','volley','squire','cleaver','frost','longbows'], end:CLEAR,
-        script:[ { at:0.3, say:'Colossus on the right with Longbows behind.' }, { at:1, key:'colossus', pos:[14.5,2.5] }, { at:11, key:'longbows', pos:behind('colossus') } ],
-        goals:[ gKeep, gLoss(1100), gNet(10, true) ] } ] },
+      { label:'Brute, Crossbowman and Sapper', time:50, elixir:8, deck:['rattlers','cleaver','turret','imps','log','squire','frost','fireball'], end:CLEAR,
+        script:[ { at:0.3, say:'Brute with a Crossbowman and a Sapper behind. 12 elixir.' }, { at:2, key:'brute', pos:[14.5,7] }, { at:5, key:'crossbow', pos:behind('brute', 2.5, [14.5,5]) }, { at:6, key:'sapper', pos:behind('brute', 3, [13.5,5]) } ],
+        goals:[ gKeep, gLoss(500), gNet(8, true) ] },
+      { label:'Mastery: full beatdown', time:65, elixir:9, deck:['pylon','imps','rattlers','volley','cleaver','log','frost','squire'], end:CLEAR,
+        script:[ { at:0.3, say:'Mastery. Colossus with Pyromancer and Longbows, and a Charger on the other lane while you are busy.' },
+          { at:1, key:'colossus', pos:[14.5,2.5] }, { at:10, key:'pyromancer', pos:behind('colossus') }, { at:11, key:'longbows', pos:behind('colossus', 3) }, { at:16, key:'charger', pos:[3.5,12.5] } ],
+        goals:[ gKeep, gLoss(800), gNet(12, true) ] } ] },
 
   { id:'counter', name:'Defend, then counter-push', skill:'Counter-pushing',
     brief:'After a cheap defence your surviving troops walk to the bridge. Add one card behind them and you have a push the Rival must answer with fresh elixir. This is how most towers fall in Classic Challenge.',
@@ -2680,12 +2684,13 @@ const DRILLS = [
       { label:'After a Charger', time:45, elixir:7, deck:['squire','lancer','imps','longbows','fireball','frost','turret','charger'],
         script:[ { at:0.3, say:'Defend this Charger cheaply, then push back with what survives.' }, { at:2, key:'charger', pos:[14.5,12.5] }, { at:24, key:'squire', pos:[14.5,9] } ],
         goals:[ gDealt(600), gLoss(400), gNet(12) ] },
-      { label:'After a Brute', time:50, elixir:7, deck:['whirl','cleaver','imps','charger','longbows','frost','turret','log'],
-        script:[ { at:0.3, say:'Stop the Brute with a troop that lives, then go.' }, { at:2, key:'brute', pos:[3.5,9] }, { at:26, key:'imps', pos:[3.5,9] } ],
-        goals:[ gDealt(600), gLoss(500), gNet(12) ] },
-      { label:'After a Drake', time:45, elixir:7, deck:['crossbow','longbows','squire','lancer','frost','imps','spire','fireball'],
-        script:[ { at:0.3, say:'Shoot down the Drake, then counter on the same lane.' }, { at:2, key:'drake', pos:[14.5,10] }, { at:22, key:'squire', pos:[14.5,9] } ],
-        goals:[ gDealt(500), gLoss(400), gNet(11) ] } ] },
+      { label:'After a Brute, into a defence', time:50, elixir:7, deck:['whirl','cleaver','imps','charger','longbows','frost','turret','log'],
+        script:[ { at:0.3, say:'Stop the Brute with a troop that lives, then go. The Rival will defend.' }, { at:2, key:'brute', pos:[3.5,9] }, { at:22, key:'squire', pos:[3.5,9] }, { at:26, key:'imps', pos:[3.5,9] } ],
+        goals:[ gDealt(900), gLoss(300), gNet(10) ] },
+      { label:'Mastery: break a full defence', time:50, elixir:7, deck:['crossbow','longbows','squire','lancer','frost','imps','spire','fireball'],
+        script:[ { at:0.3, say:'Mastery. Drake first, then the Rival defends with a Squire, a Crossbowman and a Turret. Get 1000 through.' },
+          { at:2, key:'drake', pos:[14.5,10] }, { at:20, key:'squire', pos:[14.5,9] }, { at:24, key:'crossbow', pos:[14.5,5] }, { at:28, key:'turret', pos:[10,9] } ],
+        goals:[ gDealt(1000), gLoss(300), gNet(11) ] } ] },
 
   { id:'punish', name:'Punish the other lane', skill:'Opposite-lane pressure',
     brief:'When the Rival drops an expensive tank at the back, it has little elixir left for about ten seconds. Attack the opposite lane right then: they must split their defence or take free damage. Then come back and defend the tank.',
@@ -2694,12 +2699,13 @@ const DRILLS = [
       { label:'Colossus on the left', time:50, elixir:9, deck:['charger','imps','squire','cleaver','longbows','fireball','turret','frost'], setup:markLane(1),
         script:[ { at:0.3, say:'Watch the back left.' }, { at:2, key:'colossus', pos:[3.5,1.8] }, { at:2.4, say:'It just spent 7 elixir. Hit the RIGHT lane now.' }, markAt(22) ],
         goals:[ gMark(500, 20), gKeep, gLoss(1500) ] },
-      { label:'Brute on the right', time:45, elixir:9, deck:['burrower','imps','charger','cleaver','squire','frost','turret','longbows'], setup:markLane(0),
-        script:[ { at:0.3, say:'Watch the back right.' }, { at:2, key:'brute', pos:[14.5,2.5] }, { at:2.4, say:'Brute at the back. Pressure the LEFT lane.' }, markAt(20) ],
-        goals:[ gMark(400, 18), gKeep, gLoss(1000) ] },
-      { label:'Colossus on the right', time:50, elixir:10, deck:['lancer','charger','imps','squire','cleaver','fireball','turret','frost'], setup:markLane(0),
-        script:[ { at:0.3, say:'Big tank coming on the right.' }, { at:2, key:'colossus', pos:[14.5,1.8] }, { at:2.4, say:'7 elixir spent. Go LEFT, hard.' }, markAt(22) ],
-        goals:[ gMark(600, 20), gKeep, gLoss(1500) ] } ] },
+      { label:'Brute on the right, quick punish', time:45, elixir:9, deck:['burrower','imps','charger','cleaver','squire','frost','turret','longbows'], setup:markLane(0),
+        script:[ { at:0.3, say:'Watch the back right.' }, { at:2, key:'brute', pos:[14.5,2.5] }, { at:2.4, say:'Brute at the back. Pressure the LEFT lane, fast.' }, markAt(18) ],
+        goals:[ gMark(600, 16), gKeep, gLoss(800) ] },
+      { label:'Mastery: punish a live Rival', time:50, elixir:10, ai:true, aiDiff:'hard', rivalDeck:['squire','turret','imps','longbows','frost','fireball','cleaver','log'], deck:['lancer','charger','imps','squire','cleaver','fireball','turret','frost'], setup:markLane(0),
+        script:[ { at:0.3, say:'Mastery. Colossus on the right, and this Rival plays live: it will defend your punish.' }, { at:2, key:'colossus', pos:[14.5,1.8] }, { at:2.4, say:'7 elixir spent. Go LEFT, hard.' },
+          { at:7, key:'squire', pos:[3.5,9] }, { at:10, key:'turret', pos:[8,9] }, { at:14, key:'imps', pos:[3.5,9] }, markAt(20) ],
+        goals:[ gMark(1100, 18), gKeep, gLoss(1000) ] } ] },
 
   { id:'leak', name:'Never waste elixir', skill:'Elixir discipline',
     brief:'Sitting on 10 elixir throws elixir away every second. When you are full and nothing is happening, play a cheap card behind your king tower so it builds into a push. A slow start is one of the most common reasons matches are lost.',
@@ -2707,10 +2713,10 @@ const DRILLS = [
     rounds:[
       { label:'Easy Rival', time:60, elixir:5, ai:true, aiDiff:'easy', rivalDeck:STARTER, deck:['squire','longbows','imps','turret','fireball','frost','charger','sapper'],
         script:[ { at:0.3, say:'Keep your bar below full the whole time.' } ], goals:[ gLeak(1), gDealt(300), gLoss(600) ] },
-      { label:'Normal Rival', time:60, elixir:7, ai:true, aiDiff:'normal', deck:['brute','longbows','imps','log','squire','fireball','turret','wisp'],
-        script:[ { at:0.3, say:'A tougher Rival. Spend every drop, but on useful plays.' } ], goals:[ gLeak(1), gDealt(300), gLoss(800) ] },
-      { label:'Double elixir', time:45, elixir:8, ai:true, aiDiff:'normal', double:true, deck:['charger','squire','imps','wisp','log','fireball','longbows','turret'],
-        script:[ { at:0.3, say:'Double elixir: your bar fills twice as fast. Keep cycling.' } ], goals:[ gLeak(1.5), gDealt(400), gLoss(900) ] } ] },
+      { label:'Hard Rival', time:60, elixir:7, ai:true, aiDiff:'hard', deck:['brute','longbows','imps','log','squire','fireball','turret','wisp'],
+        script:[ { at:0.3, say:'A Hard Rival. Spend every drop, but on useful plays.' } ], goals:[ gLeak(0.5), gDealt(500), gLoss(600) ] },
+      { label:'Mastery: double elixir, Elite Rival', time:50, elixir:8, ai:true, aiDiff:'elite', double:true, deck:['charger','squire','imps','wisp','log','fireball','longbows','turret'],
+        script:[ { at:0.3, say:'Mastery. Double elixir against the Elite Rival. Waste nothing and come out ahead.' } ], goals:[ gLeak(0.5), gDealt(1000), gAhead ] } ] },
 
   { id:'closer', name:'Double elixir closer', skill:'Closing a match',
     brief:'In double elixir both sides get cards twice as fast. One of the Rival’s towers is already low. Finish it with a real push and a spell, but defend properly: giving up a tower now throws the match away.',
@@ -2718,10 +2724,10 @@ const DRILLS = [
     rounds:[
       { label:'Left tower on 900', time:60, elixir:7, ai:true, aiDiff:'normal', double:true, deck:['brute','longbows','imps','fireball','squire','charger','frost','crossbow'], setup:lowTower(1,0,900), end:'crown',
         script:[ { at:0.3, say:'Their left tower is on 900. Finish it.' } ], goals:[ gTake, gKeep, gFast(20) ] },
-      { label:'Both sides low', time:60, elixir:7, ai:true, aiDiff:'normal', double:true, deck:['charger','meteor','imps','squire','log','turret','longbows','frost'], setup:G => { lowTower(1,1,1200)(G); lowTower(0,0,900)(G); },
-        end:'crown', script:[ { at:0.3, say:'Their right tower is on 1200, but your left is on 900. Defend while you push.' } ], goals:[ gTake, gKeep, gFast(15) ] },
-      { label:'Hard Rival', time:60, elixir:7, ai:true, aiDiff:'hard', double:true, deck:['burrower','fireball','imps','cleaver','squire','log','spire','longbows'], setup:lowTower(1,0,1300), end:'crown',
-        script:[ { at:0.3, say:'A Hard Rival with its left tower on 1300.' } ], goals:[ gTake, gKeep, gFast(10) ] } ] }
+      { label:'Both sides low, Hard Rival', time:60, elixir:7, ai:true, aiDiff:'hard', double:true, deck:['charger','meteor','imps','squire','log','turret','longbows','frost'], setup:G => { lowTower(1,1,1200)(G); lowTower(0,0,900)(G); },
+        end:'crown', script:[ { at:0.3, say:'Their right tower is on 1200, your left is on 900, and the Rival is Hard.' } ], goals:[ gTake, gKeep, gFast(25) ] },
+      { label:'Mastery: Elite Rival', time:60, elixir:7, ai:true, aiDiff:'elite', double:true, deck:['burrower','fireball','imps','cleaver','squire','log','spire','longbows'], setup:G => { lowTower(1,0,1600)(G); lowTower(0,1,700)(G); }, end:'crown',
+        script:[ { at:0.3, say:'Mastery. Elite Rival. Their left tower is on 1600, your right is on 700. Take theirs first, fast.' } ], goals:[ gTake, gKeep, gFast(20) ] } ] }
 ];
 // The playable version of one round: the drill's shared text plus that round's scenario.
 function drillRound(d, i){
