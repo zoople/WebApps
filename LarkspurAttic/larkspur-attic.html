@@ -97,6 +97,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .orders::-webkit-scrollbar{display:none}
 .orders>.order{flex:0 0 calc((100% - 32px - 14px - 25px)/3.15);scroll-snap-align:start}
 .order.side{background:#2a2420;border:1px dashed #e4b84c55}
+.order.side.lucky{border:1px solid #78c27c99;background:#22291f}
 .orders>.grp{flex:0 0 18px;display:flex;align-items:center;justify-content:center;border-radius:8px;scroll-snap-align:start}
 .orders>.grp span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
 .orders>.grp.g-story{background:#e4b84c22;color:var(--gold)}
@@ -271,7 +272,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v13 · 13 Oct 2026';
+const VERSION='v14 · 13 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -508,20 +509,48 @@ function taskRewards(t){
 /* Jumble Sale: side orders that never run out, built from generators you already have,
    so there is always something to work on whatever happens to the story orders */
 function sideGens(){ const g=new Set(); S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&isGen(c.it)){ const m=CHAINS[c.it.k].main; if(m&&m!=='E'&&m!=='M') g.add(m); } }); return [...g]; }
+/* JUMBLE SALE DIFFICULTY. Orders get harder as the event goes on (higher levels, more rare items,
+   more two-item orders), which pushes you to upgrade generators. About 1 in 6 is a 🍀 lucky easy one.
+   progress(): 0 at the start of the event, 1 near the end. */
+function sideTargets(){
+  // chains you can actually make right now: each generator on the board gives its main chain and its rare chain
+  const m=new Map();
+  S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&isGen(c.it)){ const ch=CHAINS[c.it.k];
+    if(ch.main&&ch.main!=='E'&&ch.main!=='M'&&ch.main!=='V') m.set(ch.main,false);
+    if(typeof ch.rare==='string'&&CHAINS[ch.rare]&&!CHAINS[ch.rare].type) m.set(ch.rare,true); } });
+  return [...m].map(([k,rare])=>({k,rare}));
+}
 function makeSide(){
-  const pool=sideGens(); if(!pool.length) return null;
-  const hi = S.ch>=4?4 : S.ch>=2?3 : 2;
-  const pick=()=>[pool[Math.floor(Math.random()*pool.length)], 1+Math.floor(Math.random()*hi)];
-  // never ask for something that is already sitting on the board: a fresh order should take some work
+  const all=sideTargets(); if(!all.length) return null;
+  const common=all.filter(x=>!x.rare), rares=all.filter(x=>x.rare);
+  const p=Math.max(0,Math.min(1,sideProgress()));
+  const lucky=Math.random()<1/6;
+  const pickOne=(allowRare)=>{
+    const rare = allowRare && rares.length && Math.random() < .08+.32*p;
+    const t = rare ? rares[Math.floor(Math.random()*rares.length)] : (common.length?common:all)[Math.floor(Math.random()*(common.length?common:all).length)];
+    const top=maxL(t.k);
+    let l;
+    if(lucky) l=1+Math.floor(Math.random()*2);                          // 🍀 level 1-2
+    else if(t.rare) l=1+Math.floor(p*2.6+Math.random()*1.2);             // rare: 1-2 early, up to 4 late
+    else l=Math.round(1.6+p*3.6+(Math.random()*2-1));                    // common: ~2 early, ~5 late, ±1
+    return [t.k, Math.max(1,Math.min(l, top, t.rare?4:6))];
+  };
   let need;
   for(let tries=0;tries<20;tries++){
-    need=[pick()]; if(Math.random()<.35){ const b=pick(); b[1]=Math.max(1,b[1]-1); need.push(b); }
-    if(!need.every(([k,l])=>openCount(k,l)>0)) break;
+    need=[pickOne(!lucky)];
+    if(!lucky && Math.random()<.2+.35*p){ const b=pickOne(true); b[1]=Math.max(1,b[1]-1); if(b[0]!==need[0][0]||b[1]!==need[0][1]) need.push(b); }
+    if(!need.every(([k,l])=>openCount(k,l)>0)) break;                    // never already sitting on the board
   }
-  const size=need.reduce((a,[,l])=>a+(1<<(l-1)),0);
-  const rw=[['C', size>=6?2:1]]; if(Math.random()<.25) rw.push(['N',1]); else if(Math.random()<.4) rw.push(['X',1]);
+  const size=need.reduce((a,[k,l])=>a+(1<<(l-1))*(CHAINS[k].rare?3:1),0); // effort in level-1 items
   S.sideN=(S.sideN||0)+1;
-  return {id:'s'+S.sideN, who:'S', side:true, need, rw, say:'For the church jumble sale. Anything you can spare.'};
+  return {id:'s'+S.sideN, who:'S', side:true, lucky, need, rw:sideRewards(size,lucky), say: lucky?'A lucky find! Something small for the jumble sale.':'For the church jumble sale. Anything you can spare.'};
+}
+function sideProgress(){ return S.ch/5*.8 + Math.min(.2,(S.sideDone||0)/150); }
+function sideRewards(size,lucky){
+  const c = size>=24?3 : size>=8?2 : 1;
+  const rw=[['C',c]];
+  if(size>=24) rw.push(['N',2]); else if(size>=8 || Math.random()<.3) rw.push(['N',1]); else if(Math.random()<.4) rw.push(['X',1]);
+  return rw;
 }
 function ensureSide(){ S.side=S.side||[]; while(S.side.length<2){ const o=makeSide(); if(!o) break; S.side.push(o); } }
 
@@ -939,7 +968,7 @@ function completeTask(t){
   });
   SND.play('coins');
   if(t.side){
-    S.side=S.side.filter(o=>o.id!==t.id); dropItems(t.rw); ensureSide();
+    S.side=S.side.filter(o=>o.id!==t.id); S.sideDone=(S.sideDone||0)+1; dropItems(t.rw); ensureSide();
     toast(`🏷️ Sold at the jumble sale. Rewards are on the board`);
     save(); render(); return;
   }
@@ -1103,8 +1132,8 @@ function renderOrders(tasks){
     if(Array.isArray(t)){ label(t[1],t[2]); return; }
     const st=taskStatus(t);
     const el=document.createElement('div');
-    el.className='order'+(st.ready?' ready':'')+(t.side?' side':'');
-    el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${CAST[t.who].name}</span></div>
+    el.className='order'+(st.ready?' ready':'')+(t.side?' side':'')+(t.lucky?' lucky':'');
+    el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
       <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     el.onclick=()=>{ if(taskStatus(t).ready) completeTask(t); else hintTask(t); };
