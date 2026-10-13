@@ -68,6 +68,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .meters{display:grid;grid-template-columns:auto 1fr;gap:3px 8px;align-items:center;font-size:10px;color:var(--dim)}
 .meters .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .meters .bar i{display:block;height:100%;background:var(--sand);border-radius:2px}
+.meters .bar.tot i{background:var(--ink2)}
 .meters .bar.sil i{background:var(--teal)}
 .meters .dots{display:flex;gap:3px}
 .meters .dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
@@ -250,31 +251,33 @@ const TS=Math.max(1,+new URLSearchParams(location.search).get('speed')||1); // d
 
 /* ---------- course design ---------- */
 const COURSES=[5,10,15,20];
-// g = voice (how often the guide speaks), m = music level,
-// sf = share of the sit spent in silence, n = how many silences it is split into, b = bell pattern.
-// Each step changes one thing: when the music drops, the voice comes back up to carry you;
-// when the voice drops, the music and silence hold you. Silences grow longer, then fewer but bigger.
+// Voice (g), music (m) and bells (b) are three supports that are removed one at a time.
+// Pattern: a support drops while the others hold or lift to carry you over the step, then the
+// lifted one settles back down, once or twice, to a new, lower level. The total support
+// (see supportTotal) only ever falls, from 100 to 0.
+// g = voice (how often the guide speaks), m = music level, b = bell pattern,
+// sf = share of the sit spent in silence, n = how many silences it is split into.
 const LESSONS=[
- {t:"Zero", d:"Full guidance with gentle music. A voice walks you through every breath.", g:1, m:1, sf:0, n:0, b:"ends"},
- {t:"Soft Landing", d:"The music eases back a touch. Everything else stays just as it was.", g:1, m:0.9, sf:0, n:0, b:"ends"},
- {t:"First Pause", d:"A short silence appears for the first time. The voice explains what to do.", g:1, m:0.9, sf:0.05, n:1, b:"ends"},
- {t:"Settling", d:"The voice leaves a little more room. The music stays, so the quiet feels held.", g:0.9, m:0.9, sf:0.08, n:1, b:"ends"},
- {t:"Quarter Bells", d:"The music drops, so the voice steps back up to guide you. Bells now mark each quarter.", g:1, m:0.75, sf:0.1, n:2, b:"quarters"},
- {t:"Fewer Words", d:"Fewer spoken cues. The music and the silences hold you.", g:0.85, m:0.75, sf:0.13, n:2, b:"quarters"},
- {t:"Thinner Music", d:"The music thins, and the voice comes back to support you.", g:0.95, m:0.6, sf:0.17, n:2, b:"quarters"},
- {t:"Space", d:"The voice relaxes into longer gaps while the silences stretch.", g:0.75, m:0.6, sf:0.21, n:2, b:"quarters"},
- {t:"Longer Pauses", d:"The music drops again; the voice returns. Three silences, each a little longer.", g:0.85, m:0.45, sf:0.26, n:3, b:"quarters"},
- {t:"Breathing Room", d:"The voice steps back. Longer stretches are yours alone.", g:0.65, m:0.45, sf:0.31, n:3, b:"quarters"},
- {t:"Soft Music", d:"The music becomes a faint colour; the voice is a little more present to compensate.", g:0.75, m:0.3, sf:0.37, n:3, b:"quarters"},
- {t:"Short Cues", d:"The guide eases to short, spaced cues. Faint music still beneath you.", g:0.55, m:0.3, sf:0.43, n:3, b:"quarters"},
- {t:"Distant Guide", d:"Music fades further, so the voice stays with you through longer silences.", g:0.65, m:0.18, sf:0.49, n:3, b:"quarters"},
- {t:"One Word", d:"The voice drops to a word here and there. The music is nearly a whisper.", g:0.45, m:0.18, sf:0.55, n:3, b:"quarters"},
- {t:"Almost Silent", d:"The music nearly disappears. Silence takes up more than half the sit.", g:0.55, m:0.08, sf:0.61, n:3, b:"quarters"},
- {t:"A Few Whispers", d:"Only a few words now. A bell marks the middle, and the silences stretch.", g:0.35, m:0.08, sf:0.67, n:3, b:"half"},
- {t:"No Music", d:"The music ends. The voice returns a little to bridge the gap.", g:0.45, m:0, sf:0.67, n:3, b:"half"},
- {t:"Open & Close", d:"The voice thins again. A bell to begin, a bell to end, long silences between.", g:0.3, m:0, sf:0.74, n:2, b:"ends"},
- {t:"One Bell", d:"Barely any voice. One bell to begin, then mostly silence. A soft light marks the end.", g:0.15, m:0, sf:0.82, n:2, b:"start"},
- {t:"Zen", d:"Nothing. No voice, no music, no bell, no tone. Only you and the time.", g:0, m:0, sf:1, n:0, b:"none"},
+ {t:"Zero", d:"Everything on: full voice, full music, a bell each quarter.", g:1, m:1, b:"quarters", sf:0, n:0},
+ {t:"Quieter Voice", d:"Only the voice steps back. Music and bells hold you.", g:0.8, m:1, b:"quarters", sf:0, n:0},
+ {t:"First Pause", d:"The voice steps back again and a first short silence appears. The guide explains it.", g:0.6, m:1, b:"quarters", sf:0.05, n:1},
+ {t:"Music Eases", d:"The music drops, so the voice lifts to see you over the step.", g:0.8, m:0.75, b:"quarters", sf:0.08, n:1},
+ {t:"Voice Settles", d:"The voice settles back down. The music stays.", g:0.6, m:0.75, b:"quarters", sf:0.11, n:2},
+ {t:"Fewer Words", d:"The voice steps down again. You are now on less music and less voice.", g:0.4, m:0.75, b:"quarters", sf:0.14, n:2},
+ {t:"Softer Music", d:"The music drops again, and the voice lifts to carry you over it.", g:0.6, m:0.5, b:"quarters", sf:0.18, n:2},
+ {t:"Settling In", d:"The voice settles back down.", g:0.4, m:0.5, b:"quarters", sf:0.22, n:2},
+ {t:"Room to Breathe", d:"The voice steps down once more. The silences stretch.", g:0.25, m:0.5, b:"quarters", sf:0.27, n:3},
+ {t:"Faint Music", d:"The music fades to a faint colour, and the voice lifts a little to help.", g:0.45, m:0.25, b:"quarters", sf:0.32, n:3},
+ {t:"Steady Footing", d:"The voice settles back down.", g:0.3, m:0.25, b:"quarters", sf:0.37, n:3},
+ {t:"Short Cues", d:"Only short, spaced cues now.", g:0.15, m:0.25, b:"quarters", sf:0.42, n:3},
+ {t:"No Music", d:"The music ends. The voice lifts to guide you through the change.", g:0.35, m:0, b:"quarters", sf:0.48, n:3},
+ {t:"Bare Voice", d:"The voice steps back down. Bells and silence carry the sit.", g:0.2, m:0, b:"quarters", sf:0.54, n:3},
+ {t:"Fewer Bells", d:"The bells thin to the middle one, and the voice lifts a little to help.", g:0.35, m:0, b:"half", sf:0.6, n:3},
+ {t:"Quiet Again", d:"The voice settles back down.", g:0.2, m:0, b:"half", sf:0.66, n:3},
+ {t:"Two Bells", d:"The bells thin to the start and end, and the voice lifts briefly.", g:0.3, m:0, b:"ends", sf:0.72, n:3},
+ {t:"A Few Words", d:"The voice steps down again. Mostly silence now.", g:0.15, m:0, b:"ends", sf:0.78, n:2},
+ {t:"One Bell", d:"A single bell to begin, a few words, and a soft light at the end.", g:0.2, m:0, b:"start", sf:0.86, n:2},
+ {t:"Zen", d:"Nothing. No voice, no music, no bell, no tone. Only you and the time.", g:0, m:0, b:"none", sf:1, n:0},
 ];
 const NL=LESSONS.length;
 const BELLS={none:[],start:[0],ends:[0,1],half:[0,.5,1],quarters:[0,.25,.5,.75,1]};
@@ -392,10 +395,12 @@ $('#playBtn').onclick=()=>{const t=target();beginSession(t.c,t.l)};
 
 /* ---------- courses ---------- */
 let viewCourse=5;
-function metersHTML(L){
+const BELL_LEVEL={quarters:1,half:.6,ends:.4,start:.2,none:0};
+const supportTotal=L=>Math.round(100*(L.g+L.m+BELL_LEVEL[L.b])/3);
+function metersHTML(L,total){
   const n={none:0,start:1,ends:2,half:3,quarters:5}[L.b];
   let dots='';for(let i=0;i<5;i++)dots+='<i'+(i<n?' class="on"':'')+'></i>';
-  return '<div class="meters"><span>Voice</span><div class="bar"><i style="width:'+Math.round(L.g*100)+'%"></i></div>'+
+  return '<div class="meters">'+(total?'<span>Support</span><div class="bar tot"><i style="width:'+supportTotal(L)+'%"></i></div>':'')+'<span>Voice</span><div class="bar"><i style="width:'+Math.round(L.g*100)+'%"></i></div>'+
          '<span>Music</span><div class="bar"><i style="width:'+Math.round(L.m*100)+'%"></i></div>'+
          '<span>Silence</span><div class="bar sil"><i style="width:'+Math.round(L.sf*100)+'%"></i></div>'+
          '<span>Bells</span><div class="dots">'+dots+'</div></div>';
@@ -405,7 +410,7 @@ function renderCourses(){
   $$('#tabs .tab').forEach(b=>b.onclick=()=>{viewCourse=+b.dataset.c;renderCourses()});
   const dn=st.done[viewCourse].length;
   $('#progBar').style.width=(dn/NL*100)+'%';
-  $('#courseNote').textContent=(dn>=NL?'Course complete. ':'')+NL+' lessons, one a day. Each step changes one thing at a time, and silences grow longer as you go. Tap any lesson to sit it, and repeat whenever you like.'+(satToday()?' You’ve already sat today. Come back tomorrow for the next step, or repeat any lesson now.':'');
+  $('#courseNote').textContent=(dn>=NL?'Course complete. ':'')+NL+' lessons, one a day. Voice, music and bells are removed one at a time, each step cushioned by the others, while silences grow longer. Tap any lesson to sit it, and repeat whenever you like.'+(satToday()?' You’ve already sat today. Come back tomorrow for the next step, or repeat any lesson now.':'');
   const t=target();
   $('#lessonGrid').innerHTML=LESSONS.map((L,i)=>{
     const n=i+1,isNext=t.c===viewCourse&&t.l===n;
@@ -417,7 +422,7 @@ function renderCourses(){
 }
 function openSheet(c,l){
   const L=LESSONS[l-1];
-  $('#sheetHost').innerHTML='<div class="sheet" id="sheet"><div class="box"><div class="sub">'+c+' minutes · Lesson '+l+' of '+NL+'</div><h3>'+L.t+'</h3><p>'+L.d+'</p>'+metersHTML(L)+
+  $('#sheetHost').innerHTML='<div class="sheet" id="sheet"><div class="box"><div class="sub">'+c+' minutes · Lesson '+l+' of '+NL+'</div><h3>'+L.t+'</h3><p>'+L.d+'</p>'+metersHTML(L,true)+
     '<div class="acts"><button class="link" id="shClose">Close</button><button class="cta" id="shGo">Begin · '+c+' min</button></div></div></div>';
   $('#shClose').onclick=closeSheet;
   $('#sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet()};
@@ -524,10 +529,10 @@ const AU={
   /* low, gentle tone that announces a silence */
   silenceTone(){
     const c=this.ctx;if(!c)return;const t=c.currentTime+.05,len=9;
-    const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=320;
+    const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=420;
     const g=c.createGain();
     g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.2,t+3);g.gain.setValueAtTime(.2,t+4.6);g.gain.linearRampToValueAtTime(0,t+len);
-    [[82.41,1],[164.81,.25],[123.47,.18]].forEach(([f,a])=>{
+    [[110,1],[220,.3],[165,.15]].forEach(([f,a])=>{
       const o=c.createOscillator(),og=c.createGain();o.type='sine';o.frequency.value=f;og.gain.value=a;
       o.connect(og);og.connect(lp);o.start(t);o.stop(t+len+.1);
     });
