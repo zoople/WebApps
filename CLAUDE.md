@@ -41,6 +41,8 @@ Static browser apps, published with GitHub Pages from `main`
 - Develop on the session branch, then open a PR to `main`.
 - **Ask the user a yes/no question (AskUserQuestion) before merging**, then squash-merge it yourself.
   Don't make them click through GitHub.
+  - **Exception: `LarkspurAttic/` (Larkspur Attic and the Sandbox).** Don't ask. Squash-merge the PR
+    automatically as soon as it's ready, then report as usual.
 - After merging, reply with: the live link with `?v=<n>` appended (cache-buster), what changed as
   plain bullets, and what was and wasn't tested. Pages takes about a minute to deploy.
 - Pages must be enabled once: repo Settings → Pages → Deploy from a branch → `main` / root.
