@@ -36,6 +36,14 @@ Static browser apps, published with GitHub Pages from `main`
    - Test: record the output with an AudioWorklet in headless Chromium and check peak level and
      sample discontinuities before shipping.
 
+7. **Work fully offline.** No Google Fonts, CDNs or other internet requests: a stylesheet that can't load
+   leaves a blank screen on a weak connection. Embed fonts with
+   `python3 tools/embed-fonts.py <app.html> <google/fonts checkout> "Family|file.ttf|style|weight[|wght=min:max]"`.
+   Register an offline service worker next to the app (copy `Grace/sw.js`, list the app's files, use its own
+   cache prefix; root apps scope it, e.g. `bridgeburn-sw.js` with `{scope:'./bridgeburn'}`).
+   **Test offline before shipping**: headless Chromium with the network off and with every request hanging,
+   both from the file and served over http after the worker installs. The page must paint in under a second.
+
 ## Publishing workflow
 
 - Develop on the session branch, then open a PR to `main`.
