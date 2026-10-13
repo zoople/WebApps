@@ -93,7 +93,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .ms:not(.done) .tr{opacity:.55}
 @media (max-width:390px){ .top #eTimer{display:none} .top .pill{font-size:13px;padding:4px 7px 4px 5px} }
 .top{gap:5px}.top .pill{padding:4px 8px 4px 6px;gap:4px}.top .iconbtn{width:34px;height:34px;flex:none}.top .spacer{min-width:0}
-.slotlv{position:absolute;right:2px;top:1px;min-width:16px;height:16px;border-radius:8px;background:var(--velvet);color:#fff;font-size:10px;font-weight:800;font-style:normal;display:grid;place-items:center;padding:0 3px;pointer-events:none;box-shadow:0 1px 2px #0008}
+.slotlv{position:absolute;right:0;top:0;width:22px;height:22px;display:grid;place-items:center;padding-top:2px;font-size:10px;font-weight:800;font-style:normal;color:#3a2410;pointer-events:none;z-index:2;
+  background:linear-gradient(#ffe48a,#e4b84c);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);filter:drop-shadow(0 1px 1px #0008)}
+.slotchips{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);font-size:9.5px;font-weight:800;font-style:normal;background:#000a;color:#fff;border-radius:6px;padding:0 4px;white-space:nowrap;pointer-events:none;font-variant-numeric:tabular-nums}
 .reel{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:45;display:flex;gap:8px;padding:10px 12px;border-radius:16px;background:linear-gradient(#2e2125,#1d1517);border:2px solid var(--gold);box-shadow:0 12px 30px #000c;pointer-events:none}
 .reel span{width:54px;height:62px;border-radius:10px;background:#f4e8d3;display:grid;place-items:center;font-size:34px;box-shadow:inset 0 3px 6px #0004}
 .reel.win{border-color:var(--ok)}.reel.junk{border-color:#8a7a6a;opacity:.92}
@@ -265,6 +267,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <li>🌕 Points event: swaps give moon tokens, points hit story milestones</li>
     <li>⏱ Every generator has charges that refill on a timer</li>
     <li>🎰 Slot machine: spend chips 🔴, chase 7️⃣7️⃣7️⃣, merge machines to level up</li>
+    <li>🔴 Chips: crates, Jumble Sale swaps, recycled scrap, or the 🛒 store</li>
     <li>Separate save. Larkspur Attic is untouched</li>
   </ul>
   <button id="playBtn">Play</button>
@@ -299,7 +302,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v6 · 13 Oct 2026';
+const VERSION='v7 · 13 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -833,7 +836,7 @@ let spinning=false;
 function spin(i){
   const it=S.cells[i].it;
   if(spinning) return;
-  if(S.chips<SLOT_COST){ SND.play('nope'); toast('Out of casino chips 🔴. Get more from crates, the Jumble Sale, scrap, or the 🛒 Store.'); return; }
+  if(S.chips<SLOT_COST){ SND.play('nope'); showChipHelp(); return; }
   S.chips-=SLOT_COST; spinning=true;
   const tab=slotTable(it.l), tot=tab.reduce((a,t)=>a+t.w,0); let x=Math.random()*tot, out=tab[0];
   for(const t of tab){ x-=t.w; if(x<=0){ out=t; break; } }
@@ -860,6 +863,20 @@ function recycle(i){
   S.cells[i].it=null; sel=-1; fx[i]='reveal'; S.chips+=1; SND.play('reveal');
   toast('🧱 Scrap recycled. +1 casino chip 🔴'); save(); render();
 }
+/* where chips come from, with a direct buy */
+function chipSourcesHTML(){
+  return `<div class="tier"><span class="tp">📦</span><span class="tr" style="font-size:13px;letter-spacing:0">Tap crates: 1 in 7 drops is a chip</span></div>
+    <div class="tier"><span class="tp">🏷️</span><span class="tr" style="font-size:13px;letter-spacing:0">Jumble Sale swaps: 1 in 5 pays a chip</span></div>
+    <div class="tier"><span class="tp">🧱</span><span class="tr" style="font-size:13px;letter-spacing:0">Merge junk to a Scrap Bale, tap it: +1 chip</span></div>
+    <div class="tier"><span class="tp">🎰</span><span class="tr" style="font-size:13px;letter-spacing:0">Spin 🔴🔴🔴 on the slot for chips back</span></div>
+    <div class="tier"><span class="tp">🛒</span><span class="tr" style="font-size:13px;letter-spacing:0">Buy 10 chips for 🪙 15</span><button class="sbtn" id="buyChips2" ${S.coins<15?'disabled style="opacity:.5"':''}>Buy</button></div>
+    <p style="color:var(--muted);font-size:12px">Chips you pick up on the board are 🔴 / 🟡 / 🟣 (1 / 3 / 8). Tap twice to add them.</p>`;
+}
+function showChipHelp(){
+  openModal(`<h2>🔴 Out of chips</h2><p>You have ${S.chips} chip${S.chips===1?'':'s'}. Each spin costs ${SLOT_COST}.</p><h3>Where chips come from</h3>${chipSourcesHTML()}
+    <div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
+  $('buyChips2').onclick=()=>{ if(S.coins<15) return; S.coins-=15; S.chips+=10; SND.play('coin'); toast('+10 casino chips 🔴'); save(); render(); closeModal(); };
+}
 function slotPrice(){ return 40+30*(S.slotsBought||0); }
 function showStore(){
   const sp=slotPrice();
@@ -867,6 +884,7 @@ function showStore(){
     <p>🪙 ${S.coins} · 🔴 ${S.chips} chips</p>
     <div class="tier"><span class="tp">🎰</span><span class="tr" style="font-size:14px;letter-spacing:0">Slot Machine 1<br><small style="color:var(--muted)">Price rises each time</small></span><button class="sbtn" id="buySlot" ${S.coins<sp?'disabled style="opacity:.5"':''}>🪙 ${sp}</button></div>
     <div class="tier"><span class="tp">🔴</span><span class="tr" style="font-size:14px;letter-spacing:0">10 Casino Chips</span><button class="sbtn" id="buyChips" ${S.coins<15?'disabled style="opacity:.5"':''}>🪙 15</button></div>
+    <h3>Other ways to get chips</h3>${chipSourcesHTML().replace(/<div class="tier"><span class="tp">🛒[\s\S]*?<\/div>/,'')}
     <div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('buySlot').onclick=()=>{ if(S.coins<sp) return; S.coins-=sp; S.slotsBought=(S.slotsBought||0)+1; S.gifts.push(['SL',1]); SND.play('gift'); toast('🎰 Slot machine added to your gifts 🎁'); save(); render(); showStore(); };
   $('buyChips').onclick=()=>{ if(S.coins<15) return; S.coins-=15; S.chips+=10; SND.play('coin'); toast('+10 casino chips 🔴'); save(); render(); showStore(); };
@@ -1137,7 +1155,7 @@ function render(){
           }
           else if(d.want){ const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="bubble">${w.e}<b class="arr">↓</b></i>`; cls+=' hungry'; }
           else if(d.fuelled){ if(c.it.fuel) html+=`<i class="gen">🔥${c.it.fuel}</i>`; else { html+=`<i class="bubble">🪵📄<b class="arr">↓</b></i>`; cls+=' cool hungry'; } }
-          else if(CHAINS[c.it.k].slot) html+=`<i class="slotlv">${c.it.l}</i>`;
+          else if(CHAINS[c.it.k].slot){ html+=`<i class="slotlv">${c.it.l}</i>`; if(S.chips>0) html+=`<i class="slotchips">🔴${S.chips}</i>`; else { html+=`<i class="bubble">🔴?<b class="arr">↓</b></i>`; cls+=' cool hungry'; } }
           else if(d.uses) html+=`<i class="gen">${d.free?'':'⚡'}${c.it.left}</i>`;
           else html+=`<i class="gen">⚡</i>`;
           if(d.charges && chargedCell(i)){ cls+=' charged'; html+=`<i class="x2">×2</i>`; }
@@ -1231,10 +1249,10 @@ function renderInfo(){
   const it=c.it, d=def(it), ch=CHAINS[it.k];
   let ds='';
   if(ch.slot){
-    ds=`Tap again to spin for ${SLOT_COST} chip 🔴 (you have ${S.chips}). 7️⃣7️⃣7️⃣ is the jackpot.`+(it.l<5?` Merge two for a Slot Machine ${it.l+1}.`:' Top level.');
-    box.innerHTML=`<div class="big">🎰</div><div class="txt"><div class="nm">Slot Machine ${it.l}<small>pays better each level</small></div><div class="ds">${ds}</div></div>
-      <div class="btns"><button class="sbtn" id="payBtn">Odds</button><button class="sbtn" id="storeBtn">🛒 Store</button></div>`;
-    $('payBtn').onclick=()=>showPaytable(it.l); $('storeBtn').onclick=showStore; return;
+    ds=`${S.chips} chip${S.chips===1?'':'s'} 🔴 · tap again to spin (1 chip). 7️⃣7️⃣7️⃣ is the jackpot.`+(it.l<5?` Merge two for a ⭐${it.l+1}.`:' Top level.');
+    box.innerHTML=`<div class="big">🎰</div><div class="txt"><div class="nm">Slot Machine ⭐${it.l}<small>pays better each level</small></div><div class="ds">${ds}</div></div>
+      <div class="btns"><button class="sbtn" id="payBtn">Odds</button><button class="sbtn" id="chipBtn">Get 🔴</button></div>`;
+    $('payBtn').onclick=()=>showPaytable(it.l); $('chipBtn').onclick=showChipHelp; return;
   }
   if(it.k==='J'){
     ds = d.recycle ? 'Tap again to recycle it: +1 casino chip 🔴.' : `Junk from the slot machine. Can’t be sold. Merge two up to a 🧱 Scrap Bale to get rid of it.`;
