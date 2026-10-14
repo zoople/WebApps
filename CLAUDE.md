@@ -33,6 +33,10 @@ Static browser apps, published with GitHub Pages from `main`
      jump ahead instead of scheduling into the past.
    - Soft timbres: filtered, detuned pairs (triangle/sine, or saw under a low-pass). No raw square waves
      or bright high partials. Suspend the context when the page is hidden.
+   - Best fix (Larkspur Attic v16): pre-render music loops and SFX in an `OfflineAudioContext` and play
+     buffers live (loop the music with `loop=true`, fold the reverb tail onto the start). Nothing synthesises
+     in real time, so main-thread jank can't underrun. In the offline render, create nodes just ahead of the
+     render position (`suspend()` every second) and disconnect finished ones, or the render is ~16× slower.
    - Test: record the output with an AudioWorklet in headless Chromium and check peak level and
      sample discontinuities before shipping.
 

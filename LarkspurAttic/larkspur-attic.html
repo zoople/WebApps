@@ -81,6 +81,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .bar{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
 .xprow{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .xpbtn{flex:1;display:flex;align-items:center;gap:8px;padding:0;text-align:left;color:inherit;min-width:0}
+/* compact HUD so the gift, full-screen, book and menu buttons fit at 360 px */
+@media (max-width:390px){ .top #eTimer{display:none} .top .pill{font-size:13px;padding:4px 7px 4px 5px} }
+.top{gap:5px}.top .pill{padding:4px 8px 4px 6px;gap:4px}.top .iconbtn{width:34px;height:34px;flex:none}.top .spacer{min-width:0}
 .passbtn{position:relative;display:flex;align-items:center;gap:4px;background:#1f2238;border:1px solid #8ea0ff44;border-radius:999px;padding:2px 9px;font-size:12px;color:#dfe4ff}
 .passbtn .dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--velvet);box-shadow:0 0 0 2px var(--bg)}
 .tier{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #ffffff10}
@@ -219,6 +222,38 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .t{background:#120c0ee8;border:1px solid #e4b84c55;color:var(--ink);padding:8px 14px;border-radius:12px;font-size:13.5px;text-align:center;animation:rise .2s ease-out;box-shadow:0 8px 20px #0008}
 #ghost{position:fixed;left:0;top:0;z-index:40;pointer-events:none;font-size:calc(var(--cs)*.75);line-height:1;transform:translate(-999px,-999px);filter:drop-shadow(0 8px 6px #0009)}
 
+/* book hub: pip, tabs, quests, collection reveals */
+.iconbtn{position:relative}
+.pip{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#e8584a;color:#fff;font:800 11px/17px system-ui,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px var(--bg);pointer-events:none}
+.tabs{display:flex;gap:6px;margin:0 0 10px}
+.tabs button{flex:1;position:relative;padding:10px 4px;border-radius:12px;background:#ffffff10;border:1px solid #ffffff14;font-weight:800;font-size:13px;color:inherit}
+.tabs button.on{background:var(--gold);color:#2a1a10}
+.tabs .pip{top:-6px;right:-2px}
+.quest{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:#ffffff0c;margin:6px 0}
+.quest .qi{font-size:26px;flex:none}
+.quest .qb{flex:1;min-width:0}
+.quest .qn{font-weight:800;font-size:14px}
+.quest .qbar{height:7px;border-radius:4px;background:#ffffff18;overflow:hidden;margin:5px 0 3px}
+.quest .qbar i{display:block;height:100%;background:var(--gold);border-radius:4px}
+.quest .qs{font-size:12px;color:var(--muted)}
+.quest.done{box-shadow:inset 0 0 0 2px var(--gold);background:#e4b84c18}
+.quest.fin{opacity:.55}
+.chain .ci.wrap{cursor:pointer;color:var(--gold);font-weight:800}
+.chain .ci.wrap span{background:linear-gradient(135deg,#6a4bb8,#b5487f);animation:wrapglow 1.6s ease-in-out infinite}
+.chain .ci.flip span{animation:flip .5s ease}
+.chain .ci .rw{display:block;font-size:10px;color:var(--gold);font-weight:800}
+.cgrp{margin:14px 0 4px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.cname{margin:10px 0 6px;font-weight:800;display:flex;justify-content:space-between}
+.cname small{color:var(--muted);font-weight:700}
+@keyframes wrapglow{0%,100%{box-shadow:0 0 0 0 #e4b84c00}50%{box-shadow:0 0 0 3px #e4b84ccc}}
+@keyframes flip{0%{transform:rotateY(0) scale(1)}50%{transform:rotateY(90deg) scale(1.15)}100%{transform:rotateY(0) scale(1)}}
+/* a new story order shows big at the bottom, then flies up into the order row */
+.arrive{position:fixed;z-index:60;pointer-events:none;will-change:transform}
+.arrive .order{box-shadow:0 10px 30px #000a;border-color:var(--gold)}
+.arrive-tag{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:6px;white-space:nowrap;background:var(--gold);color:#2a1a10;font-weight:800;font-size:11px;padding:3px 9px;border-radius:999px}
+.order.incoming{visibility:hidden}
+.order.landed{animation:landed .5s ease}
+@keyframes landed{0%{transform:scale(1.15);box-shadow:0 0 0 3px var(--gold)}100%{transform:scale(1)}}
 @keyframes pop{0%{transform:scale(.4)}100%{transform:scale(1)}}
 @keyframes spawn{0%{transform:scale(0) translateY(30%)}100%{transform:scale(1)}}
 @keyframes pulse{50%{transform:scale(.85)}}
@@ -242,6 +277,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <li>Jumble Sale orders are always open</li>
     <li>Claim moons 🌑 for Moon Pass rewards; merged moons are worth more</li>
     <li>No timer. Play at your own pace</li>
+    <li>📖 Quests and new finds pay out rewards</li>
   </ul>
   <button id="playBtn">Play</button>
   <p id="iosHint" class="best" hidden>📱 Full screen on iPhone: Share → Add to Home Screen</p>
@@ -256,7 +292,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <span class="spacer"></span>
     <button class="pill gift" id="giftBtn" hidden>🎁 <b id="giftCount">1</b></button>
     <button class="iconbtn" id="fsBtn" aria-label="Full screen" title="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path id="fsPath" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
-    <button class="iconbtn" id="journalBtn" aria-label="Journal">📖</button>
+    <button class="iconbtn" id="journalBtn" aria-label="Quests, collection and journal">📖<i class="pip" id="bookPip" hidden></i></button>
     <button class="iconbtn" id="menuBtn" aria-label="Menu">⋯</button>
   </header>
   <section class="chapter">
@@ -274,7 +310,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v15 · 14 Oct 2026';
+const VERSION='v16 · 14 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -590,109 +626,118 @@ function stageReward(l){ return l%4===0 ? [['H',1],['C',2]] : l%2 ? [['C',2]] : 
    warm on phone speakers. Voices are filtered, detuned pairs with soft attacks: no raw square or
    bright partials, which is what makes synth audio sound "8-bit". */
 const SND = (()=>{
+  /* Everything is pre-rendered in an OfflineAudioContext (music loop + every sound effect), so the
+     live audio thread only plays buffers: no real-time synthesis, no live convolver, nothing the
+     main thread can starve. That is what removes the intermittent crackle on phones. */
   const PREF_KEY='larkspur-attic-audio';
   let pref={music:true,sfx:true};
   try{ const p=JSON.parse(localStorage.getItem(PREF_KEY)||'null'); if(p) pref={...pref,...p}; }catch(e){}
-  let ctx=null, out, sfxG, musG, revIn, noiseBuf, timer=null, nextT=0, step=0, lastNote=57, live=0;
+  let ctx=null, out, sfxG, musG, live=0, musSrc=null, musBuf=null, musWant=false;
+  const BUF={};
   const MAX_SFX_VOICES=28;
   const mtof=m=>440*Math.pow(2,(m-69)/12);
   const SFX_VOL=.8, MUS_VOL=.75;
+  const BPM=76, BEAT=60/BPM;
+  const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
 
-  function init(){
-    if(ctx){ if(ctx.state==='suspended') ctx.resume(); return; }
-    const AC=window.AudioContext||window.webkitAudioContext;
-    try{ ctx=new AC({latencyHint:'playback'}); }catch(e){ try{ ctx=new AC(); }catch(e2){ return; } }
-    // master: warm shelf + gentle glue compression
-    const shelf=ctx.createBiquadFilter(); shelf.type='highshelf'; shelf.frequency.value=3200; shelf.gain.value=-9;
-    const top=ctx.createBiquadFilter(); top.type='lowpass'; top.frequency.value=7500; top.Q.value=.5;
-    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=90; hp.Q.value=.5; // phone speakers distort below this
-    const comp=ctx.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=12; comp.ratio.value=2.5; comp.attack.value=.03; comp.release.value=.25;
-    out=ctx.createGain(); out.gain.value=.7; // headroom so nothing ever hits 0 dBFS
-    out.connect(hp); hp.connect(shelf); shelf.connect(top); top.connect(comp); comp.connect(ctx.destination);
-    // long soft reverb, darkened on the way in
-    const rev=ctx.createConvolver(), len=Math.floor(ctx.sampleRate*2.2), ir=ctx.createBuffer(2,len,ctx.sampleRate);
-    for(let c=0;c<2;c++){ const d=ir.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6); }
-    rev.buffer=ir;
-    revIn=ctx.createBiquadFilter(); revIn.type='lowpass'; revIn.frequency.value=2400;
-    const revOut=ctx.createGain(); revOut.gain.value=.5;
-    revIn.connect(rev); rev.connect(revOut); revOut.connect(out);
-    // sfx bus
-    sfxG=ctx.createGain(); sfxG.gain.value=pref.sfx?SFX_VOL:0;
-    const sfxLP=ctx.createBiquadFilter(); sfxLP.type='lowpass'; sfxLP.frequency.value=3400; sfxLP.Q.value=.4;
-    const sfxSend=ctx.createGain(); sfxSend.gain.value=.35;
-    sfxG.connect(sfxLP); sfxLP.connect(out); sfxLP.connect(sfxSend); sfxSend.connect(revIn);
-    // music bus: low-pass → reverb + tape echo
-    musG=ctx.createGain(); musG.gain.value=0;
-    const mLP=ctx.createBiquadFilter(); mLP.type='lowpass'; mLP.frequency.value=2200; mLP.Q.value=.3;
-    musG.connect(mLP);
-    const chorusOut=ctx.createGain(); mLP.connect(chorusOut);
-    chorusOut.connect(out);
-    const mSend=ctx.createGain(); mSend.gain.value=.55; chorusOut.connect(mSend); mSend.connect(revIn);
-    const dly=ctx.createDelay(2), fb=ctx.createGain(), dlp=ctx.createBiquadFilter(), wet=ctx.createGain();
-    dly.delayTime.value=BEAT*.75; fb.gain.value=.3; dlp.type='lowpass'; dlp.frequency.value=1300; wet.gain.value=.22;
-    chorusOut.connect(dly); dly.connect(dlp); dlp.connect(fb); fb.connect(dly); dlp.connect(wet); wet.connect(out); wet.connect(revIn);
-    noiseBuf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
-    const nd=noiseBuf.getChannelData(0); let b=0; for(let i=0;i<nd.length;i++){ b=.97*b+.03*(Math.random()*2-1); nd[i]=b*6; } // brown-ish noise: soft, not hissy
-    if(pref.music) startMusic();
+  /* --- builders: C is the offline context being rendered, D the bus to write into --- */
+  let C=null, D=null, noiseBuf=null, LAZY=null, DEAD=[]; const IR={};
+  /* builders queue their events; render() creates the nodes just ahead of the render position and
+     disconnects finished ones, so the offline graph stays small (16x faster than building it all up front) */
+  const lazy=(t,fn)=>{ const d=D; LAZY.push([t,()=>{ const k=D; D=d; fn(); D=k; }]); };
+  const voice=o=>{ o={...o,t:(o.t||0)+OFF}; lazy(o.t,()=>voiceNow(o)); };
+  const puff=o=>{ o={...o,t:(o.t||0)+OFF}; lazy(o.t,()=>puffNow(o)); };
+  const pad=(n,t,dur)=>lazy(t,()=>padNow(n,t,dur));
+  async function render(c){
+    const ev=LAZY.sort((a,b)=>a[0]-b[0]), dead=DEAD=[]; LAZY=null; let k=0;
+    const build=s=>{ while(k<ev.length&&ev[k][0]<s+1.5) ev[k++][1]();
+      for(const d of dead) if(d[1]&&d[0]<s){ d[1].forEach(n=>{ try{ n.disconnect(); }catch(e){} }); d[1]=null; } };
+    build(0);
+    const dur=c.length/c.sampleRate;
+    for(let s=1;s<dur-.2;s++) c.suspend(s).then(()=>{ build(s); c.resume(); });
+    return c.startRendering();
   }
-
-  /* one soft synth voice: detuned pair through an enveloped low-pass */
-  function voice({m,f,t=0,dur=.4,g=.1,a=.012,wave='triangle',det=7,lp=1800,lpEnd=0,glide=0,dest=sfxG,abs=false,sub=0}){
-    if(!ctx) return;
-    if(!abs && live>=MAX_SFX_VOICES) return;
+  function voiceNow({m,f,t=0,dur=.4,g=.1,a=.012,wave='triangle',det=7,lp=1800,lpEnd=0,glide=0,sub=0}){
     a=Math.max(a,.008);
-    const t0=abs?Math.max(t,ctx.currentTime+.02):ctx.currentTime+.02+t, fr=f||mtof(m), e=ctx.createGain(), fl=ctx.createBiquadFilter(), stop=t0+dur+.12;
+    const t0=t+.005, fr=f||mtof(m), e=C.createGain(), fl=C.createBiquadFilter(), stop=t0+dur+.12;
     fl.type='lowpass'; fl.Q.value=.6; fl.frequency.setValueAtTime(lp,t0);
     if(lpEnd) fl.frequency.exponentialRampToValueAtTime(lpEnd,t0+dur);
-    e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+a); e.gain.exponentialRampToValueAtTime(.0001,t0+dur);
-    const oscs=[[-det,wave],[det,wave]]; if(sub) oscs.push([0,'sine',sub]);
+    e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+a); e.gain.exponentialRampToValueAtTime(.0001,t0+dur); e.gain.linearRampToValueAtTime(0,t0+dur+.05);
+    const oscs=[[-det,wave],[det,wave]], nodes=[]; if(sub) oscs.push([0,'sine',sub]);
     oscs.forEach(([dt,w,lvl])=>{
-      const o=ctx.createOscillator(), og=ctx.createGain(); o.type=w; o.frequency.setValueAtTime(lvl?fr/2:fr,t0); o.detune.value=dt;
+      const o=C.createOscillator(), og=C.createGain(); o.type=w; o.frequency.setValueAtTime(lvl?fr/2:fr,t0); o.detune.value=dt;
       if(glide) o.frequency.exponentialRampToValueAtTime((lvl?glide/2:glide),t0+dur*.7);
-      og.gain.value=lvl||.5; o.connect(og); og.connect(fl); o.start(t0); o.stop(stop);
-      if(!abs){ live++; o.onended=()=>{ live--; o.disconnect(); }; } else o.onended=()=>o.disconnect();
+      og.gain.value=lvl||.5; o.connect(og); og.connect(fl); o.start(t0); o.stop(stop); nodes.push(o,og);
     });
-    fl.connect(e); e.connect(dest);
+    fl.connect(e); e.connect(D); nodes.push(fl,e); DEAD.push([stop+.05,nodes]);
   }
-  /* mallet: sine with a quiet 4th partial, quick but rounded decay (marimba-ish) */
   const mallet=(m,t,g=.12,dur=.5)=>{ voice({m,t,dur,g,a:.006,wave:'sine',det:3,lp:2600,lpEnd:900}); voice({f:mtof(m)*4,t,dur:dur*.18,g:g*.07,a:.003,wave:'sine',det:0,lp:3000}); };
-  function puff({t=0,dur=.25,g=.06,f=900,to=300}){
-    if(!ctx) return;
-    const t0=ctx.currentTime+.02+t, s=ctx.createBufferSource(), fl=ctx.createBiquadFilter(), e=ctx.createGain();
+  function puffNow({t=0,dur=.25,g=.06,f=900,to=300}){
+    const t0=t+.005, s=C.createBufferSource(), fl=C.createBiquadFilter(), e=C.createGain();
     s.buffer=noiseBuf; fl.type='lowpass'; fl.frequency.setValueAtTime(f,t0); fl.frequency.exponentialRampToValueAtTime(to,t0+dur);
-    e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+.02); e.gain.exponentialRampToValueAtTime(.0001,t0+dur);
-    s.connect(fl); fl.connect(e); e.connect(sfxG); s.start(t0); s.stop(t0+dur+.05);
+    e.gain.setValueAtTime(0,t0); e.gain.linearRampToValueAtTime(g,t0+.02); e.gain.exponentialRampToValueAtTime(.0001,t0+dur); e.gain.linearRampToValueAtTime(0,t0+dur+.03);
+    s.connect(fl); fl.connect(e); e.connect(D); s.start(t0); s.stop(t0+dur+.05); DEAD.push([t0+dur+.1,[s,fl,e]]);
+  }
+  function makeAssets(sr){
+    noiseBuf=new AudioBuffer({length:sr,sampleRate:sr,numberOfChannels:1});
+    const nd=noiseBuf.getChannelData(0); let b=0; for(let i=0;i<nd.length;i++){ b=.97*b+.03*(Math.random()*2-1); nd[i]=b*6; } // brown-ish noise: soft, not hissy
+  }
+  function irFor(sr){
+    if(IR[sr]) return IR[sr];
+    const len=Math.floor(sr*2.2), b=new AudioBuffer({length:len,sampleRate:sr,numberOfChannels:2});
+    for(let c=0;c<2;c++){ const d=b.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6); }
+    return IR[sr]=b;
+  }
+  function reverb(c,gain){
+    const revIn=c.createBiquadFilter(); revIn.type='lowpass'; revIn.frequency.value=2400;
+    const rev=c.createConvolver(); rev.buffer=irFor(c.sampleRate); const ro=c.createGain(); ro.gain.value=gain;
+    revIn.connect(rev); rev.connect(ro); ro.connect(c.destination); return revIn;
   }
 
-  let lastPlay={};
-  function play(name,lv=1){
-    if(!ctx||!pref.sfx) return;
-    const n=performance.now(); if(lastPlay[name]&&n-lastPlay[name]<50) return; lastPlay[name]=n;
-    switch(name){
-      case 'tap':  voice({f:440,glide:330,dur:.07,g:.05,a:.004,wave:'sine',det:0,lp:1400}); break;
-      case 'move': voice({f:200,glide:140,dur:.12,g:.08,a:.006,wave:'sine',det:0,lp:900}); puff({dur:.1,g:.03,f:700,to:250}); break;
-      case 'spawn': { const f=260+lv*35; voice({f,glide:f*1.5,dur:.18,g:.11,a:.01,wave:'sine',det:4,lp:1600}); puff({dur:.14,g:.025,f:900,to:300}); break; }
-      case 'merge': { // warm major-chord swell, rising with level
-        const base=55+Math.min(lv,8)*2;
-        [0,4,7,12].forEach((iv,i)=>voice({m:base+iv,t:i*.035,dur:1.0,g:.06,a:.02,wave:'triangle',det:8,lp:2400,lpEnd:700}));
-        voice({m:base-12,dur:.35,g:.12,a:.01,wave:'sine',det:0,lp:600}); break; }
-      case 'reveal': puff({dur:.35,g:.07,f:1400,to:250}); voice({f:150,glide:95,dur:.22,g:.07,a:.01,wave:'sine',det:0,lp:500}); break;
-      case 'unweb': [76,79,83].forEach((m,i)=>voice({m,t:.05+i*.06,dur:.7,g:.025,a:.05,wave:'sine',det:6,lp:3000})); break;
-      case 'coins': [67,71,74,79].forEach((m,i)=>mallet(m,i*.075,.11,.55)); break;
-      case 'coin': mallet(74,0,.1,.4); mallet(79,.07,.09,.5); break;
-      case 'drink': voice({f:260,glide:200,dur:.1,g:.07,a:.01,wave:'sine',det:0,lp:900}); voice({f:280,glide:210,t:.13,dur:.12,g:.07,a:.01,wave:'sine',det:0,lp:900}); puff({t:.02,dur:.25,g:.03,f:600,to:200}); break;
-      case 'nope': voice({f:150,glide:110,dur:.2,g:.09,a:.008,wave:'triangle',det:5,lp:500}); break;
-      case 'page': puff({dur:.16,g:.035,f:1800,to:600}); break;
-      case 'gift': [67,71,74,79,83].forEach((m,i)=>mallet(m,i*.09,.09,.6)); break;
-      case 'magic': [60,64,67,71,74].forEach((m,i)=>voice({m:m+12,t:i*.06,dur:2.2,g:.03,a:.35,wave:'sawtooth',det:12,lp:500,lpEnd:2000})); [83,86,91].forEach((m,i)=>voice({m,t:.4+i*.12,dur:1.2,g:.018,a:.08,wave:'sine',det:5,lp:3000})); break;
-      case 'fanfare': // soft synth-brass: G then C, filtered saws swelling open
-        [[55,59,62,67],[60,64,67,72]].forEach((ch,k)=>ch.forEach(m=>voice({m,t:k*.55,dur:k?2.0:.6,g:.035,a:.06,wave:'sawtooth',det:10,lp:k?600:500,lpEnd:k?1800:1200})));
-        voice({m:36,t:.55,dur:2.0,g:.16,a:.03,wave:'sine',det:0,lp:400}); break;
-    }
+  /* --- sound effects --- */
+  const SFX={
+    tap:()=>voice({f:440,glide:330,dur:.07,g:.05,a:.004,wave:'sine',det:0,lp:1400}),
+    move:()=>{ voice({f:200,glide:140,dur:.12,g:.08,a:.006,wave:'sine',det:0,lp:900}); puff({dur:.1,g:.03,f:700,to:250}); },
+    spawn:lv=>{ const f=260+lv*35; voice({f,glide:f*1.5,dur:.18,g:.11,a:.01,wave:'sine',det:4,lp:1600}); puff({dur:.14,g:.025,f:900,to:300}); },
+    merge:lv=>{ const base=55+lv*2;
+      [0,4,7,12].forEach((iv,i)=>voice({m:base+iv,t:i*.035,dur:1.0,g:.06,a:.02,wave:'triangle',det:8,lp:2400,lpEnd:700}));
+      voice({m:base-12,dur:.35,g:.12,a:.01,wave:'sine',det:0,lp:600}); },
+    reveal:()=>{ puff({dur:.35,g:.07,f:1400,to:250}); voice({f:150,glide:95,dur:.22,g:.07,a:.01,wave:'sine',det:0,lp:500}); },
+    unweb:()=>[76,79,83].forEach((m,i)=>voice({m,t:.05+i*.06,dur:.7,g:.025,a:.05,wave:'sine',det:6,lp:3000})),
+    coins:()=>[67,71,74,79].forEach((m,i)=>mallet(m,i*.075,.11,.55)),
+    coin:()=>{ mallet(74,0,.1,.4); mallet(79,.07,.09,.5); },
+    drink:()=>{ voice({f:260,glide:200,dur:.1,g:.07,a:.01,wave:'sine',det:0,lp:900}); voice({f:280,glide:210,t:.13,dur:.12,g:.07,a:.01,wave:'sine',det:0,lp:900}); puff({t:.02,dur:.25,g:.03,f:600,to:200}); },
+    nope:()=>voice({f:150,glide:110,dur:.2,g:.09,a:.008,wave:'triangle',det:5,lp:500}),
+    page:()=>puff({dur:.16,g:.035,f:1800,to:600}),
+    gift:()=>[67,71,74,79,83].forEach((m,i)=>mallet(m,i*.09,.09,.6)),
+    magic:()=>{ [60,64,67,71,74].forEach((m,i)=>voice({m:m+12,t:i*.06,dur:2.2,g:.03,a:.35,wave:'sawtooth',det:12,lp:500,lpEnd:2000})); [83,86,91].forEach((m,i)=>voice({m,t:.4+i*.12,dur:1.2,g:.018,a:.08,wave:'sine',det:5,lp:3000})); },
+    fanfare:()=>{ [[55,59,62,67],[60,64,67,72]].forEach((ch,k)=>ch.forEach(m=>voice({m,t:k*.55,dur:k?2.0:.6,g:.035,a:.06,wave:'sawtooth',det:10,lp:k?600:500,lpEnd:k?1800:1200})));
+      voice({m:36,t:.55,dur:2.0,g:.16,a:.03,wave:'sine',det:0,lp:400}); },
+  };
+  const SFX_LEN={magic:2.8,fanfare:2.7,merge:1.2,gift:1.1,coins:1};
+  const LV={merge:8,spawn:6};
+  function sfxList(){ const L=[]; Object.keys(SFX).forEach(n=>{ if(LV[n]) for(let l=1;l<=LV[n];l++) L.push([n,l]); else L.push([n,0]); }); return L; }
+
+  /* render every effect into one offline pass, then slice it up */
+  async function renderSfx(sr){
+    const TAIL=1.4, list=sfxList(), slots=[]; let t=0;
+    list.forEach(([n,l])=>{ const len=(SFX_LEN[n]||.6)+TAIL; slots.push([n,l,t,len]); t+=len+.1; });
+    const c=new OAC(2,Math.ceil(t*sr),sr); C=c; LAZY=[];
+    const bus=c.createGain(), lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3400; lp.Q.value=.4;
+    const send=c.createGain(); send.gain.value=.35; bus.connect(lp); lp.connect(c.destination); lp.connect(send); send.connect(reverb(c,.5));
+    slots.forEach(([n,l,t0])=>{ D=c.createGain(); D.connect(bus); withOffset(t0,()=>SFX[n](l)); });
+    const r=await render(c);
+    slots.forEach(([n,l,t0,len])=>{
+      const s0=Math.floor(t0*sr), N=Math.floor(len*sr), b=new AudioBuffer({length:N,sampleRate:sr,numberOfChannels:2}), fade=Math.floor(.3*sr);
+      for(let ch=0;ch<2;ch++){ const src=r.getChannelData(ch), d=b.getChannelData(ch); for(let i=0;i<N;i++) d[i]=src[s0+i]*(i>N-fade?(N-i)/fade:1); }
+      BUF[n+(l||'')]=b;
+    });
   }
+  /* run a builder with every start time shifted by `off` seconds */
+  let OFF=0;
+  function withOffset(off,fn){ OFF=off; try{ fn(); } finally{ OFF=0; } }
 
   /* --- background music: slow, warm 4/4 chill — pads, sub bass, soft keys, a faint arpeggio --- */
-  const BPM=76, BEAT=60/BPM;
   const PROGS=[
     [[45,[57,60,64,67]],[41,[57,60,64,65]],[36,[55,60,64,67]],[43,[55,59,62,65]]],   // Am7  Fmaj7  Cadd  G7sus-ish
     [[38,[57,60,62,65]],[41,[57,60,64,65]],[40,[56,59,62,64]],[40,[56,59,64,68]]],   // Dm7  Fmaj7  E7   E
@@ -700,49 +745,88 @@ const SND = (()=>{
     [[36,[55,59,64,67]],[40,[55,59,64,67]],[41,[57,60,64,69]],[43,[55,59,62,65]]],   // Cmaj7 Em7  Fmaj7 G7
   ];
   const SCALE=[57,59,60,62,64,65,67,69,71,72];
-  function pad(notes,t,dur){
-    t=Math.max(t,ctx.currentTime+.02);
-    const fl=ctx.createBiquadFilter(), e=ctx.createGain(), stop=t+dur+.2;
+  function padNow(notes,t,dur){
+    const fl=C.createBiquadFilter(), e=C.createGain(), stop=t+dur+.2, nodes=[fl,e]; DEAD.push([stop+.05,nodes]);
     fl.type='lowpass'; fl.Q.value=.5; fl.frequency.setValueAtTime(520,t); fl.frequency.linearRampToValueAtTime(900,t+dur*.5); fl.frequency.linearRampToValueAtTime(560,t+dur);
     e.gain.setValueAtTime(0,t); e.gain.linearRampToValueAtTime(.022,t+1.4); e.gain.setValueAtTime(.022,t+dur-1); e.gain.linearRampToValueAtTime(0,t+dur+.15);
-    notes.forEach((m,i)=>{ const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=mtof(m); o.detune.value=i%2?9:-9; o.connect(fl); o.start(t); o.stop(stop); o.onended=()=>o.disconnect(); });
-    const s=ctx.createOscillator(), sg=ctx.createGain(); s.type='sine'; s.frequency.value=mtof(notes[0]); sg.gain.value=.9; s.connect(sg); sg.connect(fl); s.start(t); s.stop(stop); s.onended=()=>s.disconnect();
-    fl.connect(e); e.connect(musG);
+    notes.forEach((m,i)=>{ const o=C.createOscillator(); o.type='sawtooth'; o.frequency.value=mtof(m); o.detune.value=i%2?9:-9; o.connect(fl); o.start(t); o.stop(stop); nodes.push(o); });
+    const s=C.createOscillator(), sg=C.createGain(); s.type='sine'; s.frequency.value=mtof(notes[0]); sg.gain.value=.9; s.connect(sg); sg.connect(fl); s.start(t); s.stop(stop); nodes.push(s,sg);
+    fl.connect(e); e.connect(D);
   }
-  function bass(m,t,dur,g=.17){ voice({m,t,abs:true,dur,g,a:.06,wave:'sine',det:0,lp:300,sub:0,dest:musG}); voice({m,t,abs:true,dur:dur*.6,g:g*.18,a:.05,wave:'triangle',det:3,lp:420,dest:musG}); }
-  function keys(m,t,g,dur){ voice({m,t,abs:true,dur,g,a:.025,wave:'triangle',det:6,lp:1500,lpEnd:550,dest:musG}); voice({m:m+12,t,abs:true,dur:dur*.4,g:g*.15,a:.02,wave:'sine',det:3,lp:2000,dest:musG}); }
-  function scheduleBeat(t){
-    const bar=Math.floor(step/4), beat=step%4, phrase=Math.floor(bar/4);
-    const prog=PROGS[phrase%PROGS.length], [root,chord]=prog[bar%4];
-    if(beat===0){ pad(chord,t,BEAT*4.6); bass(root,t,BEAT*2.8); }
-    if(beat===2 && Math.random()<.5) bass(root+(Math.random()<.5?7:12),t,BEAT*1.6,.1);
-    // faint arpeggio in alternate phrases, eighth notes
-    if(phrase%2===1){ [0,.5].forEach(h=>{ const n=chord[(step*2+h*2)%chord.length]+12; voice({m:n,t:t+h*BEAT,abs:true,dur:BEAT*.9,g:.012,a:.01,wave:'triangle',det:5,lp:1700,lpEnd:600,dest:musG}); }); }
-    // melody: sparse, legato, mid register
-    const p = beat===0?.7 : beat===2?.4 : .15;
-    if(Math.random()<p && !(bar%4===3 && beat>1)){
-      const pool = beat===0 ? chord.map(c=>c+12).concat(chord.filter(c=>c>=57)) : SCALE;
-      let target=pool[Math.floor(Math.random()*pool.length)];
-      if(Math.abs(target-lastNote)>7) target=pool.reduce((a,b)=>Math.abs(b-lastNote)<Math.abs(a-lastNote)?b:a);
-      lastNote=target;
-      keys(target,t,.07,BEAT*(beat===0?3:2));
+  function bass(m,t,dur,g=.17){ voice({m,t,dur,g,a:.06,wave:'sine',det:0,lp:300}); voice({m,t,dur:dur*.6,g:g*.18,a:.05,wave:'triangle',det:3,lp:420}); }
+  function keys(m,t,g,dur){ voice({m,t,dur,g,a:.025,wave:'triangle',det:6,lp:1500,lpEnd:550}); voice({m:m+12,t,dur:dur*.4,g:g*.15,a:.02,wave:'sine',det:3,lp:2000}); }
+  /* one 32-bar loop (≈100 s) at 24 kHz — everything in it sits below 3 kHz — played with loop=true */
+  async function renderMusic(sr,seed){
+    const STEPS=128, L=STEPS*BEAT, TAIL=3.2, c=new OAC(2,Math.ceil((L+TAIL)*sr),sr); C=c; LAZY=[];
+    let rs=seed*9301+49297; const rnd=()=>((rs=(rs*9301+49297)%233280)/233280);
+    D=c.createGain();
+    const mLP=c.createBiquadFilter(); mLP.type='lowpass'; mLP.frequency.value=2200; mLP.Q.value=.3;
+    D.connect(mLP); mLP.connect(c.destination);
+    const mSend=c.createGain(); mSend.gain.value=.55; mLP.connect(mSend); const rv=reverb(c,.5); mSend.connect(rv);
+    const dly=c.createDelay(2), fb=c.createGain(), dlp=c.createBiquadFilter(), wet=c.createGain();
+    dly.delayTime.value=BEAT*.75; fb.gain.value=.3; dlp.type='lowpass'; dlp.frequency.value=1300; wet.gain.value=.22;
+    mLP.connect(dly); dly.connect(dlp); dlp.connect(fb); fb.connect(dly); dlp.connect(wet); wet.connect(c.destination); wet.connect(rv);
+    let lastNote=57;
+    for(let step=0;step<STEPS;step++){
+      const t=step*BEAT+.01, bar=Math.floor(step/4), beat=step%4, phrase=Math.floor(bar/4);
+      const [root,chord]=PROGS[phrase%PROGS.length][bar%4];
+      if(beat===0){ pad(chord,t,BEAT*4.6); bass(root,t,BEAT*2.8); }
+      if(beat===2 && rnd()<.5) bass(root+(rnd()<.5?7:12),t,BEAT*1.6,.1);
+      if(phrase%2===1){ [0,.5].forEach(h=>{ const n=chord[(step*2+h*2)%chord.length]+12; voice({m:n,t:t+h*BEAT,dur:BEAT*.9,g:.012,a:.01,wave:'triangle',det:5,lp:1700,lpEnd:600}); }); }
+      const p = beat===0?.7 : beat===2?.4 : .15;
+      if(rnd()<p && !(bar%4===3 && beat>1)){
+        const pool = beat===0 ? chord.map(x=>x+12).concat(chord.filter(x=>x>=57)) : SCALE;
+        let target=pool[Math.floor(rnd()*pool.length)];
+        if(Math.abs(target-lastNote)>7) target=pool.reduce((a,b)=>Math.abs(b-lastNote)<Math.abs(a-lastNote)?b:a);
+        lastNote=target; keys(target,t,.07,BEAT*(beat===0?3:2));
+      }
     }
-    step++;
+    const r=await render(c);
+    // fold the tail (reverb/echo ring-out) back onto the start so the loop is seamless
+    const N=Math.round(L*sr), b=new AudioBuffer({length:N,sampleRate:sr,numberOfChannels:2});
+    for(let ch=0;ch<2;ch++){ const s=r.getChannelData(ch), d=b.getChannelData(ch); d.set(s.subarray(0,N)); for(let i=N;i<s.length;i++) d[i-N]+=s[i]; }
+    return b;
+  }
+
+  function init(){
+    if(ctx){ if(ctx.state==='suspended') ctx.resume(); return; }
+    const AC=window.AudioContext||window.webkitAudioContext;
+    try{ ctx=new AC({latencyHint:'playback'}); }catch(e){ try{ ctx=new AC(); }catch(e2){ return; } }
+    // master: high-pass (phone speakers distort below 90 Hz) → warm shelf → low-pass → gentle glue compression
+    const shelf=ctx.createBiquadFilter(); shelf.type='highshelf'; shelf.frequency.value=3200; shelf.gain.value=-9;
+    const top=ctx.createBiquadFilter(); top.type='lowpass'; top.frequency.value=7500; top.Q.value=.5;
+    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=90; hp.Q.value=.5;
+    const comp=ctx.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=12; comp.ratio.value=2.5; comp.attack.value=.03; comp.release.value=.25;
+    out=ctx.createGain(); out.gain.value=.7; // headroom so nothing ever hits 0 dBFS
+    out.connect(hp); hp.connect(shelf); shelf.connect(top); top.connect(comp); comp.connect(ctx.destination);
+    sfxG=ctx.createGain(); sfxG.gain.value=pref.sfx?SFX_VOL:0; sfxG.connect(out);
+    musG=ctx.createGain(); musG.gain.value=0; musG.connect(out);
+    if(!OAC) return;
+    const sr=ctx.sampleRate; makeAssets(sr);
+    if(pref.music) musWant=true;
+    renderSfx(24000).then(()=>renderMusic(24000,1)).then(b=>{ musBuf=b; if(musWant) startMusic(); }).catch(()=>{});
+  }
+
+  function play(name,lv=1){
+    if(!ctx||!pref.sfx||live>=MAX_SFX_VOICES) return;
+    const b=BUF[name+(LV[name]?Math.max(1,Math.min(lv,LV[name])):'')]; if(!b) return;
+    const s=ctx.createBufferSource(); s.buffer=b; s.connect(sfxG); live++;
+    s.onended=()=>{ live--; s.disconnect(); };
+    s.start(ctx.currentTime+.02);
   }
   function startMusic(){
-    if(!ctx||timer) return;
-    musG.gain.cancelScheduledValues(ctx.currentTime);
-    musG.gain.setValueAtTime(musG.gain.value,ctx.currentTime);
-    musG.gain.linearRampToValueAtTime(MUS_VOL,ctx.currentTime+3);
-    nextT=ctx.currentTime+.1; step=0;
-    timer=setInterval(()=>{ if(nextT<ctx.currentTime+.05) nextT=ctx.currentTime+.1; while(nextT<ctx.currentTime+.6){ scheduleBeat(nextT); nextT+=BEAT; } },100);
+    if(!ctx) return; musWant=true;
+    if(musSrc||!musBuf) return;
+    const t=ctx.currentTime;
+    musG.gain.cancelScheduledValues(t); musG.gain.setValueAtTime(0,t); musG.gain.linearRampToValueAtTime(MUS_VOL,t+3);
+    const s=ctx.createBufferSource(); s.buffer=musBuf; s.loop=true; s.connect(musG); s.start(t+.05); musSrc=s;
+    s.onended=()=>s.disconnect();
   }
   function stopMusic(){
-    if(!ctx) return;
-    musG.gain.cancelScheduledValues(ctx.currentTime);
-    musG.gain.setValueAtTime(musG.gain.value,ctx.currentTime);
-    musG.gain.linearRampToValueAtTime(0,ctx.currentTime+.8);
-    clearInterval(timer); timer=null;
+    musWant=false; if(!ctx) return;
+    const t=ctx.currentTime;
+    musG.gain.cancelScheduledValues(t); musG.gain.setValueAtTime(musG.gain.value,t); musG.gain.linearRampToValueAtTime(0,t+.8);
+    const s=musSrc; musSrc=null; if(s){ try{ s.stop(t+.85); }catch(e){} }
   }
   function savePref(){ try{ localStorage.setItem(PREF_KEY,JSON.stringify(pref)); }catch(e){} }
   function setMusic(on){ pref.music=on; savePref(); if(!ctx) return; on?startMusic():stopMusic(); }
@@ -751,7 +835,7 @@ const SND = (()=>{
   const unlock=()=>{ init(); };
   document.addEventListener('pointerdown',unlock,{capture:true});
   document.addEventListener('keydown',unlock,{capture:true});
-  return {play,setMusic,setSfx,get pref(){return pref;}};
+  return {play,setMusic,setSfx,get pref(){return pref;},get ready(){return !!musBuf;},_buf:BUF,get _mus(){return musBuf;}};
 })();
 
 /* ============================================================ state */
@@ -784,11 +868,16 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
-      s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[]; return s; } } }catch(e){}
+      s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[];
+      if(!s.unrev) s.unrev={...s.disc}; // saves from before the collection: everything found so far waits to be revealed
+      if(!s.stats){ const story=Object.keys(s.done||{}).length; s.stats={side:s.sideDone||0, story, disc:Object.keys(s.disc||{}).length}; }
+      s.qt=s.qt||{};
+      if(!s.seenOrd){ s.seenOrd={}; TASKS.filter(t=>t.ch===s.ch&&!(s.done||{})[t.id]).slice(0,3).forEach(t=>s.seenOrd[t.id]=1); }
+      return s; } } }catch(e){}
   return freshState();
 }
 function save(){ try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} }
@@ -825,7 +914,7 @@ function revealCell(i){
   SND.play('reveal');
   return true;
 }
-function revealAround(i){ neighbours(i).forEach(revealCell); }
+function revealAround(i){ neighbours(i).forEach(n=>{ if(revealCell(n)) stat('open'); }); }
 
 function nearestEmpty(from){
   const [r0,c0]=rc(from); let best=-1, bd=1e9;
@@ -845,10 +934,11 @@ function discover(it, quiet){
   const k=key(it.k,it.l);
   if(S.disc[k]) return;
   S.disc[k]=1;
+  (S.unrev||(S.unrev={}))[k]=1; stat('disc');
   if(quiet) return;
   const d=def(it), ch=CHAINS[it.k];
   if(ch.story && d.lore){ setTimeout(()=>showLore(it),350); }
-  else toast(`New: ${d.e} <b>${d.n}</b>`);
+  else toast(`New: ${d.e} <b>${d.n}</b> · reveal it in 📖 for a reward`,2600);
 }
 
 function produce(i){
@@ -868,12 +958,12 @@ function produce(i){
   S.cells[t].it=mkItem(k,l);
   fx[i]='pulse'; fx[t]='spawn';
   SND.play('spawn',l);
-  discover(S.cells[t].it);
+  discover(S.cells[t].it); stat('gen'); if(CHAINS[k].rare===true) stat('rare');
   save(); render();
 }
 
 function claim(i){
-  const it=S.cells[i].it, d=def(it), kind=CHAINS[it.k].claim; delete it.st;
+  const it=S.cells[i].it, d=def(it), kind=CHAINS[it.k].claim; delete it.st; stat('claim');
   S.cells[i].it=null; sel=-1; fx[i]='pulse';
   if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
   else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
@@ -930,7 +1020,7 @@ function drop(a,b){
 function doMerge(a,b){
   const A=S.cells[a], B=S.cells[b];
   const it=mkItem(A.it.k, A.it.l+1);
-  SND.play('merge',it.l); if(B.s==='web') SND.play('unweb');
+  SND.play('merge',it.l); stat('merge'); if(it.l>=5&&!isGen(it)&&!isRes(it)) stat('high'); if(B.s==='web'){ SND.play('unweb'); stat('open'); }
   A.it=null; B.it=it; B.s='open';
   fx[b]='pop';
   revealAround(b);
@@ -943,7 +1033,7 @@ function doMerge(a,b){
 function sellValue(it){ return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
-  S.coins+=v; S.cells[i].it=null; sel=-1;
+  S.coins+=v; S.cells[i].it=null; sel=-1; stat('sell');
   SND.play('coin');
   toast(`Sold ${def(it).e} for 🪙${v}`);
   save(); render();
@@ -970,11 +1060,11 @@ function completeTask(t){
   });
   SND.play('coins');
   if(t.side){
-    S.side=S.side.filter(o=>o.id!==t.id); S.sideDone=(S.sideDone||0)+1; dropItems(t.rw); ensureSide();
+    S.side=S.side.filter(o=>o.id!==t.id); S.sideDone=(S.sideDone||0)+1; stat('side'); dropItems(t.rw); ensureSide();
     toast(`🏷️ Sold at the jumble sale. Rewards are on the board`);
     save(); render(); return;
   }
-  S.done[t.id]=1;
+  S.done[t.id]=1; stat('story');
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
   if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat);
@@ -1097,7 +1187,7 @@ function renderHud(){
   $('pts').textContent=S.pts||0; $('passDot').hidden=!passReady();
   { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
     $('xpLv').textContent=l; $('xpTxt').textContent=`${S.xp-lo}/${hi-lo}`; $('xpBar').style.width=((S.xp-lo)/(hi-lo)*100)+'%'; }
-  $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length;
+  $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length; renderPip();
   const ci=Math.min(S.ch,CHAPTERS.length-1);
   const chT=TASKS.filter(t=>t.ch===ci), dn=chT.filter(t=>S.done[t.id]).length;
   $('chNum').textContent = S.complete?'Event complete':'Chapter '+(ci+1);
@@ -1135,12 +1225,15 @@ function renderOrders(tasks){
     const st=taskStatus(t);
     const el=document.createElement('div');
     el.className='order'+(st.ready?' ready':'')+(t.side?' side':'')+(t.lucky?' lucky':'');
+    el.dataset.id=t.id;
+    if(!t.side && (!(S.seenOrd||{})[t.id] || flying===String(t.id))) el.classList.add('incoming');
     el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
       <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     el.onclick=()=>{ if(taskStatus(t).ready) completeTask(t); else hintTask(t); };
     box.appendChild(el);
   });
+  if(flying===null && box.querySelector('.order.incoming')) setTimeout(runArrivals,60);
 }
 let sellArm=false;
 function renderInfo(){
@@ -1259,7 +1352,7 @@ function playScene(sc,done){
   hideToasts();
   ov.hidden=false;
   const show=()=>{
-    if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; if(done) done(); if(!storyOpen()) flushToasts(); return; }
+    if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; if(done) done(); if(!storyOpen()) flushToasts(); setTimeout(runArrivals,300); return; }
     const [who,txt]=sc.lines[i], cst=CAST[who];
     const cls = who==='N'?'narr': (who==='O'||who==='F')?'note':'';
     ov.innerHTML=`${i===0&&sc.title?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:'<div style="margin:auto"></div>'}
@@ -1277,13 +1370,14 @@ function playScene(sc,done){
   show();
 }
 function openModal(html,story){ $('modalBody').innerHTML=html; $('modal').hidden=false; $('modal').dataset.story=story?'1':''; if(story) hideToasts(); }
-function closeModal(){ const was=$('modal').dataset.story==='1'; $('modal').hidden=true; $('modal').dataset.story=''; if(was && !storyOpen()) flushToasts(); }
+function closeModal(){ const was=$('modal').dataset.story==='1'; $('modal').hidden=true; $('modal').dataset.story=''; if(was && !storyOpen()) flushToasts(); setTimeout(runArrivals,250); }
 $('modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
 
 function chainHtml(k,cur){
   const ch=CHAINS[k];
   return `<div class="chain">${ch.items.map((d,j)=>{
-    const known=S.disc[key(k,j+1)];
+    const kk=key(k,j+1), known=S.disc[kk];
+    if(known && (S.unrev||{})[kk]) return `<div class="ci wrap${cur===j+1?' cur':''}" data-rv="${kk}" role="button"><span>🎁</span>Tap</div>`;
     return `<div class="ci${known?'':' unk'}${cur===j+1?' cur':''}"><span>${known?d.e:'?'}</span>${known?d.n:'Lv '+(j+1)}</div>`;
   }).join('')}</div>`;
 }
@@ -1299,8 +1393,8 @@ function showLore(it){
   SND.play('magic');
   openModal(`<h3 style="margin-top:0">Found in the Circus Trunk</h3><div style="font-size:54px;text-align:center">${d.e}</div><h2 style="text-align:center">${d.n}</h2><p style="font-style:italic;text-align:center">${d.lore}</p><div class="row-btns" style="justify-content:center"><button class="bigbtn gold" onclick="closeModal()">Into the journal</button></div>`,true);
 }
-function showJournal(){
-  let html=`<h2>Odile’s Attic</h2><p style="color:var(--muted)">Everything you’ve uncovered so far.</p><h3>Chapters</h3>`;
+function journalHtml(){
+  let html=`<h3 style="margin-top:4px">Chapters</h3>`;
   const upto=S.complete?CHAPTERS.length:S.ch+1;
   for(let c=0;c<upto;c++){
     const fin=S.journal.includes(c);
@@ -1316,16 +1410,162 @@ function showJournal(){
     mn.forEach(ls=>html+=`<div class="lore"><span>🌙</span><div>${ls[ls.length-1][1]}</div></div>`);
     fx.forEach(ls=>html+=`<div class="lore"><span>✉️</span><div>${ls.find(l=>l[0]==='F')[1]}</div></div>`);
   }
-  html+=`<h3>Collections</h3>`;
-  ['P','F','T','L','E','M'].forEach(k=>html+=`<p style="margin:10px 0 6px;font-weight:800">${CHAINS[k].name}</p>${chainHtml(k)}`);
-  html+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
-  openModal(html);
+  return html;
+}
+function wireJournal(){
   $('modalBody').querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{
     const s=b.dataset.scene, c=+s.slice(1), ch=CHAPTERS[c];
     closeModal();
     playScene({title:'Chapter '+(c+1), sub:ch.title, lines: s[0]==='i'?ch.intro:ch.outro});
   });
 }
+const QUESTS=[
+  {id:'gen',   ic:'🔨', n:'Use generators',        steps:[25,100,250,500,1000,2000]},
+  {id:'merge', ic:'🔗', n:'Make merges',           steps:[20,50,150,300,600,1200]},
+  {id:'side',  ic:'🏷️', n:'Finish Jumble Sales',   steps:[3,10,25,50,100]},
+  {id:'rare',  ic:'💎', n:'Find rare items',       steps:[3,10,25,50,100]},
+  {id:'story', ic:'📜', n:'Fill story orders',     steps:[3,10,20]},
+  {id:'high',  ic:'🌟', n:'Make level 5+ items',   steps:[3,10,25,60]},
+  {id:'claim', ic:'🫖', n:'Claim tea, coins & stars', steps:[10,40,100,250]},
+  {id:'open',  ic:'📦', n:'Open boxes & cobwebs',  steps:[10,25,45]},
+  {id:'disc',  ic:'🧩', n:'Discover new items',    steps:[15,30,50,70]},
+  {id:'sell',  ic:'🪙', n:'Sell items',            steps:[5,20,50]},
+];
+const QUEST_RW=[[['C',1],['E',1]],[['C',2],['E',2]],[['E',3],['H',1]],[['E',3],['H',2],['N',1]],[['E',4],['H',2],['N',2]],[['E',4],['H',3],['N',3]]];
+/* ============================================================ mini quests */
+function stat(k,n=1){
+  if(!S) return;
+  const st=S.stats||(S.stats={}); st[k]=(st[k]||0)+n;
+  const q=QUESTS.find(x=>x.id===k);
+  if(q){ const t=(S.qt||{})[k]||0, tgt=q.steps[t];
+    if(tgt && st[k]>=tgt && st[k]-n<tgt) setTimeout(()=>{ SND.play('gift'); toast(`📋 Quest done: ${q.ic} ${q.n} ${tgt}<br><small>Claim it in 📖</small>`,3000); },250); }
+  renderPip();
+}
+function questReady(q){ const t=(S.qt||{})[q.id]||0; return t<q.steps.length && ((S.stats||{})[q.id]||0)>=q.steps[t]; }
+function questRw(t){ return QUEST_RW[Math.min(t,QUEST_RW.length-1)].map(([k,l])=>[k,Math.min(l,maxL(k))]); }
+function renderPip(){
+  const p=$('bookPip'); if(!p||!S) return;
+  const n=QUESTS.filter(questReady).length+Object.keys(S.unrev||{}).length;
+  p.hidden=!n; p.textContent=n>99?'99+':n;
+}
+function questsHtml(){
+  let h=`<p style="color:var(--muted);font-size:13px;margin-top:0">• Little goals that run all event<br>• Each has several stages<br>• Rewards go to 🎁</p>`;
+  const row=q=>{ const t=S.qt[q.id]||0, v=S.stats[q.id]||0, fin=t>=q.steps.length, tgt=q.steps[Math.min(t,q.steps.length-1)], ready=questReady(q);
+    return {q,ready,fin,frac:fin?2:Math.min(1,v/tgt),html:`<div class="quest${ready?' done':''}${fin?' fin':''}"><span class="qi">${q.ic}</span><div class="qb"><div class="qn">${q.n}${fin?'':' '+tgt}</div>
+      <div class="qbar"><i style="width:${fin?100:Math.min(100,v/tgt*100)}%"></i></div>
+      <div class="qs">${fin?'All stages done ✓':`${Math.min(v,tgt)}/${tgt} · stage ${t+1} of ${q.steps.length} · ${questRw(t).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}`}</div></div>
+      ${ready?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-q="${q.id}">Claim</button>`:''}</div>`}; };
+  QUESTS.map(row).sort((a,b)=>(b.ready-a.ready)||(a.fin-b.fin)||(b.frac-a.frac)).forEach(r=>h+=r.html);
+  return h;
+}
+function claimQuest(id){
+  const q=QUESTS.find(x=>x.id===id); if(!q||!questReady(q)) return;
+  const t=S.qt[q.id]||0; S.qt[q.id]=t+1;
+  questRw(t).forEach(r=>S.gifts.push(r));
+  SND.play('gift'); toast(`${q.ic} Quest reward added to 🎁`);
+  save(); render(); showBook('q');
+}
+
+/* ============================================================ collection: new finds wait here, wrapped, until tapped */
+const discRw=(k,l)=>{ const L=l+(CHAINS[k].gen?1:0); return {c:2*L, e:L>=3?3*(L-2):0, x:L>=5?L:0}; };
+const rwTxt=r=>[r.c?`🪙${r.c}`:'', r.e?`⚡${r.e}`:'', r.x?`⭐${r.x}`:''].filter(Boolean).join(' ');
+function revealDisc(kk,el,quiet){
+  if(!(S.unrev||{})[kk]) return null;
+  const m=kk.match(/^([a-zA-Z]+?)(\d+)$/); if(!m||!CHAINS[m[1]]) { delete S.unrev[kk]; return null; }
+  const k=m[1], l=+m[2], d=CHAINS[k].items[l-1], r=discRw(k,l);
+  delete S.unrev[kk];
+  S.coins+=r.c; S.energy+=r.e; if(r.x) addXP(r.x);
+  if(el){ el.className='ci flip'; el.removeAttribute('data-rv'); el.removeAttribute('role'); el.innerHTML=`<span>${d.e}</span>${d.n}<b class="rw">+${rwTxt(r)}</b>`; }
+  if(!quiet){ SND.play(l>=5?'gift':'coin'); toast(`${d.e} <b>${d.n}</b> · +${rwTxt(r)}`); save(); render(); bookCounts(); }
+  return r;
+}
+function revealAll(){
+  const els=[...$('modalBody').querySelectorAll('[data-rv]')]; if(!els.length) return;
+  $('revAll').disabled=true;
+  const tot={c:0,e:0,x:0};
+  els.forEach((el,i)=>setTimeout(()=>{
+    const r=revealDisc(el.dataset.rv,el,true); if(r){ tot.c+=r.c; tot.e+=r.e; tot.x+=r.x; }
+    if(i%2===0) SND.play('coin');
+    if(i===els.length-1){ Object.keys(S.unrev||{}).forEach(kk=>{ const r2=revealDisc(kk,null,true); if(r2){ tot.c+=r2.c; tot.e+=r2.e; tot.x+=r2.x; } });
+      SND.play('gift'); toast(`🧩 Revealed ${els.length} · +${rwTxt(tot)}`,2800); save(); render(); bookCounts(); const b=$('revAll'); if(b) b.parentNode.remove(); }
+  }, i*110));
+}
+function collectionHtml(){
+  const un=Object.keys(S.unrev||{}).length;
+  let h=`<p style="color:var(--muted);font-size:13px;margin-top:0">• New finds wait here, wrapped 🎁<br>• Tap one to reveal it and collect a reward<br>• Higher levels pay more</p>`;
+  if(un>1) h+=`<div class="row-btns" style="margin-top:0"><button class="bigbtn gold" id="revAll">Reveal all ${un}</button></div>`;
+  const groups=[['Items',ch=>!ch.gen&&ch.type!=='res'&&ch.rare!==true],['Rare finds',ch=>!ch.gen&&ch.rare===true],['Resources',ch=>ch.type==='res'],['Generators',ch=>ch.gen]];
+  let hidden=0;
+  groups.forEach(([name,fn])=>{
+    const ks=Object.keys(CHAINS).filter(k=>fn(CHAINS[k]));
+    const found=ks.filter(k=>CHAINS[k].items.some((_,j)=>S.disc[key(k,j+1)]));
+    hidden+=ks.length-found.length;
+    if(!found.length) return;
+    // chains with wrapped finds first
+    found.sort((a,b)=>CHAINS[b].items.some((_,j)=>S.unrev[key(b,j+1)])-CHAINS[a].items.some((_,j)=>S.unrev[key(a,j+1)]));
+    h+=`<div class="cgrp">${name}</div>`;
+    found.forEach(k=>{ const ch=CHAINS[k], n=ch.items.filter((_,j)=>S.disc[key(k,j+1)]).length;
+      h+=`<p class="cname">${ch.name}<small>${n}/${ch.items.length}</small></p>${chainHtml(k)}`; });
+  });
+  if(hidden) h+=`<p style="color:var(--muted);font-size:13px;margin-top:14px">${hidden} more chain${hidden>1?'s':''} still to find.</p>`;
+  return h;
+}
+
+/* ============================================================ the book: quests · collection · journal */
+let bookTab='q';
+function bookCounts(){
+  const qn=QUESTS.filter(questReady).length, un=Object.keys(S.unrev||{}).length;
+  document.querySelectorAll('.tabs [data-tab]').forEach(b=>{ const n=b.dataset.tab==='q'?qn:b.dataset.tab==='c'?un:0; let p=b.querySelector('.pip');
+    if(n){ if(!p){ p=document.createElement('i'); p.className='pip'; b.appendChild(p); } p.textContent=n; } else if(p) p.remove(); });
+  renderPip();
+}
+function showBook(tab){
+  const qn=QUESTS.filter(questReady).length, un=Object.keys(S.unrev||{}).length;
+  tab=tab||(qn?'q':un?'c':bookTab); bookTab=tab;
+  const T=(id,lbl)=>`<button data-tab="${id}" class="${tab===id?'on':''}">${lbl}</button>`;
+  let h=`<div class="tabs">${T('q','📋 Quests')}${T('c','🧩 Collection')}${T('j','📖 Journal')}</div>`;
+  h+= tab==='q'?questsHtml() : tab==='c'?collectionHtml() : journalHtml();
+  h+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
+  openModal(h);
+  $('modalBody').scrollTop=0;
+  bookCounts();
+  $('modalBody').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ SND.play('page'); showBook(b.dataset.tab); });
+  $('modalBody').querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>claimQuest(b.dataset.q));
+  if($('revAll')) $('revAll').onclick=revealAll;
+  if(tab==='j') wireJournal();
+}
+const showJournal=()=>showBook('j');
+$('modalBody').addEventListener('click',e=>{ const t=e.target.closest('[data-rv]'); if(t) revealDisc(t.dataset.rv,t); });
+
+/* ============================================================ new story orders arrive: big at the bottom, then fly up into the row */
+var flying=null;
+function runArrivals(){
+  if(flying!==null||!S||S.complete||storyOpen()||!$('modal').hidden||!$('title').hidden) return;
+  const box=$('orders'), el=box.querySelector('.order.incoming'); if(!el) return;
+  const id=el.dataset.id; flying=id; const hold=box.querySelectorAll('.order.incoming').length>1?850:1400;
+  box.scrollTo({left:0});
+  const tr=el.getBoundingClientRect(), W=tr.width, H=tr.height;
+  const card=document.createElement('div'); card.className='arrive';
+  card.innerHTML='<div class="arrive-tag">📜 New story request</div>';
+  const cl=el.cloneNode(true); cl.classList.remove('incoming'); cl.style.cssText=`width:${W}px;height:${H}px;margin:0`; card.appendChild(cl);
+  const x0=(innerWidth-W)/2, y0=innerHeight*.74-H/2;
+  card.style.left=x0+'px'; card.style.top=y0+'px'; card.style.width=W+'px';
+  document.body.appendChild(card);
+  SND.play('page');
+  card.animate([{transform:'translateY(70px) scale(.6)',opacity:0},{transform:'translateY(0) scale(1.4)',opacity:1}],{duration:450,easing:'cubic-bezier(.2,.9,.3,1.25)',fill:'forwards'});
+  setTimeout(()=>{
+    const tgt=box.querySelector(`.order[data-id="${id}"]`), r=(tgt||el).getBoundingClientRect();
+    card.querySelector('.arrive-tag').animate([{opacity:1},{opacity:0}],{duration:180,fill:'forwards'});
+    const a=card.animate([{transform:'translate(0,0) scale(1.4)',opacity:1},{transform:`translate(${r.left-x0}px,${r.top-y0}px) scale(1)`,opacity:1}],{duration:620,easing:'cubic-bezier(.55,0,.3,1)',fill:'forwards'});
+    a.onfinish=()=>{
+      card.remove(); (S.seenOrd||(S.seenOrd={}))[id]=1; save(); flying=null;
+      const t2=box.querySelector(`.order[data-id="${id}"]`); if(t2){ t2.classList.remove('incoming'); t2.classList.add('landed'); }
+      SND.play('tap');
+      setTimeout(runArrivals,200);
+    };
+  },hold);
+}
+
 let resetArm=false;
 function showMenu(){
   const b=CONFIG.buyEnergy;
@@ -1372,7 +1612,7 @@ function showComplete(){
   openModal(`<h3 style="margin-top:0">Event complete</h3><h2>The Vanishing Moon</h2><p>You restored Odile’s attic and found out who she really was.</p><p style="color:var(--muted)">The board stays open. Merge as long as you like. The Circus Trunk chain has one level nobody has reached yet.</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button></div>`);
 }
 
-$('journalBtn').onclick=showJournal;
+$('journalBtn').onclick=()=>showBook();
 $('menuBtn').onclick=()=>{ resetArm=false; showMenu(); };
 $('giftBtn').onclick=placeGift;
 $('passBtn').onclick=showPass;
