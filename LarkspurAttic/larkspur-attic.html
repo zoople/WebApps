@@ -219,7 +219,10 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .lore div b{display:block;font-size:13px}
 
 /* toasts dock inside the bottom info panel: one at a time, never over the board */
-#toast{position:fixed;z-index:60;pointer-events:none;display:grid}
+#toast{position:fixed;z-index:45;display:grid;cursor:pointer}
+#toast:empty{display:none}
+#toast .tx{position:absolute;right:9px;bottom:5px;font-size:10.5px;color:var(--muted);font-weight:700}
+#toast .tm{position:absolute;left:10px;bottom:5px;font-size:10.5px;color:var(--gold);font-weight:800}
 #toast .t{grid-area:1/1;display:grid;place-items:center;background:#1a1216;border:1px solid #e4b84c88;color:var(--ink);padding:6px 12px;border-radius:14px;font-size:13.5px;line-height:1.35;text-align:center;animation:tin .18s ease-out;overflow:hidden}
 #toast .t.out{animation:tout .16s ease-in forwards}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -314,7 +317,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v17 · 14 Oct 2026';
+const VERSION='v18 · 14 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1338,36 +1341,38 @@ function flushToasts(){
   list.forEach(([h,ms],i)=>setTimeout(()=>toast(h,ms),250+i*450));
 }
 function storyOpen(){ return !$('scene').hidden || $('modal').dataset.story==='1'; }
-/* one toast at a time, docked over the info panel; when more are waiting the current one hands over sooner */
+/* one toast at a time, docked over the info panel; it stays until tapped, then the next one shows.
+   Sits just under dialogs (z 45 vs 50) and waits while one is open, so it never blocks a button. */
 let toastQ=[], toastCur=null;
 function hideToasts(){
-  if(toastCur){ heldToasts.push([toastCur.h,toastCur.ms]); clearTimeout(toastCur.tm); toastCur.el.remove(); toastCur=null; }
+  if(toastCur){ heldToasts.push([toastCur.h,toastCur.ms]); toastCur.el.remove(); toastCur=null; }
   toastQ.forEach(t=>heldToasts.push(t)); toastQ=[];
 }
 function dockToast(){
   const r=$('info').getBoundingClientRect(), b=$('toast').style;
   b.left=r.left+'px'; b.top=r.top+'px'; b.width=r.width+'px'; b.height=r.height+'px';
 }
+const overlayOpen=()=>storyOpen()||!$('modal').hidden;
+function toastMore(){ if(!toastCur) return; const m=toastCur.el.querySelector('.tm'); m.textContent=toastQ.length?`+${toastQ.length} more`:''; }
 function nextToast(){
-  const n=toastQ.shift(); if(!n){ toastCur=null; return; }
+  if(toastCur||overlayOpen()) return;
+  const n=toastQ.shift(); if(!n) return;
   dockToast();
-  const el=document.createElement('div'); el.className='t'; el.innerHTML=`<div>${n[0]}</div>`;
+  const el=document.createElement('div'); el.className='t'; el.innerHTML=`<div>${n[0]}</div><span class="tm"></span><span class="tx">Tap to close ✕</span>`;
   $('toast').appendChild(el);
-  const cur=toastCur={el,h:n[0],ms:n[1],at:Date.now()};
-  cur.tm=setTimeout(()=>endToast(cur), toastQ.length?1300:n[1]);
+  toastCur={el,h:n[0],ms:n[1]}; toastMore();
 }
-function endToast(cur){
-  if(toastCur!==cur) return;
-  cur.el.classList.add('out'); setTimeout(()=>cur.el.remove(),170);
-  toastCur=null; nextToast();
+function closeToast(){
+  const cur=toastCur; if(!cur) return;
+  toastCur=null; SND.play('tap');
+  cur.el.classList.add('out'); setTimeout(()=>{ cur.el.remove(); nextToast(); },150);
 }
+$('toast').addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); closeToast(); });
 function toast(html,ms=2200){
   if(storyOpen()){ heldToasts.push([html,ms]); return; }
   if(toastQ.some(t=>t[0]===html) || (toastCur&&toastCur.h===html)) return;
-  toastQ.push([html,ms]); if(toastQ.length>4) toastQ.splice(0,toastQ.length-4);
-  if(!toastCur){ nextToast(); return; }
-  // something is showing: let it finish after at least 1.3 s so the next one comes through
-  const cur=toastCur; clearTimeout(cur.tm); cur.tm=setTimeout(()=>endToast(cur), Math.max(0,1300-(Date.now()-cur.at)));
+  toastQ.push([html,ms]); if(toastQ.length>5) toastQ.splice(0,toastQ.length-5);
+  if(toastCur) toastMore(); else nextToast();
 }
 function playQueue(q,done){
   if(!q.length){ done&&done(); return; }
@@ -1397,7 +1402,7 @@ function playScene(sc,done){
   show();
 }
 function openModal(html,story){ $('modalBody').innerHTML=html; $('modal').hidden=false; $('modal').dataset.story=story?'1':''; if(story) hideToasts(); }
-function closeModal(){ const was=$('modal').dataset.story==='1'; $('modal').hidden=true; $('modal').dataset.story=''; if(was && !storyOpen()) flushToasts(); setTimeout(runArrivals,250); }
+function closeModal(){ const was=$('modal').dataset.story==='1'; $('modal').hidden=true; $('modal').dataset.story=''; if(was && !storyOpen()) flushToasts(); setTimeout(nextToast,200); setTimeout(runArrivals,250); }
 $('modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
 
 function chainHtml(k,cur){
@@ -1489,7 +1494,7 @@ function claimQuest(id){
   const q=QUESTS.find(x=>x.id===id); if(!q||!questReady(q)) return;
   const t=S.qt[q.id]||0; S.qt[q.id]=t+1;
   questRw(t).forEach(r=>S.gifts.push(r));
-  SND.play('gift'); toast(`${q.ic} Quest reward added to 🎁`);
+  SND.play('gift');
   save(); render(); showBook('q');
 }
 
@@ -1503,7 +1508,7 @@ function revealDisc(kk,el,quiet){
   delete S.unrev[kk];
   S.coins+=r.c; S.energy+=r.e; if(r.x) addXP(r.x);
   if(el){ el.className='ci flip'; el.removeAttribute('data-rv'); el.removeAttribute('role'); el.innerHTML=`<span>${d.e}</span>${d.n}<b class="rw">+${rwTxt(r)}</b>`; }
-  if(!quiet){ SND.play(l>=5?'gift':'coin'); toast(`${d.e} <b>${d.n}</b> · +${rwTxt(r)}`); save(); render(); bookCounts(); }
+  if(!quiet){ SND.play(l>=5?'gift':'coin'); save(); render(); bookCounts(); }
   return r;
 }
 function revealAll(){
@@ -1514,7 +1519,7 @@ function revealAll(){
     const r=revealDisc(el.dataset.rv,el,true); if(r){ tot.c+=r.c; tot.e+=r.e; tot.x+=r.x; }
     if(i%2===0) SND.play('coin');
     if(i===els.length-1){ Object.keys(S.unrev||{}).forEach(kk=>{ const r2=revealDisc(kk,null,true); if(r2){ tot.c+=r2.c; tot.e+=r2.e; tot.x+=r2.x; } });
-      SND.play('gift'); toast(`🧩 Revealed ${els.length} · +${rwTxt(tot)}`,2800); save(); render(); bookCounts(); const b=$('revAll'); if(b) b.parentNode.remove(); }
+      SND.play('gift'); save(); render(); bookCounts(); const b=$('revAll'); if(b) b.parentNode.remove(); }
   }, i*110));
 }
 function collectionHtml(){
