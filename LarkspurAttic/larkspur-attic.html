@@ -317,7 +317,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v19 · 14 Oct 2026';
+const VERSION='v20 · 14 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1169,7 +1169,7 @@ function render(){
         } else {
           if(isRes(c.it)) cls+=' res';
           if(c.it.st){ cls+=' must'; html+=`<b class="musttag">Tap</b>`; }
-          else if(c.it.l===maxL(c.it.k)) cls+=' maxed';
+          else if(c.it.l===maxL(c.it.k) && (isRes(c.it)||def(c.it).recycle)) cls+=' maxed'; // only pulse tops you can tap to collect
           if(needed.has(key(c.it.k,c.it.l))) html+=`<b class="chk">✓</b>`;
           else if(sideNeeded.has(key(c.it.k,c.it.l))) html+=`<b class="chk side">✓</b>`;
         }
