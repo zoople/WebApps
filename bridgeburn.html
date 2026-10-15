@@ -390,7 +390,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <div class="score"><span class="b" id="endYou">0</span><span>–</span><span class="r" id="endRival">0</span></div>
       <p id="endNote"></p>
       <div class="coachbox" id="coachReport" hidden></div>
-      <div class="row"><button class="btn go" id="againBtn">Play again</button><button class="btn" id="menuBtn">Change rival</button></div>
+      <div class="row"><button class="btn go" id="againBtn">Play again</button><button class="btn" id="rematchBtn">Rematch<span class="sub">Same decks, same hands</span></button><button class="btn" id="menuBtn">Change rival</button></div>
       <p class="record" id="record2"></p>
     </div>
   </div>
@@ -692,11 +692,15 @@ function newGame(opts = {}){
   const myDeck = drill ? drill.deck : startDeck();
   G = { t:0, clock:drill ? drill.time : 180, ot:false, over:false, endT:0, result:null, elixir:drill ? [drill.elixir ?? 5, 5] : [5,5], crowns:[0,0],
     ents:[], projs:[], spells:[], fx:[], texts:[], ruins:[], pending:[], zones:[], rolls:[],
-    deck:[drill ? { hand:myDeck.slice(0,4), queue:myDeck.slice(4) } : newDeck(myDeck), newDeck(drill && drill.rivalDeck ? drill.rivalDeck : cloneMatch && !opts.challenge ? startDeck() : rivalDeck())],
+    deck:opts.rematch ? [{ hand:opts.rematch.p.slice(0,4), queue:opts.rematch.p.slice(4) }, { hand:opts.rematch.r.slice(0,4), queue:opts.rematch.r.slice(4) }] :
+         [drill ? { hand:myDeck.slice(0,4), queue:myDeck.slice(4) } : newDeck(myDeck), newDeck(drill && drill.rivalDeck ? drill.rivalDeck : cloneMatch && !opts.challenge ? startDeck() : rivalDeck())],
     aiT:drill && !drill.ai ? Infinity : 2, sel:-1, ghost:null, paused:false, dblShown:!!drill, otLevel:0, lastLane:[0,0], aiSpellAt:-99,
     stats:{ played:[0,0] }, track:newTrack(), drill, script:drill ? drill.script.map(e => ({ ...e })) : [], challenge:!!opts.challenge, banner:null };
   G.ents.push(makeTower(1,true,9,3), makeTower(1,false,3.5,6.5), makeTower(1,false,14.5,6.5));
   G.ents.push(makeTower(0,true,9,29), makeTower(0,false,3.5,25.5), makeTower(0,false,14.5,25.5));
+  // Remember both decks in their starting order, so a rematch can deal exactly the same hands.
+  G.initDecks = { p:[...G.deck[0].hand, ...G.deck[0].queue], r:[...G.deck[1].hand, ...G.deck[1].queue] };
+  G.rematch = !!opts.rematch;
   if (drill && drill.setup) drill.setup(G);
   renderHand(); renderTracker(); lastHud = {};
 }
@@ -2403,7 +2407,7 @@ function showEnd(){
   const res = G.result;
   $('#endTitle').textContent = res==='win' ? 'Victory' : res==='lose' ? 'Defeat' : 'Draw';
   $('#endTitle').style.color = res==='win' ? 'var(--blue)' : res==='lose' ? 'var(--red)' : 'var(--gold)';
-  $('#endSub').textContent = `${diffKey[0].toUpperCase()+diffKey.slice(1)} rival` + (cloneMatch ? ' · clone match' : '');
+  $('#endSub').textContent = `${diffKey[0].toUpperCase()+diffKey.slice(1)} rival` + (G.rematch ? ' · rematch' : cloneMatch ? ' · clone match' : '');
   $('#endYou').textContent = G.crowns[0];
   $('#endRival').textContent = G.crowns[1];
   const mins = Math.floor(G.t/60), secs = Math.round(G.t%60);
@@ -2420,6 +2424,7 @@ function showEnd(){
     $('#endSub').textContent = `Classic Challenge · ${CHAL.wins} win${CHAL.wins===1?'':'s'}, ${CHAL.losses} loss${CHAL.losses===1?'':'es'}`;
   }
   $('#againBtn').textContent = G.challenge ? 'Continue challenge' : 'Play again';
+  $('#rematchBtn').hidden = !!G.challenge;
   $('#menuBtn').textContent = G.challenge ? 'Main menu' : 'Change rival';
   $('#endScreen').hidden = false;
 }
@@ -2444,6 +2449,8 @@ $('#startBtn').addEventListener('click', () => start(diffKey));
 $('#helpBtn').addEventListener('click', () => { $('#startScreen').hidden = true; $('#helpScreen').hidden = false; });
 $('#helpClose').addEventListener('click', () => { $('#helpScreen').hidden = true; $('#startScreen').hidden = false; });
 $('#againBtn').addEventListener('click', () => { if (G && G.challenge){ openChallenge(); return; } if (randomDeck) rolled = rivalDeck(); start(diffKey); });
+// Rematch: both sides get exactly the decks and starting hands of the match that just ended.
+$('#rematchBtn').addEventListener('click', () => { if (!G || !G.initDecks) return; const d = G.initDecks; start(diffKey, { rematch:{ p:[...d.p], r:[...d.r] } }); });
 $('#menuBtn').addEventListener('click', () => { G = null; showStart(); });
 
 // ---------- Coach ----------
@@ -2486,7 +2493,8 @@ function hint(id, text){ coach('info', text, id, 2, 15); }
 function coachTick(dt){
   const T = G.track;
   if (G.elixir[0] >= 9.99) T.fullT += dt; else T.fullT = 0;
-  if (T.fullT > 2) hint('leak', `Full elixir: you are wasting about 1 elixir every ${(2.8/elixirMult()).toFixed(1)} seconds. Play something at the back.`);
+  // Only mention a full bar once it has sat there long enough to really cost something.
+  if (T.fullT > 4.5) coach('info', `Your elixir has been full for ${Math.floor(T.fullT)} seconds, about ${(T.fullT*elixirMult()/2.8).toFixed(1)} wasted. Play something at the back.`, 'leak', 0, 40);
   if (!G.drill && G.clock <= 60 && !G.ot) hint('double', 'Double elixir: now is the time for big pushes, and for defending with the tower’s help.');
   for (const sc of T.spellChecks) if (!sc.done && G.t >= sc.at){ sc.done = true; reviewSpell(sc.rec); }
   // A tower one of your spells could finish right now.
