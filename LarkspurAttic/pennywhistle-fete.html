@@ -40,6 +40,10 @@
 #scene{z-index:55} /* story scenes sit above pop-ups like the wheel */
 .wheelwrap{position:relative;width:min(280px,78vw);aspect-ratio:1;margin:10px auto 4px}
 .wheelspin{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 4px #e4b84c,0 10px 24px #0009}
+.wbanner{margin:6px auto;max-width:300px;text-align:center;border-radius:12px;padding:8px 10px;background:#ffffff10}
+.wbanner.new{background:#ffc94a22;box-shadow:0 0 0 2px #ffc94a}
+.wbanner .wb1{font-weight:800;font-size:17px}.wbanner .wb2{font-size:14px;color:var(--muted);margin-top:2px}
+.justlit{animation:lit 1s ease-in-out 3}@keyframes lit{50%{filter:brightness(1.8) drop-shadow(0 0 6px #ffe9a0)}}
 .wheelptr{position:absolute;left:50%;top:-14px;transform:translateX(-50%);z-index:2;color:#f4e8d3;font-size:24px;text-shadow:0 2px 3px #000}
 .slotchips{position:absolute;left:50%;bottom:1px;transform:translateX(-50%);font-size:9.5px;font-weight:800;font-style:normal;background:#000a;color:#fff;border-radius:6px;padding:0 4px;white-space:nowrap;pointer-events:none;font-variant-numeric:tabular-nums}
 .cell.charged{box-shadow:inset 0 0 0 2px #7fd3ffaa}
@@ -304,7 +308,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
     <li>Tap a generator twice to make items</li>
     <li>Drag two matching items together to merge</li>
     <li>Fill orders to find out who leaves the Mystery Prize</li>
-    <li>🎡 Spin the Prize Wheel with 🎟️ tickets; new segments move the story on</li>
+    <li>🎡 Spin the Prize Wheel with 🎟️ tickets; each new 💡 light unlocks a page of the story</li>
     <li>Every story order pays a ticket</li>
     <li>Generators need a rest; ⏲️ egg timers refill one</li>
     <li>Drag tea onto a generator to focus it on rare finds</li>
@@ -345,7 +349,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v2 · 15 Oct 2026';
+const VERSION='v3 · 15 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -483,7 +487,7 @@ const CHAPTERS = [
       ['T','Everything for the fete lives in the village hall storeroom. Nobody’s been in since last summer. Mind the bunting, it bites.'],
       ['M','Wuff! <em>(Biscuit is already under a trestle table, tail going like a metronome.)</em>'],
       ['N','Tap a generator, then tap it again to make something. Drag two matching things together to merge them. Every merge shakes open the boxes beside it.'],
-      ['N','The 🎡 Prize Wheel is by the door. 🎟️ Raffle tickets spin it. Every new segment you uncover is an old prize, and a little piece of the story.'],
+      ['N','The 🎡 Prize Wheel is by the door, all its lights dark. 🎟️ Raffle tickets spin it. Tap it to find out why.'],
     ],
     outro:[
       ['T','There. A floor. Nobody has seen this floor since 2019.'],
@@ -576,7 +580,7 @@ const CHAPTERS = [
 ];
 
 /* ---------- orders ---------- */
-/* wheel:n = the order also needs n Prize Wheel segments uncovered */
+/* wheel:n = the order also needs n Prize Wheel lights back on */
 const TASKS = [
   // ch1 — zone 0 only
   {beat:['T','Nose on. The hoopla rabbit now looks alarmed rather than menacing. Progress.'], ch:0, who:'T', need:[['F',2]], coins:8, say:'Got a carrot? The hoopla rabbit costume needs a nose.'},
@@ -735,9 +739,9 @@ function showShop(){
 }
 
 /* ---------- the Prize Wheel ----------
-   20 segments, each an old Mystery Prize. A ticket spins it. Landing on a covered segment uncovers it for good,
-   pays its prize and tells the next piece of the story (told in the order you uncover them, so it always reads right).
-   Landing on an uncovered one pays its prize again. The wheel leans towards covered segments (70%), so the last few
+   20 segments with dark bulbs. A ticket spins it. Stopping on a dark segment lights it for good and unlocks the next
+   page of Dot's Prize Ledger (read in page order, so the story is never tied to a segment). Every stop pays the
+   segment's prize, lit or not. The wheel leans towards covered segments (70%), so the last few
    don't take forever. Story orders need a number of segments uncovered: the wheel is how the story moves. */
 const WHEEL_COST=1, WHEEL_N=20, WHEEL_LEAN=.7;
 const WHEEL_PRIZES=[
@@ -763,7 +767,16 @@ const WHEEL_STORY=[
   [['N','2014. A pair of oven gloves, embroidered “Hot Stuff”.'],['P','The old vicar won those. Wore them at the Christmas service. Nobody ever asked.']],
   [['N','2018. A bag of shells, each one painted with a face.'],['T','Every face is somebody in the village. That one’s me. Why am I frowning?']],
   [['N','2022. A little book of everyone’s recipes, typed up.'],['P','Page twelve is my Victoria sponge. I never gave that recipe to anybody. Well. Hardly anybody.']],
-  [['N','The last segment is a parcel with no year and no tag. Dot lifts it off the wheel before you can look.'],['P','That one’s for Saturday, love.']],
+  [['N','The last page has no year. Just a parcel, sketched in pencil, and a curly ‘y’. Dot shuts the ledger before you can look.'],['P','That page is for Saturday, love.']],
+];
+/* why the wheel matters: dark bulbs, and Dot's Prize Ledger read one page per light (so the story is always in order) */
+const WHEEL_INTRO=[
+  ['T','Right. The wheel. It hasn’t turned since last summer, and every one of its twenty little bulbs is dark.'],
+  ['P','Fred wired those in 1972. Loose contacts, every one. When the wheel stops on a dark segment, the jolt knocks its bulb back on.'],
+  ['T','So we test it. Spin until all twenty are lit for Saturday. Got it.'],
+  ['P','And every time a light comes back on, I read the next page of the Prize Ledger. One page a light. It’s tradition, love.'],
+  ['N','📒 The Prize Ledger lists every Mystery Prize since 1964, one a page, in order.'],
+  ['N','<em>• A dark segment that lights up: 💡 a new light, plus the next ledger page<br>• Wherever it stops, you win the prize painted on that segment<br>• Story orders need lights on</em>'],
 ];
 let wheelBusy=false, wheelCell=-1;
 const wheelDone=()=>(S.wheel||[]).filter(Boolean).length;
@@ -788,7 +801,7 @@ function wheelSVG(){
     const a0=i*seg, a1=(i+1)*seg, open=S.wheel[i];
     const p0=[c+R*Math.cos(rad(a0)), c+R*Math.sin(rad(a0))], p1=[c+R*Math.cos(rad(a1)), c+R*Math.sin(rad(a1))];
     const fill = open ? OPEN[i%4] : (i%2?'#1f4651':'#28545f');
-    g+=`<path d="M${c},${c} L${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${R},${R} 0 0 1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)} Z" fill="${fill}" stroke="#123039" stroke-width="1.5"/>`;
+    g+=`<path d="M${c},${c} L${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${R},${R} 0 0 1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)} Z" fill="${fill}" stroke="#123039" stroke-width="1.5" ${S.wheelLast&&S.wheelLast.fresh&&S.wheelLast.i===i?' class="justlit"':''}/>`;
     const m=rad(a0+seg/2), tx=c+98*Math.cos(m), ty=c+98*Math.sin(m);
     const [k,l]=WHEEL_PRIZES[i];
     g+= open ? `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="19" text-anchor="middle" dominant-baseline="central" transform="rotate(${a0+seg/2} ${tx.toFixed(1)} ${ty.toFixed(1)})">${CHAINS[k].items[l-1].e}</text>`
@@ -797,20 +810,39 @@ function wheelSVG(){
   return `<svg viewBox="0 0 280 280" width="100%" height="100%" aria-hidden="true">${g}<circle cx="140" cy="140" r="26" fill="#123039" stroke="#ffc94a" stroke-width="3"/><text x="140" y="141" font-size="22" text-anchor="middle" dominant-baseline="central">🎟️</text></svg>`;
 }
 function openWheel(i){
-  wheelCell=i; const done=wheelDone();
-  const told=WHEEL_STORY.slice(0,done).map(s=>`<div class="lore" style="margin:4px 0"><div>${s[0][1]}</div></div>`).reverse().join('');
+  wheelCell=i;
+  if(!S.wheelIntro){ S.wheelIntro=1; save(); playScene({title:'The Prize Wheel', sub:'Twenty dark bulbs', lines:WHEEL_INTRO}, ()=>openWheel(i)); return; }
+  const done=wheelDone(), unread=S.wheelUnread||0, last=S.wheelLast;
+  const told=WHEEL_STORY.slice(0,done-(unread?1:0)).map((s,j)=>`<div class="lore" style="margin:4px 0"><span style="font-size:13px;font-weight:800;color:var(--muted)">p${j+1}</span><div>${s[0][1]}</div></div>`).reverse().join('');
+  const banner = last ? (last.fresh
+      ? `<div class="wbanner new"><div class="wb1">💡 Light ${last.n} of ${WHEEL_N} is back on!</div><div class="wb2">Prize: ${last.e} ${last.nm} → on the board</div></div>`
+      : `<div class="wbanner"><div class="wb1">Already lit</div><div class="wb2">Prize: ${last.e} ${last.nm} → on the board</div></div>`) : '';
+  const btn = unread
+      ? `<button class="bigbtn gold" id="wheelRead">📒 Read ledger page ${unread}</button>`
+      : `<button class="bigbtn gold" id="wheelGo" ${wheelBusy?'disabled':''}>Spin · ${WHEEL_COST} 🎟️</button>`;
   openModal(`<h2>🎡 Prize Wheel</h2>
-    <p style="color:var(--muted);font-size:13px;margin:0">• ${WHEEL_COST} raffle ticket 🎟️ per spin<br>• Land on a ? to uncover an old prize and the next bit of the story<br>• Story orders need segments uncovered</p>
+    <p style="color:var(--muted);font-size:13px;margin:0">• ${WHEEL_COST} raffle ticket 🎟️ per spin<br>• Stop on a dark ? segment: 💡 its light comes back on, and Dot reads the next 📒 ledger page<br>• Every stop wins the prize on that segment<br>• Story orders need lights on</p>
     <div class="wheelwrap"><div class="wheelptr">▼</div><div class="wheelspin" id="wheelSpin" style="transform:rotate(${S.wheelRot||0}deg)">${wheelSVG()}</div></div>
-    <p style="text-align:center;margin:4px 0;font-variant-numeric:tabular-nums"><b>${done}/${WHEEL_N}</b> uncovered · 🎟️ ${S.chips||0} tickets</p>
-    <div class="row-btns" style="justify-content:center"><button class="bigbtn gold" id="wheelGo" ${wheelBusy?'disabled':''}>Spin · ${WHEEL_COST} 🎟️</button><button class="bigbtn" id="wheelClose">Close</button></div>
-    <h3>Prizes so far</h3>${told||'<p style="color:var(--muted);font-size:13px">Nothing yet. Every new segment is a prize from a past fete.</p>'}`);
+    <p style="text-align:center;margin:4px 0;font-variant-numeric:tabular-nums">💡 <b>${done}/${WHEEL_N}</b> lights on · 🎟️ ${S.chips||0} tickets</p>${banner}
+    <div class="row-btns" style="justify-content:center">${btn}<button class="bigbtn" id="wheelClose">Close</button></div>
+    <h3>📒 The Prize Ledger</h3>${told||'<p style="color:var(--muted);font-size:13px">Unread. Dot reads a page each time a light comes back on.</p>'}`);
   $('wheelClose').onclick=()=>{ if(!wheelBusy) closeModal(); };
-  $('wheelGo').onclick=spinWheel;
+  if($('wheelGo')) $('wheelGo').onclick=spinWheel;
+  if($('wheelRead')) $('wheelRead').onclick=readLedger;
+}
+function readLedger(){
+  const n=S.wheelUnread; if(!n) return;
+  const lines=WHEEL_STORY[n-1].slice();
+  if(n===WHEEL_N) lines.push(['N','All twenty lights are on. <em>(Wheel complete. A gift is waiting 🎁)</em>']);
+  S.wheelUnread=0; S.wheelLast=null; save();
+  const yr=(WHEEL_STORY[n-1][0][1].match(/^(\d{4})\./)||[])[1];
+  playScene({title:`📒 Prize Ledger · page ${n} of ${WHEEL_N}`, sub:yr||'The last page', lines}, ()=>openWheel(wheelCell));
 }
 function spinWheel(){
   if(wheelBusy) return;
+  if(S.wheelUnread) return;
   if((S.chips||0)<WHEEL_COST){ SND.play('nope'); showTicketHelp(); return; }
+  S.wheelLast=null; const bn=$('modalBody').querySelector('.wbanner'); if(bn) bn.remove();
   S.chips-=WHEEL_COST; wheelBusy=true; save(); renderHud();
   const idx=wheelPick();
   const seg=360/WHEEL_N, target=-(idx*seg+seg/2);
@@ -824,14 +856,9 @@ function spinWheel(){
     const [k,l]=WHEEL_PRIZES[idx], d=CHAINS[k].items[l-1];
     const n=wheelLand(idx);
     save(); render();
-    if(n){
-      SND.play('magic'); openWheel(wheelCell);
-      const lines=WHEEL_STORY[n-1].slice();
-      if(n===WHEEL_N) lines.push(['N','Every segment is uncovered. <em>(Wheel complete. A gift is waiting 🎁)</em>']);
-      playScene({title:`Prize ${n} of ${WHEEL_N}`, sub:`${d.e} ${d.n} is on the board`, lines});
-    } else {
-      SND.play('coins'); toast(`${d.e} ${d.n} again`); openWheel(wheelCell);
-    }
+    S.wheelLast={fresh:!!n, n, i:idx, e:d.e, nm:d.n};
+    if(n){ S.wheelUnread=n; SND.play('magic'); } else SND.play('coins');
+    save(); openWheel(wheelCell);
   },3300);
 }
 function showTicketHelp(){
@@ -1464,12 +1491,12 @@ function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&(ch.main===k||
 function hintTask(t){
   if(t.wheel && wheelDone()<t.wheel && t.need.every(([k,l])=>openCount(k,l)>0)){
     S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
-    toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs 🎡 ${t.wheel} wheel segments uncovered (${wheelDone()} so far)`,4200); render(); return;
+    toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs 💡 ${t.wheel} wheel lights on (${wheelDone()} so far)`,4200); render(); return;
   }
   const ks=new Set(t.need.map(n=>n[0]));
   S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
   const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=genFor(k); return `${d.e} ${d.n}${g?` <small>(${CHAINS[k].rare?'rare from ':''}${g.items[0].e} ${g.name})</small>`:''}`; });
-  if(t.wheel && wheelDone()<t.wheel) parts.push(`🎡 ${t.wheel} wheel segments <small>(${wheelDone()} so far)</small>`);
+  if(t.wheel && wheelDone()<t.wheel) parts.push(`💡 ${t.wheel} wheel lights <small>(${wheelDone()} so far)</small>`);
   toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs: ${parts.join(' + ')}`, 4200);
   render();
 }
@@ -1598,7 +1625,7 @@ function renderOrders(tasks){
     el.dataset.id=t.id;
     if(!t.side && (!(S.seenOrd||{})[t.id] || flying===String(t.id))) el.classList.add('incoming');
     el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
-      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">🎡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}</div>
+      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">💡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}</div>
       <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     el.onclick=()=>{
       if(!taskStatus(t).ready){ hintTask(t); return; }
@@ -1624,7 +1651,7 @@ function renderInfo(){
   const it=c.it, d=def(it), ch=CHAINS[it.k];
   let ds='';
   if(ch.wheel){
-    box.innerHTML=`<div class="big">🎡</div><div class="txt"><div class="nm">Prize Wheel<small>${wheelDone()}/20 uncovered</small></div><div class="ds">Tap to open. ${WHEEL_COST} 🎟️ per spin. New segments move the story on.</div></div><div class="btns"><button class="sbtn" id="wOpen">Spin</button><button class="sbtn" id="tkBtn">Get 🎟️</button></div>`;
+    box.innerHTML=`<div class="big">🎡</div><div class="txt"><div class="nm">Prize Wheel<small>💡 ${wheelDone()}/20 lit</small></div><div class="ds">Tap to open. ${WHEEL_COST} 🎟️ per spin. New segments move the story on.</div></div><div class="btns"><button class="sbtn" id="wOpen">Spin</button><button class="sbtn" id="tkBtn">Get 🎟️</button></div>`;
     $('wOpen').onclick=()=>openWheel(sel); $('tkBtn').onclick=showTicketHelp; return;
   }
   if(isGen(it)){
@@ -1822,10 +1849,10 @@ function journalHtml(){
   html+=`<h3>The Mystery Prizes</h3>`;
   const lore=CHAINS.M.items.map((d,j)=>S.disc[key('M',j+1)]?`<div class="lore"><span>${d.e}</span><div><b>${d.n}</b>${d.lore}</div></div>`:'').join('');
   html+= lore || `<p style="color:var(--muted)">Nothing yet. Somewhere in here is a trunk full of other people’s good years.</p>`;
-  const wd=wheelDone();
-  if(wd){
-    html+=`<h3>The Prize Wheel <span style="color:var(--muted);font-weight:400;font-size:13px">${wd}/${WHEEL_N}</span></h3>`;
-    html+=WHEEL_STORY.slice(0,wd).map(ls=>`<div class="lore"><span>🎡</span><div>${ls.map(([w,t])=>(w==='N'||t.startsWith('<em>'))?t:`<span style="font-weight:800">${CAST[w].name}:</span> ${t}`).join('<br>')}</div></div>`).join('');
+  const wd=wheelDone()-(S.wheelUnread?1:0);
+  if(wd>0){
+    html+=`<h3>📒 The Prize Ledger <span style="color:var(--muted);font-weight:400;font-size:13px">${wd}/${WHEEL_N} pages</span></h3>`;
+    html+=WHEEL_STORY.slice(0,wd).map(ls=>`<div class="lore"><span>📒</span><div>${ls.map(([w,t])=>(w==='N'||t.startsWith('<em>'))?t:`<span style="font-weight:800">${CAST[w].name}:</span> ${t}`).join('<br>')}</div></div>`).join('');
   }
   const mn=MOON_NOTES.filter((_,j)=>(S.moonSeen||{})[j+1]), fx=FELIX.filter((_,j)=>S.passGot[j*3+2]);
   if(mn.length||fx.length){
