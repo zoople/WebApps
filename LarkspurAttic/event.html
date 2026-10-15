@@ -315,7 +315,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
   <section class="chapter">
     <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Dust Sheets</h1><span class="ch-count" id="chCount">0/5</span></div>
     <div class="bar"><i id="chBar"></i></div>
-    <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button><button class="passbtn" id="passBtn" aria-label="Pass"><span id="passIc">🌕</span> <b id="pts">0</b><i class="dot" id="passDot" hidden></i></button></div>
+    <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button><button class="passbtn" id="passBtn" aria-label="Pass"><span id="passIc">🌑</span> <b id="pts">0</b><i class="dot" id="passDot" hidden></i></button></div>
   </section>
   <section class="orders" id="orders"></section>
   <main class="boardwrap" id="wrap"><div id="board"></div></main>
@@ -327,7 +327,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v2 · 15 Oct 2026';
+const VERSION='v3 · 15 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1766,7 +1766,7 @@ function showPass(){
   const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;
   const N_=CHAINS.N.items;
   let h=`<h2>${TM.passName}</h2><p style="color:var(--muted);font-size:13px">• ${CHAINS.N.name} ${N_[0].e} drop from generators and orders<br>• Tap twice to claim them any time: ${N_.map(d=>d.e+' '+d.v).join(' · ')} points<br>• Merging first is worth more, but takes board space<br>• Every 3rd reward comes with a letter from ${TM.letterFrom} ${CAST.F.av}</p>
-    <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">🌕 ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
+    <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">${CHAINS.N.items[0].e} ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
   PASS.forEach((t,i)=>{
     const got=S.passGot[i], ok=S.pts>=t.pts;
     h+=`<div class="tier${ok?'':' locked'}"><span class="tp">${t.pts}</span><span class="tr">${t.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span>${got?'<span style="color:var(--ok);font-weight:800">✓</span>':ok?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-tier="${i}">Claim</button>`:''}</div>`;
@@ -1835,7 +1835,7 @@ function startIntro(){
 
 /* title screen reflects the loaded event; with none, point to the Workshop */
 (function(){
-  $('passIc').textContent=CHAINS.N.items[3].e.replace(/&amp;/g,'&');
+  $('passIc').textContent=CHAINS.N.items[0].e.replace(/&amp;/g,'&');
   if(!EVENT){
     $('tSub').textContent='Merge event player'; $('tName').textContent='No event loaded';
     $('tList').innerHTML='<li>Build an event in the ✏️ Workshop</li><li>Or load an event file (.json) you saved</li>';

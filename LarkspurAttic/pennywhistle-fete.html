@@ -333,7 +333,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
   <section class="chapter">
     <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Bunting Up</h1><span class="ch-count" id="chCount">0/5</span></div>
     <div class="bar"><i id="chBar"></i></div>
-    <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button><button class="passbtn" id="passBtn" aria-label="Rosette Board">🏵️ <b id="pts">0</b><i class="dot" id="passDot" hidden></i></button></div>
+    <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button><button class="passbtn" id="passBtn" aria-label="Rosette Board"><span id="passIc">🎗️</span> <b id="pts">0</b><i class="dot" id="passDot" hidden></i></button></div>
   </section>
   <section class="orders" id="orders"></section>
   <main class="boardwrap" id="wrap"><div id="board"></div></main>
@@ -345,7 +345,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v1 · 15 Oct 2026';
+const VERSION='v2 · 15 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1304,7 +1304,7 @@ function claim(i){
   if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
   else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
   else if(kind==='points'){
-    S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} Rosette Board points${passReady()?' · a reward is ready 🏵️':''}`);
+    S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} Rosette Board points${passReady()?' · a reward is ready '+CHAINS.N.items[0].e:''}`);
     S.moonSeen=S.moonSeen||{};
     if(!S.moonSeen[it.l]){ S.moonSeen[it.l]=1; save(); setTimeout(()=>playScene({title:'Dot’s fete scrapbook', sub:d.n, lines:MOON_NOTES[it.l-1]}),250); }
   }
@@ -1554,7 +1554,7 @@ function renderHud(){
   $('energy').textContent=S.energy;
   $('eTimer').textContent = S.energy<CONFIG.energyMax ? fmt(Math.ceil((CONFIG.energyRegenMs-(now()-S.eT))/1000)) : '';
   $('coins').textContent=S.coins; $('chips').textContent=S.chips||0;
-  $('pts').textContent=S.pts||0; $('passDot').hidden=!passReady();
+  $('passIc').textContent=CHAINS.N.items[0].e; $('pts').textContent=S.pts||0; $('passDot').hidden=!passReady();
   { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
     $('xpLv').textContent=l; $('xpTxt').textContent=`${S.xp-lo}/${hi-lo}`; $('xpBar').style.width=((S.xp-lo)/(hi-lo)*100)+'%'; }
   $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length; renderPip();
@@ -1822,6 +1822,11 @@ function journalHtml(){
   html+=`<h3>The Mystery Prizes</h3>`;
   const lore=CHAINS.M.items.map((d,j)=>S.disc[key('M',j+1)]?`<div class="lore"><span>${d.e}</span><div><b>${d.n}</b>${d.lore}</div></div>`:'').join('');
   html+= lore || `<p style="color:var(--muted)">Nothing yet. Somewhere in here is a trunk full of other people’s good years.</p>`;
+  const wd=wheelDone();
+  if(wd){
+    html+=`<h3>The Prize Wheel <span style="color:var(--muted);font-weight:400;font-size:13px">${wd}/${WHEEL_N}</span></h3>`;
+    html+=WHEEL_STORY.slice(0,wd).map(ls=>`<div class="lore"><span>🎡</span><div>${ls.map(([w,t])=>(w==='N'||t.startsWith('<em>'))?t:`<span style="font-weight:800">${CAST[w].name}:</span> ${t}`).join('<br>')}</div></div>`).join('');
+  }
   const mn=MOON_NOTES.filter((_,j)=>(S.moonSeen||{})[j+1]), fx=FELIX.filter((_,j)=>S.passGot[j*3+2]);
   if(mn.length||fx.length){
     html+=`<h3>Letters & notes</h3>`;
@@ -2019,7 +2024,7 @@ function showSOS(){
 function showPass(){
   const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;
   let h=`<h2>Rosette Board</h2><p style="color:var(--muted);font-size:13px">• Rosettes 🎗️ drop from generators and orders<br>• Tap twice to claim them any time: 🎗️ 1 · 🏵️ 3 · 🥈 7 · 🥇 16 points<br>• Merging first is worth more, but takes board space<br>• Every 3rd reward comes with a note from a past winner 💌</p>
-    <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">🏵️ ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
+    <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">${CHAINS.N.items[0].e} ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
   PASS.forEach((t,i)=>{
     const got=S.passGot[i], ok=S.pts>=t.pts;
     h+=`<div class="tier${ok?'':' locked'}"><span class="tp">${t.pts}</span><span class="tr">${t.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span>${got?'<span style="color:var(--ok);font-weight:800">✓</span>':ok?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-tier="${i}">Claim</button>`:''}</div>`;
