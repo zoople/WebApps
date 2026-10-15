@@ -349,7 +349,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v3 · 15 Oct 2026';
+const VERSION='v4 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -617,7 +617,7 @@ const TASKS = [
   {beat:['P','The kite marrow. Nobody remembers why. Nobody would dare stop.'], x:1, ch:4, who:'P', need:[['F',6],['T',6]], coins:30, say:'Hold the marrow steady while I tie the kite on, love. Don’t ask why. Tradition.'},
   // ch6
   {beat:['T','Horse up. Doughnut… gone. It was a test doughnut.'], ch:5, who:'T', need:[['T',7],['R',4]], coins:34, say:'The carousel horse and an iced doughnut. Every fete needs a horse. And a doughnut. Mostly the doughnut.'},
-  {beat:['P','“Your turn.” Every one in different writing, and every one of them meant it.'], ch:5, who:'P', need:[['M',6]], coins:34, say:'That card, love. It belongs on the wheel today.'},
+  {beat:['P','“Your turn.” Every one in different writing, and every one of them meant it.'], more:[['T','Sixty people, and every one kept it quiet for a whole year.'],['P','Longest anybody in Pennywhistle has kept anything, love.']], ch:5, who:'P', need:[['M',6]], coins:34, say:'That card, love. It belongs on the wheel today.'},
   {beat:['N','Biscuit is crowned May Queen. He accepts with enormous dignity, then sneezes.'], ch:5, who:'M', need:[['F',7],['B',4]], coins:34, say:'(The giant pumpkin and the May Queen crown. He has decided he is the May Queen. Nobody argues.)'},
   {beat:['P','There’s the march. Same march every year, and it’s still the best bit.'], x:1, ch:5, who:'P', need:[['L',6],['R',4]], coins:34, say:'The band score and a doughnut for the bandleader. He plays better with icing on.'},
   {ch:5, who:'O', wheel:20, need:[['M',7]], coins:50, say:'“For the wheel. From a friend.”'},
@@ -1448,15 +1448,16 @@ function completeTask(t){
   S.done[t.id]=1; stat('story');
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
-  if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat);
-  else if(t.beat) playScene({lines:[t.beat]});
+  if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat, t.more);
+  else if(t.beat) playScene({lines:[t.beat].concat(t.more||[])});
   save(); render();
 }
-function finishChapter(beat){
+/* big story beats carry `more`: a short exchange where the cast confirm what just happened */
+function finishChapter(beat, more){
   const c=S.ch;
   S.journal.push(c);
   setTimeout(()=>SND.play('fanfare'),350);
-  const queue=[{title:'Chapter '+(c+1)+' complete', sub:CHAPTERS[c].title, lines:(beat?[beat]:[]).concat(CHAPTERS[c].outro)}];
+  const queue=[{title:'Chapter '+(c+1)+' complete', sub:CHAPTERS[c].title, lines:(beat?[beat]:[]).concat(more||[], CHAPTERS[c].outro)}];
   S.ch++;
   if(S.ch>=CHAPTERS.length){ S.complete=true; }
   else{
