@@ -160,6 +160,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .cell.drop{box-shadow:inset 0 0 0 3px #fff8}
 .lv{position:absolute;right:3px;bottom:2px;font-size:9px;font-style:normal;font-weight:800;color:#f4e8d3aa;pointer-events:none}
 .chk{position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:var(--ok);color:#10200f;font-size:9px;font-weight:800;display:grid;place-items:center;pointer-events:none}
+.focus{position:absolute;left:2px;bottom:2px;font-size:9px;font-style:normal;font-weight:800;background:#2a1d10e6;color:#ffd98a;border-radius:6px;padding:1px 4px;pointer-events:none;font-variant-numeric:tabular-nums}
 .gen{position:absolute;left:2px;top:2px;font-size:9px;font-style:normal;font-weight:800;background:#0007;color:var(--gold);border-radius:6px;padding:1px 4px;pointer-events:none;font-variant-numeric:tabular-nums}
 .ring{position:absolute;inset:5%;width:90%;height:90%;transform:rotate(-90deg);pointer-events:none}
 .ring circle{fill:none;stroke-width:7}
@@ -356,7 +357,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v16 · 14 Oct 2026';
+const VERSION='v17 · 15 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -442,6 +443,8 @@ const CHAINS = {
     {e:'🕊️',n:'Paper Dove', lore:'Folded from one of Felix’s letters. You can still read the word “sorry” along one wing.'},
     {e:'🔮',n:'Crystal Ball', lore:'Not crystal. Glass, polished by hand until it holds the whole attic upside down.'},
     {e:'🌙',n:'The Vanishing Moon', lore:'The full method, written out. Two pages. The second page is a drawing of a black cat.'}]},
+  /* egg timers: drag onto a generator to refill it straight away */
+  ET:{name:'Egg Timers', items:[{e:'⏲️',n:'Egg Timer'}]},
   /* generators */
   gD:{name:'Paper Tray', gen:true, main:'P', rare:'K', items:[
     {e:'🗂️',n:'Paper Tray', drop:[['P',1,75],['P',2,10],['K',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
@@ -555,9 +558,10 @@ function makeSide(){
 }
 function sideProgress(){ return Math.min(1,(S.sideDone||0)/50 + (S.pts||0)/500); }
 function sideRewards(size,lucky){
-  const rw=[['N', size>=24?3 : size>=8?2 : 1]];
+  const rw=[['N', size>=24?3 : size>=8?2 : 1], ['C', size>=28?4 : size>=12?3 : size>=4?2 : 1]];   // bigger orders pay bigger coins
   const r=Math.random();
-  if(size>=24) rw.push(['CP',2]); else if(r<.3) rw.push(['C',1]); else if(r<.5) rw.push(['CP',1]); else if(r<.65) rw.push(['E',1]);
+  if(size>=24) rw.push(['CP',2]); else if(r<.3) rw.push(['CP',1]); else if(r<.45) rw.push(['E',1]);
+  if(size>=12 && Math.random()<.3) rw.push(['ET',1]);
   return rw;
 }
 function ensureSide(){ S.side=S.side||[]; while(S.side.length<3){ const o=makeSide(); if(!o) break; S.side.push(o); } }
@@ -591,6 +595,27 @@ function checkMilestones(){
   const scenes=[];
   PASS.forEach((t,i)=>{ if(S.pts>=t.pts && !S.passGot[i]){ S.passGot[i]=1; t.rw.forEach(r=>S.gifts.push(r)); scenes.push({title:`Milestone ${i+1} of ${PASS.length}`, sub:`${t.pts} points · rewards in 🎁`, lines:MILESTONES[i]}); } });
   return scenes;
+}
+/* ============================================================ tea focus and egg timers (same as Larkspur Attic: Second Pass) */
+const FOCUS=[2,5,12,30,75], FOCUS_MULT=5;
+const canFocus=it=>isGen(it)&&typeof CHAINS[it.k].rare==='string'&&!!CHAINS[CHAINS[it.k].rare]&&CHAINS[CHAINS[it.k].rare].rare===true;
+function useOn(a,b){
+  const A=S.cells[a].it, B=S.cells[b].it; if(!A||!B||!isGen(B)||S.cells[b].s!=='open') return false;
+  const T=def(B);
+  if(A.k==='ET'){
+    if(!T.charges){ SND.play('nope'); toast(`${def(A).e} That doesn’t need refilling.`); return true; }
+    refreshCharges(B);
+    if(B.ch>=T.charges){ SND.play('nope'); toast(`${T.e} The ${T.n} is already full. Save the ${def(A).n} for when it runs dry.`); return true; }
+    S.cells[a].it=null; B.ch=T.charges; B.t=now(); fx[b]='pop'; SND.play('unweb'); if(sel===a) sel=b;
+    toast(`${def(A).e} ${T.e} ${T.n} refilled`); save(); render(); return true;
+  }
+  if(A.k==='E' && !A.st){
+    if(!canFocus(B)) return false;   // sandbox: tea on other generators keeps its old behaviour (feeding/swapping)
+    const n=FOCUS[A.l-1]; S.cells[a].it=null; B.focus=(B.focus||0)+n; fx[b]='pop'; SND.play('drink'); if(sel===a) sel=b;
+    const RC=CHAINS[CHAINS[B.k].rare];
+    toast(`${def(A).e} Focused: the next ${B.focus} taps find ${RC.items[0].e} ${RC.name.toLowerCase()} far more often`,2800); save(); render(); return true;
+  }
+  return false;
 }
 function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i]).length; }
 
@@ -1085,9 +1110,13 @@ function showStore(){
     <p>🪙 ${S.coins} · 🔴 ${S.chips} chips</p>
     <div class="tier"><span class="tp">🎰</span><span class="tr" style="font-size:14px;letter-spacing:0">Slot Machine 1<br><small style="color:var(--muted)">Price rises each time</small></span><button class="sbtn" id="buySlot" ${S.coins<sp?'disabled style="opacity:.5"':''}>🪙 ${sp}</button></div>
     <div class="tier"><span class="tp">🔴</span><span class="tr" style="font-size:14px;letter-spacing:0">10 Casino Chips</span><button class="sbtn" id="buyChips" ${S.coins<15?'disabled style="opacity:.5"':''}>🪙 15</button></div>
+    <div class="tier"><span class="tp">⏲️</span><span class="tr" style="font-size:14px;letter-spacing:0">Egg Timer<br><small style="color:var(--muted)">Drag onto a generator to refill it</small></span><button class="sbtn" id="buyET" ${S.coins<30?'disabled style="opacity:.5"':''}>🪙 30</button></div>
+    <div class="tier"><span class="tp">⏳</span><span class="tr" style="font-size:14px;letter-spacing:0">Hourglass<br><small style="color:var(--muted)">Skips 15 minutes for everything</small></span><button class="sbtn" id="buyH" ${S.coins<90?'disabled style="opacity:.5"':''}>🪙 90</button></div>
     <h3>Other ways to get chips</h3>${chipSourcesHTML().replace(/<div class="tier"><span class="tp">🛒[\s\S]*?<\/div>/,'')}
     <div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('buySlot').onclick=()=>{ if(S.coins<sp) return; S.coins-=sp; S.slotsBought=(S.slotsBought||0)+1; S.gifts.push(['SL',1]); SND.play('gift'); toast('🎰 Slot machine added to your gifts 🎁'); save(); render(); showStore(); };
+  $('buyET').onclick=()=>{ if(S.coins<30) return; S.coins-=30; S.gifts.push(['ET',1]); SND.play('coin'); toast('⏲️ Egg timer added to your gifts 🎁'); save(); render(); showStore(); };
+  $('buyH').onclick=()=>{ if(S.coins<90) return; S.coins-=90; S.gifts.push(['H',1]); SND.play('coin'); toast('⏳ Hourglass added to your gifts 🎁'); save(); render(); showStore(); };
   $('buyChips').onclick=()=>{ if(S.coins<15) return; S.coins-=15; S.chips+=10; SND.play('coin'); toast('+10 casino chips 🔴'); save(); render(); showStore(); };
 }
 function showPaytable(lvl){
@@ -1111,7 +1140,8 @@ function produce(i){
   if(t<0){ SND.play('nope'); toast('No room left. Merge or sell something first.'); fx[i]='pulse'; render(); return; }
   if(d.fuelled) it.fuel--;
   else { if(d.charges){ if(it.ch>=d.charges) it.t=now(); it.ch--; } if(!d.free) spendEnergy(CONFIG.energyCost); }
-  let [k,l]=pickDrop(d.drop);
+  let [k,l]=pickDrop(it.focus>0 ? d.drop.map(x=>CHAINS[x[0]]&&CHAINS[x[0]].rare===true?[x[0],x[1],x[2]*FOCUS_MULT]:x) : d.drop);
+  if(it.focus>0) it.focus--;
   if(k==='N' && moonPending()){ const alt=d.drop.filter(x=>x[0]!=='N'); [k,l]=pickDrop(alt); }
   const boosted = poweredCell(i) && l<maxL(k);
   if(boosted) l++;
@@ -1208,6 +1238,7 @@ function drop(a,b){
   if(!B.it){ B.it=A.it; A.it=null; sel=b; SND.play('move'); save(); render(); return; }
   if(canMerge(A.it,B.it)){ doMerge(a,b); return; }
   if(feed(a,b)) return;
+  if(useOn(a,b)) return;
   const tmp=B.it; B.it=A.it; A.it=tmp; sel=b; SND.play('move'); save(); render();
 }
 function doMerge(a,b){
@@ -1227,7 +1258,7 @@ function doMerge(a,b){
   save(); render();
 }
 
-function sellValue(it){ if(it.k==='J') return 0; if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
+function sellValue(it){ if(it.k==='J'||it.k==='ET') return 0; if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
   S.coins+=v; S.cells[i].it=null; sel=-1; stat('sell');
@@ -1349,6 +1380,7 @@ function render(){
           if(d.charges){
             refreshCharges(c.it);
             html+=`<i class="gen">${c.it.ch}/${d.charges}</i>`;
+            if(c.it.focus) html+=`<i class="focus">${CHAINS.E.items[2].e}${c.it.focus}</i>`;
             if(c.it.ch<d.charges){
               const p=Math.min(1,(now()-c.it.t)/d.rechargeMs), C=2*Math.PI*44;
               html+=`<svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc" cx="50" cy="50" r="44" stroke-dasharray="${(p*C).toFixed(1)} ${C.toFixed(1)}"/></svg>`;
