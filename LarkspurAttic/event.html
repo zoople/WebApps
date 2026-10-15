@@ -139,6 +139,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .cell.drop{box-shadow:inset 0 0 0 3px #fff8}
 .lv{position:absolute;right:3px;bottom:2px;font-size:9px;font-style:normal;font-weight:800;color:#f4e8d3aa;pointer-events:none}
 .chk{position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:var(--ok);color:#10200f;font-size:9px;font-weight:800;display:grid;place-items:center;pointer-events:none}
+.focus{position:absolute;left:2px;bottom:2px;font-size:9px;font-style:normal;font-weight:800;background:#2a1d10e6;color:#ffd98a;border-radius:6px;padding:1px 4px;pointer-events:none;font-variant-numeric:tabular-nums}
+.orders>.empty.done{flex:0 0 60%;scroll-snap-align:start}
+.orders .empty .sbtn.refl{display:block;margin:8px auto 0;background:var(--gold);color:#2a1a10}
+.orders>.empty.done{font-size:12px;line-height:1.3}
+button.pill{color:inherit;font:inherit;cursor:pointer}
+.pill .plus{font-style:normal;font-size:11px;font-weight:800;color:var(--gold);margin-left:-2px}
 .gen{position:absolute;left:2px;top:2px;font-size:9px;font-style:normal;font-weight:800;background:#0007;color:var(--gold);border-radius:6px;padding:1px 4px;pointer-events:none;font-variant-numeric:tabular-nums}
 .ring{position:absolute;inset:5%;width:90%;height:90%;transform:rotate(-90deg);pointer-events:none}
 .ring circle{fill:none;stroke-width:7}
@@ -299,7 +305,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="app">
   <header class="top">
     <div class="pill" title="Energy"><span>⚡</span><b id="energy">100</b><small id="eTimer"></small></div>
-    <div class="pill" title="Coins"><span>🪙</span><b id="coins">0</b></div>
+    <button class="pill" id="coinPill" title="Shop" aria-label="Coins and shop"><span>🪙</span><b id="coins">0</b><i class="plus">+</i></button>
     <span class="spacer"></span>
     <button class="pill gift" id="giftBtn" hidden>🎁 <b id="giftCount">1</b></button>
     <button class="iconbtn" id="fsBtn" aria-label="Full screen" title="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path id="fsPath" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
@@ -321,17 +327,17 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v1 · 15 Oct 2026';
+const VERSION='v2 · 15 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
    ============================================================ */
 const CONFIG = {
   cols: 7, rows: 9,
-  energyMax: 100,
+  energyMax: 50,          // Second Pass: a smaller tank so a session can run dry
   energyRegenMs: 120000,  // 1 energy every 2 min, same as Merge Mansion
   energyCost: 1,
-  buyEnergy: { cost: 120, step: 40, amount: 40 },  // price rises by `step` after each purchase
+  buyEnergy: { cost: 60, step: 20, amount: 30 },  // price rises by `step` after each purchase
   saveKey: 'larkspur-attic-v2',  // v12: order list rebalanced, fresh start
 };
 
@@ -376,27 +382,29 @@ const CHAINS = {
     {e:'🕊️',n:'Paper Dove', lore:'Folded from one of Felix’s letters. You can still read the word “sorry” along one wing.'},
     {e:'🔮',n:'Crystal Ball', lore:'Not crystal. Glass, polished by hand until it holds the whole attic upside down.'},
     {e:'🌙',n:'The Vanishing Moon', lore:'The full method, written out. Two pages. The second page is a drawing of a black cat.'}]},
+  /* egg timers: drag onto a generator to refill it straight away */
+  ET:{name:'Egg Timers', items:[{e:'⏲️',n:'Egg Timer'}]},
   /* generators */
   gD:{name:'Paper Tray', gen:true, main:'P', rare:'K', items:[
-    {e:'🗂️',n:'Paper Tray', drop:[['P',1,75],['P',2,10],['K',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
-    {e:'🗄️',n:'Writing Bureau', drop:[['P',1,44],['P',2,28],['P',3,10],['K',1,9],['K',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
-    {e:'🖨️',n:'Printing Press', drop:[['P',1,22],['P',2,30],['P',3,22],['P',4,6],['K',1,8],['K',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
+    {e:'🗂️',n:'Paper Tray', charges:24, rechargeMs:60000, drop:[['P',1,75],['P',2,10],['K',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🗄️',n:'Writing Bureau', charges:20, rechargeMs:75000, drop:[['P',1,44],['P',2,28],['P',3,10],['K',1,9],['K',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
+    {e:'🖨️',n:'Printing Press', charges:16, rechargeMs:90000, drop:[['P',1,22],['P',2,30],['P',3,22],['P',4,6],['K',1,8],['K',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
   gS:{name:'Sewing Basket', gen:true, main:'F', rare:'B', items:[
-    {e:'🧺',n:'Sewing Basket', drop:[['F',1,75],['F',2,10],['B',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
-    {e:'🪡',n:'Sewing Kit', drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
-    {e:'🧷',n:'Tailor’s Studio', drop:[['F',1,22],['F',2,30],['F',3,22],['F',4,6],['B',1,8],['B',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
+    {e:'🧺',n:'Sewing Basket', charges:24, rechargeMs:60000, drop:[['F',1,75],['F',2,10],['B',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🪡',n:'Sewing Kit', charges:20, rechargeMs:75000, drop:[['F',1,44],['F',2,28],['F',3,10],['B',1,9],['B',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
+    {e:'🧷',n:'Tailor’s Studio', charges:16, rechargeMs:90000, drop:[['F',1,22],['F',2,30],['F',3,22],['F',4,6],['B',1,8],['B',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
   gT:{name:'Toolbox', gen:true, main:'T', rare:'W', items:[
-    {e:'🧰',n:'Toolbox', drop:[['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
-    {e:'🗜️',n:'Workbench', drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
-    {e:'🏭',n:'Stage Workshop', drop:[['T',1,22],['T',2,30],['T',3,22],['T',4,6],['W',1,8],['W',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
+    {e:'🧰',n:'Toolbox', charges:24, rechargeMs:60000, drop:[['T',1,75],['T',2,10],['W',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🗜️',n:'Workbench', charges:20, rechargeMs:75000, drop:[['T',1,44],['T',2,28],['T',3,10],['W',1,9],['W',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
+    {e:'🏭',n:'Stage Workshop', charges:16, rechargeMs:90000, drop:[['T',1,22],['T',2,30],['T',3,22],['T',4,6],['W',1,8],['W',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
   gL:{name:'Fuse Box', gen:true, main:'L', rare:'R', items:[
-    {e:'🔌',n:'Fuse Box', drop:[['L',1,75],['L',2,10],['R',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
-    {e:'🎚️',n:'Lighting Desk', drop:[['L',1,44],['L',2,28],['L',3,10],['R',1,9],['R',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
-    {e:'🎇',n:'Stage Lights', drop:[['L',1,22],['L',2,30],['L',3,22],['L',4,6],['R',1,8],['R',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
+    {e:'🔌',n:'Fuse Box', charges:24, rechargeMs:60000, drop:[['L',1,75],['L',2,10],['R',1,8],['E',1,2],['C',1,3],['X',1,2],['N',1,5]]},
+    {e:'🎚️',n:'Lighting Desk', charges:20, rechargeMs:75000, drop:[['L',1,44],['L',2,28],['L',3,10],['R',1,9],['R',2,3],['E',1,2],['C',1,2],['X',1,2],['N',1,5]]},
+    {e:'🎇',n:'Stage Lights', charges:16, rechargeMs:90000, drop:[['L',1,22],['L',2,30],['L',3,22],['L',4,6],['R',1,8],['R',2,5],['E',1,2],['C',1,2],['X',1,3],['N',1,6]]}]},
   gM:{name:'Circus Trunk', gen:true, main:'M', rare:'X', items:[
-    {e:'🎪',n:'Circus Trunk', drop:[['M',1,80],['M',2,8],['X',1,7],['C',1,5],['N',1,5]]},
-    {e:'🪞',n:'Magic Mirror', drop:[['M',1,50],['M',2,26],['M',3,10],['X',1,8],['X',2,3],['C',1,3],['N',1,5]]},
-    {e:'✨',n:'Grand Illusion', drop:[['M',1,26],['M',2,30],['M',3,20],['M',4,6],['X',1,8],['X',2,4],['C',1,2],['N',1,6]]}]},
+    {e:'🎪',n:'Circus Trunk', charges:24, rechargeMs:60000, drop:[['M',1,80],['M',2,8],['X',1,7],['C',1,5],['N',1,5]]},
+    {e:'🪞',n:'Magic Mirror', charges:20, rechargeMs:75000, drop:[['M',1,50],['M',2,26],['M',3,10],['X',1,8],['X',2,3],['C',1,3],['N',1,5]]},
+    {e:'✨',n:'Grand Illusion', charges:16, rechargeMs:90000, drop:[['M',1,26],['M',2,30],['M',3,20],['M',4,6],['X',1,8],['X',2,4],['C',1,2],['N',1,6]]}]},
   gK:{name:'Kettle', gen:true, main:'E', items:[
     {e:'🫖',n:'Kettle', free:true, charges:3, rechargeMs:480000, drop:[['E',1,70],['E',2,25],['E',3,5]]}]},
 };
@@ -596,9 +604,10 @@ function makeSide(){
 }
 function sideProgress(){ return S.ch/5*.8 + Math.min(.2,(S.sideDone||0)/150); }
 function sideRewards(size,lucky){
-  const c = size>=24?3 : size>=8?2 : 1;
-  const rw=[['C',c]];
-  if(size>=24) rw.push(['N',2]); else if(size>=8 || Math.random()<.3) rw.push(['N',1]); else if(Math.random()<.4) rw.push(['X',1]);
+  if(lucky) return [['C',1],['N',1]];
+  const c = size>=28?4 : size>=12?3 : size>=4?2 : 1;           // a level-4 item (size 8) now pays a level-2 coin
+  const rw=[['C',c],['N', size>=24&&Math.random()<.5?2:1]];
+  if(size>=12 && Math.random()<.3) rw.push(['ET',1]);
   return rw;
 }
 function ensureSide(){ S.side=S.side||[]; while(S.side.length<2){ const o=makeSide(); if(!o) break; S.side.push(o); } }
@@ -624,6 +633,62 @@ const MOON_NOTES=[
   [['O','“Half moon. Half the trick is the method. The other half is the reason. Felix only ever had the first half.”']],
   [['O','“Full moon. Everyone looks up at once. That’s the moment, Nell. Not the vanishing. The looking.”']],
 ];
+/* ============================================================ Second Pass systems */
+/* tea focus: drag tea onto a generator; its next taps find rare items far more often */
+const FOCUS=[2,5,12,30,75], FOCUS_MULT=5;
+const canFocus=it=>isGen(it)&&typeof CHAINS[it.k].rare==='string'&&!!CHAINS[CHAINS[it.k].rare]&&CHAINS[CHAINS[it.k].rare].rare===true;
+function useOn(a,b){
+  const A=S.cells[a].it, B=S.cells[b].it; if(!A||!B||!isGen(B)||S.cells[b].s!=='open') return false;
+  const T=def(B);
+  if(A.k==='ET'){
+    if(!T.charges){ SND.play('nope'); toast(`${def(A).e} That doesn’t need refilling.`); return true; }
+    refreshCharges(B);
+    if(B.ch>=T.charges){ SND.play('nope'); toast(`${T.e} The ${T.n} is already full. Save the ${def(A).n} for when it runs dry.`); return true; }
+    S.cells[a].it=null; B.ch=T.charges; B.t=now(); fx[b]='pop'; SND.play('unweb'); if(sel===a) sel=b;
+    toast(`${def(A).e} ${T.e} ${T.n} refilled`); save(); render(); return true;
+  }
+  if(A.k==='E' && !A.st){
+    if(!canFocus(B)){ SND.play('nope'); toast(`${def(A).e} ${CHAINS.E.name} helps you focus on rare finds. Try a generator that has a rare chain.`); return true; }
+    const n=FOCUS[A.l-1]; S.cells[a].it=null; B.focus=(B.focus||0)+n; fx[b]='pop'; SND.play('drink'); if(sel===a) sel=b;
+    const RC=CHAINS[CHAINS[B.k].rare];
+    toast(`${def(A).e} Focused: the next ${B.focus} taps find ${RC.items[0].e} ${RC.name.toLowerCase()} far more often`,2800); save(); render(); return true;
+  }
+  return false;
+}
+const P2={ shopName:'Mrs Pike’s Odds & Ends', shopBlurb:'Mrs Pike sells whatever turns up in her own loft' };
+const SHOP_ITEMS=[
+  {id:'ET', price:()=>30, what:'Refills one generator. Drag it onto the one you need', give:()=>S.gifts.push(['ET',1])},
+  {id:'H1', price:()=>90, what:'Skips time for everything: energy, generators, kettle', give:()=>S.gifts.push(['H',1])},
+  {id:'EN', price:()=>energyPrice(), what:'Energy straight into your tank', give:()=>{ S.energy+=CONFIG.buyEnergy.amount; S.buys=(S.buys||0)+1; }},
+];
+function showShop(){
+  const row=it=>{ const p=it.price(), d= it.id==='ET'?CHAINS.ET.items[0] : it.id==='H1'?CHAINS.H.items[0] : {e:'⚡',n:`+${CONFIG.buyEnergy.amount} energy`};
+    return `<div class="tier"><span class="tp">${d.e}</span><span class="tr" style="font-size:14px;letter-spacing:0">${d.n}<br><small style="color:var(--muted)">${it.what}</small></span><button class="sbtn" data-buy="${it.id}" ${S.coins<p?'disabled style="opacity:.5"':''}>🪙 ${p}</button></div>`; };
+  openModal(`<h2>🛒 ${P2.shopName}</h2><p style="color:var(--muted);font-size:13px">• ${P2.shopBlurb}<br>• Earn coins from orders and the ${CAST.S.name}<br>• Bought items go to your gifts 🎁 (energy goes straight in)</p>
+    <p>🪙 ${S.coins}</p>${SHOP_ITEMS.map(row).join('')}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
+  $('modalBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{ const it=SHOP_ITEMS.find(x=>x.id===b.dataset.buy), p=it.price(); if(S.coins<p) return;
+    S.coins-=p; it.give(); SND.play('coin'); stat('shop'); save(); render(); showShop(); toast(it.id==='EN'?`+${CONFIG.buyEnergy.amount} ⚡`:'Added to your gifts 🎁'); });
+}
+/* after the ending: the cast look back, knowing everything */
+const REFLECTIONS=[
+  ['N','Later, with the bulbs back on and an ordinary moon in the round window, the three of you sit on the trunk and try to put it all in order.'],
+  ['T','So. Nineteen sixty-eight. Two of them build a trick nobody thinks can be done. And it works.'],
+  ['P','And the night it works, he takes her notebook and goes. Paris, Vienna, wherever they’d book him. Not a word to her.'],
+  ['T','But he only took the how. The mirror, the timing, the four minutes twelve. Not the why.'],
+  ['P','That’s what she meant by half. He could make the moon disappear. He could never make anyone care that it had.'],
+  ['N','She came home, called it a sister in Lyon, and sewed hems on Larkspur Lane for forty years. The theatre went under dust sheets with everything else.'],
+  ['P','I used to think she was hiding from him. Now I think she was keeping the other half safe. In case.'],
+  ['T','Then why never open his letter?'],
+  ['P','She opened one. Folded it into a dove and put it in the act. That was her answer, love. The other one she didn’t need to read.'],
+  ['T','And seat A1. Every night, empty. Kept for a man who never came back.'],
+  ['P','And he kept her one at a show she never did again. Pair of them. Forty years of saving seats.'],
+  ['M','(Mothball settles on the empty stand where the crystal ball sat, exactly where the moon would be.)'],
+  ['N','Forgiving him didn’t mean letting him back in. It meant finishing the trick without him, so it was never only his. Tonight, it was finished.'],
+  ['T','…Do you reckon Felix ever knew?'],
+  ['P','No, love. But he said he’d be looking up. I’d like to think he was.'],
+];
+function showReflections(){ playScene({title:'Reflections', sub:'Now that you know everything', lines:REFLECTIONS.map(([w,t])=>[w,t.replace(/\(([^)]*)\)/g,'<em>($1)</em>')])}); }
+
 /* ============================================================ custom event
    Everything above is the template (Larkspur Attic's data, which also sets the balance).
    A config made in the Workshop replaces every name, line and label; the mechanics stay identical. */
@@ -641,7 +706,7 @@ const TM={ title:'Larkspur Attic', subtitle:'The Vanishing Moon', place:'attic',
 const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const stageDir=t=>esc(t).replace(/\(([^)]*)\)/g,'<em>($1)</em>');
 function applyEvent(E){
-  const K={C1:'P',C2:'F',C3:'T',C4:'L',S:'M',R1:'K',R2:'B',R3:'W',R4:'R',EN:'E',CO:'C',XP:'X',PT:'N',SK:'H',G1:'gD',G2:'gS',G3:'gT',G4:'gL',SG:'gM',FG:'gK'};
+  const K={C1:'P',C2:'F',C3:'T',C4:'L',S:'M',R1:'K',R2:'B',R3:'W',R4:'R',EN:'E',CO:'C',XP:'X',PT:'N',SK:'H',G1:'gD',G2:'gS',G3:'gT',G4:'gL',SG:'gM',FG:'gK',ET:'ET'};
   const src=Object.assign({}, E.chains||{}, E.gens||{});
   Object.entries(K).forEach(([g,k])=>{ const c=src[g]; if(!c) return;
     if(c.name) CHAINS[k].name=esc(c.name);
@@ -655,6 +720,10 @@ function applyEvent(E){
   if(E.letters) FELIX.splice(0,FELIX.length,...[0,1,2,3,4].map(i=>[['F',esc(E.letters[i]||'…')]]));
   if(E.notes) MOON_NOTES.splice(0,MOON_NOTES.length,...[0,1,2,3].map(i=>[['O',esc(E.notes[i]||'…')]]));
   Object.entries(E.terms||{}).forEach(([k,v])=>{ if(v!=null&&v!=='') TM[k]=esc(v); });
+  // Second Pass: shop words and the end-of-event reflections
+  if(E.terms&&E.terms.shopName) P2.shopName=esc(E.terms.shopName);
+  if(E.terms&&E.terms.shopBlurb) P2.shopBlurb=esc(E.terms.shopBlurb);
+  REFLECTIONS.splice(0,REFLECTIONS.length,...(E.reflections||[]).filter(l=>l&&l[1]).map(([w,t])=>[w,esc(t)]));
   if(E.title) TM.title=esc(E.title); if(E.subtitle) TM.subtitle=esc(E.subtitle);
   if(E.partner&&E.partner.name) TM.letterFrom=esc(E.partner.name);
   CONFIG.saveKey='merge-event:'+String(E.id||'custom').replace(/[^a-z0-9-]/gi,'');
@@ -993,15 +1062,17 @@ function produce(i){
   const it=S.cells[i].it, d=def(it);
   if(d.charges){
     refreshCharges(it);
-    if(it.ch<=0){ SND.play('nope'); toast(`${d.e} The ${d.n.toLowerCase()} is boiling. Ready in ${nextChargeIn(it)}s.`); return; }
-  } else if(S.energy<CONFIG.energyCost){
+    if(it.ch<=0){ SND.play('nope'); if(d.free) toast(`${d.e} The ${d.n.toLowerCase()} is boiling. Ready in ${nextChargeIn(it)}s.`); else toast(`${d.e} The ${d.n} needs a rest. Next one in ${fmt(nextChargeIn(it))}.<br><small>Drag ${CHAINS.ET.items[0].e} ${CHAINS.ET.items[0].n} onto it to refill it now</small>`,3000); return; }
+  }
+  if(!d.free && S.energy<CONFIG.energyCost){
     SND.play('nope'); toast(`Out of energy. Claim some ${TM.energyWord}, or buy a top-up from the ⋯ menu.`); return;
   }
   const t=nearestEmpty(i);
   if(t<0){ SND.play('nope'); toast('No room left. Merge or sell something first.'); fx[i]='pulse'; render(); return; }
   if(d.charges){ if(it.ch>=d.charges) it.t=now(); it.ch--; }
-  else spendEnergy(CONFIG.energyCost);
-  let [k,l]=pickDrop(d.drop);
+  if(!d.free) spendEnergy(CONFIG.energyCost);
+  let [k,l]=pickDrop(it.focus>0 ? d.drop.map(x=>CHAINS[x[0]].rare===true?[x[0],x[1],x[2]*FOCUS_MULT]:x) : d.drop);
+  if(it.focus>0) it.focus--;
   if(k==='N' && moonPending()){ const alt=d.drop.filter(x=>x[0]!=='N'); [k,l]=pickDrop(alt); } // one story moon at a time
   S.cells[t].it=mkItem(k,l);
   fx[i]='pulse'; fx[t]='spawn';
@@ -1063,6 +1134,7 @@ function drop(a,b){
   // open
   if(!B.it){ B.it=A.it; A.it=null; sel=b; SND.play('move'); save(); render(); return; }
   if(canMerge(A.it,B.it)){ doMerge(a,b); return; }
+  if(useOn(a,b)) return;
   const tmp=B.it; B.it=A.it; A.it=tmp; sel=b; SND.play('move'); save(); render();
 }
 function doMerge(a,b){
@@ -1078,7 +1150,7 @@ function doMerge(a,b){
   save(); render();
 }
 
-function sellValue(it){ return isGen(it)||isRes(it)?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
+function sellValue(it){ return isGen(it)||isRes(it)||it.k==='ET'?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
   S.coins+=v; S.cells[i].it=null; sel=-1; stat('sell');
@@ -1088,6 +1160,16 @@ function sell(i){
 }
 
 /* ============================================================ orders & chapters */
+let armSide=null;
+/* a Jumble Sale order would take an item an active story order is still waiting for */
+function sideConflict(t){
+  for(const [k,l] of t.need){
+    const story=activeTasks().filter(s=>s.need.some(n=>n[0]===k&&n[1]===l)); if(!story.length) continue;
+    const storyN=story.reduce((a,s)=>a+s.need.filter(n=>n[0]===k&&n[1]===l).length,0), sideN=t.need.filter(n=>n[0]===k&&n[1]===l).length;
+    if(openCount(k,l)-sideN<storyN) return [k,l,story[0]];
+  }
+  return null;
+}
 function activeTasks(){
   if(S.complete) return [];
   return TASKS.filter(t=>t.ch===S.ch && !S.done[t.id]).slice(0,3);
@@ -1200,6 +1282,7 @@ function render(){
           if(d.charges){
             refreshCharges(c.it);
             html+=`<i class="gen">${c.it.ch}/${d.charges}</i>`;
+            if(c.it.focus) html+=`<i class="focus">${CHAINS.E.items[2].e}${c.it.focus}</i>`;
             if(c.it.ch<d.charges){
               const p=Math.min(1,(now()-c.it.t)/d.rechargeMs), C=2*Math.PI*44;
               html+=`<svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc" cx="50" cy="50" r="44" stroke-dasharray="${(p*C).toFixed(1)} ${C.toFixed(1)}"/></svg>`;
@@ -1247,12 +1330,12 @@ function fmt(s){ s=Math.max(0,s); return s>=60? Math.floor(s/60)+':'+String(s%60
 const readySince={};
 function renderOrders(tasks){
   const box=$('orders');
+  box.innerHTML='';
   if(S.complete){
     const has=S.disc['M8'];
-    box.innerHTML=`<div class="empty"><div><b>${TM.doneTitle}</b>${has?TM.doneFound:TM.doneKeep}</div></div>`;
-    return;
+    box.innerHTML=`<div class="empty done"><div><b>${TM.doneTitle}</b>${has?TM.doneFound:TM.doneKeep}${REFLECTIONS.length?'<button class="sbtn refl" id="reflBtn">✨ Reflections</button>':''}</div></div>`;
+    const rb=box.querySelector('#reflBtn'); if(rb) rb.onclick=e=>{ e.stopPropagation(); showReflections(); };
   }
-  box.innerHTML='';
   ensureSide();
   /* two groups, Story then Jumble Sale; a ready order jumps to the front of its own group only */
   const tnow=now(); let storyNewlyReady=false;
@@ -1278,7 +1361,13 @@ function renderOrders(tasks){
     el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
       <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
-    el.onclick=()=>{ if(taskStatus(t).ready) completeTask(t); else hintTask(t); };
+    el.onclick=()=>{
+      if(!taskStatus(t).ready){ hintTask(t); return; }
+      const clash=t.side?sideConflict(t):null;
+      if(clash && armSide!==t.id){ armSide=t.id; setTimeout(()=>{ if(armSide===t.id) armSide=null; },8000); SND.play('nope');
+        const [k,l,st]=clash, d=CHAINS[k].items[l-1];
+        toast(`⚠️ ${d.e} ${d.n} is needed for ${CAST[st.who].name}’s order<br><small>Tap this ${CAST.S.name} order again to sell it anyway</small>`,3500); return; }
+      armSide=null; completeTask(t); };
     box.appendChild(el);
   });
   if(flying===null && box.querySelector('.order.incoming')) setTimeout(runArrivals,60);
@@ -1296,8 +1385,9 @@ function renderInfo(){
   const it=c.it, d=def(it), ch=CHAINS[it.k];
   let ds='';
   if(ch.gen){
-    if(d.charges){ refreshCharges(it); ds = it.ch>0 ? `Tap again to ${TM.freeVerb}. Free. ${it.ch} left.` : `Recharging… ready in ${nextChargeIn(it)}s.`; }
-    else ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}. Costs ⚡${CONFIG.energyCost}.`;
+    if(d.free){ refreshCharges(it); ds = it.ch>0 ? `Tap again to ${TM.freeVerb}. Free. ${it.ch} left.` : `Recharging… ready in ${nextChargeIn(it)}s.`; }
+    else { ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}. Costs ⚡${CONFIG.energyCost}.`; if(d.charges) ds+= it.ch>0?` ${it.ch} left before a rest.`:` Resting: next in ${fmt(nextChargeIn(it))}.`;
+      if(canFocus(it)) ds+= it.focus?` Focused for ${it.focus} more taps.`:` Drag ${CHAINS.E.items[0].e} onto it for better rare odds.`; }
     if(it.l<maxL(it.k)) ds+=` Merge two to get a ${ch.items[it.l].n}.`;
   } else if(it.st){
     ds=`A page from ${TM.notesTitle} is folded inside. Tap it to read. It can’t be merged until you do.`;
@@ -1305,6 +1395,8 @@ function renderInfo(){
     const unit = ch.claim==='energy'?'⚡' : ch.claim==='coins'?'🪙' : ch.claim==='skip'?'min time skip' : ch.claim==='points'?TM.passName+' points' : '⭐ '+TM.xpWord;
     if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min: refills energy and generator timers.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
     else ds=`Tap again to collect +${d.v} ${unit}.`+(it.l<maxL(it.k)?` Merge two for +${ch.items[it.l].v}.`:' Top of the chain.');
+  } else if(it.k==='ET'){
+    ds=`Drag onto a generator to refill it straight away.`;
   } else {
     ds = (ch.rare?`Rare find from the ${genFor(it.k).name}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
   }
@@ -1467,7 +1559,7 @@ function showLore(it){
   openModal(`<h3 style="margin-top:0">${TM.loreFoundIn}</h3><div style="font-size:54px;text-align:center">${d.e}</div><h2 style="text-align:center">${d.n}</h2><p style="font-style:italic;text-align:center">${d.lore}</p><div class="row-btns" style="justify-content:center"><button class="bigbtn gold" onclick="closeModal()">Into the journal</button></div>`,true);
 }
 function journalHtml(){
-  let html=`<h3 style="margin-top:4px">Chapters</h3>`;
+  let html=(S.complete&&REFLECTIONS.length?'<div class="row-btns" style="margin-top:4px"><button class="bigbtn gold" data-refl="1">✨ Reflections</button></div>':'')+`<h3 style="margin-top:4px">Chapters</h3>`;
   const upto=S.complete?CHAPTERS.length:S.ch+1;
   for(let c=0;c<upto;c++){
     const fin=S.journal.includes(c);
@@ -1486,6 +1578,7 @@ function journalHtml(){
   return html;
 }
 function wireJournal(){
+  const rf=$('modalBody').querySelector('[data-refl]'); if(rf) rf.onclick=()=>{ closeModal(); showReflections(); };
   $('modalBody').querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{
     const s=b.dataset.scene, c=+s.slice(1), ch=CHAPTERS[c];
     closeModal();
@@ -1644,13 +1737,13 @@ function showMenu(){
   const b=CONFIG.buyEnergy;
   openModal(`<h2>${TM.title}</h2><p style="color:var(--muted)">${TM.subtitle} · no timer · player ${VERSION}</p>
     <h3>Energy</h3><p>⚡ ${S.energy} · refills 1 every ${CONFIG.energyRegenMs/60000} min up to ${CONFIG.energyMax}. ${CHAINS.E.name} on the board tops you up past the cap. Price rises each time you buy.</p>
-    <div class="row-btns"><button class="bigbtn gold" id="buyE" ${S.coins<energyPrice()?'disabled style="opacity:.5"':''}>Buy ⚡${b.amount} for 🪙${energyPrice()}</button></div>
+    <div class="row-btns"><button class="bigbtn gold" id="shopOpen">🛒 ${P2.shopName}</button></div>
     <h3>Sound</h3>
     <div class="row-btns" style="margin-top:0"><button class="bigbtn${SND.pref.music?' gold':''}" id="musBtn">♪ Music: ${SND.pref.music?'On':'Off'}</button><button class="bigbtn${SND.pref.sfx?' gold':''}" id="sfxBtn">Sound effects: ${SND.pref.sfx?'On':'Off'}</button></div>
     <h3>Help</h3><div class="row-btns" style="margin-top:0"><button class="bigbtn" id="sosOpen">I’m stuck…</button><a class="bigbtn" href="workshop.html" style="text-decoration:none;text-align:center">✏️ Workshop</a></div>
     <h3>Save</h3><p style="color:var(--muted);font-size:13px">Progress saves in this browser automatically.</p>
     <div class="row-btns"><button class="bigbtn warn" id="resetBtn">${resetArm?'Tap again to wipe everything':'Restart event'}</button><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
-  $('buyE').onclick=()=>{ const c=energyPrice(); if(S.coins<c) return; S.coins-=c; S.buys=(S.buys||0)+1; S.energy+=b.amount; SND.play('coin'); save(); render(); showMenu(); toast(`+${b.amount} ⚡`); };
+  $('shopOpen').onclick=showShop;
   $('musBtn').onclick=()=>{ SND.setMusic(!SND.pref.music); showMenu(); };
   $('sosOpen').onclick=showSOS;
   $('sfxBtn').onclick=()=>{ SND.setSfx(!SND.pref.sfx); showMenu(); SND.play('tap'); };
@@ -1683,12 +1776,14 @@ function showPass(){
   $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>S.gifts.push(r)); SND.play('gift'); toast('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:TM.lettersTitle, sub:`Letter ${(i+1)/3} of 5`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
 }
 function showComplete(){
-  openModal(`<h3 style="margin-top:0">Event complete</h3><h2>${TM.completeTitle}</h2><p>${TM.completeText}</p><p style="color:var(--muted)">${TM.completeMore}</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button></div>`);
+  openModal(`<h3 style="margin-top:0">Event complete</h3><h2>${TM.completeTitle}</h2><p>${TM.completeText}</p><p style="color:var(--muted)">${TM.completeMore}</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button>${REFLECTIONS.length?'<button class="bigbtn" id="reflGo">✨ Reflections</button>':''}</div>`);
+  if($('reflGo')) $('reflGo').onclick=()=>{ closeModal(); showReflections(); };
 }
 
 $('journalBtn').onclick=()=>showBook();
 $('menuBtn').onclick=()=>{ resetArm=false; showMenu(); };
 $('giftBtn').onclick=placeGift;
+$('coinPill').onclick=showShop;
 $('passBtn').onclick=showPass;
 $('xpRow').onclick=()=>{ const l=stageOf(S.xp); toast(`⭐ Stage ${l}. Next level gives: ${stageReward(l+1).map(([k,lv])=>CHAINS[k].items[lv-1].e).join(' ')}<br><small>Claim stars ⭐ on the board to fill it</small>`,3200); };
 
@@ -1716,15 +1811,15 @@ window.addEventListener('resize',()=>{ fit(); if(toastCur) dockToast(); });
 setInterval(()=>{
   const before=S.energy; tickEnergy(); renderHud();
   // refresh kettle counters + info text once a second
-  let any=false;
+  let any=false, woke=false;
   S.cells.forEach((c,i)=>{
     if(c.s!=='open'||!c.it) return; const d=def(c.it); if(!d.charges) return;
-    const o=c.it.ch; refreshCharges(c.it); if(o!==c.it.ch){ any=true; return; }
+    const o=c.it.ch; refreshCharges(c.it); if(o!==c.it.ch){ any=true; if(o===0) woke=true; return; }
     // advance the cooldown ring in place (no full re-render, so taps aren't interrupted)
     const arc=board.children[i].querySelector('.arc');
     if(arc){ const C=2*Math.PI*44, p=Math.min(1,(now()-c.it.t)/d.rechargeMs); arc.setAttribute('stroke-dasharray',`${(p*C).toFixed(1)} ${C.toFixed(1)}`); board.children[i]._h=null; }
   });
-  if(any){ SND.play('unweb'); }
+  if(woke){ SND.play('unweb'); }
   if(any||before!==S.energy){ save(); render(); }
   else if(sel>=0 && S.cells[sel].it && def(S.cells[sel].it).charges) renderInfo();
 },1000);
@@ -1750,7 +1845,7 @@ function startIntro(){
   $('tSub').innerHTML=TM.subtitle; $('tName').innerHTML=TM.title;
   const E_=CHAINS.E.items[0].e, C_=CHAINS.C.items[0].e, X_=CHAINS.X.items[0].e, N_=CHAINS.N.items[0].e;
   $('tList').innerHTML=['Tap a generator twice to make items','Drag two matching items together to merge','Merges open the boxes next to them',
-    TM.storyHook, `Tap ${E_} ${C_} ${X_} twice to claim them`, `${TM.sideName} orders are always open`,
+    TM.storyHook, `Tap ${E_} ${C_} ${X_} twice to claim them`, `Generators need a rest after a while; ${CHAINS.ET.items[0].e} ${CHAINS.ET.items[0].n.toLowerCase()}s refill one`, `Drag ${E_} onto a generator to focus it on rare finds`, `Tap 🪙 for ${P2.shopName}`, `${TM.sideName} orders are always open`,
     `Claim ${N_} for ${TM.passName} rewards; merged ones are worth more`,'No timer. Play at your own pace','📖 Quests and new finds pay out rewards'].map(t=>`<li>${t}</li>`).join('');
 })();
 $('importBtn').onclick=()=>$('importFile').click();
