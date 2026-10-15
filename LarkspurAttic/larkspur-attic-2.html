@@ -326,7 +326,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v1 · 15 Oct 2026';
+const VERSION='v2 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -486,6 +486,10 @@ const CHAPTERS = [
       ['N','Odile’s diary, spring 1968: “Felix says the Moon can’t be done. A whole moon, gone, in front of two thousand people. I say it’s only a question of where you make them look.”'],
       ['N','Autumn 1969: “We did it. Then he took the method and ran. Let him. He only has half.”'],
       ['T','Half a trick?'],
+      ['P','He stole it. Her own trick, and he walked off with it.'],
+      ['T','And she just… let him?'],
+      ['P','“Let him.” That’s Odile all over. She never raised her voice. She just went very quiet and very busy.'],
+      ['M','<em>(Mothball hops off the diary and sits facing the round window.)</em>'],
     ]},
   { title:'Smoke and Mirrors', zone:null, gifts:[['E',3]],
     intro:[
@@ -540,7 +544,7 @@ const TASKS = [
   {beat:['N','In the nest of letters: one from Felix. Never opened.'], ch:3, who:'M', need:[['F',5],['P',6]], coins:22, say:'(He has made a nest of letters. It needs a scarf.)'},
   {beat:['T','It’s not a real rabbit. It’s a very good puppet. I’m not crying, it’s dusty.'], ch:3, who:'T', need:[['M',5]], coins:26, say:'The programme says there was a rabbit. I need to see the rabbit.'},
   {beat:['P','She wore this to my wedding. I never knew it was a costume.'], ch:3, who:'P', need:[['B',3],['F',6]], coins:20, say:'A bonnet! And the gown she wore with it. I had one just like it. Well. Nearly.'},
-  {beat:['N','The photograph is of the last night of the Vanishing Moon. Seat A1 is empty. It was reserved for “F.”'], x:1, ch:3, who:'M', need:[['T',6],['K',3]], coins:24, say:'(He is batting a photograph around her tool roll. He wants both.)'},
+  {beat:['N','The photograph is of the last night of the Vanishing Moon. Seat A1 is empty. It was reserved for “F.”'], more:[['P','She kept him a seat. After all that.'],['T','Front row, dead centre. Best view in the house, and she saved it for the man who robbed her.']], x:1, ch:3, who:'M', need:[['T',6],['K',3]], coins:24, say:'(He is batting a photograph around her tool roll. He wants both.)'},
   // ch5
   {beat:['T','The false wall comes away. Behind it, a mirror. Of course there’s a mirror.'], ch:4, who:'T', need:[['T',6],['L',5]], coins:28, say:'Her tool roll and the oil lamp. This false wall comes down today.'},
   {beat:['P','Oh, Odile. You were magnificent.'], ch:4, who:'P', need:[['F',6],['L',6]], coins:30, say:'Her stage gown, under the spotlight. I want to see it properly.'},
@@ -549,7 +553,7 @@ const TASKS = [
   {beat:['P','Every bead stitched by hand. That’s months of work, love.'], x:1, ch:4, who:'P', need:[['F',6],['T',6]], coins:30, say:'Hold the gown still while I fix the beading, love. Pass me the tool roll.'},
   // ch6
   {beat:['T','Mirror angled. Wireless tuned. All we need now is the moon.'], ch:5, who:'T', need:[['T',7],['R',4]], coins:34, say:'Stagehand’s tools to angle the mirror, and the violin for the overture.'},
-  {beat:['P','She forgave him, you know. She just never told him.'], ch:5, who:'P', need:[['M',6]], coins:34, say:'The dove. It belongs with the trick.'},
+  {beat:['P','She forgave him, you know. She just never told him.'], more:[['T','How can you tell?'],['P','That dove is his apology, love. She made it part of the show. You don’t give pride of place to something you’re still angry about.'],['T','So his “sorry” was on stage every night, and he never saw it.']], ch:5, who:'P', need:[['M',6]], coins:34, say:'The dove. It belongs with the trick.'},
   {beat:['N','The set is dressed. Mothball takes his mark.'], ch:5, who:'M', need:[['F',7],['B',4]], coins:34, say:'(The masks and the tiara. He is dressing the set like he’s done it before.)'},
   {beat:['P','A bit of music for the finale. She’d insist.'], x:1, ch:5, who:'P', need:[['L',6],['R',4]], coins:34, say:'The spotlight and the violin. She’d have wanted music.'},
   {ch:5, who:'O', need:[['M',7]], coins:50, say:'“…a crystal, and someone who looks.”'},
@@ -1155,15 +1159,16 @@ function completeTask(t){
   S.done[t.id]=1; stat('story');
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
-  if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat);
-  else if(t.beat) playScene({lines:[t.beat]});
+  if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat, t.more);
+  else if(t.beat) playScene({lines:[t.beat].concat(t.more||[])});
   save(); render();
 }
-function finishChapter(beat){
+/* big story beats carry `more`: a short exchange where the cast confirm what just happened */
+function finishChapter(beat, more){
   const c=S.ch;
   S.journal.push(c);
   setTimeout(()=>SND.play('fanfare'),350);
-  const queue=[{title:'Chapter '+(c+1)+' complete', sub:CHAPTERS[c].title, lines:(beat?[beat]:[]).concat(CHAPTERS[c].outro)}];
+  const queue=[{title:'Chapter '+(c+1)+' complete', sub:CHAPTERS[c].title, lines:(beat?[beat]:[]).concat(more||[], CHAPTERS[c].outro)}];
   S.ch++;
   if(S.ch>=CHAPTERS.length){ S.complete=true; }
   else{
