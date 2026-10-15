@@ -135,12 +135,20 @@ main input:focus,main textarea:focus{border-color:var(--gold)}
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 
 <script>
-const VERSION='v1 · 15 Oct 2026';
+const VERSION='v2 · 15 Oct 2026';
 const DRAFT='merge-workshop:draft', CURRENT='merge-workshop:current';
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const words=t=>String(t||'').trim().split(/\s+/).filter(Boolean).length;
 
+/* ============================================================ story structures
+   Each structure is a story shape with its own tone, cast roles and beats. The Attic is the first;
+   new ones get added here (and documented in the vault: Projects/Merge Events/Story Structures). */
+const STRUCTURES={
+  attic:{name:'The Attic',mood:'Cosy, wry, a little sad',shape:'A mystery about who someone really was. Six chapters, three acts: who were they, what happened, finish it.',
+    feel:'Warm melancholy; jokes thin out as the stakes rise; ends on a quiet reframe'},
+};
+const FUTURE=['Joy: a celebration or comeback that builds to a party','Comedy caper: a scheme that keeps going wrong','Romance: two people circling each other','Rivalry: a contest between neighbours','Adventure: a map, a journey, a found place'];
 /* ============================================================ the template (structure is fixed; only words change) */
 const MAIN=[
   {k:'C1',len:7,slot:'Record',what:'The paper trail of a life',bands:['fragments','fragments','fragments','letters & logs','letters & logs','the whole archive','the whole archive']},
@@ -256,7 +264,7 @@ function blank(){
     cast:{T:{name:'',av:''},P:{name:'',av:''},M:{name:'',av:''},O:{name:'',av:'📜'},F:{name:'',av:'✉️'},S:{name:'',av:''}},
     terms:{place:'',covered:''}, chains, gens,
     chapters:CH_SKEL.map(c=>({title:'',intro:c.intro.map(([w,t,pre])=>[w,'']),outro:c.outro.map(([w,t,pre])=>[w,''])})),
-    orders:ORD.map(o=>({say:'',beat:'',by:o[1]==='O'?'O':o[1]})), notes:['','','',''], letters:['','','','',''], checks:{} };
+    orders:ORD.map(o=>({say:'',beat:'',by:o[1]==='O'?'O':o[1]})), notes:['','','',''], letters:['','','','',''], checks:{}, structure:'attic' };
 }
 let W=null;
 try{ W=JSON.parse(localStorage.getItem(DRAFT)||'null'); }catch(e){}
@@ -352,6 +360,9 @@ VIEWS.start=()=>`<h2>Make your own event</h2>
   <p class="lead">Build a story event with the same structure and balance as Larkspur Attic, then play it.</p>
   ${tips(['Fill the premise first; every later hint uses your words','Each chain climbs from the cover story (bottom) to the truth (top)','The board, orders, rewards and pacing are fixed, so balance stays right','Everything saves on this phone as you type','▶ plays your event at any time, even half-written'],'How it works')}
   ${tips(['Cosy, wry, a little sad underneath','Short lines: about 13 words; never over 35','Evidence, not explanation: let the player work it out','The guide never speaks, never explained, always a step ahead','Jokes thin out as the stakes rise; one joke in the finale'],'The voice')}
+  <h3>Story structure</h3>
+  ${Object.entries(STRUCTURES).map(([k,st])=>`<div class="pack" style="border-color:var(--gold)"><b>${esc(st.name)} ✓</b><span>${esc(st.mood)} · ${esc(st.shape)}</span></div>`).join('')}
+  <p class="mini">More structures to come: ${FUTURE.map(f=>esc(f.split(':')[0])).join(' · ')}. Each will have its own tone, cast and beats.</p>
   ${W?`<button class="big go" id="contBtn">Continue “${esc(W.title||'untitled')}”</button>`:''}
   <button class="big${W?'':' go'}" id="newBtn">Start a new event</button>
   <button class="big" id="exBtn">Open the Larkspur Attic example</button>
