@@ -37,6 +37,8 @@
   color-scheme:dark;
 }
 [hidden]{display:none!important}
+#scene.clear{background:#0d080a33;justify-content:flex-start;padding-top:calc(12px + env(safe-area-inset-top,0px))} /* scenes about the board: see-through, dialog at the top */
+.dlg .dtitle{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--gold);margin-bottom:6px}.dlg .dtitle span{color:var(--muted);font-weight:600}
 html,body{height:100%;margin:0}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 
@@ -341,7 +343,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v5 · 16 Oct 2026';
+const VERSION='v6 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -962,7 +964,7 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
@@ -1024,11 +1026,43 @@ function pickDrop(drop){
   for(const d of drop){ x-=d[2]; if(x<=0) return d; }
   return drop[0];
 }
+/* every generator gets a little story the first time it appears on the board (each level counts) */
+const GEN_STORY={
+  gD1:[['T','A paper tray. Receipts, ration books, and one very old Valentine.'],['P','Odile kept everything. Every scrap. I always thought it was thrift.']],
+  gD2:[['N','The trays slot into a writing bureau with a lid that sticks.'],['T','There’s a stamp in here from 1965. Paris. Never used.']],
+  gD3:[['P','A printing press! In an attic!'],['T','Every playbill she ever had. She printed them herself.']],
+  gS1:[['P','Her sewing basket. I borrowed thread from this every Christmas for forty years.'],['M','<em>(Mothball climbs in and takes up residence.)</em>']],
+  gS2:[['N','A proper sewing kit: tailor’s chalk, pins, a thimble worn through on one side.'],['P','She sewed left-handed. I never noticed till now.']],
+  gS3:[['T','This isn’t a hobby corner. It’s a costume department.'],['P','Sequins by the jar. “A seamstress,” she said. Well. She wasn’t lying.']],
+  gT1:[['T','Finally, something I understand. Hammer, saw, and… a trick dagger.'],['P','Put that down, love.']],
+  gT2:[['N','The tools spread out across a workbench marked with chalk lines.'],['T','These are stage marks. Exits, entrances. Somebody rehearsed a show up here.']],
+  gT3:[['T','Trapdoors. Pulleys. A box with false sides. Your aunt was a menace.'],['P','A lovely menace.']],
+  gL1:[['T','Labelled in her handwriting. “Moon.” Who labels a fuse “Moon”?'],['P','Someone who needed to find it in the dark.']],
+  gL2:[['N','Rows of brass sliders, each with a tiny paper label.'],['T','Footlights, wash, spot… and one just marked “Felix, don’t”.']],
+  gL3:[['N','The attic fills with warm stage light. For a moment it’s 1968.'],['P','Oh. Oh, look at it.']],
+  gM1:[['P','No keyhole, no hinges, and it opens for the cat.'],['T','Of course it does.']],
+  gM2:[['N','A tall mirror in a gilt frame. Your reflection seems to arrive half a second late.'],['T','I’m choosing not to think about that.']],
+  gM3:[['P','This is the act. The whole act, laid out and ready.'],['T','Every trick she ever did, in one corner of an attic.']],
+  gK1:[['P','My kettle. On loan. It’s seen me through three husbands and a flood.'],['T','It whistles in a minor key. Fitting, really.']],
+};
+let genBusy=false;
+function playGenStory(){
+  genBusy=false;
+  if(!S.genQ||!S.genQ.length||storyOpen()||!$('modal').hidden||!$('title').hidden) return;
+  const k=S.genQ.shift(); save();
+  if((S.genSeen||{})[k]){ playGenStory(); return; }
+  const i=S.cells.findIndex(c=>c.s==='open'&&c.it&&key(c.it.k,c.it.l)===k);
+  if(i<0||!GEN_STORY[k]){ playGenStory(); return; }
+  (S.genSeen=S.genSeen||{})[k]=1; save();
+  const d=def(S.cells[i].it); sel=i; fx[i]='hint'; render();
+  playScene({clear:true, title:`${d.e} ${d.n}`, sub:'New on the board', lines:GEN_STORY[k]}, ()=>{ fx[i]='hint'; render(); });
+}
 function discover(it, quiet){
   const k=key(it.k,it.l);
   if(S.disc[k]) return;
   S.disc[k]=1;
   (S.unrev||(S.unrev={}))[k]=1; stat('disc');
+  if(isGen(it) && GEN_STORY[k] && !(S.genSeen||{})[k]){ (S.genQ=S.genQ||[]).push(k); return; }
   if(quiet) return;
   const d=def(it), ch=CHAINS[it.k];
   if(ch.story && d.lore){ setTimeout(()=>showLore(it),350); }
@@ -1323,6 +1357,7 @@ function render(){
     setTimeout(()=>{ Object.keys(f).forEach(i=>cellEls[i]&&cellEls[i].classList.remove(f[i])); }, f && Object.values(f).includes('hint')?2400:420);
   }
   renderHud(); renderOrders(tasks); renderInfo();
+  if(S.genQ&&S.genQ.length&&!genBusy){ genBusy=true; setTimeout(playGenStory,450); }
 }
 function renderHud(){
   $('energy').textContent=S.energy;
@@ -1471,6 +1506,8 @@ function tap(i){
     if(isRes(c.it)){ const ch=CHAINS[c.it.k]; if(ch.claimMax && c.it.l<maxL(c.it.k)){ SND.play('nope'); toast(`Merge up to a ${ch.items[maxL(c.it.k)-1].e} ${ch.items[maxL(c.it.k)-1].n} to claim Moon Pass points`); return; } claim(i); return; }
     return;
   }
+  if(isGen(c.it)){ const gk=key(c.it.k,c.it.l); // a generator you never heard about: its story plays when you first pick it up
+    if(GEN_STORY[gk]&&!(S.genSeen||{})[gk]&&!(S.genQ||[]).includes(gk)){ (S.genQ=S.genQ||[]).unshift(gk); genBusy=true; setTimeout(playGenStory,150); } }
   sel=i; sellArm=false; render();
 }
 
@@ -1523,14 +1560,14 @@ function playQueue(q,done){
 function playScene(sc,done){
   const ov=$('scene'); let i=0;
   hideToasts();
-  ov.hidden=false;
+  ov.hidden=false; ov.classList.toggle('clear',!!sc.clear);
   const show=()=>{
     if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; if(done) done(); if(!storyOpen()) flushToasts(); setTimeout(runArrivals,300); return; }
     const [who,txt]=sc.lines[i], cst=CAST[who];
     const cls = who==='N'?'narr': (who==='O'||who==='F')?'note':'';
-    ov.innerHTML=`${i===0&&sc.title?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:'<div style="margin:auto"></div>'}
+    ov.innerHTML=`${i===0&&sc.title&&!sc.clear?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:sc.clear?'':'<div style="margin:auto"></div>'}
       <div class="dlg ${cls}" id="dlg" role="button" tabindex="0">
-        ${cst.name?`<div class="spk"><span class="av">${cst.av}</span><b>${cst.name}</b></div>`:''}
+        ${sc.clear&&sc.title?`<div class="dtitle">${sc.title}${sc.sub?` · <span>${sc.sub}</span>`:''}</div>`:''}${cst.name?`<div class="spk"><span class="av">${cst.av}</span><b>${cst.name}</b></div>`:''}
         <p>${txt}</p>
         <div class="foot"><span>${i+1} / ${sc.lines.length}</span><span>Tap to continue ›</span></div>
       </div>
@@ -1819,6 +1856,7 @@ window.addEventListener('resize',()=>{ fit(); if(toastCur) dockToast(); });
 if(window.ResizeObserver) new ResizeObserver(()=>{ fit(); if(toastCur) dockToast(); }).observe($('wrap'));
 setInterval(()=>{
   const before=S.energy; tickEnergy(); renderHud();
+  if(S.genQ&&S.genQ.length&&!genBusy){ genBusy=true; setTimeout(playGenStory,300); } // a waiting generator story plays once the screen is free
   // refresh kettle counters + info text once a second
   let any=false, woke=false;
   S.cells.forEach((c,i)=>{
