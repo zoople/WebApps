@@ -124,7 +124,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .orders .empty b{font-family:var(--display);font-weight:400;color:var(--gold);font-size:18px;display:block}
 
 /* board */
-.boardwrap{flex:1;min-height:0;display:grid;place-items:center}
+.boardwrap{flex:1;min-height:0;display:grid;place-items:center;overflow:hidden}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 #board{display:grid;grid-template-columns:repeat(7,var(--cs));grid-auto-rows:var(--cs);border-radius:14px;overflow:hidden;
   box-shadow:0 0 0 3px #2a1d16,0 0 0 4px #6b4a33,0 14px 30px #0008;touch-action:none;user-select:none;-webkit-user-select:none}
 .cell{position:relative;display:grid;place-items:center;background:var(--wood)}
@@ -175,12 +176,12 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 .cell.pulse .em{animation:pulse .25s ease-out}
 
 /* info bar */
-.info{background:var(--panel);border:1px solid #ffffff12;border-radius:14px;padding:9px 10px;display:flex;align-items:center;gap:10px;min-height:76px}
+.info{background:var(--panel);border:1px solid #ffffff12;border-radius:14px;padding:9px 10px;display:flex;align-items:center;gap:10px;height:88px;flex:none;overflow:hidden}
 .info .big{font-size:36px;width:48px;text-align:center;flex:none}
 .info .txt{flex:1;min-width:0}
 .info .nm{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .info .nm small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
-.info .ds{font-size:12.5px;color:var(--muted);line-height:1.35}
+.info .ds{font-size:12.5px;color:var(--muted);line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .info .btns{display:flex;flex-direction:column;gap:5px;flex:none}
 .sbtn{background:var(--panel2);border:1px solid #ffffff1a;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap}
 .sbtn.warn{background:var(--velvet)}
@@ -340,7 +341,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v4 · 16 Oct 2026';
+const VERSION='v5 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1409,7 +1410,7 @@ function renderInfo(){
   }
   const sv=sellValue(it);
   box.innerHTML=`<div class="big">${d.e}</div>
-    <div class="txt"><div class="nm">${d.n}<small>${ch.name} · Lv ${it.l}</small></div><div class="ds">${ds}</div></div>
+    <div class="txt"><div class="nm">${d.n}<small>${ch.name!==d.n?ch.name+' · ':''}Lv ${it.l}</small></div><div class="ds">${ds}</div></div>
     <div class="btns"><button class="sbtn" id="chainBtn">Chain</button>${sv?`<button class="sbtn${sellArm?' warn':''}" id="sellBtn">${sellArm?'Sure?':'Sell 🪙'+sv}</button>`:''}</div>`;
   $('chainBtn').onclick=()=>showChain(it.k, it.l);
   if(sv) $('sellBtn').onclick=()=>{ if(sellArm){ sellArm=false; sell(sel); } else { sellArm=true; renderInfo(); } };
@@ -1814,6 +1815,8 @@ function fit(){
   document.documentElement.style.setProperty('--cs',cs+'px');
 }
 window.addEventListener('resize',()=>{ fit(); if(toastCur) dockToast(); });
+/* the board is sized to the space left over, so refit whenever that space changes (orders, info bar, fonts) */
+if(window.ResizeObserver) new ResizeObserver(()=>{ fit(); if(toastCur) dockToast(); }).observe($('wrap'));
 setInterval(()=>{
   const before=S.energy; tickEnergy(); renderHud();
   // refresh kettle counters + info text once a second
