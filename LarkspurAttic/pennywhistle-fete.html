@@ -75,6 +75,26 @@ html,body{height:100%;margin:0}
 #playBtn:active{transform:translateY(3px);box-shadow:0 3px 0 #9a7426}
 #title .ver{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 #title .best{font-size:12px;color:var(--muted);margin:0}
+#title{overflow-y:auto;justify-content:flex-start;gap:10px;padding:0 18px calc(14px + env(safe-area-inset-bottom,0px))}
+#title .cover{flex:none;width:calc(100% + 36px);max-width:520px;margin:0 -18px;height:auto;display:block;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
+#title .cover .spin{animation:cvspin 40s linear infinite}
+#title .cover .bulb{fill:#ffe9a0;animation:cvbulb 1.6s ease-in-out infinite}
+@keyframes cvspin{to{transform:rotate(360deg)}}
+@keyframes cvbulb{50%{fill:#7a5a1c}}
+@media (prefers-reduced-motion:reduce){#title .cover .spin,#title .cover .bulb{animation:none}}
+#title h1{margin-top:-4px;text-shadow:0 3px 0 #0b2a33,0 0 24px #ffc94a55}
+#title ul.key{gap:9px;font-size:15px;margin:2px 0}
+#title ul.key li::before{content:none}
+#title ul.key li{display:flex;gap:10px;align-items:flex-start}
+#title ul.key li span{flex:none;width:26px;text-align:center}
+#title details.more{width:100%;max-width:360px;background:#ffffff0d;border:1px solid #ffffff1a;border-radius:12px;padding:0 12px;text-align:left}
+#title details.more summary{cursor:pointer;padding:10px 0;font-weight:800;color:var(--gold);list-style:none}
+#title details.more summary::-webkit-details-marker{display:none}
+#title details.more summary::after{content:" ▾"}
+#title details.more[open] summary::after{content:" ▴"}
+#title details.more ul{font-size:13px;margin:0 0 10px}
+#title .go{position:sticky;bottom:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:8px;margin-top:auto;width:100%;background:linear-gradient(transparent,var(--bg) 30%)}
+
 #updBox{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:80;background:var(--panel);border:1px solid var(--gold);border-radius:12px;padding:8px 10px 8px 14px;font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 20px #0009;white-space:nowrap}
 #updBox button{background:var(--gold);color:#2a1a10;font-weight:800;border-radius:8px;padding:6px 10px}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
@@ -301,27 +321,29 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 </head>
 <body>
 <div id="title">
-  <img class="logo" src="icons/fete-192.png" alt="">
+  <svg class="cover" viewBox="0 0 360 230" role="img" aria-label="A prize wheel on the village green at sunset, under bunting"><defs><linearGradient id="cvSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#173f4c"/><stop offset=".55" stop-color="#2f7a80"/><stop offset=".85" stop-color="#f0a46a"/><stop offset="1" stop-color="#ffd27a"/></linearGradient><radialGradient id="cvGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe9a0" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9a0" stop-opacity="0"/></radialGradient></defs><rect width="360" height="230" fill="url(#cvSky)"/><circle cx="292" cy="160" r="30" fill="#ffd27a" opacity=".85"/><rect y="160" width="360" height="16" fill="#2b7487"/><path d="M0 166h360" stroke="#ffe3a8" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="14 10"/><path d="M0 178 Q90 160 180 172 T360 168 V230 H0Z" fill="#4f8a4b"/><path d="M0 200 Q120 186 240 198 T360 194 V230 H0Z" fill="#3f7640"/><g transform="translate(18,140)"><rect x="0.0" y="16.1" width="11.7" height="29.9" fill="#e8547a"/><rect x="11.7" y="16.1" width="11.7" height="29.9" fill="#fdf6e3"/><rect x="23.3" y="16.1" width="11.7" height="29.9" fill="#e8547a"/><rect x="35.0" y="16.1" width="11.7" height="29.9" fill="#fdf6e3"/><rect x="46.7" y="16.1" width="11.7" height="29.9" fill="#e8547a"/><rect x="58.3" y="16.1" width="11.7" height="29.9" fill="#fdf6e3"/><path d="M-4 17.0 L35.0 0 L74 17.0Z" fill="#e8547a"/><path d="M35.0 0 v-8" stroke="#fdf6e3" stroke-width="1.5"/><path d="M35.0 -8 l7 3 l-7 3z" fill="#ffc94a"/><path d="M26.6 46 L35.0 23.0 L43.4 46Z" fill="#7a2a3e" opacity=".6"/></g><g transform="translate(300,150)"><rect x="0.0" y="10.5" width="7.3" height="19.5" fill="#e8547a"/><rect x="7.3" y="10.5" width="7.3" height="19.5" fill="#fdf6e3"/><rect x="14.7" y="10.5" width="7.3" height="19.5" fill="#e8547a"/><rect x="22.0" y="10.5" width="7.3" height="19.5" fill="#fdf6e3"/><rect x="29.3" y="10.5" width="7.3" height="19.5" fill="#e8547a"/><rect x="36.7" y="10.5" width="7.3" height="19.5" fill="#fdf6e3"/><path d="M-4 11.1 L22.0 0 L48 11.1Z" fill="#e8547a"/><path d="M22.0 0 v-8" stroke="#fdf6e3" stroke-width="1.5"/><path d="M22.0 -8 l7 3 l-7 3z" fill="#ffc94a"/><path d="M16.7 30 L22.0 15.0 L27.3 30Z" fill="#7a2a3e" opacity=".6"/></g><circle cx="180" cy="104" r="86" fill="url(#cvGlow)"/><path d="M146 190 L180 104 L214 190" stroke="#123039" stroke-width="7" fill="none" stroke-linecap="round"/><g transform="translate(180,104)"><circle r="65" fill="#123039"/><g class="spin"><path d="M0 0 L0.0 -60.0 A60 60 0 0 1 30.0 -52.0Z" fill="#e8547a" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L30.0 -52.0 A60 60 0 0 1 52.0 -30.0Z" fill="#ffc94a" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L52.0 -30.0 A60 60 0 0 1 60.0 0.0Z" fill="#4fb3a9" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L60.0 0.0 A60 60 0 0 1 52.0 30.0Z" fill="#8f9cf0" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L52.0 30.0 A60 60 0 0 1 30.0 52.0Z" fill="#e8547a" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L30.0 52.0 A60 60 0 0 1 0.0 60.0Z" fill="#ffc94a" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L0.0 60.0 A60 60 0 0 1 -30.0 52.0Z" fill="#4fb3a9" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L-30.0 52.0 A60 60 0 0 1 -52.0 30.0Z" fill="#8f9cf0" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L-52.0 30.0 A60 60 0 0 1 -60.0 0.0Z" fill="#e8547a" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L-60.0 0.0 A60 60 0 0 1 -52.0 -30.0Z" fill="#ffc94a" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L-52.0 -30.0 A60 60 0 0 1 -30.0 -52.0Z" fill="#4fb3a9" stroke="#123039" stroke-width="1.5"/><path d="M0 0 L-30.0 -52.0 A60 60 0 0 1 -0.0 -60.0Z" fill="#8f9cf0" stroke="#123039" stroke-width="1.5"/><circle class="bulb" cx="15.8" cy="-58.9" r="3.4" style="animation-delay:0.00s"/><circle class="bulb" cx="43.1" cy="-43.1" r="3.4" style="animation-delay:0.13s"/><circle class="bulb" cx="58.9" cy="-15.8" r="3.4" style="animation-delay:0.26s"/><circle class="bulb" cx="58.9" cy="15.8" r="3.4" style="animation-delay:0.39s"/><circle class="bulb" cx="43.1" cy="43.1" r="3.4" style="animation-delay:0.52s"/><circle class="bulb" cx="15.8" cy="58.9" r="3.4" style="animation-delay:0.65s"/><circle class="bulb" cx="-15.8" cy="58.9" r="3.4" style="animation-delay:0.78s"/><circle class="bulb" cx="-43.1" cy="43.1" r="3.4" style="animation-delay:0.91s"/><circle class="bulb" cx="-58.9" cy="15.8" r="3.4" style="animation-delay:1.04s"/><circle class="bulb" cx="-58.9" cy="-15.8" r="3.4" style="animation-delay:1.17s"/><circle class="bulb" cx="-43.1" cy="-43.1" r="3.4" style="animation-delay:1.30s"/><circle class="bulb" cx="-15.8" cy="-58.9" r="3.4" style="animation-delay:1.43s"/></g><circle r="11" fill="#123039" stroke="#ffc94a" stroke-width="2.5"/><path d="M-8 -72 h16 l-8 13z" fill="#fdf6e3"/></g><path d="M-5 6 Q180 38 365 6" stroke="#fdf6e3" stroke-opacity=".8" stroke-width="1.2" fill="none"/><path d="M0.2 8.2 h16 l-8 14z" fill="#e8547a"/><path d="M26.6 12.1 h16 l-8 14z" fill="#ffc94a"/><path d="M53.1 15.4 h16 l-8 14z" fill="#4fb3a9"/><path d="M79.5 18.0 h16 l-8 14z" fill="#8f9cf0"/><path d="M105.9 20.0 h16 l-8 14z" fill="#e8547a"/><path d="M132.4 21.3 h16 l-8 14z" fill="#ffc94a"/><path d="M158.8 21.9 h16 l-8 14z" fill="#4fb3a9"/><path d="M185.2 21.9 h16 l-8 14z" fill="#8f9cf0"/><path d="M211.6 21.3 h16 l-8 14z" fill="#e8547a"/><path d="M238.1 20.0 h16 l-8 14z" fill="#ffc94a"/><path d="M264.5 18.0 h16 l-8 14z" fill="#4fb3a9"/><path d="M290.9 15.4 h16 l-8 14z" fill="#8f9cf0"/><path d="M317.4 12.1 h16 l-8 14z" fill="#e8547a"/><path d="M343.8 8.2 h16 l-8 14z" fill="#ffc94a"/><path d="M-5 26 Q180 70 365 26" stroke="#fdf6e3" stroke-opacity=".8" stroke-width="1.2" fill="none"/><path d="M0.2 29.0 h16 l-8 14z" fill="#4fb3a9"/><path d="M26.6 34.4 h16 l-8 14z" fill="#8f9cf0"/><path d="M53.1 38.9 h16 l-8 14z" fill="#e8547a"/><path d="M79.5 42.5 h16 l-8 14z" fill="#ffc94a"/><path d="M105.9 45.2 h16 l-8 14z" fill="#4fb3a9"/><path d="M132.4 47.0 h16 l-8 14z" fill="#8f9cf0"/><path d="M158.8 47.9 h16 l-8 14z" fill="#e8547a"/><path d="M185.2 47.9 h16 l-8 14z" fill="#ffc94a"/><path d="M211.6 47.0 h16 l-8 14z" fill="#4fb3a9"/><path d="M238.1 45.2 h16 l-8 14z" fill="#8f9cf0"/><path d="M264.5 42.5 h16 l-8 14z" fill="#e8547a"/><path d="M290.9 38.9 h16 l-8 14z" fill="#ffc94a"/><path d="M317.4 34.4 h16 l-8 14z" fill="#4fb3a9"/><path d="M343.8 29.0 h16 l-8 14z" fill="#8f9cf0"/><text x="250" y="212" font-size="22">🐕</text><text x="120" y="216" font-size="16">🎈</text></svg>
   <div class="sub">Event 2 · The Mystery Prize</div>
   <h1>Pennywhistle Fete</h1>
+  <ul class="key">
+    <li><span>🎡</span>Spin the Prize Wheel to light up sixty years of old prizes</li>
+    <li><span>🧩</span>Merge and fill orders to find out who leaves the Mystery Prize</li>
+    <li><span>☀️</span>No timer. Play at your own pace</li>
+  </ul>
+  <details class="more"><summary>How to play</summary>
   <ul>
-    <li>Tap a generator twice to make items</li>
-    <li>Drag two matching items together to merge</li>
-    <li>Fill orders to find out who leaves the Mystery Prize</li>
-    <li>🎡 Spin the Prize Wheel with 🎟️ tickets to light it up; each new 💡 light shows an old prize and its story</li>
-    <li>You don’t win the old prizes; every stop shakes out loose change 🪙</li>
-    <li>Every story order pays a ticket</li>
+    <li>Tap a generator twice to make items; drag two matching items together to merge</li>
+    <li>Every story order pays a 🎟️ ticket; one ticket spins the wheel</li>
+    <li>You don’t win the old prizes on the wheel; every stop shakes out loose change 🪙</li>
     <li>Generators need a rest; ⏲️ egg timers refill one</li>
     <li>Drag tea onto a generator to focus it on rare finds</li>
     <li>📦 Donation boxes are free, then fold flat</li>
     <li>🗑️ Feed the compost bin, grow 🌳 apple trees, burn 🪵 logs in the ♨️ stove for tea</li>
     <li>⏱️ Time chargers make generators around them recharge twice as fast</li>
     <li>Tap 🪙 for Dot’s tombola table</li>
-    <li>No timer. Play at your own pace</li>
-  </ul>
-  <button id="playBtn">Play</button>
+  </ul></details>
+  <div class="go"><button id="playBtn">Play</button>
   <p id="iosHint" class="best" hidden>📱 Full screen on iPhone: Share → Add to Home Screen</p>
-  <div class="ver" id="ver"></div>
+  <div class="ver" id="ver"></div></div>
 </div>
 <div id="updBox" hidden></div>
 
@@ -350,7 +372,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v5 · 16 Oct 2026';
+const VERSION='v6 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
