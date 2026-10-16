@@ -37,7 +37,9 @@
   color-scheme:dark;
 }
 [hidden]{display:none!important}
-#scene{z-index:55} /* story scenes sit above pop-ups like the wheel */
+#scene{z-index:55}
+#scene.clear{background:#06161b33;justify-content:flex-start;padding-top:calc(12px + env(safe-area-inset-top,0px))} /* sits at the top so the board (and the wheel) stay visible */
+.dlg .dtitle{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--gold);margin-bottom:6px}.dlg .dtitle span{color:var(--muted);font-weight:600} /* story scenes sit above pop-ups like the wheel */
 .wheelwrap{position:relative;width:min(280px,78vw);aspect-ratio:1;margin:10px auto 4px}
 .wheelspin{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 4px #e4b84c,0 10px 24px #0009}
 .wbanner{margin:6px auto;max-width:300px;text-align:center;border-radius:12px;padding:8px 10px;background:#ffffff10}
@@ -387,7 +389,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v10 · 16 Oct 2026';
+const VERSION='v11 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -626,7 +628,7 @@ const TASKS = [
   {beat:['M','(He does three laps of the storeroom with it, very proud. Something rattles in a box he knocks over.)'], ch:0, who:'M', need:[['P',2]], coins:8, say:'(Biscuit wants a pennant to run round the hall with.)'},
   {id:200, side0:1, beat:['H','Lovely. Junk, but lovely. Somebody will buy it. Somebody always does.'], more:[['P','Mrs Hale has run the White Elephant stall since 1979. Nobody knows where she keeps it all.'],['H','Bring me anything you can spare, any time. I pay fair, and every penny goes to the church roof.'],['T','The church roof has been “nearly fixed” since I was six.'],['H','Then it needs more jumble, doesn’t it? My stall never closes, dear. Not while that roof still leaks.'],['N','<em>(The White Elephant stall is open. Its orders never run out: bring anything you can spare for coins, tickets and rosettes.)</em>']], ch:0, who:'H', need:[['P',2],['F',1]], coins:8, say:'You’re the new one. I’m Mrs Hale, White Elephant stall. I need stock. A pennant and a pea pod to start me off. Don’t argue.'},
   {beat:['T','She would, too. She’s eighty-four and she’s got a whistle.'], ch:0, who:'T', need:[['P',3]], coins:10, say:'Flag string, please. If the bunting isn’t up by Saturday, Dot will have me shot.'},
-  {beat:['N','Under the box, under a dust sheet: the old Prize Wheel. Twenty little bulbs round the rim, every one of them dark.'], more:[['P','There she is! Fred’s old wheel. She hasn’t turned since last summer.'],['T','Does it even still work?'],['P','Only one way to find out, love. Ticket in, give her a spin.'],['N','<em>(The Prize Wheel is waiting in your gifts 🎁)</em>']], gifts:[['WH',1]], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He is pawing at a box. A yo-yo and a carrot might tempt him off it.)'},
+  {beat:['N','Under the box, under a dust sheet: the old Prize Wheel. Twenty little bulbs round the rim, every one of them dark.'], gifts:[['WH',1]], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He is pawing at a box. A yo-yo and a carrot might tempt him off it.)'},
   {beat:['T','Potato toss: sorted. And the wheel works! Right, let’s get the big covers off.'], ch:0, who:'T', wheel:2, need:[['T',2],['F',3]], coins:12, say:'A hoopla ring and a potato. And give the wheel a couple of spins, I want to see it go.'},
   // ch2 — zone 1, microphone
   {beat:['T','I can now play the drum. Badly. Hey, there’s writing on the rafters. Names, painted, one a year.'], ch:1, who:'T', need:[['L',2]], coins:12, say:'Is that a drum? Can I have the drum? I’ve always wanted the drum.'},
@@ -882,7 +884,6 @@ function wheelListHtml(withSpeakers){
 }
 function openWheel(i){
   wheelCell=i;
-  if(!S.wheelIntro){ S.wheelIntro=1; save(); playScene({title:'The Prize Wheel', sub:'Twenty dark bulbs', lines:WHEEL_INTRO}, ()=>openWheel(i)); return; }
   const done=wheelDone(), last=S.wheelLast, sg=last?WHEEL_SEGS[last.i]:null;
   const banner = !last ? '' : last.hits===1
       ? `<div class="wbanner new"><div class="wb1">💡 Light ${last.n} of ${WHEEL_N} is back on!</div><div class="wb2">Under it: ${sg.e} ${sg.n}, ${sg.yr}<br>💷 Loose change fell out → on the board</div></div>`
@@ -897,6 +898,7 @@ function openWheel(i){
     <h3>💡 Under the lights</h3>${wheelListHtml(false)||'<p style="color:var(--muted);font-size:13px">All dark so far. Each light shows an old Mystery Prize.</p>'}`);
   $('wheelClose').onclick=()=>{ if(!wheelBusy) closeModal(); };
   $('wheelGo').onclick=spinWheel;
+  if(!S.wheelIntro){ S.wheelIntro=1; save(); playScene({clear:true, title:'The Prize Wheel', sub:'Twenty dark bulbs', lines:WHEEL_INTRO}); }
 }
 function spinWheel(){
   if(wheelBusy) return;
@@ -1256,7 +1258,7 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, wheel:Array(20).fill(0), wheelRot:0, chips:3, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:3, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
@@ -1319,11 +1321,48 @@ function pickDrop(drop){
   for(const d of drop){ x-=d[2]; if(x<=0) return d; }
   return drop[0];
 }
+/* every generator gets a little story the first time it appears on the board (each level counts) */
+const GEN_STORY={
+  gD1:[['P','My craft box. Crayons, crepe paper, and sixty years of glitter that will never, ever come out.'],['T','Every flag on the green started life in that box.']],
+  gD2:[['N','Two craft boxes, one trestle, and suddenly it’s a proper craft table.'],['P','The Brownies used to sit here. You could hear the glue sticks from the car park.']],
+  gD3:[['P','The Thursday Art Club! Six ladies, one gentleman, and very strong opinions about watercolour.'],['T','They painted the Welcome Arch in 1988. Still the best thing in Pennywhistle.']],
+  gS1:[['P','My veg trug. Everything that wins at the show passes through this bucket first.'],['T','Dot’s marrows have their own fan club.']],
+  gS2:[['N','Behind the hall, the old allotments. Somebody’s left a deckchair and a flask.'],['P','Fred’s plot, that was. Corn taller than the church.']],
+  gS3:[['T','A whole farm cart of veg. We could feed the entire village. Twice.'],['P','We could. Mrs Hale would still bring chutney.']],
+  gT1:[['T','The games bag! Hoopla rings, a beanbag, and one skittle with a face drawn on it.'],['M','<em>(Biscuit takes the beanbag. The beanbag is his now.)</em>']],
+  gT2:[['N','The games tent goes up with only a little bad language.'],['T','Ring the bell, hook a duck, guess the weight of the cake. The classics.']],
+  gT3:[['T','A funfair. An actual funfair. Do you know how long I’ve wanted to say that in Pennywhistle?'],['P','Since you were four, love. You told me every year.']],
+  gL1:[['T','“Testing, testing.” Right, it works. Mostly.'],['P','Fred wired that too. If it whistles, give it a thump.']],
+  gL2:[['N','Two speakers on poles. Every announcement now reaches the beach.'],['P','“Would the owner of a small brown terrier please collect him from the cake stall.” Every single year.']],
+  gL3:[['N','The bandstand, freshly painted. The brass band takes its seats.'],['T','They know four songs. They play them all twice. It’s perfect.']],
+  gM1:[['P','Every Mystery Prize that ever came back to the hall ends up in here.'],['T','It smells of mothballs and sixty years of good intentions.']],
+  gM2:[['N','The boxes stack into a battered prize trunk, covered in stickers from a dozen seaside towns.'],['P','We took the wheel on tour once. Bognor. Never again.']],
+  gM3:[['N','Shelves, labels, dates. The whole history of the fete, finally in order.'],['T','Dot, there’s a whole shelf just labelled “GOAT”.'],['P','We don’t talk about the goat.']],
+  gK1:[['P','The urn takes eight minutes to boil and it has never once been rushed.'],['T','It’s older than me. It might be older than the hall.']],
+  Q1:[['N','A cardboard box on the step, marked “FOR THE FETE”. Nobody ever sees who leaves them.'],['P','The village gives what it can. There’s always something good in the bottom.']],
+  Q2:[['T','A big one! Somebody’s cleared out their whole loft.'],['P','That’ll be the Pattersons. They move house every summer and never leave.']],
+  Z1:[['P','The compost bin. Feed it scraps and it gives you seedlings. Don’t ask how. It’s Pennywhistle.'],['M','<em>(Biscuit sniffs it once and decides it is beneath him.)</em>']],
+  U1:[['T','Fred’s old camping stove. Logs or old bunting in, tea out.'],['P','Best cup you’ll ever have, and it tastes faintly of 1979.']],
+  gC1:[['N','The church clock’s spare works, ticking away in a box.'],['P','The vicar swears it runs fast. Put it near anything slow and see.']],
+  G4:[['N','The sapling has grown into a proper little apple tree.'],['P','Fruit for the jam stall. It gives a few crops, then it’s firewood. That’s trees, love.']],
+  WH1:[['P','There she is! Fred’s old Prize Wheel. She hasn’t turned since last summer.'],['T','Does it even still work?'],['P','Only one way to find out, love. A raffle ticket in, and give her a spin.']],
+};
+let genBusy=false;
+function playGenStory(){
+  genBusy=false;
+  if(!S.genQ||!S.genQ.length||storyOpen()||!$('modal').hidden||!$('title').hidden) return;
+  const k=S.genQ.shift(); save();
+  const i=S.cells.findIndex(c=>c.s==='open'&&c.it&&key(c.it.k,c.it.l)===k);
+  if(i<0||!GEN_STORY[k]){ playGenStory(); return; }
+  const d=def(S.cells[i].it); sel=i; fx[i]='hint'; render();
+  playScene({clear:true, title:`${d.e} ${d.n}`, sub:'New on the board', lines:GEN_STORY[k]}, ()=>{ fx[i]='hint'; render(); });
+}
 function discover(it, quiet){
   const k=key(it.k,it.l);
   if(S.disc[k]) return;
   S.disc[k]=1;
   (S.unrev||(S.unrev={}))[k]=1; stat('disc');
+  if(isGen(it) && GEN_STORY[k]){ (S.genQ=S.genQ||[]).push(k); return; }
   if(quiet) return;
   const d=def(it), ch=CHAINS[it.k];
   if(ch.story && d.lore){ setTimeout(()=>showLore(it),350); }
@@ -1506,7 +1545,7 @@ function completeTask(t){
   }
   S.done[t.id]=1; stat('story');
   if(t.side0) S.sideOn=1;
-  (t.gifts||[]).forEach(g=>{ if(g[0]==='WH' && (S.cells.some(c=>c.it&&c.it.k==='WH')||S.gifts.some(x=>x[0]==='WH'))) return; S.gifts.push(g); });
+  (t.gifts||[]).forEach(g=>{ if(g[0]==='WH' && (S.cells.some(c=>c.it&&c.it.k==='WH')||S.gifts.some(x=>x[0]==='WH'))) return; dropItems([g]); });
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
   if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat, t.more);
@@ -1673,6 +1712,7 @@ function render(){
     setTimeout(()=>{ Object.keys(f).forEach(i=>cellEls[i]&&cellEls[i].classList.remove(f[i])); }, f && Object.values(f).includes('hint')?2400:420);
   }
   renderHud(); renderOrders(tasks); renderInfo();
+  if(S.genQ&&S.genQ.length&&!genBusy){ genBusy=true; setTimeout(playGenStory,450); }
 }
 function renderHud(){
   $('energy').textContent=S.energy;
@@ -1887,14 +1927,14 @@ function playQueue(q,done){
 function playScene(sc,done){
   const ov=$('scene'); let i=0;
   hideToasts();
-  ov.hidden=false;
+  ov.hidden=false; ov.classList.toggle('clear',!!sc.clear);
   const show=()=>{
     if(i>=sc.lines.length){ ov.hidden=true; ov.innerHTML=''; if(done) done(); if(!storyOpen()) flushToasts(); setTimeout(runArrivals,300); return; }
     const [who,txt]=sc.lines[i], cst=CAST[who];
     const cls = who==='N'?'narr': (who==='O'||who==='F')?'note':'';
-    ov.innerHTML=`${i===0&&sc.title?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:'<div style="margin:auto"></div>'}
+    ov.innerHTML=`${i===0&&sc.title&&!sc.clear?`<div class="scene-title"><small>${sc.title}</small>${sc.sub||''}</div>`:sc.clear?'':'<div style="margin:auto"></div>'}
       <div class="dlg ${cls}" id="dlg" role="button" tabindex="0">
-        ${cst.name?`<div class="spk"><span class="av">${cst.av}</span><b>${cst.name}</b></div>`:''}
+        ${sc.clear&&sc.title?`<div class="dtitle">${sc.title}${sc.sub?` · <span>${sc.sub}</span>`:''}</div>`:''}${cst.name?`<div class="spk"><span class="av">${cst.av}</span><b>${cst.name}</b></div>`:''}
         <p>${txt}</p>
         <div class="foot"><span>${i+1} / ${sc.lines.length}</span><span>Tap to continue ›</span></div>
       </div>
@@ -2188,6 +2228,7 @@ window.addEventListener('resize',()=>{ fit(); if(toastCur) dockToast(); });
 if(window.ResizeObserver) new ResizeObserver(()=>{ fit(); if(toastCur) dockToast(); }).observe($('wrap'));
 setInterval(()=>{
   const before=S.energy; tickEnergy(); renderHud();
+  if(S.genQ&&S.genQ.length&&!genBusy){ genBusy=true; setTimeout(playGenStory,300); } // a waiting generator story plays once the screen is free
   if(chargerTick()){ save(); render(); }
   // charger countdown badges tick in place
   S.cells.forEach((c,i)=>{ if(c.s==='open'&&isCharger(c.it)&&c.it.on){ const el=board.children[i].querySelector('.gen'); if(el) el.textContent='⏳'+fmt(Math.ceil((c.it.end-now())/1000)); const arc=board.children[i].querySelector('.arc'); if(arc){ const C=2*Math.PI*44, p=Math.max(0,(c.it.end-now())/chargerMs(c.it)); arc.setAttribute('stroke-dasharray',`${(p*C).toFixed(1)} ${C.toFixed(1)}`); } board.children[i]._h=null; } });
