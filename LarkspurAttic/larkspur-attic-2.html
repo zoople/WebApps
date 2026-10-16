@@ -231,6 +231,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 #toast .tm{position:absolute;left:10px;bottom:5px;font-size:10.5px;color:var(--gold);font-weight:800}
 #toast .t{grid-area:1/1;display:grid;place-items:center;background:linear-gradient(180deg,#3a2b1d,#2c2017);border:1px solid #e4b84c88;color:var(--ink);padding:6px 12px;border-radius:14px;font-size:13.5px;line-height:1.35;text-align:center;animation:tin .18s ease-out;overflow:hidden}
 #toast .t.out{animation:tout .16s ease-in forwards}
+.order{position:relative}.order .opip{position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--velvet);box-shadow:0 0 0 2px var(--panel);pointer-events:none}
 #orderPop{position:fixed;left:12px;right:12px;margin:0 auto;max-width:480px;z-index:46;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-radius:14px;padding:12px 12px 10px;box-shadow:0 14px 34px #000c;animation:rise .18s ease-out}
 #orderPop .op-x{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:50%;background:#ffffff14;font-size:14px;display:grid;place-items:center;color:var(--ink)}
 #orderPop .op-who{display:flex;align-items:center;gap:8px;font-size:15px}#orderPop .op-who .av{font-size:26px}
@@ -339,7 +340,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v3 · 16 Oct 2026';
+const VERSION='v4 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1216,7 +1217,7 @@ function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&(ch.main===k||
 function hintTask(t){
   const ks=new Set(t.need.map(n=>n[0]));
   S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
-  const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=genFor(k); return `${d.e} ${d.n}${g?` <small>(${CHAINS[k].rare?'rare from ':''}${g.items[0].e} ${g.name})</small>`:''}`; });
+  const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=genFor(k); return `${d.e} ${d.n}${g?` <small>(${CHAINS[k].rare?'rare from ':''}${genLabel(g)})</small>`:''}`; });
   toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs: ${parts.join(' + ')}`, 4200);
   render();
 }
@@ -1231,14 +1232,19 @@ function deliver(t){
     toast(`⚠️ ${d.e} ${d.n} is needed for ${CAST[st.who].name}’s order<br><small>Tap Hand over again to sell it anyway</small>`,3500); return; }
   armSide=null; closeOrder(); completeTask(t);
 }
+/* name the generator you'd actually use: your highest level one on the board (level 1 if you have none) */
+function genLabel(g){ const gk=Object.keys(CHAINS).find(x=>CHAINS[x]===g); let l=0;
+  S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&c.it.k===gk&&c.it.l>l) l=c.it.l; });
+  const d=g.items[Math.max(1,l)-1]; return `${d.e} ${d.n}`; }
 function closeOrder(){ const p=$('orderPop'); if(p) p.remove(); }
 function showOrder(t){
+  if(!t.side){ (S.readOrd=S.readOrd||{})[t.id]=1; save(); }
   closeOrder(); const st=taskStatus(t), wd=typeof wheelDone==='function'?wheelDone():0;
   const ks=new Set(t.need.map(n=>n[0]));
   S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
   if(t.wheel && wd<t.wheel) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
   const rows=t.need.map(([k,l],j)=>{ const d=CHAINS[k].items[l-1], g=genFor(k);
-      return `<div class="op-need${st.have[j]?' have':''}"><span class="e">${d.e}</span><span class="n">${d.n}${g?`<small>${CHAINS[k].rare?'Rare find from':'From'} ${g.items[0].e} ${g.name}</small>`:''}</span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
+      return `<div class="op-need${st.have[j]?' have':''}"><span class="e">${d.e}</span><span class="n">${d.n}${g?`<small>${CHAINS[k].rare?'Rare find from':'From'} ${genLabel(g)}</small>`:''}</span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
     + (t.wheel?`<div class="op-need${st.wok?' have':''}"><span class="e">💡</span><span class="n">${t.wheel} wheel lights on<small>${wd} lit so far</small></span><b>${st.wok?'✓':''}</b></div>`:'');
   const rw=(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ');
   const p=document.createElement('div'); p.id='orderPop';
@@ -1364,7 +1370,7 @@ function renderOrders(tasks){
     el.className='order'+(st.ready?' ready':'')+(t.side?' side':'')+(t.lucky?' lucky':'');
     el.dataset.id=t.id;
     if(!t.side && (!(S.seenOrd||{})[t.id] || flying===String(t.id))) el.classList.add('incoming');
-    el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
+    el.innerHTML=`${!t.side&&!(S.readOrd||{})[t.id]?'<i class="opip" title="New story"></i>':''}<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
       <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     // tap the card for details; only the green "Hand over" strip delivers
@@ -1399,7 +1405,7 @@ function renderInfo(){
   } else if(it.k==='ET'){
     ds=`Drag onto a generator to refill it straight away.`;
   } else {
-    ds = (ch.rare?`Rare find from the ${genFor(it.k).name}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
+    ds = (ch.rare?`Rare find from the ${genLabel(genFor(it.k))}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
   }
   const sv=sellValue(it);
   box.innerHTML=`<div class="big">${d.e}</div>
@@ -1551,7 +1557,7 @@ function showChain(k,cur){
   const ch=CHAINS[k];
   let extra='';
   if(ch.gen){ const d=ch.items[0]; extra=`<p class="ds">Makes: ${[...new Set(d.drop.map(x=>x[0]))].map(x=>CHAINS[x].name).join(', ')}.</p>${chainHtml(d.drop[0][0])}`; }
-  else { const g=genFor(k); if(g) extra=`<p style="color:var(--muted);font-size:13px">Comes from the ${g.items[0].e} ${g.name}.</p>`; }
+  else { const g=genFor(k); if(g) extra=`<p style="color:var(--muted);font-size:13px">Comes from the ${genLabel(g)}.</p>`; }
   openModal(`<h2>${ch.name}</h2>${chainHtml(k,cur)}${extra}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
 }
 function showLore(it){
