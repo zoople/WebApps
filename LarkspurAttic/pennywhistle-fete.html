@@ -272,8 +272,21 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 #toast:empty{display:none}
 #toast .tx{position:absolute;right:9px;bottom:5px;font-size:10.5px;color:var(--muted);font-weight:700}
 #toast .tm{position:absolute;left:10px;bottom:5px;font-size:10.5px;color:var(--gold);font-weight:800}
-#toast .t{grid-area:1/1;display:grid;place-items:center;background:linear-gradient(180deg,#3a2b1d,#2c2017);border:1px solid #e4b84c88;color:var(--ink);padding:6px 12px;border-radius:14px;font-size:13.5px;line-height:1.35;text-align:center;animation:tin .18s ease-out;overflow:hidden}
+#toast .t{grid-area:1/1;display:grid;place-items:center;background:linear-gradient(180deg,#1f4651,#183a44);border:1px solid #ffc94a88;color:var(--ink);padding:6px 12px;border-radius:14px;font-size:13.5px;line-height:1.35;text-align:center;animation:tin .18s ease-out;overflow:hidden}
 #toast .t.out{animation:tout .16s ease-in forwards}
+#orderPop{position:fixed;left:12px;right:12px;margin:0 auto;max-width:480px;z-index:46;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-radius:14px;padding:12px 12px 10px;box-shadow:0 14px 34px #000c;animation:rise .18s ease-out}
+#orderPop .op-x{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:50%;background:#ffffff14;font-size:14px;display:grid;place-items:center;color:var(--ink)}
+#orderPop .op-who{display:flex;align-items:center;gap:8px;font-size:15px}#orderPop .op-who .av{font-size:26px}
+#orderPop .op-say{margin:6px 34px 8px 0;font-style:italic;font-size:14px;line-height:1.4}
+#orderPop .op-need{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #ffffff12}
+#orderPop .op-need .e{font-size:26px;width:34px;text-align:center}
+#orderPop .op-need .n{flex:1;font-weight:700;font-size:14px}#orderPop .op-need small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+#orderPop .op-need b{color:var(--ok);font-size:18px}#orderPop .op-need.have .n{color:var(--ok)}
+#orderPop .op-rw{font-size:13px;color:var(--muted);padding-top:6px;border-top:1px solid #ffffff12}
+#orderPop .op-go{width:100%;margin-top:8px}
+#toast .tx{top:5px;right:6px;bottom:auto;width:22px;height:22px;border-radius:50%;background:#ffffff1a;display:grid;place-items:center;font-size:11px;color:var(--ink)}
+#toast .t{padding-right:30px}
+
 @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes tout{to{opacity:0;transform:translateY(-6px)}}
 #ghost{position:fixed;left:0;top:0;z-index:40;pointer-events:none;font-size:calc(var(--cs)*.75);line-height:1;transform:translate(-999px,-999px);filter:drop-shadow(0 8px 6px #0009)}
@@ -372,7 +385,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v6 · 16 Oct 2026';
+const VERSION='v7 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -486,7 +499,7 @@ const LAYOUT = [
   'wT1 bL2 bP1 wE2 bF2 wT2 bP3',
   'bP1 bgT1 wP1 bF2 wF1 bQ1 bT1',   // zone 0 — start
   'wF2 oP1 o. o. o. oF1 wP2',
-  'oE1 ogD1 o. oWH1 o. ogS1 oE1',
+  'oE1 ogD1 o. o. o. ogS1 oE1',
 ];
 const zoneOfRow = r => r>=6?0 : r>=4?1 : r>=2?2 : 3;
 
@@ -510,7 +523,7 @@ const CHAPTERS = [
       ['T','Everything for the fete lives in the village hall storeroom. Nobody’s been in since last summer. Mind the bunting, it bites.'],
       ['M','Wuff! <em>(Biscuit is already under a trestle table, tail going like a metronome.)</em>'],
       ['N','Tap a generator, then tap it again to make something. Drag two matching things together to merge them. Every merge shakes open the boxes beside it.'],
-      ['N','The 🎡 Prize Wheel is by the door, all its lights dark. 🎟️ Raffle tickets spin it. Tap it to find out why.'],
+      ['P','The wheel’s in there somewhere, under a sheet. Biscuit will find it. He finds everything.'],
     ],
     outro:[
       ['T','There. A floor. Nobody has seen this floor since 2019.'],
@@ -609,7 +622,7 @@ const TASKS = [
   {beat:['T','Nose on. The hoopla rabbit now looks alarmed rather than menacing. Progress.'], ch:0, who:'T', need:[['F',2]], coins:8, say:'Got a carrot? The hoopla rabbit costume needs a nose.'},
   {beat:['M','(He does three laps of the storeroom with it, very proud. Something rattles in a box he knocks over.)'], ch:0, who:'M', need:[['P',2]], coins:8, say:'(Biscuit wants a pennant to run round the hall with.)'},
   {beat:['T','She would, too. She’s eighty-four and she’s got a whistle.'], ch:0, who:'T', need:[['P',3]], coins:10, say:'Flag string, please. If the bunting isn’t up by Saturday, Dot will have me shot.'},
-  {beat:['N','Under the box: a fete programme from 1964. One line is circled. “Prize Wheel. Every ticket wins!”'], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He is pawing at a box. A yo-yo and a carrot might tempt him off it.)'},
+  {beat:['N','Under the box, under a dust sheet: the old Prize Wheel. Twenty little bulbs round the rim, every one of them dark.'], more:[['P','There she is! Fred’s old wheel. She hasn’t turned since last summer.'],['T','Does it even still work?'],['P','Only one way to find out, love. Ticket in, give her a spin.'],['N','<em>(The Prize Wheel is waiting in your gifts 🎁)</em>']], gifts:[['WH',1]], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He is pawing at a box. A yo-yo and a carrot might tempt him off it.)'},
   {beat:['T','Potato toss: sorted. And the wheel works! Right, let’s get the big covers off.'], ch:0, who:'T', wheel:2, need:[['T',2],['F',3]], coins:12, say:'A hoopla ring and a potato. And give the wheel a couple of spins, I want to see it go.'},
   // ch2 — zone 1, microphone
   {beat:['T','I can now play the drum. Badly. Hey, there’s writing on the rafters. Names, painted, one a year.'], ch:1, who:'T', need:[['L',2]], coins:12, say:'Is that a drum? Can I have the drum? I’ve always wanted the drum.'},
@@ -820,7 +833,7 @@ const WHEEL_LAST=[
 ];
 /* why the wheel matters: twenty dark bulbs, and an old prize painted under each */
 const WHEEL_INTRO=[
-  ['T','Right. The wheel. It hasn’t turned since last summer, and every one of its twenty little bulbs is dark.'],
+  ['T','Right. Twenty dark bulbs. How do we get them back on?'],
   ['P','Fred wired those in 1972. Loose contacts, every one. When the wheel stops on a dark segment, the jolt knocks its bulb back on.'],
   ['P','And under each bulb there’s a little painting of an old Mystery Prize. One for every few years. You’ll see.'],
   ['T','So we spin until all twenty are lit for Saturday. And it rattles. Why does it rattle?'],
@@ -1243,7 +1256,7 @@ function freshState(){
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
       s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[];
-      if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; delete s.wheelUnread; s.wheelLast=null;
+      if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; if((s.ch>0||(s.done||{})[3]) && !s.cells.some(c=>c.it&&c.it.k==='WH') && !(s.gifts||[]).some(g=>g[0]==='WH')) (s.gifts=s.gifts||[]).push(['WH',1]); delete s.wheelUnread; s.wheelLast=null;
       if(!s.unrev) s.unrev={...s.disc}; // saves from before the collection: everything found so far waits to be revealed
       if(!s.stats){ const story=Object.keys(s.done||{}).length; s.stats={side:s.sideDone||0, story, disc:Object.keys(s.disc||{}).length}; }
       s.qt=s.qt||{};
@@ -1487,6 +1500,7 @@ function completeTask(t){
     save(); render(); return;
   }
   S.done[t.id]=1; stat('story');
+  (t.gifts||[]).forEach(g=>{ if(g[0]==='WH' && (S.cells.some(c=>c.it&&c.it.k==='WH')||S.gifts.some(x=>x[0]==='WH'))) return; S.gifts.push(g); });
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
   if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat, t.more);
@@ -1542,6 +1556,36 @@ function hintTask(t){
   toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs: ${parts.join(' + ')}`, 4200);
   render();
 }
+
+
+/* order details: opens under the orders row (opt-in, so it may cover the board); never delivers by itself */
+function deliver(t){
+  if(!taskStatus(t).ready) return;
+  const clash=t.side?sideConflict(t):null;
+  if(clash && armSide!==t.id){ armSide=t.id; setTimeout(()=>{ if(armSide===t.id) armSide=null; },8000); SND.play('nope');
+    const [k,l,st]=clash, d=CHAINS[k].items[l-1];
+    toast(`⚠️ ${d.e} ${d.n} is needed for ${CAST[st.who].name}’s order<br><small>Tap Hand over again to sell it anyway</small>`,3500); return; }
+  armSide=null; closeOrder(); completeTask(t);
+}
+function closeOrder(){ const p=$('orderPop'); if(p) p.remove(); }
+function showOrder(t){
+  closeOrder(); const st=taskStatus(t), wd=typeof wheelDone==='function'?wheelDone():0;
+  const ks=new Set(t.need.map(n=>n[0]));
+  S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
+  if(t.wheel && wd<t.wheel) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
+  const rows=t.need.map(([k,l],j)=>{ const d=CHAINS[k].items[l-1], g=genFor(k);
+      return `<div class="op-need${st.have[j]?' have':''}"><span class="e">${d.e}</span><span class="n">${d.n}${g?`<small>${CHAINS[k].rare?'Rare find from':'From'} ${g.items[0].e} ${g.name}</small>`:''}</span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
+    + (t.wheel?`<div class="op-need${st.wok?' have':''}"><span class="e">💡</span><span class="n">${t.wheel} wheel lights on<small>${wd} lit so far</small></span><b>${st.wok?'✓':''}</b></div>`:'');
+  const rw=(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ');
+  const p=document.createElement('div'); p.id='orderPop';
+  p.innerHTML=`<button class="op-x" aria-label="Close">✕</button><div class="op-who"><span class="av">${CAST[t.who].av}</span><b>${t.lucky?'🍀 Lucky find':CAST[t.who].name}</b></div>
+    <p class="op-say">${t.say}</p>${rows}<div class="op-rw">Reward ${rw}</div>${st.ready?'<button class="bigbtn gold op-go">Hand over</button>':''}`;
+  document.body.appendChild(p);
+  p.style.top=($('orders').getBoundingClientRect().bottom+6)+'px';
+  p.querySelector('.op-x').onclick=closeOrder; if(st.ready) p.querySelector('.op-go').onclick=()=>deliver(t);
+  SND.play('tap'); render();
+}
+document.addEventListener('pointerdown',e=>{ const p=$('orderPop'); if(p && !p.contains(e.target) && !e.target.closest('.order')) closeOrder(); },true);
 
 /* ============================================================ rendering */
 const board=$('board');
@@ -1669,13 +1713,8 @@ function renderOrders(tasks){
     el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">💡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}</div>
       <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
-    el.onclick=()=>{
-      if(!taskStatus(t).ready){ hintTask(t); return; }
-      const clash=t.side?sideConflict(t):null;
-      if(clash && armSide!==t.id){ armSide=t.id; setTimeout(()=>{ if(armSide===t.id) armSide=null; },8000); SND.play('nope');
-        const [k,l,st]=clash, d=CHAINS[k].items[l-1];
-        toast(`⚠️ ${d.e} ${d.n} is needed for ${CAST[st.who].name}’s order<br><small>Tap this ${CAST.S.name} order again to sell it anyway</small>`,3500); return; }
-      armSide=null; completeTask(t); };
+    // tap the card for details; only the green "Hand over" strip delivers
+    el.onclick=e=>{ if(e.target.closest('.act') && taskStatus(t).ready){ deliver(t); return; } showOrder(t); };
     box.appendChild(el);
   });
   if(flying===null && box.querySelector('.order.incoming')) setTimeout(runArrivals,60);
@@ -1813,7 +1852,7 @@ function nextToast(){
   if(toastCur||overlayOpen()) return;
   const n=toastQ.shift(); if(!n) return;
   dockToast();
-  const el=document.createElement('div'); el.className='t'; el.innerHTML=`<div>${n[0]}</div><span class="tm"></span><span class="tx">Tap to close ✕</span>`;
+  const el=document.createElement('div'); el.className='t'; el.innerHTML=`<div>${n[0]}</div><span class="tm"></span><span class="tx">✕</span>`;
   $('toast').appendChild(el);
   toastCur={el,h:n[0],ms:n[1]}; toastMore();
 }

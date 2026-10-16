@@ -231,6 +231,19 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 #toast .tm{position:absolute;left:10px;bottom:5px;font-size:10.5px;color:var(--gold);font-weight:800}
 #toast .t{grid-area:1/1;display:grid;place-items:center;background:linear-gradient(180deg,#3a2b1d,#2c2017);border:1px solid #e4b84c88;color:var(--ink);padding:6px 12px;border-radius:14px;font-size:13.5px;line-height:1.35;text-align:center;animation:tin .18s ease-out;overflow:hidden}
 #toast .t.out{animation:tout .16s ease-in forwards}
+#orderPop{position:fixed;left:12px;right:12px;margin:0 auto;max-width:480px;z-index:46;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-radius:14px;padding:12px 12px 10px;box-shadow:0 14px 34px #000c;animation:rise .18s ease-out}
+#orderPop .op-x{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:50%;background:#ffffff14;font-size:14px;display:grid;place-items:center;color:var(--ink)}
+#orderPop .op-who{display:flex;align-items:center;gap:8px;font-size:15px}#orderPop .op-who .av{font-size:26px}
+#orderPop .op-say{margin:6px 34px 8px 0;font-style:italic;font-size:14px;line-height:1.4}
+#orderPop .op-need{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #ffffff12}
+#orderPop .op-need .e{font-size:26px;width:34px;text-align:center}
+#orderPop .op-need .n{flex:1;font-weight:700;font-size:14px}#orderPop .op-need small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+#orderPop .op-need b{color:var(--ok);font-size:18px}#orderPop .op-need.have .n{color:var(--ok)}
+#orderPop .op-rw{font-size:13px;color:var(--muted);padding-top:6px;border-top:1px solid #ffffff12}
+#orderPop .op-go{width:100%;margin-top:8px}
+#toast .tx{top:5px;right:6px;bottom:auto;width:22px;height:22px;border-radius:50%;background:#ffffff1a;display:grid;place-items:center;font-size:11px;color:var(--ink)}
+#toast .t{padding-right:30px}
+
 @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes tout{to{opacity:0;transform:translateY(-6px)}}
 #ghost{position:fixed;left:0;top:0;z-index:40;pointer-events:none;font-size:calc(var(--cs)*.75);line-height:1;transform:translate(-999px,-999px);filter:drop-shadow(0 8px 6px #0009)}
@@ -326,7 +339,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v2 · 16 Oct 2026';
+const VERSION='v3 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1208,6 +1221,36 @@ function hintTask(t){
   render();
 }
 
+
+/* order details: opens under the orders row (opt-in, so it may cover the board); never delivers by itself */
+function deliver(t){
+  if(!taskStatus(t).ready) return;
+  const clash=t.side?sideConflict(t):null;
+  if(clash && armSide!==t.id){ armSide=t.id; setTimeout(()=>{ if(armSide===t.id) armSide=null; },8000); SND.play('nope');
+    const [k,l,st]=clash, d=CHAINS[k].items[l-1];
+    toast(`⚠️ ${d.e} ${d.n} is needed for ${CAST[st.who].name}’s order<br><small>Tap Hand over again to sell it anyway</small>`,3500); return; }
+  armSide=null; closeOrder(); completeTask(t);
+}
+function closeOrder(){ const p=$('orderPop'); if(p) p.remove(); }
+function showOrder(t){
+  closeOrder(); const st=taskStatus(t), wd=typeof wheelDone==='function'?wheelDone():0;
+  const ks=new Set(t.need.map(n=>n[0]));
+  S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
+  if(t.wheel && wd<t.wheel) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
+  const rows=t.need.map(([k,l],j)=>{ const d=CHAINS[k].items[l-1], g=genFor(k);
+      return `<div class="op-need${st.have[j]?' have':''}"><span class="e">${d.e}</span><span class="n">${d.n}${g?`<small>${CHAINS[k].rare?'Rare find from':'From'} ${g.items[0].e} ${g.name}</small>`:''}</span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
+    + (t.wheel?`<div class="op-need${st.wok?' have':''}"><span class="e">💡</span><span class="n">${t.wheel} wheel lights on<small>${wd} lit so far</small></span><b>${st.wok?'✓':''}</b></div>`:'');
+  const rw=(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ');
+  const p=document.createElement('div'); p.id='orderPop';
+  p.innerHTML=`<button class="op-x" aria-label="Close">✕</button><div class="op-who"><span class="av">${CAST[t.who].av}</span><b>${t.lucky?'🍀 Lucky find':CAST[t.who].name}</b></div>
+    <p class="op-say">${t.say}</p>${rows}<div class="op-rw">Reward ${rw}</div>${st.ready?'<button class="bigbtn gold op-go">Hand over</button>':''}`;
+  document.body.appendChild(p);
+  p.style.top=($('orders').getBoundingClientRect().bottom+6)+'px';
+  p.querySelector('.op-x').onclick=closeOrder; if(st.ready) p.querySelector('.op-go').onclick=()=>deliver(t);
+  SND.play('tap'); render();
+}
+document.addEventListener('pointerdown',e=>{ const p=$('orderPop'); if(p && !p.contains(e.target) && !e.target.closest('.order')) closeOrder(); },true);
+
 /* ============================================================ rendering */
 const board=$('board');
 function buildBoard(){
@@ -1324,13 +1367,8 @@ function renderOrders(tasks){
     el.innerHTML=`<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
       <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
-    el.onclick=()=>{
-      if(!taskStatus(t).ready){ hintTask(t); return; }
-      const clash=t.side?sideConflict(t):null;
-      if(clash && armSide!==t.id){ armSide=t.id; setTimeout(()=>{ if(armSide===t.id) armSide=null; },8000); SND.play('nope');
-        const [k,l,st]=clash, d=CHAINS[k].items[l-1];
-        toast(`⚠️ ${d.e} ${d.n} is needed for ${CAST[st.who].name}’s order<br><small>Tap this ${CAST.S.name} order again to sell it anyway</small>`,3500); return; }
-      armSide=null; completeTask(t); };
+    // tap the card for details; only the green "Hand over" strip delivers
+    el.onclick=e=>{ if(e.target.closest('.act') && taskStatus(t).ready){ deliver(t); return; } showOrder(t); };
     box.appendChild(el);
   });
   if(flying===null && box.querySelector('.order.incoming')) setTimeout(runArrivals,60);
@@ -1454,7 +1492,7 @@ function nextToast(){
   if(toastCur||overlayOpen()) return;
   const n=toastQ.shift(); if(!n) return;
   dockToast();
-  const el=document.createElement('div'); el.className='t'; el.innerHTML=`<div>${n[0]}</div><span class="tm"></span><span class="tx">Tap to close ✕</span>`;
+  const el=document.createElement('div'); el.className='t'; el.innerHTML=`<div>${n[0]}</div><span class="tm"></span><span class="tx">✕</span>`;
   $('toast').appendChild(el);
   toastCur={el,h:n[0],ms:n[1]}; toastMore();
 }
