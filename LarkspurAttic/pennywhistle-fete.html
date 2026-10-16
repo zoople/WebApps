@@ -385,7 +385,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v7 · 16 Oct 2026';
+const VERSION='v8 · 16 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -512,6 +512,7 @@ const CAST = {
   O:{name:'The mystery tag', av:'🏷️'},
   F:{name:'A winner’s note', av:'💌'},
   S:{name:'White Elephant', av:'🐘'},
+  H:{name:'Mrs Hale', av:'👒'},
 };
 
 /* ---------- story ---------- */
@@ -621,6 +622,7 @@ const TASKS = [
   // ch1 — zone 0 only
   {beat:['T','Nose on. The hoopla rabbit now looks alarmed rather than menacing. Progress.'], ch:0, who:'T', need:[['F',2]], coins:8, say:'Got a carrot? The hoopla rabbit costume needs a nose.'},
   {beat:['M','(He does three laps of the storeroom with it, very proud. Something rattles in a box he knocks over.)'], ch:0, who:'M', need:[['P',2]], coins:8, say:'(Biscuit wants a pennant to run round the hall with.)'},
+  {id:200, side0:1, beat:['H','Lovely. Junk, but lovely. Somebody will buy it. Somebody always does.'], more:[['P','Mrs Hale has run the White Elephant stall since 1979. Nobody knows where she keeps it all.'],['H','Bring me anything you can spare, any time. I pay fair, and every penny goes to the church roof.'],['T','The church roof has been “nearly fixed” since I was six.'],['H','Then it needs more jumble, doesn’t it? My stall never closes, dear. Not while that roof still leaks.'],['N','<em>(The White Elephant stall is open. Its orders never run out: bring anything you can spare for coins, tickets and rosettes.)</em>']], ch:0, who:'H', need:[['P',2],['F',1]], coins:8, say:'You’re the new one. I’m Mrs Hale, White Elephant stall. I need stock. A pennant and a pea pod to start me off. Don’t argue.'},
   {beat:['T','She would, too. She’s eighty-four and she’s got a whistle.'], ch:0, who:'T', need:[['P',3]], coins:10, say:'Flag string, please. If the bunting isn’t up by Saturday, Dot will have me shot.'},
   {beat:['N','Under the box, under a dust sheet: the old Prize Wheel. Twenty little bulbs round the rim, every one of them dark.'], more:[['P','There she is! Fred’s old wheel. She hasn’t turned since last summer.'],['T','Does it even still work?'],['P','Only one way to find out, love. Ticket in, give her a spin.'],['N','<em>(The Prize Wheel is waiting in your gifts 🎁)</em>']], gifts:[['WH',1]], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He is pawing at a box. A yo-yo and a carrot might tempt him off it.)'},
   {beat:['T','Potato toss: sorted. And the wheel works! Right, let’s get the big covers off.'], ch:0, who:'T', wheel:2, need:[['T',2],['F',3]], coins:12, say:'A hoopla ring and a potato. And give the wheel a couple of spins, I want to see it go.'},
@@ -659,7 +661,7 @@ const TASKS = [
   {ch:5, who:'O', wheel:20, need:[['M',7]], coins:50, say:'“For the wheel. From a friend.”'},
 ];
 /* stable ids: original orders keep 0..27 so existing saves line up; orders added later (x:1) get 100+ */
-{ let n=0, m=100; TASKS.forEach(t=>{ t.id = t.x ? m++ : n++; }); }
+{ let n=0, m=100; TASKS.forEach(t=>{ if(t.id!=null) return; t.id = t.x ? m++ : n++; }); } // preset ids (200+) never shift old saves
 /* order rewards land on the board as claimable items (coins + applause), like Merge Mansion */
 function taskRewards(t){
   const c = t.coins>=30?3 : t.coins>=14?2 : 1;
@@ -714,7 +716,8 @@ function sideRewards(size,lucky){
   if(size>=4 && Math.random()<.35) rw.push(['CP',1]);
   return rw;
 }
-function ensureSide(){ S.side=S.side||[]; while(S.side.length<2){ const o=makeSide(); if(!o) break; S.side.push(o); } }
+/* the White Elephant stall only opens once you've met Mrs Hale (order 200) */
+function ensureSide(){ S.side=S.side||[]; if(!S.sideOn) return; while(S.side.length<2){ const o=makeSide(); if(!o) break; S.side.push(o); } }
 
 /* Rosette Board: event points from rosettes unlock tiers of rewards outside the board */
 /* every third tier also unlocks a note from a past winner */
@@ -1256,7 +1259,7 @@ function freshState(){
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
       s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[];
-      if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; if((s.ch>0||(s.done||{})[3]) && !s.cells.some(c=>c.it&&c.it.k==='WH') && !(s.gifts||[]).some(g=>g[0]==='WH')) (s.gifts=s.gifts||[]).push(['WH',1]); delete s.wheelUnread; s.wheelLast=null;
+      if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; if(s.sideOn==null) s.sideOn=(s.ch>0||(s.sideDone||0)>0||(s.side||[]).length)?1:0; if((s.ch>0||(s.done||{})[3]) && !s.cells.some(c=>c.it&&c.it.k==='WH') && !(s.gifts||[]).some(g=>g[0]==='WH')) (s.gifts=s.gifts||[]).push(['WH',1]); delete s.wheelUnread; s.wheelLast=null;
       if(!s.unrev) s.unrev={...s.disc}; // saves from before the collection: everything found so far waits to be revealed
       if(!s.stats){ const story=Object.keys(s.done||{}).length; s.stats={side:s.sideDone||0, story, disc:Object.keys(s.disc||{}).length}; }
       s.qt=s.qt||{};
@@ -1500,6 +1503,7 @@ function completeTask(t){
     save(); render(); return;
   }
   S.done[t.id]=1; stat('story');
+  if(t.side0) S.sideOn=1;
   (t.gifts||[]).forEach(g=>{ if(g[0]==='WH' && (S.cells.some(c=>c.it&&c.it.k==='WH')||S.gifts.some(x=>x[0]==='WH'))) return; S.gifts.push(g); });
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
