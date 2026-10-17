@@ -235,6 +235,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 #toast .t{grid-area:1/1;display:grid;place-items:center;background:linear-gradient(180deg,#3a2b1d,#2c2017);border:1px solid #e4b84c88;color:var(--ink);padding:6px 12px;border-radius:14px;font-size:13.5px;line-height:1.35;text-align:center;animation:tin .18s ease-out;overflow:hidden}
 #toast .t.out{animation:tout .16s ease-in forwards}
 .order{position:relative}.order .opip{position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--velvet);box-shadow:0 0 0 2px var(--panel);pointer-events:none}
+.order.ready .act.rd{background:var(--gold);color:#2a1a10;animation:rdpulse 1.6s ease-in-out infinite}@keyframes rdpulse{50%{filter:brightness(1.15);box-shadow:0 0 0 2px #ffffff55}}
 #orderPop{position:fixed;left:12px;right:12px;margin:0 auto;max-width:480px;z-index:46;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-radius:14px;padding:12px 12px 10px;box-shadow:0 14px 34px #000c;animation:rise .18s ease-out}
 #orderPop .op-x{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:50%;background:#ffffff14;font-size:14px;display:grid;place-items:center;color:var(--ink)}
 #orderPop .op-who{display:flex;align-items:center;gap:8px;font-size:15px}#orderPop .op-who .av{font-size:26px}
@@ -343,7 +344,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v6 · 16 Oct 2026';
+const VERSION='v7 · 17 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -1408,9 +1409,10 @@ function renderOrders(tasks){
     if(!t.side && (!(S.seenOrd||{})[t.id] || flying===String(t.id))) el.classList.add('incoming');
     el.innerHTML=`${!t.side&&!(S.readOrd||{})[t.id]?'<i class="opip" title="New story"></i>':''}<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
       <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}</div>
-      <div class="act">${st.ready?'Hand over':(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
+      <div class="act${st.ready&&!t.side?' rd':''}">${st.ready?(t.side?'Hand over':'✓ Ready'):(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     // tap the card for details; only the green "Hand over" strip delivers
-    el.onclick=e=>{ if(e.target.closest('.act') && taskStatus(t).ready){ deliver(t); return; } showOrder(t); };
+    // story orders only hand over from their details popup; side orders can still go from the strip
+    el.onclick=e=>{ if(t.side && e.target.closest('.act') && taskStatus(t).ready){ deliver(t); return; } showOrder(t); };
     box.appendChild(el);
   });
   if(flying===null && box.querySelector('.order.incoming')) setTimeout(runArrivals,60);
