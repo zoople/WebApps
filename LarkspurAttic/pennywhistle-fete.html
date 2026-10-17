@@ -390,7 +390,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v14 · 17 Oct 2026';
+const VERSION='v15 · 17 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -630,12 +630,12 @@ const TASKS = [
   {id:200, side0:1, beat:['H','Lovely. Junk, but lovely. Somebody will buy it. Somebody always does.'], more:[['P','Mrs Hale has run the White Elephant stall since 1979. Nobody knows where she keeps it all.'],['H','Bring me anything you can spare, any time. I pay fair, and every penny goes to the church roof.'],['T','The church roof has been “nearly fixed” since I was six.'],['H','Then it needs more jumble, doesn’t it? My stall never closes, dear. Not while that roof still leaks.'],['N','<em>(The White Elephant stall is open. Its orders never run out: bring anything you can spare for coins, tickets and rosettes.)</em>']], ch:0, who:'H', need:[['P',2],['F',1]], coins:8, say:'You’re the new one. I’m Mrs Hale, White Elephant stall. I need stock. A pennant and a pea pod to start me off. Don’t argue.'},
   {beat:['T','She would, too. She’s eighty-four and she’s got a whistle.'], ch:0, who:'T', need:[['P',3]], coins:10, say:'Flag string, please. If the bunting isn’t up by Saturday, Dot will have me shot.'},
   {beat:['N','Under the box, under a dust sheet: the old Prize Wheel. Twenty little bulbs round the rim, every one of them dark.'], gifts:[['WH',1]], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He is pawing at a box. A yo-yo and a carrot might tempt him off it.)'},
-  {beat:['T','Potato toss: sorted. And the wheel works! Right, let’s get the big covers off.'], ch:0, who:'T', wheel:3, need:[['T',2],['F',3]], coins:12, say:'A hoopla ring and a potato. And give the wheel a couple of spins, I want to see it go.'},
+  {beat:['T','Potato toss: sorted. And the wheel works! Right, let’s get the big covers off.'], ch:0, who:'T', wheel:2, need:[['T',2],['F',3]], coins:12, say:'A hoopla ring and a potato. And give the wheel a couple of spins, I want to see it go.'},
   // ch2 — zone 1, microphone
   {beat:['T','I can now play the drum. Badly. Hey, there’s writing on the rafters. Names, painted, one a year.'], ch:1, who:'T', need:[['L',2]], coins:12, say:'Is that a drum? Can I have the drum? I’ve always wanted the drum.'},
   {beat:['P','Sixty-odd years I’ve been tying flags to that gate. My knees have opinions.'], ch:1, who:'P', need:[['P',4]], coins:14, say:'Crossed flags for the gate, love. It’s not a fete without flags on the gate.'},
   {beat:['M','(He rolls the cabbage under a trestle and lies on it, guarding.)'], ch:1, who:'M', need:[['F',4]], coins:12, say:'(Biscuit has found a cabbage-shaped hole in his life.)'},
-  {beat:['T','Ding! And look: every name on the rafters has a little star by it. Every one a Mystery Prize winner.'], ch:1, who:'T', wheel:7, need:[['T',3],['L',1]], coins:14, say:'A dartboard and a bell for ring-the-bell. And keep that wheel spinning, people want to see it.'},
+  {beat:['T','Ding! And look: every name on the rafters has a little star by it. Every one a Mystery Prize winner.'], ch:1, who:'T', wheel:8, need:[['T',3],['L',1]], coins:14, say:'A dartboard and a bell for ring-the-bell. And keep that wheel spinning, people want to see it.'},
   {beat:['P','Poor Mr Buttons. Nobody ever picks a teddy with one eye. We’ll find him a home.'], ch:1, who:'P', need:[['P',4],['K',2]], coins:16, say:'More flags, and that teddy. He was a tombola prize in 1979 and nobody’s ever won him.'},
   {beat:['N','Biscuit has found the sunniest spot in the storeroom. It is directly on top of a shoebox full of old gift tags.'], x:1, ch:1, who:'M', need:[['F',4],['L',3]], coins:14, say:'(He wants a cabbage to sleep on and a trumpet to guard.)'},
   // ch3 — zone 2, lost property box
@@ -649,21 +649,21 @@ const TASKS = [
   {beat:['P','There’s me, by the wheel, 1990. Hair like a dandelion clock.'], ch:3, who:'P', need:[['M',4]], coins:22, say:'That jigsaw of the green. Let me do the corners, I always do the corners.'},
   {beat:['T','Sun, rain and a seagull attack, all in one afternoon. Normal Saturday.'], ch:3, who:'T', need:[['T',5],['W',3]], coins:22, say:'Cricket bat and a beach brolly. The stall has to survive Pennywhistle weather.'},
   {beat:['N','Biscuit’s stall sells one sweetcorn, at no price. Three people queue anyway.'], ch:3, who:'M', need:[['F',5],['P',6]], coins:22, say:'(He wants a stall sign and some sweetcorn. He seems to think he runs a stall now.)'},
-  {beat:['T','Two thousand and three. Dot blamed the Scouts for a decade. So who’s the spoon thief? WHO?'], ch:3, who:'T', wheel:14, need:[['M',5]], coins:26, say:'The wind chime! Those are tea tent spoons, I know it. Spin the wheel too, I need more suspects.'},
+  {beat:['T','Two thousand and three. Dot blamed the Scouts for a decade. So who’s the spoon thief? WHO?'], ch:3, who:'T', wheel:13, need:[['M',5]], coins:26, say:'The wind chime! Those are tea tent spoons, I know it. Spin the wheel too, I need more suspects.'},
   {beat:['P','Best in show goes to… Mrs Hale. Don’t look at me like that, it’s a very good marrow.'], ch:3, who:'P', need:[['B',3],['F',6]], coins:20, say:'A sun hat and the prize marrow, love. I’m judging the veg and I’ll do it in style.'},
   {beat:['N','The wireless crackles into life: the brass band, live from the bandstand, 1988. Dot hums along without noticing.'], x:1, ch:3, who:'M', need:[['T',6],['K',3]], coins:24, say:'(He wants the kite, and he is dragging the old wireless towards it.)'},
   // ch5
   {beat:['T','That was a fanfare. Everyone heard it. The ducks heard it.'], ch:4, who:'T', need:[['T',6],['L',5]], coins:28, say:'Kite and post horn. Opening fanfare. I’ve been practising. Don’t run.'},
   {beat:['P','Sixty years of marrow parades. I’ve only cried at about forty of them.'], ch:4, who:'P', need:[['F',6],['L',6]], coins:30, say:'The marrow and the band score. Every fete ends with the marrow parade and a march.'},
   {beat:['N','Peace is made. Seagull and terrier share the popcorn. Mostly.'], ch:4, who:'M', need:[['M',5],['R',3]], coins:30, say:'(Biscuit and a seagull are both eyeing the wind chime. Popcorn might settle it.)'},
-  {beat:['T','“Welcome to Pennywhistle Fete.” Look at that arch. I could cry. I won’t. I might.'], ch:4, who:'T', wheel:17, need:[['P',7],['K',3]], coins:30, say:'The Welcome Arch, and that wireless for announcements. And the wheel, nearly all of it. Big entrance.'},
+  {beat:['T','“Welcome to Pennywhistle Fete.” Look at that arch. I could cry. I won’t. I might.'], ch:4, who:'T', wheel:15, need:[['P',7],['K',3]], coins:30, say:'The Welcome Arch, and that wireless for announcements. And the wheel, nearly all of it. Big entrance.'},
   {beat:['P','The kite marrow. Nobody remembers why. Nobody would dare stop.'], x:1, ch:4, who:'P', need:[['F',6],['T',6]], coins:30, say:'Hold the marrow steady while I tie the kite on, love. Don’t ask why. Tradition.'},
   // ch6
   {beat:['T','Horse up. Doughnut… gone. It was a test doughnut.'], ch:5, who:'T', need:[['T',7],['R',4]], coins:34, say:'The carousel horse and an iced doughnut. Every fete needs a horse. And a doughnut. Mostly the doughnut.'},
   {beat:['P','“Your turn.” Every one in different writing, and every one of them meant it.'], more:[['T','Sixty people, and every one kept it quiet for a whole year.'],['P','Longest anybody in Pennywhistle has kept anything, love.']], ch:5, who:'P', need:[['M',6]], coins:34, say:'That card, love. It belongs on the wheel today.'},
   {beat:['N','Biscuit is crowned May Queen. He accepts with enormous dignity, then sneezes.'], ch:5, who:'M', need:[['F',7],['B',4]], coins:34, say:'(The giant pumpkin and the May Queen crown. He has decided he is the May Queen. Nobody argues.)'},
   {beat:['P','There’s the march. Same march every year, and it’s still the best bit.'], x:1, ch:5, who:'P', need:[['L',6],['R',4]], coins:34, say:'The band score and a doughnut for the bandleader. He plays better with icing on.'},
-  {ch:5, who:'O', wheel:18, need:[['M',7]], coins:50, say:'“For the wheel. From a friend.”'},
+  {ch:5, who:'O', wheel:17, need:[['M',7]], coins:50, say:'“For the wheel. From a friend.”'},
 ];
 /* stable ids: original orders keep 0..27 so existing saves line up; orders added later (x:1) get 100+ */
 { let n=0, m=100; TASKS.forEach(t=>{ if(t.id!=null) return; t.id = t.x ? m++ : n++; }); } // preset ids (200+) never shift old saves
@@ -671,8 +671,8 @@ const TASKS = [
 function taskRewards(t){
   const c = t.coins>=30?2 : 1;   // coins are scarce: 2 or 5 per story order
   const x = t.ch>=4?3 : t.ch>=2?2 : 1;
-  const tk = t.ch>=3 ? [['CP',2],['CP',2],['CP',2]] : [['CP',2],['CP',2]];   // 🎫 strips of 3: 6 tickets early, 9 later
-  return t.who==='O' ? [['C',3],['X',4],['N',3],['CP',2],['CP',2],['CP',2]] : [['C',c],['X',x],['N',t.ch>=3?2:1],...tk];
+  const tk = [['CP', t.ch>=3?2:1]];   // one ticket item per order, never two of the same: 🎟️ 1 early, 🎫 3 later
+  return t.who==='O' ? [['C',3],['X',4],['N',3],['CP',2]] : [['C',c],['X',x],['N',t.ch>=3?2:1],...tk];
 }
 /* Jumble Sale: side orders that never run out, built from generators you already have,
    so there is always something to work on whatever happens to the story orders */
@@ -719,7 +719,7 @@ function sideRewards(size,lucky){
   const c = size>=24?2 : 1;           // a penny, or a fiver for a big sale: the stall pays mostly in tickets and rosettes
   const rw=[['C',c],['N', size>=24&&Math.random()<.5?2:1]];
   if(size>=12 && Math.random()<.3) rw.push(['ET',1]);
-  rw.push(['CP', size>=12?2:1]);   // the stall always pays a ticket (🎫 3 for big sales)
+  if(size>=12 || Math.random()<.5) rw.push(['CP',1]);   // big sales always pay a ticket, small ones half the time
   return rw;
 }
 /* the White Elephant stall only opens once you've met Mrs Hale (order 200) */

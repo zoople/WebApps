@@ -48,6 +48,12 @@ Static browser apps, published with GitHub Pages from `main`
    **Test offline before shipping**: headless Chromium with the network off and with every request hanging,
    both from the file and served over http after the worker installs. The page must paint in under a second.
 
+## Merge games (`LarkspurAttic/`)
+
+- **Never reward two of the same item in one go** (orders, quests, passes, gifts, drops). Give one item of a
+  higher level instead: the player could just merge the pair.
+- When a price or cost goes up, don't raise the matching income to compensate; the point is that it costs more.
+
 ## Publishing workflow
 
 - Develop on the session branch, then open a PR to `main`.
