@@ -14,9 +14,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Circuits">
 <style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root{
   --bg:#E9EDF0; --panel:#FFFFFF; --canvas:#F6F8F9; --grid:#E1E6EA;
@@ -26,9 +23,9 @@
   --good:#16935F; --good-bg:#E3F4EC; --bad:#C23B35; --bad-bg:#FBE9E7; --note-bg:#EEF4F7;
   --s1:#2a78d6; --s2:#eb6834;
   --shadow:0 1px 2px rgba(22,33,43,.06),0 6px 24px rgba(22,33,43,.06);
-  --display:"Chakra Petch","Segoe UI",system-ui,sans-serif;
-  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --display:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   color-scheme:dark;
@@ -76,7 +73,7 @@ main.step.enter{animation:enter .35s ease-out}
 .eyebrow.mist{color:var(--bad)}
 h2{font:600 clamp(22px,3.2vw,30px)/1.15 var(--display);margin:4px 0 0;text-wrap:balance}
 .cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:start}
-@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}.cols .text{order:-1}}
 .lab{display:grid;gap:12px;position:sticky;top:110px}
 @media (max-width:860px){.lab{position:static}}
 .canvas{background-color:var(--canvas);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:20px 20px;border:1px solid var(--line);border-radius:8px;overflow-x:auto}
@@ -1701,6 +1698,103 @@ steps:[
 <p>Build step 1 (NPN low side) and step 2 (PNP high side) next to each other. Then swap the transistors between them, test both switch states, and compare with the mistake steps. Finally build the 12 V PNP with an NPN helper from step 8.</p>`}
 ]});
 })();
+/* ======================= Op-amp primer: revise the pieces, build up to Stage 1 ======================= */
+(function(){
+var BETA=100;
+function pr1Diag(s){
+  var vb=5*s.f,Ib=Math.max(0,(vb-0.65)/10000),IcMax=(5-0.15)/2200,Ic=Math.min(BETA*Ib,IcMax),on=Ic>1e-6,
+      Vc=on?Math.max(0.15,5-Ic*2200):5,sat=on&&Vc<=0.151,o="";
+  begin(22,240);
+  var P=POT(40,60,220,s.f,"");
+  o+=FLAG(40,60,0.2)+P.svg+GND(40,220,0.2)+W([P.wx,P.wy,100,P.wy,100,150],vb)+D(100,150,vb);
+  o+=R(100,150,176,150,"10 kΩ",-1);
+  o+=FLAG(218,60,on?1:0,"b")+R(218,60,218,120,"2.2 kΩ",-1);
+  o+=BJT(200,150,{state:on})+T(200,190,"Q","nlbl")+GND(218,180,on?1:0,"b");
+  o+=TAG(100,138,"base "+fV(vb),"end")+TAG(230,110,"C "+fV(Vc),"start");
+  o+=T(40,246,"pot (base)","lbl");
+  return {svg:finish(o,300,262,50),vb:vb,Ib:Ib,Ic:Ic,Vc:Vc,on:on,sat:sat};
+}
+function pr2Diag(s){
+  var vb=5*s.f,on=vb>0.65,Ve=on?Math.max(0,(vb-0.65)/1.1):0,Ic=Ve/1000,o="";
+  begin(22,250);
+  var P=POT(40,60,220,s.f,"");
+  o+=FLAG(40,60,0.2)+P.svg+GND(40,220,0.2)+W([P.wx,P.wy,100,P.wy,100,150],vb)+D(100,150,vb);
+  o+=R(100,150,176,150,"10 kΩ",-1);
+  o+=FLAG(218,120,Ic>1e-5?1:0,"b")+BJT(200,150,{state:Ic>1e-5})+T(200,190,"Q","nlbl");
+  o+=R(218,180,218,220,"1 kΩ",-1)+GND(218,220,clamp(Ic/3e-3,0,1),"b");
+  o+=TAG(100,138,"base "+fV(vb),"end")+TAG(230,200,"E "+fV(Ve),"start");
+  o+=T(40,246,"pot (base)","lbl")+T(230,236,"this resistor becomes the “tail”","lbl","start");
+  return {svg:finish(o,340,262,50),vb:vb,Ve:Ve,Ic:Ic,on:on};
+}
+function prTailDiag(s){
+  var V1=s.v1,V2=2.5,Rtail=1800,hi=V1>=V2,top=hi?V1:V2,Ve=Math.max(top-0.65,0),It=Ve/Rtail,
+      I1=hi?It:0,I2=hi?0:It,Vc1=Math.max(0.15,5-I1*2200),Vc2=Math.max(0.15,5-I2*2200),
+      k1=clamp(I1/1e-3,0,1),k2=clamp(I2/1e-3,0,1),o="";
+  begin(22,320);
+  var P1=POT(40,60,250,V1/5,"");
+  o+=FLAG(40,60,0.2)+P1.svg+GND(40,250,0.2)+W([P1.wx,P1.wy,90,P1.wy,90,200,126,200],V1);
+  o+=FLAG(330,50,0.2,"b")+R(330,50,330,115,"10 kΩ",-1)+W([330,115,330,145],V2)+D(330,130,V2)+R(330,145,330,210,"10 kΩ",-1)+GND(330,210,0.2,"b");
+  o+=W([330,130,285,130,285,200,264,200],V2);
+  o+=W([168,108,168,170],Vc1)+W([222,108,222,170],Vc2)+W([168,230,168,245,222,245,222,230],Ve)+W([195,245,195,255],Ve)+D(195,245,Ve);
+  o+=F([168,108,168,170],"b",k1)+F([222,108,222,170],"b",k2)+F([168,230,168,245,195,245],"b",k1)+F([222,230,222,245,195,245],"b",k2)+F([195,245,195,255],"b",1);
+  o+=FLAG(168,48,k1,"b")+R(168,48,168,108,"2.2 kΩ",-1)+FLAG(222,48,k2,"b")+R(222,48,222,108,"2.2 kΩ");
+  o+=BJT(150,200,{state:k1>0.05})+BJT(240,200,{m:true,state:k2>0.05})+T(150,240,"Q1","nlbl","end")+T(240,240,"Q2","nlbl","start");
+  o+=R(195,255,195,295,"1.8 kΩ",-1)+GND(195,295,1,"b");
+  o+=TAG(160,128,"C1 "+fV(Vc1),"end")+TAG(230,128,"C2 "+fV(Vc2),"start")+TAG(94,162,"V1 "+fx(V1,2),"start")+TAG(296,162,"V2 "+fx(V2,2)+" fixed","end");
+  o+=T(60,276,"pot (V1)","lbl")+T(320,228,"fixed 2.5 V divider","lbl","end")+T(205,312,"tail "+fI(It),"lbl","start");
+  return {svg:finish(o,370,334,50),Vc1:Vc1,Vc2:Vc2,I1:I1,I2:I2,It:It,hi:hi,close:Math.abs(V1-V2)<0.03};
+}
+
+MODS.push({id:"opprimer",n:7,title:"Op-amp primer",blurb:"Revisit the base-emitter rule and the emitter resistor from earlier modules, then share one emitter resistor between two transistors — the exact circuit the next module opens with.",mistakes:"Expecting a hard on/off split once two transistors share a resistor; forgetting the emitter resistor is about to become the tail.",
+steps:[
+{title:"Three ideas you already have",part:"Primer · Recap",
+ text:`<p>The next module builds an op-amp from four transistors, starting with a <b>differential pair</b>: two transistors sharing one emitter resistor. Before jumping in, this short module puts together three things you've already built, one at a time, so that first step feels familiar instead of sudden.</p>
+<ol><li>A transistor's base-emitter junction turns on around <b>0.65 V</b> (NPN vs PNP module).</li><li>An <b>emitter resistor</b> turns a transistor into a voltage-to-current converter: the emitter follows the base, and current = emitter voltage ÷ resistor (you met this as the emitter follower).</li><li>A resistor turns current into a voltage drop — that's how a collector resistor makes an output voltage (RC circuits, and every switch you've built).</li></ol>
+<p>This module reassembles those three ideas into the exact circuit that opens the Op-amps module. Nothing here is new physics — it's the same rules, pointed at a new arrangement.</p>`},
+
+{title:"Recap: base voltage sets collector voltage",part:"Primer · Recap",init:{f:0.5},
+ diag:function(s){var d=pr1Diag(s);return {svg:d.svg,bad:false,
+   meters:[["Base (pot)",fV(d.vb),true],["Base current",fI(d.Ib),d.Ib>1e-6],["Collector current",fI(d.Ic),d.on],["Collector (C)",fV(d.Vc),d.on]],
+   now:d.vb<0.65?"Base below 0.65 V: the junction is off. No base current, no collector current, so the 2.2 kΩ has nothing to drop and C sits at 5 V.":d.sat?"Base comfortably above 0.65 V: β × base current is more than the 2.2 kΩ can pass at 5 V, so the transistor saturates and C is pulled down to about 0.15 V.":"Base just above 0.65 V: a small base current, multiplied by β ≈ 100, becomes a collector current. That current through the 2.2 kΩ drops some of the 5 V, so C falls below 5 V."};},
+ ctl:[{k:"f",type:"range",label:"Pot (base voltage)",min:0,max:1,step:0.01,fmt:function(v){return fV(5*v);}}],
+ text:`<p>One NPN, a 10 kΩ base resistor from the pot, a 2.2 kΩ collector resistor to the + rail, emitter straight to 0 V. This is the plain switch/amplifier stage from earlier modules — nothing new.</p>
+<ul><li>Below 0.65 V at the base: off, collector at 5 V.</li><li>Above 0.65 V: base current flows, multiplied by β into a collector current, which drops voltage across the 2.2 kΩ.</li><li>Push the base high enough and the transistor <b>saturates</b>: the collector bottoms out around 0.15 V and can't fall further.</li></ul>
+<p class="hint">Sweep the pot slowly and watch C fall as the base crosses 0.65 V. Keep this picture: base current in, collector current out, a resistor turning that current into a voltage.</p>`},
+
+{title:"Recap: an emitter resistor turns voltage into current",part:"Primer · Recap",init:{f:0.5},
+ diag:function(s){var d=pr2Diag(s);return {svg:d.svg,bad:false,
+   meters:[["Base (pot)",fV(d.vb),true],["Emitter (E)",fV(d.Ve),true],["Emitter current",fI(d.Ic),d.Ic>1e-5]],
+   now:d.vb<0.65?"Base below 0.65 V: off. E sits at 0 V and no current flows.":"E follows the base, about 0.65 V lower (with a small extra sag from base current flowing through the 10 kΩ). Current through the resistor is just E ÷ 1 kΩ — Ohm's law, same as always."};},
+ ctl:[{k:"f",type:"range",label:"Pot (base voltage)",min:0,max:1,step:0.01,fmt:function(v){return fV(5*v);}}],
+ text:`<p>Same transistor, rewired: the <b>collector now goes straight to the + rail</b> (no resistor — this is the emitter-follower arrangement from the NPN vs PNP module), and the <b>emitter goes to 0 V through a resistor</b> instead of a direct wire.</p>
+<ul><li>The emitter <b>follows</b> the base, about 0.65 V behind it.</li><li>That emitter voltage, divided by the resistor, <b>is</b> the current through the transistor: a voltage turned into a current.</li></ul>
+<div class="why"><span class="k">Why this matters next</span>Watch that emitter resistor. It's about to get a second transistor connected to the exact same node. Whatever current it carries will have to be <b>shared</b> between the two.</div>`},
+
+{title:"Share the resistor between two transistors",part:"Primer · Build up",init:{v1:2.5},
+ diag:function(s){var d=prTailDiag(s);return {svg:d.svg,bad:d.close,
+   meters:[["Tail current",fI(d.It),true],["Q1 current",fI(d.I1),d.I1>d.I2],["Q2 current",fI(d.I2),d.I2>d.I1],["C1",fV(d.Vc1),true],["C2",fV(d.Vc2),true]],
+   now:d.close?"Right at 2.5 V, this simple on/off picture can't decide a winner — it treats the crossover as a knife-edge. A real base-emitter junction doesn't: the next module zooms into exactly this gap and shows the current sharing smoothly over about 60 mV.":d.hi?"V1 is above the fixed 2.5 V, so the shared emitter rises to follow it. That leaves Q2's own base less than 0.65 V above the shared emitter, so Q2 shuts off completely. Q1 carries the whole tail current: C1 is pulled low, C2 sits at a clean 5 V.":"V2 (fixed at 2.5 V) is above V1, so the shared emitter follows V2. Q1's base is now less than 0.65 V above the shared emitter, so Q1 shuts off and Q2 takes the whole tail current: C2 is pulled low, C1 sits at 5 V."};},
+ ctl:[{k:"v1",type:"range",label:"V1 (Q1's base)",min:0,max:5,step:0.01,fmt:function(v){return fV(v);}}],
+ text:`<p>Now connect a <b>second</b> transistor, Q2, onto that same emitter resistor — now fairly called the <b>tail</b> — and give its own 2.2 kΩ collector resistor too, same as Q1's. Q2's base is held at a fixed 2.5 V by a simple divider. Q1's base is the pot.</p>
+<h3>With the simple on/off model</h3>
+<ol><li>The shared emitter can only sit about 0.65 V below <b>one</b> base at a time: whichever base is higher.</li><li>That makes the <b>other</b> transistor's own base-emitter voltage fall under 0.65 V, so it switches off completely.</li><li>So the whole tail current goes to whichever transistor has the higher base. It's winner-takes-all.</li></ol>
+<p>Sweep V1 through 2.5 V and watch the current snap from one side to the other. This is the circuit the next module calls a <b>differential pair</b> — you've just built it, and worked out who wins.</p>
+<div class="why bad"><span class="k">But it isn't really a snap</span>The on/off model you've been using (0.65 V = off, above it = on) is a simplification. A real junction's current rises <b>smoothly and exponentially</b> with its voltage. Right around the crossover, that means a gradual, sharp-but-continuous handover, not a knife-edge. That's exactly what Stage 1 of the next module shows you, with both inputs movable.</div>`},
+
+{quiz:true,title:"Check: before the differential pair",part:"Primer check",qs:[
+ {q:"An NPN's emitter is grounded, its base sits at 2 V through a 10 kΩ resistor. What happens to its base-emitter voltage?",o:["It's clamped at about 0.65 V; the rest of the 2 V drops across the 10 kΩ","It's exactly 2 V","It's 0 V, the resistor blocks it","It's −0.65 V"],c:0,w:"A conducting base-emitter junction holds at about 0.65 V. Any extra voltage drops elsewhere — here, across the base resistor."},
+ {q:"Swapping a grounded emitter for an emitter resistor changes what?",o:["The emitter now follows the base (about 0.65 V below it), and the current becomes (emitter voltage ÷ resistor)","Nothing, the circuit behaves identically","The transistor stops conducting entirely","The collector voltage becomes fixed at 0 V"],c:0,w:"That's the emitter-follower idea: the resistor converts the followed emitter voltage into a current."},
+ {q:"Two transistors share one emitter resistor (the tail). Q1's base is 3.0 V, Q2's base is fixed at 2.5 V. With the simple on/off model, what happens?",o:["The shared emitter follows Q1's base up, Q2's own base-emitter voltage falls below 0.65 V, and Q2 turns off — Q1 gets the whole tail current","The current splits 50/50 regardless","Q2 gets everything because 2.5 V is lower","Both transistors turn off"],c:0,w:"Only the higher base can hold the shared emitter near its own base − 0.65 V; the loser's own junction then has too little voltage to conduct."},
+ {q:"Why is this on/off model about to need an upgrade?",o:["A real base-emitter junction doesn't snap — it shares current smoothly over a narrow range around the crossover, which the next module shows","10 kΩ resistors don't really exist","Two transistors can never share one resistor","2.5 V can't be held fixed"],c:0,w:"The exponential diode-like law of a real junction is what makes the handover smooth instead of a knife-edge."}
+]},
+
+{final:true,title:"Ready for Stage 1",part:"Primer · Transition",
+ text:`<p>You've now built every piece the next module's first step uses:</p>
+<ul><li>A base-emitter junction that turns on around 0.65 V.</li><li>An emitter resistor that turns a followed voltage into a current.</li><li>Two transistors sharing that resistor, competing for the current it carries.</li></ul>
+<p>Stage 1 of the Op-amps module is the same circuit, with one change: <b>both</b> bases move (not just one, with the other fixed), and the current split is drawn <b>smoothly</b> rather than snapping at a threshold — because that's what a real transistor actually does. Watch for two labels on the diagram: <b>C1</b> and <b>C2</b>, the two collector voltages you've been reading as "C" here, and the <b>tail</b>, the very resistor you just finished sharing.</p>
+<div class="why"><span class="k">What to expect</span>Equal inputs: the tail splits 50/50, both collectors equal, same as nobody winning. Nudge one input by just 20–60 mV and the split swings hard towards one side — much faster than the on/off model's single knife-edge, because now you're riding the smooth exponential slope right through the middle.</div>`}
+]});
+})();
 /* ======================= Op-amp: build one from transistors ======================= */
 var OPBUILD_STEPS=(function(){
 var VT=0.02585,IS=1e-3*Math.exp(-0.65/VT),BETA=100;
@@ -1751,7 +1845,7 @@ function dpDiag(s){
   o+=FLAG(168,48,k1,"b")+R(168,48,168,108,"2.2 kΩ",-1)+FLAG(222,48,k2,"b")+R(222,48,222,108,"2.2 kΩ");
   o+=BJT(150,200,{state:k1>0.05})+BJT(240,200,{m:true,state:k2>0.05})+T(150,240,"Q1","nlbl","end")+T(240,240,"Q2","nlbl","start");
   o+=(s.tail==="I"?ISRC(195,255,295,"1 mA"):R(195,255,195,295,"1.8 kΩ"))+GND(195,295,1,"b");
-  o+=TAG(160,128,fV(Vc1),"end")+TAG(230,128,fV(Vc2),"start")+TAG(94,162,"V+ "+fx(V1,3),"start")+TAG(296,162,"V− "+fx(V2,3),"end");
+  o+=TAG(160,128,"C1 "+fV(Vc1),"end")+TAG(230,128,"C2 "+fV(Vc2),"start")+TAG(94,162,"V+ "+fx(V1,3),"start")+TAG(296,162,"V− "+fx(V2,3),"end");
   o+=T(60,276,"pot (V+)","lbl")+T(320,276,"pot (V−)","lbl")+T(205,312,"tail "+fI(p.It),"lbl","start");
   return {svg:finish(o,370,334,50),p:p,Vc1:Vc1,Vc2:Vc2};
 }
@@ -1973,7 +2067,7 @@ function ampDiag(s){
   return {svg:finish(o,340,284,50),vin:vin,ideal:ideal,vout:vout,clip:ideal>vmax+0.01,vmax:vmax};
 }
 
-MODS.push({id:"opamp",n:7,title:"Op-amps",blurb:"Build a working op-amp from four transistors, watch the golden rules appear, then use op-amps as comparators, buffers and amplifiers.",mistakes:"Feedback to the wrong input, forgotten power pins, expecting output beyond the supply, loading a divider.",
+MODS.push({id:"opamp",n:8,title:"Op-amps",blurb:"Build a working op-amp from four transistors, watch the golden rules appear, then use op-amps as comparators, buffers and amplifiers.",mistakes:"Feedback to the wrong input, forgotten power pins, expecting output beyond the supply, loading a divider.",
 steps:OPBUILD_STEPS.concat([
 {title:"An op-amp compares two voltages",part:"Part 2 · Comparator",init:{f:0.4},
  diag:function(s){var vp=5*(0.15+0.7*s.f),out=vp>2.5?4.95:0.05;return {svg:compDiag(s,{vm:2.5,vp:vp,out:out,f:s.f}),
@@ -2114,7 +2208,7 @@ function thermoDiag(s){
   return {svg:finish(o,470,262,50,true),va:va,vb:vb,hot:hot,Rt:Rt};
 }
 
-MODS.push({id:"bridge",n:8,title:"Wheatstone bridge",blurb:"Two voltage dividers side by side measure tiny changes. Build a thermostat that lights HOT or COLD.",mistakes:"Loading a divider, an LED across the bridge, mismatched ratios, swapped comparator inputs.",
+MODS.push({id:"bridge",n:9,title:"Wheatstone bridge",blurb:"Two voltage dividers side by side measure tiny changes. Build a thermostat that lights HOT or COLD.",mistakes:"Loading a divider, an LED across the bridge, mismatched ratios, swapped comparator inputs.",
 steps:[
 {title:"The voltage divider",part:"Part 1 · Dividers",init:{r2:10000,led:false},
  diag:function(s){var d=divDiag(s);return {svg:d.svg,meters:[["Vout (calculated)",fV(d.vth),true],["Vout (actual)",fV(d.v),Math.abs(d.v-d.vth)>0.05?"warn":true],["LED current",fI(d.il),d.il>1e-4]],
@@ -2349,7 +2443,7 @@ function loop(ts){
 var v0=load("view",null);if(v0&&modById(v0))openMod(v0);else renderHome();
 requestAnimationFrame(loop);
 /* ======================= GitHub Pages extras: version, menu, full screen, self-update ======================= */
-const VERSION='v2 · 11 Oct 2026';
+const VERSION='v3 · 17 Oct 2026';
 XOR_URL="xor-from-scratch.html";
 (function(){
   var css=document.createElement("style");
@@ -2402,6 +2496,7 @@ XOR_URL="xor-from-scratch.html";
 })();
 
 })();
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
