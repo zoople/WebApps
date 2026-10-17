@@ -40,8 +40,10 @@
 #scene{z-index:55}
 #scene.clear{background:#06161b33;justify-content:flex-start;padding-top:calc(12px + env(safe-area-inset-top,0px))} /* sits at the top so the board (and the wheel) stay visible */
 .dlg .dtitle{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--gold);margin-bottom:6px}.dlg .dtitle span{color:var(--muted);font-weight:600} /* story scenes sit above pop-ups like the wheel */
-.wheelwrap{position:relative;width:min(280px,78vw);aspect-ratio:1;margin:10px auto 4px}
-.wheelspin{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 4px #e4b84c,0 10px 24px #0009}
+.wheelwrap{position:relative;width:min(280px,72vw,38vh);aspect-ratio:1;margin:12px auto 4px}
+.wheelwrap::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 4px #e4b84c,0 10px 24px #0009;pointer-events:none} /* the ring stays still; only the wheel turns */
+.wheelclip{position:absolute;inset:0;border-radius:50%;overflow:hidden;contain:paint} /* a turning square never pokes out and scrolls the window */
+.wheelspin{width:100%;height:100%;border-radius:50%;will-change:transform;transform-origin:50% 50%;backface-visibility:hidden}
 .wbanner{margin:6px auto;max-width:300px;text-align:center;border-radius:12px;padding:8px 10px;background:#ffffff10}
 .wbanner.new{background:#ffc94a22;box-shadow:0 0 0 2px #ffc94a}
 .wbanner .wb1{font-weight:800;font-size:17px}.wbanner .wb2{font-size:14px;color:var(--muted);margin-top:2px}
@@ -250,7 +252,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 .scene-title small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 
 .modal{justify-content:center}
-.sheetbox{width:100%;max-width:488px;max-height:82%;overflow:auto;background:var(--panel);border:1px solid #ffffff1a;border-radius:16px;padding:16px;animation:rise .22s ease-out}
+.sheetbox{width:100%;max-width:488px;max-height:82%;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--panel);border:1px solid #ffffff1a;border-radius:16px;padding:16px;animation:rise .22s ease-out}
 .sheetbox h2{font-family:var(--display);font-weight:400;color:var(--gold);margin:0 0 4px;font-size:24px}
 .sheetbox h3{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
 .sheetbox p{color:var(--ink);line-height:1.5;margin:6px 0}
@@ -350,7 +352,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
   <details class="more"><summary>How to play</summary>
   <ul>
     <li>Tap a generator twice to make items; drag two matching items together to merge</li>
-    <li>Story orders and the White Elephant pay 🎟️ tickets; 4 tickets spin the wheel</li>
+    <li>Story orders and the White Elephant pay 🎟️ tickets; 10 tickets spin the wheel</li>
     <li>You don’t win the old prizes on the wheel; every stop shakes out loose change 🪙</li>
     <li>Generators need a rest; ⏲️ egg timers refill one</li>
     <li>Drag tea onto a generator to focus it on rare finds</li>
@@ -390,7 +392,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v15 · 17 Oct 2026';
+const VERSION='v16 · 17 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -524,20 +526,20 @@ const CAST = {
 const CHAPTERS = [
   { title:'Bunting Up', zone:0, gifts:[],
     intro:[
-      ['N','You moved to Pennywhistle-on-Sea three weeks ago. That was long enough for Dot to put you in charge of the Prize Wheel.'],
-      ['P','It’s easy, Robin love. People buy a ticket, the wheel spins, everybody wins something. Nobody’s ever cried. Well. Once. There was a goat.'],
-      ['T','Everything for the fete lives in the village hall storeroom. Nobody’s been in since last summer. Mind the bunting, it bites.'],
-      ['M','Wuff! <em>(Biscuit is already under a trestle table, tail going like a metronome.)</em>'],
-      ['N','Tap a generator, then tap it again to make something. Drag two matching things together to merge them. Every merge shakes open the boxes beside it.'],
-      ['P','The wheel’s in there somewhere, under a sheet. Biscuit will find it. He finds everything.'],
+      ['N','Three weeks in Pennywhistle-on-Sea, and Dot has already made you keeper of the Prize Wheel.'],
+      ['P','Nothing to it, Robin love. A ticket in, a spin, a prize for everyone. Only one person has ever cried. And that was the goat’s fault.'],
+      ['T','All the fete stuff lives in the village hall storeroom. Untouched since last August. Watch the bunting, it’s got a temper.'],
+      ['M','Wuff! <em>(Biscuit has vanished under a trestle table. Only his tail is showing, wagging double time.)</em>'],
+      ['N','Tap a generator to pick it up, then again to make something. Drag matching things onto each other to merge them. Every merge rattles open the boxes around it.'],
+      ['P','The wheel’s hiding in here under a sheet somewhere. Biscuit will sniff it out. Nothing gets past that nose.'],
     ],
     outro:[
-      ['T','There. A floor. Nobody has seen this floor since 2019.'],
-      ['N','Under the last trestle, tied with green string: a brown paper parcel. The tag says “For the wheel. From a friend.”'],
-      ['P','Oh! The Mystery Prize! It’s come early.'],
-      ['P','Every year since 1962, one prize on the wheel is a parcel like that. Something handmade and lovely. Nobody knows who leaves it.'],
-      ['T','Nobody knows <em>yet</em>. Give me a week.'],
-      ['P','And don’t you dare open it. It’s for Saturday.'],
+      ['T','Look at that. Actual floorboards. First time anyone’s seen them since 2019.'],
+      ['N','Tucked under the last trestle, tied up in green string: a brown paper parcel. Its tag reads “For the wheel. From a friend.”'],
+      ['P','Well I never. The Mystery Prize, and it’s early!'],
+      ['P','Every fete since 1962 there’s been one parcel like this on the wheel. Handmade, always lovely. And not a soul knows who brings it.'],
+      ['T','Not a soul knows <em>so far</em>. Give me till Saturday.'],
+      ['P','And hands off, the pair of you. It doesn’t get opened till the fete.'],
     ]},
   { title:'Names in the Rafters', zone:1, gifts:[['gL',1],['gK',1]],
     intro:[
@@ -625,45 +627,45 @@ const CHAPTERS = [
 /* wheel:n = the order also needs n Prize Wheel lights back on */
 const TASKS = [
   // ch1 — zone 0 only
-  {beat:['T','Nose on. The hoopla rabbit now looks alarmed rather than menacing. Progress.'], ch:0, who:'T', need:[['F',2]], coins:8, say:'Got a carrot? The hoopla rabbit costume needs a nose.'},
-  {beat:['M','(He does three laps of the storeroom with it, very proud. Something rattles in a box he knocks over.)'], ch:0, who:'M', need:[['P',2]], coins:8, say:'(Biscuit wants a pennant to run round the hall with.)'},
-  {id:200, side0:1, beat:['H','Lovely. Junk, but lovely. Somebody will buy it. Somebody always does.'], more:[['P','Mrs Hale has run the White Elephant stall since 1979. Nobody knows where she keeps it all.'],['H','Bring me anything you can spare, any time. I pay fair, and every penny goes to the church roof.'],['T','The church roof has been “nearly fixed” since I was six.'],['H','Then it needs more jumble, doesn’t it? My stall never closes, dear. Not while that roof still leaks.'],['N','<em>(The White Elephant stall is open. Its orders never run out: bring anything you can spare for coins, tickets and rosettes.)</em>']], ch:0, who:'H', need:[['P',2],['F',1]], coins:8, say:'You’re the new one. I’m Mrs Hale, White Elephant stall. I need stock. A pennant and a pea pod to start me off. Don’t argue.'},
-  {beat:['T','She would, too. She’s eighty-four and she’s got a whistle.'], ch:0, who:'T', need:[['P',3]], coins:10, say:'Flag string, please. If the bunting isn’t up by Saturday, Dot will have me shot.'},
-  {beat:['N','Under the box, under a dust sheet: the old Prize Wheel. Twenty little bulbs round the rim, every one of them dark.'], gifts:[['WH',1]], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He is pawing at a box. A yo-yo and a carrot might tempt him off it.)'},
-  {beat:['T','Potato toss: sorted. And the wheel works! Right, let’s get the big covers off.'], ch:0, who:'T', wheel:2, need:[['T',2],['F',3]], coins:12, say:'A hoopla ring and a potato. And give the wheel a couple of spins, I want to see it go.'},
+  {beat:['T','There. He looks startled now, not sinister. That’s an improvement.'], ch:0, who:'T', need:[['F',2]], coins:8, say:'The hoopla rabbit’s missing his nose. Any chance of a carrot?'},
+  {beat:['M','(Three proud laps of the storeroom, pennant held high. On the third he knocks over a box, and something inside it rattles.)'], ch:0, who:'M', need:[['P',2]], coins:8, say:'(Biscuit has his eye on a pennant. He wants to parade it round the hall.)'},
+  {id:200, side0:1, beat:['H','Junk. Lovely junk. Someone will buy it. Someone always does.'], more:[['P','She’s run that stall since 1979. Where she keeps it all is anybody’s guess.'],['H','Anything you can spare, bring it to me, any time. Fair prices, and every penny goes to the church roof.'],['T','That roof’s been “nearly done” since I was in short trousers.'],['H','Which is exactly why it needs more jumble. My stall stays open, dear, until the last leak is fixed.'],['N','<em>(The White Elephant stall is open. Its orders never run out: bring anything you can spare for coins, tickets and rosettes.)</em>']], ch:0, who:'H', need:[['P',2],['F',1]], coins:8, say:'So you’re the new one. Mrs Hale, White Elephant stall, and I’m short of stock. A pennant and a pea pod will do for a start. No arguing.'},
+  {beat:['T','She would, too. Eighty-four years old and she owns a whistle.'], ch:0, who:'T', need:[['P',3]], coins:10, say:'I need a flag string. If the bunting’s not up by the weekend, Dot will have my head.'},
+  {beat:['N','Beneath the box, beneath a dusty sheet: the old Prize Wheel. Twenty small bulbs ring the rim. Not one of them lit.'], gifts:[['WH',1]], ch:0, who:'M', need:[['T',1],['F',2]], coins:8, say:'(He’s scrabbling at a box and won’t let go. A yo-yo and a carrot might distract him.)'},
+  {beat:['T','Potato toss: ready. And the wheel turns! Right, time to get the big covers off.'], ch:0, who:'T', wheel:1, need:[['T',2],['F',3]], coins:12, say:'A hoopla ring and a potato, please. And give that wheel a spin or two, I want to see it in action.'},
   // ch2 — zone 1, microphone
   {beat:['T','I can now play the drum. Badly. Hey, there’s writing on the rafters. Names, painted, one a year.'], ch:1, who:'T', need:[['L',2]], coins:12, say:'Is that a drum? Can I have the drum? I’ve always wanted the drum.'},
   {beat:['P','Sixty-odd years I’ve been tying flags to that gate. My knees have opinions.'], ch:1, who:'P', need:[['P',4]], coins:14, say:'Crossed flags for the gate, love. It’s not a fete without flags on the gate.'},
   {beat:['M','(He rolls the cabbage under a trestle and lies on it, guarding.)'], ch:1, who:'M', need:[['F',4]], coins:12, say:'(Biscuit has found a cabbage-shaped hole in his life.)'},
-  {beat:['T','Ding! And look: every name on the rafters has a little star by it. Every one a Mystery Prize winner.'], ch:1, who:'T', wheel:8, need:[['T',3],['L',1]], coins:14, say:'A dartboard and a bell for ring-the-bell. And keep that wheel spinning, people want to see it.'},
+  {beat:['T','Ding! And look: every name on the rafters has a little star by it. Every one a Mystery Prize winner.'], ch:1, who:'T', wheel:2, need:[['T',3],['L',1]], coins:14, say:'A dartboard and a bell for ring-the-bell. And keep that wheel spinning, people want to see it.'},
   {beat:['P','Poor Mr Buttons. Nobody ever picks a teddy with one eye. We’ll find him a home.'], ch:1, who:'P', need:[['P',4],['K',2]], coins:16, say:'More flags, and that teddy. He was a tombola prize in 1979 and nobody’s ever won him.'},
   {beat:['N','Biscuit has found the sunniest spot in the storeroom. It is directly on top of a shoebox full of old gift tags.'], x:1, ch:1, who:'M', need:[['F',4],['L',3]], coins:14, say:'(He wants a cabbage to sleep on and a trumpet to guard.)'},
   // ch3 — zone 2, lost property box
   {beat:['N','There are dozens of mice in the Lost Property Box. Every single one is wearing a rosette.'], ch:2, who:'M', need:[['M',2]], coins:16, say:'(He drops a knitted mouse at your feet. He would like all of them, please.)'},
   {beat:['T','Hook-a-crab. Revolutionary. Pennywhistle isn’t ready.'], ch:2, who:'T', need:[['L',4],['W',2]], coins:18, say:'A sax and that toy crab. The crab’s for the hook-a-duck. Ducks are expensive.'},
   {beat:['P','Fred won the Mystery Prize in 1964. Humbugs. Ever so pleased, he was. His boat had just gone down, you know.'], ch:2, who:'P', need:[['F',5]], coins:18, say:'Sweetcorn for the veg show. Old Fred once grew corn taller than the church.'},
-  {beat:['T','Spiky writing. Not curly. Not the vicar. Interesting. VERY interesting.'], ch:2, who:'T', wheel:11, need:[['M',3]], coins:20, say:'If there’s a painted doll in that trunk, I want to see the tag. And spin the wheel, the old prizes have tags too.'},
+  {beat:['T','Spiky writing. Not curly. Not the vicar. Interesting. VERY interesting.'], ch:2, who:'T', wheel:3, need:[['M',3]], coins:20, say:'If there’s a painted doll in that trunk, I want to see the tag. And spin the wheel, the old prizes have tags too.'},
   {beat:['M','(He catches one. It pops. He is astonished, then delighted.)'], ch:2, who:'M', need:[['P',5]], coins:18, say:'(Biscuit wants to chase a balloon bunch. He has never caught one. He lives in hope.)'},
   {beat:['P','There. Lovely. Mrs Hale will say it’s too much. Mrs Hale says everything is too much.'], x:1, ch:2, who:'P', need:[['P',5],['B',2]], coins:20, say:'Balloons and a bow for the cake stall, love. Presentation is half the battle.'},
   // ch4 — zone 3
   {beat:['P','There’s me, by the wheel, 1990. Hair like a dandelion clock.'], ch:3, who:'P', need:[['M',4]], coins:22, say:'That jigsaw of the green. Let me do the corners, I always do the corners.'},
   {beat:['T','Sun, rain and a seagull attack, all in one afternoon. Normal Saturday.'], ch:3, who:'T', need:[['T',5],['W',3]], coins:22, say:'Cricket bat and a beach brolly. The stall has to survive Pennywhistle weather.'},
   {beat:['N','Biscuit’s stall sells one sweetcorn, at no price. Three people queue anyway.'], ch:3, who:'M', need:[['F',5],['P',6]], coins:22, say:'(He wants a stall sign and some sweetcorn. He seems to think he runs a stall now.)'},
-  {beat:['T','Two thousand and three. Dot blamed the Scouts for a decade. So who’s the spoon thief? WHO?'], ch:3, who:'T', wheel:13, need:[['M',5]], coins:26, say:'The wind chime! Those are tea tent spoons, I know it. Spin the wheel too, I need more suspects.'},
+  {beat:['T','Two thousand and three. Dot blamed the Scouts for a decade. So who’s the spoon thief? WHO?'], ch:3, who:'T', wheel:5, need:[['M',5]], coins:26, say:'The wind chime! Those are tea tent spoons, I know it. Spin the wheel too, I need more suspects.'},
   {beat:['P','Best in show goes to… Mrs Hale. Don’t look at me like that, it’s a very good marrow.'], ch:3, who:'P', need:[['B',3],['F',6]], coins:20, say:'A sun hat and the prize marrow, love. I’m judging the veg and I’ll do it in style.'},
   {beat:['N','The wireless crackles into life: the brass band, live from the bandstand, 1988. Dot hums along without noticing.'], x:1, ch:3, who:'M', need:[['T',6],['K',3]], coins:24, say:'(He wants the kite, and he is dragging the old wireless towards it.)'},
   // ch5
   {beat:['T','That was a fanfare. Everyone heard it. The ducks heard it.'], ch:4, who:'T', need:[['T',6],['L',5]], coins:28, say:'Kite and post horn. Opening fanfare. I’ve been practising. Don’t run.'},
   {beat:['P','Sixty years of marrow parades. I’ve only cried at about forty of them.'], ch:4, who:'P', need:[['F',6],['L',6]], coins:30, say:'The marrow and the band score. Every fete ends with the marrow parade and a march.'},
   {beat:['N','Peace is made. Seagull and terrier share the popcorn. Mostly.'], ch:4, who:'M', need:[['M',5],['R',3]], coins:30, say:'(Biscuit and a seagull are both eyeing the wind chime. Popcorn might settle it.)'},
-  {beat:['T','“Welcome to Pennywhistle Fete.” Look at that arch. I could cry. I won’t. I might.'], ch:4, who:'T', wheel:15, need:[['P',7],['K',3]], coins:30, say:'The Welcome Arch, and that wireless for announcements. And the wheel, nearly all of it. Big entrance.'},
+  {beat:['T','“Welcome to Pennywhistle Fete.” Look at that arch. I could cry. I won’t. I might.'], ch:4, who:'T', wheel:6, need:[['P',7],['K',3]], coins:30, say:'The Welcome Arch, and that wireless for announcements. And the wheel, nearly all of it. Big entrance.'},
   {beat:['P','The kite marrow. Nobody remembers why. Nobody would dare stop.'], x:1, ch:4, who:'P', need:[['F',6],['T',6]], coins:30, say:'Hold the marrow steady while I tie the kite on, love. Don’t ask why. Tradition.'},
   // ch6
   {beat:['T','Horse up. Doughnut… gone. It was a test doughnut.'], ch:5, who:'T', need:[['T',7],['R',4]], coins:34, say:'The carousel horse and an iced doughnut. Every fete needs a horse. And a doughnut. Mostly the doughnut.'},
   {beat:['P','“Your turn.” Every one in different writing, and every one of them meant it.'], more:[['T','Sixty people, and every one kept it quiet for a whole year.'],['P','Longest anybody in Pennywhistle has kept anything, love.']], ch:5, who:'P', need:[['M',6]], coins:34, say:'That card, love. It belongs on the wheel today.'},
   {beat:['N','Biscuit is crowned May Queen. He accepts with enormous dignity, then sneezes.'], ch:5, who:'M', need:[['F',7],['B',4]], coins:34, say:'(The giant pumpkin and the May Queen crown. He has decided he is the May Queen. Nobody argues.)'},
   {beat:['P','There’s the march. Same march every year, and it’s still the best bit.'], x:1, ch:5, who:'P', need:[['L',6],['R',4]], coins:34, say:'The band score and a doughnut for the bandleader. He plays better with icing on.'},
-  {ch:5, who:'O', wheel:17, need:[['M',7]], coins:50, say:'“For the wheel. From a friend.”'},
+  {ch:5, who:'O', wheel:7, need:[['M',7]], coins:50, say:'“For the wheel. From a friend.”'},
 ];
 /* stable ids: original orders keep 0..27 so existing saves line up; orders added later (x:1) get 100+ */
 { let n=0, m=100; TASKS.forEach(t=>{ if(t.id!=null) return; t.id = t.x ? m++ : n++; }); } // preset ids (200+) never shift old saves
@@ -769,18 +771,18 @@ function useOn(a,b){
 }
 const P2={ shopName:'Dot’s Tombola Table', shopBlurb:'Dot sells whatever’s left from the tombola. All proceeds to the church roof' };
 const SHOP_ITEMS=[
-  {id:'TK', price:()=>20, what:'Four raffle tickets: one spin of the Prize Wheel', give:()=>{ S.chips=(S.chips||0)+4; }},
+  {id:'TK', price:()=>80, what:'Ten raffle tickets: one spin of the Prize Wheel', give:()=>{ S.chips=(S.chips||0)+10; }},
   {id:'ET', price:()=>40, what:'Refills one generator. Drag it onto the one you need', give:()=>S.gifts.push(['ET',1])},
   {id:'H1', price:()=>90, what:'Skips time for everything: energy, generators, the urn', give:()=>S.gifts.push(['H',1])},
   {id:'EN', price:()=>energyPrice(), what:'Energy straight into your tank', give:()=>{ S.energy+=CONFIG.buyEnergy.amount; S.buys=(S.buys||0)+1; }},
 ];
 function showShop(){
-  const row=it=>{ const p=it.price(), d= it.id==='TK'?{e:'🎟️',n:'4 Raffle Tickets'} : it.id==='ET'?CHAINS.ET.items[0] : it.id==='H1'?CHAINS.H.items[0] : {e:'⚡',n:`+${CONFIG.buyEnergy.amount} energy`};
+  const row=it=>{ const p=it.price(), d= it.id==='TK'?{e:'🎟️',n:'10 Raffle Tickets'} : it.id==='ET'?CHAINS.ET.items[0] : it.id==='H1'?CHAINS.H.items[0] : {e:'⚡',n:`+${CONFIG.buyEnergy.amount} energy`};
     return `<div class="tier"><span class="tp">${d.e}</span><span class="tr" style="font-size:14px;letter-spacing:0">${d.n}<br><small style="color:var(--muted)">${it.what}</small></span><button class="sbtn" data-buy="${it.id}" ${S.coins<p?'disabled style="opacity:.5"':''}>🪙 ${p}</button></div>`; };
   openModal(`<h2>🛒 ${P2.shopName}</h2><p style="color:var(--muted);font-size:13px">• ${P2.shopBlurb}<br>• Earn coins from orders and the ${CAST.S.name} stall<br>• Tickets and energy go straight in; the rest goes to your gifts 🎁</p>
     <p>🪙 ${S.coins} · 🎟️ ${S.chips||0}</p>${SHOP_ITEMS.map(row).join('')}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('modalBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{ const it=SHOP_ITEMS.find(x=>x.id===b.dataset.buy), p=it.price(); if(S.coins<p) return;
-    S.coins-=p; it.give(); SND.play('coin'); stat('shop'); save(); render(); showShop(); toast(it.id==='EN'?`+${CONFIG.buyEnergy.amount} ⚡`:it.id==='TK'?'+4 raffle tickets 🎟️':'Added to your gifts 🎁'); });
+    S.coins-=p; it.give(); SND.play('coin'); stat('shop'); save(); render(); showShop(); toast(it.id==='EN'?`+${CONFIG.buyEnergy.amount} ⚡`:it.id==='TK'?'+10 raffle tickets 🎟️':'Added to your gifts 🎁'); });
 }
 
 /* ---------- the Prize Wheel ----------
@@ -791,7 +793,7 @@ function showShop(){
    - 3rd stop on: "this again, keep spinning" (+ a penny)
    Each story stands on its own, so the order you light them in never matters. The wheel leans towards dark
    segments (70%). Story orders need a number of lights on: the wheel is how the story moves. */
-const WHEEL_COST=4, WHEEL_N=20; // a fair wheel: every segment is exactly 1 in 20, every spin
+const WHEEL_COST=10, WHEEL_N=20; // a fair wheel: every segment is exactly 1 in 20, every spin
 const WHEEL_SEGS=[
   {e:'🍬', n:'Humbugs', yr:1964, story:[['N','1964. A jar of humbugs, wrapped in a hanky. Tag: “From a friend.”'],['P','Humbugs! Fred the fisherman won those. He sucked one all the way through the sermon.']],
    tidbit:[['N','Fred kept one humbug in his top pocket for a whole year, “for emergencies”. There was never an emergency.']]},
@@ -843,11 +845,12 @@ const WHEEL_LAST=[
 /* why the wheel matters: twenty dark bulbs, and an old prize painted under each */
 const WHEEL_INTRO=[
   ['T','Right. Twenty dark bulbs. How do we get them back on?'],
-  ['P','Fred wired those in 1972. Loose contacts, every one. When the wheel stops on a dark segment, the jolt knocks its bulb back on.'],
-  ['P','And under each bulb there’s a little painting of an old Mystery Prize. One for every few years. You’ll see.'],
-  ['T','So we spin until all twenty are lit for Saturday. And it rattles. Why does it rattle?'],
-  ['P','Sixty years of loose change, love. It falls out when it stops.'],
-  ['N','<em>• Light a dark segment: 💡 see the old prize under it and hear its story<br>• You don’t win the old prizes, they’re just what was there<br>• Every stop shakes out loose change 🪙<br>• Story orders need lights on</em>'],
+  ['P','Ten tickets in the slot at the back. The slot weighs them, the brake lets go, and round she goes. No tickets, no spin. Fred didn’t believe in freebies.'],
+  ['T','A wheel with a cover charge.'],
+  ['P','Every ticket goes to the church roof, love. That’s always been the deal.'],
+  ['P','When she stops on a dark segment, the jolt knocks its bulb back on. Loose contacts. Fred again.'],
+  ['P','Under each bulb there’s a little painting of an old Mystery Prize. And sixty years of loose change rattles about inside her. It falls out when she stops.'],
+  ['N','<em>• 10 tickets 🎟️ a spin<br>• Light a dark segment: 💡 see the old prize under it and hear its story<br>• You don’t win the old prizes; every stop shakes out loose change 🪙<br>• Story orders need lights on</em>'],
 ];
 let wheelBusy=false, wheelCell=-1;
 const wheelDone=()=>(S.wheel||[]).filter(Boolean).length;
@@ -889,10 +892,10 @@ function openWheel(i){
       ? `<div class="wbanner"><div class="wb1">${sg.e} The ${sg.n} again</div><div class="wb2">✨ A little extra about it<br>🪙 A penny fell out → on the board</div></div>`
       : `<div class="wbanner"><div class="wb1">Oh, the ${sg.n} again ${sg.e}</div><div class="wb2">Keep spinning!<br>🪙 A penny fell out → on the board</div></div>`;
   openModal(`<h2>🎡 Prize Wheel</h2>
-    <p style="color:var(--muted);font-size:13px;margin:0">• ${WHEEL_COST} raffle tickets 🎟️ per spin · every segment equally likely<br>• Stop on a dark ? segment: 💡 its light comes back on and you see the old prize under it<br>• You don’t win the old prizes. Every stop shakes out loose change 🪙<br>• Story orders need lights on</p>
-    <div class="wheelwrap"><div class="wheelptr">▼</div><div class="wheelspin" id="wheelSpin" style="transform:rotate(${S.wheelRot||0}deg)">${wheelSVG()}</div></div>
+    <div class="wheelwrap"><div class="wheelptr">▼</div><div class="wheelclip"><div class="wheelspin" id="wheelSpin" style="transform:rotate(${S.wheelRot||0}deg)">${wheelSVG()}</div></div></div>
     <p style="text-align:center;margin:4px 0;font-variant-numeric:tabular-nums">💡 <b>${done}/${WHEEL_N}</b> lights on · 🎟️ ${S.chips||0} tickets</p>${banner}
-    <div class="row-btns" style="justify-content:center"><button class="bigbtn gold" id="wheelGo" ${wheelBusy?'disabled':''}>Spin · ${WHEEL_COST} 🎟️</button><button class="bigbtn" id="wheelClose">Close</button></div>
+    <div class="row-btns" style="justify-content:center;margin-top:4px"><button class="bigbtn gold" id="wheelGo" ${wheelBusy?'disabled':''}>Spin · ${WHEEL_COST} 🎟️</button><button class="bigbtn" id="wheelClose">Close</button></div>
+    <p style="color:var(--muted);font-size:13px;margin:10px 0 0">• ${WHEEL_COST} raffle tickets 🎟️ per spin · every segment equally likely<br>• Stop on a dark ? segment: 💡 its light comes back on and you see the old prize under it<br>• You don’t win the old prizes. Every stop shakes out loose change 🪙<br>• Story orders need lights on</p>
     <h3>💡 Under the lights</h3>${wheelListHtml(false)||'<p style="color:var(--muted);font-size:13px">All dark so far. Each light shows an old Mystery Prize.</p>'}`);
   $('wheelClose').onclick=()=>{ if(!wheelBusy) closeModal(); };
   $('wheelGo').onclick=spinWheel;
@@ -922,7 +925,7 @@ function spinWheel(){
 }
 function showTicketHelp(){
   openModal(`<h2>🎟️ Out of tickets</h2><p>Each spin costs ${WHEEL_COST} tickets.</p><h3>Where tickets come from</h3>
-    <p style="font-size:14px;line-height:1.6">• Every story order pays tickets<br>• 📦 Donation boxes<br>• Every ${CAST.S.name} sale<br>• 📖 Quests<br>• ${P2.shopName}: 4 for 🪙 20</p>
+    <p style="font-size:14px;line-height:1.6">• Every story order pays tickets<br>• 📦 Donation boxes<br>• Every ${CAST.S.name} sale<br>• 📖 Quests<br>• ${P2.shopName}: 10 for 🪙 80</p>
     <div class="row-btns"><button class="bigbtn gold" id="tkShop">🛒 ${P2.shopName}</button><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('tkShop').onclick=showShop;
 }
@@ -1256,7 +1259,7 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:8, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:0, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
@@ -1343,7 +1346,7 @@ const GEN_STORY={
   U1:[['T','Fred’s old camping stove. Logs or old bunting in, tea out.'],['P','Best cup you’ll ever have, and it tastes faintly of 1979.']],
   gC1:[['N','The church clock’s spare works, ticking away in a box.'],['P','The vicar swears it runs fast. Put it near anything slow and see.']],
   G4:[['N','The sapling has grown into a proper little apple tree.'],['P','Fruit for the jam stall. It gives a few crops, then it’s firewood. That’s trees, love.']],
-  WH1:[['P','There she is! Fred’s old Prize Wheel. She hasn’t turned since last summer.'],['T','Does it even still work?'],['P','Only one way to find out, love. A raffle ticket in, and give her a spin.']],
+  WH1:[['P','And there’s the old girl. Fred’s Prize Wheel. Not one turn since last summer.'],['T','Will she still go round?'],['P','She takes ten tickets a spin, love. Here, the last of last year’s roll. Ten, exactly.'],['N','<em>(Dot hands you ten raffle tickets 🎟️)</em>']],
 };
 let genBusy=false;
 function playGenStory(){
@@ -1462,7 +1465,20 @@ function dropItems(list, near=59){
   if(held) toast(`🎗️ Rosette saved in 🎁 until you tap the glowing one on the board`);
 }
 
-function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&!a.on&&!b.on&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
+/* important things (generators) arrive on the board as a wrapped present you open; the rest go to 🎁 gifts */
+const isImportant=(k,l)=>!!(CHAINS[k].gen||(CHAINS[k].items[l-1]||{}).gen);
+function give(k,l){
+  if(!isImportant(k,l)){ S.gifts.push([k,l]); return; }
+  const t=nearestEmpty(59);
+  if(t<0){ S.gifts.push([k,l]); return; }
+  const it=mkItem(k,l); it.wrap=1; S.cells[t].it=it; fx[t]='spawn';
+}
+function unwrap(i){
+  const it=S.cells[i].it; delete it.wrap; fx[i]='reveal'; SND.play('gift'); sel=i;
+  if(it.k==='WH') S.chips=Math.max(S.chips||0,WHEEL_COST); // Dot hands over enough for the first spin
+  discover(it); save(); render();
+}
+function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&!a.on&&!b.on&&!a.wrap&&!b.wrap&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
 
 function drop(a,b){
   if(b<0||a===b){ return; }
@@ -1476,6 +1492,7 @@ function drop(a,b){
   }
   // open
   if(!B.it){ B.it=A.it; A.it=null; sel=b; SND.play('move'); save(); render(); return; }
+  if(A.it.wrap||B.it.wrap){ const tmp=B.it; B.it=A.it; A.it=tmp; sel=b; SND.play('move'); save(); render(); return; }
   if(canMerge(A.it,B.it)){ doMerge(a,b); return; }
   if(isGen(B.it) && feed(a,b)) return;
   if(useOn(a,b)) return;
@@ -1545,7 +1562,7 @@ function completeTask(t){
   }
   S.done[t.id]=1; stat('story');
   if(t.side0) S.sideOn=1;
-  (t.gifts||[]).forEach(g=>{ if(g[0]==='WH' && (S.cells.some(c=>c.it&&c.it.k==='WH')||S.gifts.some(x=>x[0]==='WH'))) return; dropItems([g]); });
+  (t.gifts||[]).forEach(g=>{ if(g[0]==='WH' && (S.cells.some(c=>c.it&&c.it.k==='WH')||S.gifts.some(x=>x[0]==='WH'))) return; give(g[0],g[1]); });
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
   if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat, t.more);
@@ -1563,7 +1580,7 @@ function finishChapter(beat, more){
   else{
     const nc=CHAPTERS[S.ch];
     if(nc.zone) unlockZone(nc.zone);
-    nc.gifts.forEach(([k,l])=>S.gifts.push([k,l]));
+    nc.gifts.forEach(([k,l])=>give(k,l));
     S.seenIntro[S.ch]=1;
     queue.push({title:'Chapter '+(S.ch+1), sub:nc.title, lines:nc.intro});
   }
@@ -1668,7 +1685,8 @@ function render(){
       const d=def(c.it);
       if(c.s==='web') cls+=' web';
       html=`<span class="em">${d.e}</span>`;
-      if(c.s==='open'){
+      if(c.it.wrap){ html='<span class="em">🎁</span><b class="musttag">Open</b>'; cls+=' must'; }
+      else if(c.s==='open'){
         if(isGen(c.it)){
           cls+=' isgen';
           if(CHAINS[c.it.k].wheel){ html+=`<i class="gen">${wheelDone()}/20</i>`; if(S.chips>0) html+=`<i class="slotchips">🎟️${S.chips}</i>`; }
@@ -1782,6 +1800,7 @@ function renderInfo(){
     return;
   }
   const it=c.it, d=def(it), ch=CHAINS[it.k];
+  if(it.wrap){ box.innerHTML=`<div class="big">🎁</div><div class="txt"><div class="nm">A present</div><div class="ds">Something new for the fete. Tap to open it.</div></div>`; return; }
   let ds='';
   if(ch.wheel){
     box.innerHTML=`<div class="big">🎡</div><div class="txt"><div class="nm">Prize Wheel<small>💡 ${wheelDone()}/20 lit</small></div><div class="ds">Tap to open. ${WHEEL_COST} 🎟️ per spin. New segments move the story on.</div></div><div class="btns"><button class="sbtn" id="wOpen">Spin</button><button class="sbtn" id="tkBtn">Get 🎟️</button></div>`;
@@ -1868,6 +1887,7 @@ function tap(i){
   if(c.s==='box'){ toast('Merge something next to this box to open it.'); return; }
   if(c.s==='web'){ const d=def(c.it); toast(`${d.e} ${d.n} is stuck in cobwebs. Drop a matching one on it.`); sel=-1; render(); return; }
   if(!c.it){ sel=-1; sellArm=false; render(); return; }
+  if(c.it.wrap){ unwrap(i); return; }
   if(c.it.st){ sel=i; claim(i); return; } // story rosette: one tap reads it
   if(CHAINS[c.it.k].wheel){ sel=i; render(); openWheel(i); return; } // the wheel opens on one tap
   if(sel===i){
@@ -1951,7 +1971,7 @@ function playScene(sc,done){
 }
 function openModal(html,story){ $('modalBody').innerHTML=html; $('modal').hidden=false; $('modal').dataset.story=story?'1':''; if(story) hideToasts(); }
 function closeModal(){ const was=$('modal').dataset.story==='1'; $('modal').hidden=true; $('modal').dataset.story=''; if(was && !storyOpen()) flushToasts(); setTimeout(nextToast,200); setTimeout(runArrivals,250); }
-$('modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
+$('modal').addEventListener('click',e=>{ if(e.target.id==='modal' && !wheelBusy) closeModal(); });
 
 function chainHtml(k,cur){
   const ch=CHAINS[k];
@@ -2192,7 +2212,7 @@ function showPass(){
   });
   h+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
   openModal(h);
-  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>S.gifts.push(r)); SND.play('gift'); toast('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:'Winners’ notes', sub:`Note ${(i+1)/3} of 5`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
+  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>give(r[0],r[1])); SND.play('gift'); toast('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:'Winners’ notes', sub:`Note ${(i+1)/3} of 5`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
 }
 function showComplete(){
   openModal(`<h3 style="margin-top:0">Event complete</h3><h2>The Mystery Prize</h2><p>You ran the Prize Wheel and found out who’s been leaving the Mystery Prize since 1962. Next year it’s your turn.</p><p style="color:var(--muted)">The board stays open. Merge as long as you like. The Lost Property Box chain has one level nobody has reached yet.</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button>${REFLECTIONS.length?'<button class="bigbtn" id="reflGo">✨ Reflections</button>':''}</div>`);
