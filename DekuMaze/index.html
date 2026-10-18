@@ -80,7 +80,8 @@ const sfx = {
   chirp() { beep(900, .07, 'square', .05, 0, 500); },
   puff() { beep(180, .12, 'triangle', .07, 0, -80); },
   drop() { beep(880, .08, 'square', .07); beep(1320, .12, 'square', .07, .08); },
-  zoom() { beep(200, .35, 'sawtooth', .06, 0, 1200); },
+  chuckle(n) { beep(n % 2 ? 520 : 420, .1, 'square', .06, 0, n % 2 ? -60 : 60); },
+  poof() { beep(300, .4, 'sawtooth', .07, 0, -240); beep(120, .35, 'triangle', .08, 0, -60); },
   go() { beep(660, .1, 'square', .07); beep(880, .18, 'square', .07, .1); },
   key() { beep(1100, .08, 'square', .07); beep(1500, .12, 'square', .07, .07); },
   tick() { beep(1000, .04, 'square', .04); },
@@ -258,11 +259,16 @@ function updateCritter(dt) {
       break;
     case 'flee': {
       const d = c.d;
-      if (moveTo(c, DC[d][0] + DX[d] * 6, DC[d][1] + DY[d] * 6, 92 * dt)) { c.state = 'gone'; G.openDoor = d; sfx.door(); }
+      if (!c.wp) {
+        const ap = [DC[d][0] - DX[d] * 24, DC[d][1] - DY[d] * 24];
+        c.wp = wander(c.x, c.y, ap[0], ap[1], 1 + Math.floor(Math.random() * 2)).concat([ap, [DC[d][0] + DX[d] * 6, DC[d][1] + DY[d] * 6]]);
+      }
+      if (followPath(c, 92 * dt)) { c.state = 'gone'; G.openDoor = d; sfx.door(); }
       break;
     }
     case 'run':
-      if (moveTo(c, 104, 104, 72 * dt)) { c.state = 'puff'; c.t = 0; c.pt = 0; msg('The critter is puffed out!', 2); }
+      if (!c.wp) c.wp = wander(c.x, c.y, 104, 104, 1).concat([[104, 104]]);
+      if (followPath(c, 72 * dt)) { c.state = 'puff'; c.t = 0; c.pt = 0; msg('The critter is puffed out!', 2); }
       break;
     case 'puff':
       c.pt -= dt;
@@ -274,18 +280,37 @@ function updateCritter(dt) {
       }
       break;
     case 'dropped':
-      if (dist < 34 || c.t > 1.6) {
-        const entry = opp(G.dirs[G.n - 1]), opts = [0, 1, 2, 3].filter(d => d !== entry);
-        c.zd = opts[Math.floor(Math.random() * 3)]; c.state = 'zoom'; G.openDoor = c.zd; sfx.zoom();
+      if (dist < 34 || c.t > 1.6) { c.state = 'chuckle'; c.t = 0; c.ct = 0; c.cn = 0; }
+      break;
+    case 'chuckle':
+      c.ct -= dt;
+      if (c.ct <= 0) { c.ct = .24; c.cn++; sfx.chuckle(c.cn); }
+      if (c.t > 1.5) {
+        for (let i = 0; i < 34; i++) {
+          part(c.x + (Math.random() - .5) * 12, c.y + (Math.random() - .5) * 12, (Math.random() - .5) * 40, -8 - Math.random() * 28,
+            .9 + Math.random() * .7, ['#fff', '#e4e4e4', '#c4c4c4', '#a0a0a0'][i % 4], 4 + Math.floor(Math.random() * 3), -6);
+        }
+        sfx.poof(); c.state = 'gone'; startReturn();
       }
       break;
-    case 'zoom': {
-      const d = c.zd;
-      part(c.x - c.vx * 6, c.y, 0, 0, .25, '#fff', 3);
-      if (moveTo(c, DC[d][0] + DX[d] * 6, DC[d][1] + DY[d] * 6, 330 * dt)) { c.state = 'gone'; startReturn(); }
-      break;
-    }
   }
+}
+
+function wander(sx, sy, ex, ey, n) {
+  const dx = ex - sx, dy = ey - sy, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, pts = [];
+  let s = Math.random() < .5 ? -1 : 1;
+  const cl = v => Math.max(26, Math.min(182, v));
+  for (let i = 1; i <= n; i++) {
+    const t = i / (n + 1) * .9, off = s * (14 + Math.random() * 22) * Math.min(1, len / 90);
+    pts.push([cl(sx + dx * t + nx * off), cl(sy + dy * t + ny * off)]);
+    if (Math.random() < .6) s = -s;
+  }
+  return pts;
+}
+function followPath(c, step) {
+  const w = c.wp[0];
+  if (moveTo(c, w[0], w[1], step)) c.wp.shift();
+  return c.wp.length === 0;
 }
 
 function update(dt) {
@@ -402,14 +427,21 @@ function drawCritter(c) {
   if (c.state === 'idle') bob = Math.round(Math.sin(G.time * 10));
   else if (c.state === 'flee' || c.state === 'run') bob = Math.round(Math.sin(G.time * 30) * 1.5);
   else if (c.state === 'puff') { bob = -Math.round(Math.abs(Math.sin(G.time * 14)) * 2); wide = 2; }
-  const by = y - bob;
+  else if (c.state === 'chuckle') bob = -Math.round(Math.abs(Math.sin(G.time * 20)) * 2);
+  const by = y - bob, chuck = c.state === 'chuckle';
   R(x - 6, y + 5, 12, 3, 'rgba(0,0,0,.3)');
-  if (c.state === 'zoom') { R(x - c.vx * 14 - 5, by - 2, 10, 2, 'rgba(255,255,255,.6)'); R(x - c.vx * 20 - 4, by + 2, 8, 1, 'rgba(255,255,255,.4)'); }
   R(x - 5 - wide, by - 4, 10 + 2 * wide, 9, '#8a5a2a'); R(x - 4 - wide, by - 5, 8 + 2 * wide, 1, '#8a5a2a');
   R(x - 3, by, 6, 4, '#b07a40');
   const po = P.x > c.x ? 1 : 0;
-  R(x - 3, by - 3, 2, 3, '#fff'); R(x + 1, by - 3, 2, 3, '#fff'); R(x - 3 + po, by - 2, 1, 2, '#000'); R(x + 1 + po, by - 2, 1, 2, '#000');
-  if (c.state === 'puff') R(x - 1, by + 3, 2, 3, '#f06080'); else R(x - 1, by + 3, 2, 1, '#402010');
+  if (chuck) { R(x - 3, by - 2, 2, 1, '#000'); R(x + 1, by - 2, 2, 1, '#000'); }
+  else { R(x - 3, by - 3, 2, 3, '#fff'); R(x + 1, by - 3, 2, 3, '#fff'); R(x - 3 + po, by - 2, 1, 2, '#000'); R(x + 1 + po, by - 2, 1, 2, '#000'); }
+  if (c.state === 'puff') R(x - 1, by + 3, 2, 3, '#f06080');
+  else if (chuck) { R(x - 2, by + 2, 4, 3, '#402010'); R(x - 1, by + 4, 2, 1, '#f06080'); }
+  else R(x - 1, by + 3, 2, 1, '#402010');
+  if (chuck) {
+    ctx.font = 'bold 7px monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
+    const tx = c.cn % 2 ? 'hee' : 'hee hee'; ctx.strokeText(tx, x, by - 13); ctx.fillText(tx, x, by - 13);
+  }
   R(x - 1, by - 9, 2, 5, '#2aa02a'); R(x - 4, by - 8, 3, 2, '#3ac83a'); R(x + 1, by - 7, 3, 2, '#3ac83a');
   const fs = Math.floor(G.time * 12) % 2;
   R(x - 4, by + 5 + fs, 3, 2, '#e08030'); R(x + 1, by + 5 + (1 - fs), 3, 2, '#e08030');
