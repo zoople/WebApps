@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b14">
+<title>Deku Maze</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{--s:3}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;background:#0b0b14;overflow:hidden;touch-action:none;overscroll-behavior:none;font-family:'Press Start 2P',monospace;color:#fff}
+#stage{position:absolute;left:50%;top:0;transform:translateX(-50%);width:calc(var(--s)*208px);height:calc(var(--s)*240px)}
+#c{width:100%;height:100%;image-rendering:pixelated;display:block}
+#hud{position:absolute;left:0;top:0;width:100%;height:calc(var(--s)*20px);display:flex;align-items:center;justify-content:center;font-size:calc(var(--s)*7px);pointer-events:none}
+#tm{position:absolute;right:calc(var(--s)*6px)}
+#msg{position:absolute;left:50%;bottom:calc(var(--s)*16px);transform:translateX(-50%);background:rgba(0,0,0,.75);border:calc(var(--s)*1px) solid #f8d838;padding:calc(var(--s)*4px) calc(var(--s)*6px);font-size:calc(var(--s)*6px);line-height:1.6;text-align:center;white-space:pre-line;opacity:0;transition:opacity .3s;pointer-events:none;max-width:92%}
+#msg.on{opacity:1}
+#ov{position:absolute;inset:0;background:rgba(8,8,24,.9);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(var(--s)*10px)}
+#ov.show{display:flex}
+#ov h1{font-size:calc(var(--s)*13px);color:#f8d838;margin:0 0 calc(var(--s)*8px);line-height:1.3;text-shadow:calc(var(--s)*1px) calc(var(--s)*1px) 0 #a85c22}
+#ov p{font-size:calc(var(--s)*6px);line-height:1.8;margin:0 0 calc(var(--s)*10px)}
+#ov button{font-family:inherit;font-size:calc(var(--s)*8px);background:#30a030;color:#fff;border:calc(var(--s)*2px) solid #fff;padding:calc(var(--s)*6px) calc(var(--s)*12px);cursor:pointer}
+#ov button:active{background:#1f7a1f}
+#zone{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));width:190px;height:190px;display:flex;align-items:center;justify-content:center;touch-action:none}
+#base{position:relative;width:136px;height:136px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.35)}
+#knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:rgba(255,255,255,.45);border:3px solid rgba(255,255,255,.8)}
+#mute{position:fixed;top:8px;right:8px;width:40px;height:40px;background:rgba(0,0,0,.5);color:#fff;border:2px solid rgba(255,255,255,.5);font-size:18px;border-radius:6px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <div id="hud"><span id="lvl"></span><span id="tm"></span></div>
+  <div id="msg"></div>
+  <div id="ov" class="show"></div>
+</div>
+<div id="zone"><div id="base"><div id="knob"></div></div></div>
+<button id="mute" aria-label="Toggle sound">&#9834;</button>
+<script src="game.js"></script>
+</body>
+</html>

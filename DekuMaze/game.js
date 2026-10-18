@@ -1,0 +1,427 @@
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const W = 208, H = 240, HUD = 32;
+const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0], opp = d => (d + 2) & 3;      // 0 up,1 right,2 down,3 left
+const DC = [[104, 8], [200, 104], [104, 200], [8, 104]];                       // door centres
+const cv = $('c'), ctx = cv.getContext('2d');
+cv.width = W; cv.height = H;
+const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+const entryPos = (d, inward) => { const o = 88 - inward; return [104 + DX[d] * o, 104 + DY[d] * o]; };
+
+// ---------- layout ----------
+function fit() {
+  const s = Math.min(6, Math.max(1, Math.min(innerWidth / W, innerHeight / H)));
+  document.documentElement.style.setProperty('--s', s);
+}
+addEventListener('resize', fit); fit();
+
+// ---------- audio ----------
+let AC = null, muted = false;
+function ac() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  if (AC && AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function beep(f, dur, type = 'square', vol = .07, delay = 0, slide = 0) {
+  if (muted) return; const a = ac(); if (!a) return;
+  const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + .02);
+}
+const sfx = {
+  door() { beep(300, .1, 'square', .06, 0, 200); },
+  lock() { beep(120, .07, 'square', .07); beep(90, .1, 'square', .07, .09); },
+  rattle() { beep(150 + Math.random() * 40, .04, 'square', .04); },
+  hit() { beep(220, .3, 'sawtooth', .1, 0, -150); },
+  chirp() { beep(900, .07, 'square', .05, 0, 500); },
+  puff() { beep(180, .12, 'triangle', .07, 0, -80); },
+  drop() { beep(880, .08, 'square', .07); beep(1320, .12, 'square', .07, .08); },
+  zoom() { beep(200, .35, 'sawtooth', .06, 0, 1200); },
+  go() { beep(660, .1, 'square', .07); beep(880, .18, 'square', .07, .1); },
+  key() { beep(1100, .08, 'square', .07); beep(1500, .12, 'square', .07, .07); },
+  tick() { beep(1000, .04, 'square', .04); },
+  win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => beep(f, .16, 'square', .08, i * .12)); },
+  lose() { [392, 330, 262, 196].forEach((f, i) => beep(f, .25, 'triangle', .1, i * .2)); }
+};
+$('mute').onclick = () => { muted = !muted; $('mute').style.opacity = muted ? .4 : 1; ac(); };
+
+// ---------- input ----------
+const stick = { x: 0, y: 0 }, keys = {};
+const zone = $('zone'), base = $('base'), knob = $('knob'); let sid = null; const SR = 46;
+function sset(e) {
+  const r = base.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let dx = e.clientX - cx, dy = e.clientY - cy; const d = Math.hypot(dx, dy), m = Math.min(1, d / SR);
+  if (d > 0) { dx /= d; dy /= d; }
+  stick.x = dx * m; stick.y = dy * m;
+  knob.style.transform = `translate(${dx * m * SR}px,${dy * m * SR}px)`;
+}
+function sreset() { sid = null; stick.x = stick.y = 0; knob.style.transform = ''; }
+zone.addEventListener('pointerdown', e => { sid = e.pointerId; try { zone.setPointerCapture(sid); } catch (x) {} sset(e); ac(); e.preventDefault(); });
+zone.addEventListener('pointermove', e => { if (e.pointerId === sid) sset(e); });
+zone.addEventListener('pointerup', e => { if (e.pointerId === sid) sreset(); });
+zone.addEventListener('pointercancel', e => { if (e.pointerId === sid) sreset(); });
+addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); });
+addEventListener('keyup', e => { keys[e.code] = false; });
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+function getInput() {
+  let x = stick.x, y = stick.y;
+  if (keys.ArrowLeft || keys.KeyA) x -= 1; if (keys.ArrowRight || keys.KeyD) x += 1;
+  if (keys.ArrowUp || keys.KeyW) y -= 1; if (keys.ArrowDown || keys.KeyS) y += 1;
+  const m = Math.hypot(x, y); if (m > 1) { x /= m; y /= m; }
+  return { x, y };
+}
+
+// ---------- state ----------
+let best = 1; try { best = +localStorage.getItem('dekuBest') || 1; } catch (e) {}
+const G = { state: 'title', level: 1, hearts: 3, time: 0, shake: 0, flash: 0 };
+let P, C; const parts = [];
+const part = (x, y, vx, vy, life, color, size = 1, grav = 0) => parts.push({ x, y, vx, vy, life, max: life, color, size, grav });
+const burst = (x, y, n, colors, sp = 40, life = .6) => { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28, s = Math.random() * sp; part(x, y, Math.cos(a) * s, Math.sin(a) * s, life * (.5 + Math.random()), colors[i % colors.length], 2, 60); } };
+
+let msgTimer = 0;
+function msg(t, dur = 3) { const m = $('msg'); m.textContent = t; m.classList.add('on'); msgTimer = dur; }
+
+function overlay(title, body, btn, fn) {
+  const ov = $('ov');
+  ov.innerHTML = `<h1>${title}</h1><p>${body}</p><button id="ob">${btn}</button>`;
+  ov.classList.add('show');
+  $('ob').onclick = () => { ov.classList.remove('show'); ac(); fn(); };
+}
+
+function newLevel() {
+  const L = G.level; G.n = L + 2; G.dirs = [];
+  for (let i = 0; i < G.n; i++) {
+    let d; do { d = Math.floor(Math.random() * 4); } while (i > 0 && d === opp(G.dirs[i - 1]));
+    G.dirs.push(d);
+  }
+  G.k = 0; G.phase = 'chase'; G.openDoor = -1; G.hasKey = false; G.key = { on: false, picked: false };
+  G.traps = null; G.trans = null; G.dead = false; G.shake = 0; G.flash = 0; G.celBtn = false; G.lockedHint = false;
+  G.T = 5 + G.n * Math.max(3.3, 4.4 - .1 * (L - 1)); G.timeLeft = G.T; G.lastTick = 99;
+  P = { x: 104, y: 168, face: 0, walk: 0, mode: 'free', cool: 0, d: 0, t: 0, dur: 0, rt: 0 };
+  C = { x: 134, y: 78, state: 'idle', t: 0, hasKey: true, vx: 1, vy: 0 };
+  parts.length = 0;
+  msg(L === 1 ? 'Chase the thief!\nRemember every door you go through!' : `Level ${L}: ${G.n} doors!\nChase the thief!`, 3.5);
+}
+
+function startGame() { G.level = 1; G.hearts = 3; newLevel(); G.state = 'play'; }
+
+// ---------- rules ----------
+function doorAllowed(d) {
+  if (G.phase === 'chase') return G.k < G.n && d === G.dirs[G.k] && G.openDoor === d;
+  return G.k > 0 && d === opp(G.dirs[G.k - 1]);
+}
+const doorTrap = d => G.phase === 'return' && !doorAllowed(d) && G.traps[G.k][d];
+
+function startReturn() {
+  G.phase = 'return'; G.timeLeft = G.T; G.openDoor = -1;
+  const chance = Math.min(.6, .35 + .03 * G.level);
+  G.traps = []; for (let k = 0; k <= G.n; k++) G.traps.push([0, 1, 2, 3].map(() => Math.random() < chance));
+  sfx.go(); msg('GO! Back to the chest!\nRetrace your doors!', 3);
+}
+
+function hitDoor(d) {
+  const p = P;
+  if (G.phase === 'return' && G.k === G.n && !G.hasKey) { msg('Grab the key first!', 1.5); p.cool = 1; return; }
+  if (d % 2 === 0) p.x = 104; else p.y = 104;
+  p.face = d; p.d = d;
+  if (doorAllowed(d)) { p.mode = 'enter'; G.trans = { t: 0, d, swapped: false }; sfx.door(); }
+  else {
+    p.mode = 'struggle'; p.t = 0; p.rt = 0; p.dur = G.phase === 'return' ? 1.4 : .9;
+    if (G.phase === 'chase' && !G.lockedHint) { G.lockedHint = true; msg('Locked! Only the critter\'s door opens.', 2.5); }
+  }
+}
+
+function resolveStruggle() {
+  const p = P, d = p.d; p.mode = 'free'; p.cool = .45;
+  p.x -= DX[d] * 12; p.y -= DY[d] * 12;
+  if (doorTrap(d)) {
+    G.hearts--; G.shake = .4; G.flash = .5; sfx.hit();
+    burst(DC[d][0], DC[d][1], 22, ['#f83828', '#f8a028', '#f8e838'], 70, .6);
+    if (G.hearts <= 0) { G.dead = true; G.deadT = .9; } else msg('BOOBY TRAP! Lost a heart!', 2);
+  } else if (G.phase === 'return') sfx.lock();
+}
+
+function changeRoom(d) {
+  const e = opp(d);
+  if (G.phase === 'chase') {
+    G.k++; G.openDoor = -1;
+    const [cx, cy] = entryPos(e, 46);
+    C = { x: cx, y: cy, state: 'idle', t: 0, hasKey: true, vx: DX[d], vy: DY[d] };
+  } else G.k--;
+  const [px, py] = entryPos(e, 14);
+  P.x = px; P.y = py; P.face = d; P.mode = 'locked'; P.cool = .3;
+  parts.length = 0;
+}
+
+function win() {
+  G.state = 'celebrate'; G.celT = 0; G.celBtn = false; sfx.win();
+  P.mode = 'locked'; P.face = 0; G.hearts = Math.min(3, G.hearts + 1);
+  burst(104, 96, 40, ['#f8d838', '#fff', '#f8a028'], 90, 1);
+}
+
+function gameOver(why) {
+  G.state = 'over'; sfx.lose();
+  if (G.level > best) { best = G.level; try { localStorage.setItem('dekuBest', best); } catch (e) {} }
+  const t = why === 'time' ? 'STOLEN!' : 'OUCH!';
+  const b = why === 'time' ? '&#128176; The treasure was stolen!<br>You ran out of time.' : 'The booby traps got you!';
+  overlay(t, `${b}<br><br>You reached level ${G.level}.<br>Best: level ${best}`, 'TRY AGAIN', startGame);
+}
+
+// ---------- update ----------
+function moveTo(c, tx, ty, step) {
+  const dx = tx - c.x, dy = ty - c.y, d = Math.hypot(dx, dy);
+  if (d <= step) { c.x = tx; c.y = ty; return true; }
+  c.vx = dx / d; c.vy = dy / d; c.x += c.vx * step; c.y += c.vy * step; return false;
+}
+const hitChest = (x, y) => G.k === 0 && x + 5 > 96 && x - 5 < 112 && y + 5 > 92 && y - 5 < 106;
+
+function updatePlayer(dt) {
+  const p = P; if (p.cool > 0) p.cool -= dt;
+  if (p.mode === 'enter') { p.x += DX[p.d] * 55 * dt; p.y += DY[p.d] * 55 * dt; return; }
+  if (p.mode === 'locked') return;
+  if (p.mode === 'struggle') {
+    p.t += dt; p.rt -= dt;
+    if (p.rt <= 0) { p.rt = .17; sfx.rattle(); part(p.x + (Math.random() - .5) * 10, p.y - 12, (Math.random() - .5) * 20, -20, .5, '#6cc8f8', 2, 60); }
+    if (p.t >= p.dur) resolveStruggle();
+    return;
+  }
+  const inp = getInput(), mag = Math.hypot(inp.x, inp.y);
+  if (mag > .12) {
+    const sp = 62 * Math.min(1, mag) / mag;
+    let nx = p.x + inp.x * sp * dt, ny = p.y + inp.y * sp * dt;
+    nx = Math.max(21, Math.min(187, nx)); ny = Math.max(21, Math.min(187, ny));
+    if (!hitChest(nx, p.y)) p.x = nx;
+    if (!hitChest(p.x, ny)) p.y = ny;
+    p.walk += dt;
+    p.face = Math.abs(inp.x) > Math.abs(inp.y) ? (inp.x > 0 ? 1 : 3) : (inp.y > 0 ? 2 : 0);
+  }
+  if (p.cool <= 0) {
+    let d = -1;
+    if (p.y <= 22 && Math.abs(p.x - 104) <= 10 && inp.y < -.35) d = 0;
+    else if (p.x >= 186 && Math.abs(p.y - 104) <= 10 && inp.x > .35) d = 1;
+    else if (p.y >= 186 && Math.abs(p.x - 104) <= 10 && inp.y > .35) d = 2;
+    else if (p.x <= 22 && Math.abs(p.y - 104) <= 10 && inp.x < -.35) d = 3;
+    if (d >= 0) hitDoor(d);
+  }
+}
+
+function updateCritter(dt) {
+  const c = C; if (!c || c.state === 'gone') return; c.t += dt;
+  const dist = Math.hypot(P.x - c.x, P.y - c.y), fin = G.k === G.n;
+  switch (c.state) {
+    case 'idle':
+      if (dist < 30 && P.mode !== 'locked') { c.state = fin ? 'run' : 'flee'; c.d = G.dirs[G.k]; c.t = 0; sfx.chirp(); }
+      break;
+    case 'flee': {
+      const d = c.d;
+      if (moveTo(c, DC[d][0] + DX[d] * 6, DC[d][1] + DY[d] * 6, 92 * dt)) { c.state = 'gone'; G.openDoor = d; sfx.door(); }
+      break;
+    }
+    case 'run':
+      if (moveTo(c, 104, 104, 72 * dt)) { c.state = 'puff'; c.t = 0; c.pt = 0; msg('The critter is puffed out!', 2); }
+      break;
+    case 'puff':
+      c.pt -= dt;
+      if (c.pt <= 0) { c.pt = .22; sfx.puff(); part(c.x + (Math.random() - .5) * 8, c.y - 6, (Math.random() - .5) * 20, -22, .6, '#fff', 3); }
+      if (c.t > 1.8) {
+        c.state = 'dropped'; c.t = 0; c.hasKey = false;
+        G.key = { x: c.x, y: c.y + 10, on: true, picked: false }; sfx.drop();
+        burst(c.x, c.y + 10, 10, ['#f8d838', '#fff'], 40, .5);
+      }
+      break;
+    case 'dropped':
+      if (dist < 34 || c.t > 1.6) {
+        const entry = opp(G.dirs[G.n - 1]), opts = [0, 1, 2, 3].filter(d => d !== entry);
+        c.zd = opts[Math.floor(Math.random() * 3)]; c.state = 'zoom'; G.openDoor = c.zd; sfx.zoom();
+      }
+      break;
+    case 'zoom': {
+      const d = c.zd;
+      part(c.x - c.vx * 6, c.y, 0, 0, .25, '#fff', 3);
+      if (moveTo(c, DC[d][0] + DX[d] * 6, DC[d][1] + DY[d] * 6, 330 * dt)) { c.state = 'gone'; startReturn(); }
+      break;
+    }
+  }
+}
+
+function update(dt) {
+  G.time += dt;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i]; q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += q.grav * dt;
+    if (q.life <= 0) parts.splice(i, 1);
+  }
+  if (G.shake > 0) G.shake -= dt; if (G.flash > 0) G.flash -= dt * 1.5;
+  if (msgTimer > 0) { msgTimer -= dt; if (msgTimer <= 0) $('msg').classList.remove('on'); }
+  if (G.state === 'celebrate') {
+    G.celT += dt;
+    if (Math.random() < .6) part(Math.random() * 208, -4, (Math.random() - .5) * 20, 30 + Math.random() * 30, 3, ['#f83828', '#f8d838', '#38c838', '#38a8f8', '#f838c8'][Math.floor(Math.random() * 5)], 3, 10);
+    if (G.celT > 2.6 && !G.celBtn) {
+      G.celBtn = true;
+      overlay('TREASURE SAVED!', `Level ${G.level} clear!<br>The thief will lead you through more doors next time...`, 'NEXT LEVEL', () => { G.level++; newLevel(); G.state = 'play'; });
+    }
+    return;
+  }
+  if (G.state !== 'play') return;
+  if (G.dead) { G.deadT -= dt; if (G.deadT <= 0) gameOver('trap'); return; }
+  if (G.trans) {
+    const t = G.trans; t.t += dt;
+    if (!t.swapped && t.t >= .22) { t.swapped = true; changeRoom(t.d); }
+    if (t.t >= .44) { G.trans = null; P.mode = 'free'; }
+  }
+  updatePlayer(dt); updateCritter(dt);
+  if (G.key.on && !G.key.picked && G.k === G.n && Math.hypot(P.x - G.key.x, P.y - G.key.y) < 11) {
+    G.key.picked = true; G.hasKey = true; sfx.key(); burst(G.key.x, G.key.y, 10, ['#f8d838', '#fff'], 40, .5);
+  }
+  if (G.phase === 'return') {
+    G.timeLeft -= dt;
+    const sec = Math.ceil(G.timeLeft);
+    if (G.timeLeft < 5 && sec !== G.lastTick) { G.lastTick = sec; sfx.tick(); }
+    if (G.timeLeft <= 0) { G.timeLeft = 0; gameOver('time'); return; }
+    if (G.k === 0 && P.mode === 'free' && P.x + 7 > 96 && P.x - 7 < 112 && P.y + 7 > 92 && P.y - 7 < 106) win();
+  }
+}
+
+// ---------- drawing ----------
+function pat(rows, x, y, cols) {
+  for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) { const ch = rows[j][i]; if (ch !== '.') R(x + i, y + j, 1, 1, cols[ch]); }
+}
+const HEART = ['.XX.XX.', 'XWXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
+function drawKey(x, y) {
+  R(x - 3, y - 3, 4, 4, '#f8d838'); R(x - 2, y - 2, 2, 2, '#8a6a10');
+  R(x + 1, y - 2, 6, 2, '#f8d838'); R(x + 4, y, 1, 2, '#f8d838'); R(x + 6, y, 1, 2, '#f8d838');
+}
+function drawRoom() {
+  for (let ty = 0; ty < 13; ty++) for (let tx = 0; tx < 13; tx++) {
+    const x = tx * 16, y = ty * 16;
+    if (tx === 0 || ty === 0 || tx === 12 || ty === 12) {
+      R(x, y, 16, 16, '#3a4cb0'); R(x, y + 7, 16, 1, '#222f84'); R(x, y + 15, 16, 1, '#222f84');
+      const a = (tx + ty) & 1;
+      R(x + (a ? 3 : 11), y, 1, 7, '#222f84'); R(x + (a ? 11 : 3), y + 8, 1, 7, '#222f84'); R(x, y, 16, 1, '#5a6cd0');
+    } else {
+      R(x, y, 16, 16, ((tx + ty) & 1) ? '#d8b46c' : '#cfa862');
+      if ((tx * 7 + ty * 13) % 5 === 0) R(x + 5, y + 6, 2, 1, '#b8924c');
+    }
+  }
+  R(16, 16, 176, 3, 'rgba(0,0,0,.18)'); R(16, 16, 3, 176, 'rgba(0,0,0,.18)');
+}
+function drawDoor(d) {
+  const px = [96, 192, 96, 0][d], py = [0, 96, 192, 96][d];
+  const open = G.phase === 'chase' && G.openDoor === d;
+  let ox = 0, oy = 0;
+  if (P && P.mode === 'struggle' && P.d === d) { ox = Math.random() < .5 ? -1 : 1; oy = Math.random() < .5 ? -1 : 1; }
+  R(px, py, 16, 16, '#1a1230');
+  if (open) { R(px + 2, py + 2, 12, 12, '#04030a'); R(px + 2, py + 2, 12, 12, 'rgba(60,40,120,.3)'); return; }
+  const x = px + ox, y = py + oy;
+  R(x + 2, y + 2, 12, 12, '#9a6530');
+  for (let i = 0; i < 3; i++) { if (d % 2 === 0) R(x + 5 + i * 4, y + 2, 1, 12, '#6e4420'); else R(x + 2, y + 5 + i * 4, 12, 1, '#6e4420'); }
+  const kx = [7, 3, 7, 11][d], ky = [11, 7, 3, 7][d];
+  R(x + kx, y + ky, 2, 2, '#f8d838');
+}
+function drawChest(open) {
+  R(95, 91, 18, 16, '#000');
+  if (open) {
+    R(96, 96, 16, 10, '#8a4a1a'); R(96, 94, 16, 4, '#f8d838'); R(98, 93, 12, 2, '#fff8a0');
+    R(96, 86, 16, 6, '#a85c22'); R(100, 86, 2, 6, '#f8d838'); R(106, 86, 2, 6, '#f8d838');
+  } else {
+    R(96, 96, 16, 10, '#8a4a1a'); R(96, 92, 16, 6, '#a85c22');
+    R(100, 92, 2, 14, '#f8d838'); R(106, 92, 2, 14, '#f8d838');
+    R(102, 97, 4, 4, '#f8d838'); R(103, 98, 2, 2, '#000');
+  }
+}
+function drawHero(p) {
+  const x = Math.round(p.x), y = Math.round(p.y), f = p.face;
+  const sx = p.mode === 'struggle' ? (Math.random() < .5 ? -1 : 1) : 0;
+  ctx.save(); ctx.translate(sx, 0);
+  R(x - 5, y + 4, 10, 3, 'rgba(0,0,0,.3)');
+  const st = Math.floor(p.walk * 10) % 2;
+  if (f === 1 || f === 3) { R(x - 3 + (st ? 1 : -1), y + 3, 3, 3, '#6b3b13'); R(x - (st ? 1 : -1), y + 3, 3, 3, '#6b3b13'); }
+  else { R(x - 4, y + 3 + (st ? 0 : 1), 3, 3, '#6b3b13'); R(x + 1, y + 3 + (st ? 1 : 0), 3, 3, '#6b3b13'); }
+  R(x - 4, y - 2, 8, 6, '#30a030'); R(x - 4, y + 1, 8, 1, '#8a5a2a'); R(x - 4, y - 2, 8, 1, '#58c858');
+  if (f === 0 || f === 2) { R(x - 5, y - 1, 1, 4, '#f6c08a'); R(x + 4, y - 1, 1, 4, '#f6c08a'); }
+  R(x - 4, y - 8, 8, 7, '#f6c08a');
+  if (f === 0) { R(x - 5, y - 11, 10, 9, '#1f7a1f'); R(x - 4, y - 11, 8, 1, '#3aa03a'); }
+  else if (f === 2) { R(x - 5, y - 11, 10, 5, '#1f7a1f'); R(x - 4, y - 11, 8, 1, '#3aa03a'); R(x - 2, y - 5, 1, 2, '#000'); R(x + 1, y - 5, 1, 2, '#000'); }
+  else {
+    const s = f === 1 ? 1 : -1;
+    R(x - 5, y - 11, 10, 5, '#1f7a1f'); R(x - 4, y - 11, 8, 1, '#3aa03a');
+    if (s > 0) R(x - 8, y - 9, 4, 3, '#1f7a1f'); else R(x + 4, y - 9, 4, 3, '#1f7a1f');
+    R(x + (s > 0 ? 2 : -3), y - 5, 1, 2, '#000');
+  }
+  if (G.state === 'celebrate') { drawKey(x - 2, y - 17); R(x - 7, y - 8, 2, 6, '#f6c08a'); R(x + 5, y - 8, 2, 6, '#f6c08a'); }
+  else if (G.hasKey) drawKey(x - 3, y - 15);
+  if (p.mode === 'struggle') { R(x + 6, y - 14, 2, 5, '#f8d838'); R(x + 6, y - 7, 2, 2, '#f8d838'); }
+  ctx.restore();
+}
+function drawCritter(c) {
+  const x = Math.round(c.x), y = Math.round(c.y);
+  let bob = 0, wide = 0;
+  if (c.state === 'idle') bob = Math.round(Math.sin(G.time * 10));
+  else if (c.state === 'flee' || c.state === 'run') bob = Math.round(Math.sin(G.time * 30) * 1.5);
+  else if (c.state === 'puff') { bob = -Math.round(Math.abs(Math.sin(G.time * 14)) * 2); wide = 2; }
+  const by = y - bob;
+  R(x - 6, y + 5, 12, 3, 'rgba(0,0,0,.3)');
+  if (c.state === 'zoom') { R(x - c.vx * 14 - 5, by - 2, 10, 2, 'rgba(255,255,255,.6)'); R(x - c.vx * 20 - 4, by + 2, 8, 1, 'rgba(255,255,255,.4)'); }
+  R(x - 5 - wide, by - 4, 10 + 2 * wide, 9, '#8a5a2a'); R(x - 4 - wide, by - 5, 8 + 2 * wide, 1, '#8a5a2a');
+  R(x - 3, by, 6, 4, '#b07a40');
+  const po = P.x > c.x ? 1 : 0;
+  R(x - 3, by - 3, 2, 3, '#fff'); R(x + 1, by - 3, 2, 3, '#fff'); R(x - 3 + po, by - 2, 1, 2, '#000'); R(x + 1 + po, by - 2, 1, 2, '#000');
+  if (c.state === 'puff') R(x - 1, by + 3, 2, 3, '#f06080'); else R(x - 1, by + 3, 2, 1, '#402010');
+  R(x - 1, by - 9, 2, 5, '#2aa02a'); R(x - 4, by - 8, 3, 2, '#3ac83a'); R(x + 1, by - 7, 3, 2, '#3ac83a');
+  const fs = Math.floor(G.time * 12) % 2;
+  R(x - 4, by + 5 + fs, 3, 2, '#e08030'); R(x + 1, by + 5 + (1 - fs), 3, 2, '#e08030');
+  if (c.hasKey) { drawKey(x + 6, by - 1); if (Math.floor(G.time * 4) % 2) R(x + 9, by - 6, 1, 3, '#fff'); }
+}
+function drawHud() {
+  for (let i = 0; i < 3; i++) pat(HEART, 6 + i * 10, 6, i < G.hearts ? { X: '#e83030', W: '#f8a0a0' } : { X: '#402030', W: '#402030' });
+  if (G.phase === 'return' && G.timeLeft != null) {
+    const f = Math.max(0, G.timeLeft / G.T);
+    R(5, 21, 198, 7, '#fff'); R(6, 22, 196, 5, '#222');
+    R(6, 22, Math.round(196 * f), 5, f > .5 ? '#40d040' : f > .25 ? '#f8d838' : '#f83828');
+  }
+}
+function render() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); R(0, 0, W, H, '#0b0b14');
+  drawHud();
+  ctx.save(); ctx.translate(0, HUD);
+  if (G.shake > 0) ctx.translate(Math.round((Math.random() - .5) * 4), Math.round((Math.random() - .5) * 4));
+  drawRoom(); for (let d = 0; d < 4; d++) drawDoor(d);
+  const cel = G.state === 'celebrate' || G.state === 'over' && false;
+  if (G.k === 0) {
+    if (cel) {
+      ctx.save(); ctx.translate(104, 96);
+      for (let i = 0; i < 10; i++) { ctx.rotate(.628); ctx.rotate(G.time * .1); ctx.fillStyle = 'rgba(255,240,140,.22)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(120, -14); ctx.lineTo(120, 14); ctx.fill(); ctx.rotate(-G.time * .1); }
+      ctx.restore();
+    }
+    drawChest(cel);
+  }
+  if (G.key.on && !G.key.picked && G.k === G.n) drawKey(G.key.x - 1, G.key.y + Math.round(Math.sin(G.time * 6)));
+  const ents = [{ y: P.y, f: () => drawHero(P) }];
+  if (C && C.state !== 'gone' && G.phase === 'chase') ents.push({ y: C.y, f: () => drawCritter(C) });
+  ents.sort((a, b) => a.y - b.y).forEach(e => e.f());
+  for (const q of parts) { ctx.globalAlpha = Math.max(0, q.life / q.max); R(Math.round(q.x), Math.round(q.y), q.size, q.size, q.color); }
+  ctx.globalAlpha = 1;
+  if (G.trans) { const t = G.trans.t, a = Math.max(0, Math.min(1, t < .22 ? t / .22 : 1 - (t - .22) / .22)); R(0, 0, 208, 208, `rgba(0,0,0,${a})`); }
+  if (G.flash > 0) R(0, 0, 208, 208, `rgba(255,0,0,${Math.min(.5, G.flash)})`);
+  ctx.restore();
+}
+const lvl = $('lvl'), tm = $('tm');
+function hud() {
+  lvl.textContent = G.state === 'title' ? '' : 'LV ' + G.level;
+  tm.textContent = G.state === 'title' ? '' : G.phase === 'return' ? Math.max(0, G.timeLeft).toFixed(1) : 'CHASE!';
+  tm.style.color = G.phase === 'return' && G.timeLeft < 5 ? '#f83828' : '#fff';
+}
+
+// ---------- loop ----------
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  update(dt); render(); hud(); requestAnimationFrame(frame);
+}
+newLevel();
+overlay('DEKU MAZE', 'A critter stole your key!<br>Chase it through the doors, then<br>REMEMBER the way back to your chest before the treasure is stolen.<br><br>Wrong doors waste time.<br>Booby-trapped doors cost a heart.<br><br>Thumbstick / WASD / arrows' + (best > 1 ? `<br><br>Best: level ${best}` : ''), 'START', startGame);
+requestAnimationFrame(frame);
+window.__deku = { G, get P() { return P; }, get C() { return C; } };
+})();
