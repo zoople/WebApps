@@ -261,14 +261,14 @@ function updateCritter(dt) {
       const d = c.d;
       if (!c.wp) {
         const ap = [DC[d][0] - DX[d] * 24, DC[d][1] - DY[d] * 24];
-        c.wp = wander(c.x, c.y, ap[0], ap[1], 1 + Math.floor(Math.random() * 2)).concat([ap, [DC[d][0] + DX[d] * 6, DC[d][1] + DY[d] * 6]]);
+        c.wp = fakeOut(c, d, 3).concat(wander(c.x, c.y, ap[0], ap[1], 1 + Math.floor(Math.random() * 2)), [ap, [DC[d][0] + DX[d] * 6, DC[d][1] + DY[d] * 6]]);
       }
-      if (followPath(c, 92 * dt)) { c.state = 'gone'; G.openDoor = d; sfx.door(); }
+      if (followPath(c, 92 * dt, dt)) { c.state = 'gone'; G.openDoor = d; sfx.door(); }
       break;
     }
     case 'run':
-      if (!c.wp) c.wp = wander(c.x, c.y, 104, 104, 1).concat([[104, 104]]);
-      if (followPath(c, 72 * dt)) { c.state = 'puff'; c.t = 0; c.pt = 0; msg('The critter is puffed out!', 2); }
+      if (!c.wp) c.wp = fakeOut(c, -1, 2).concat(wander(c.x, c.y, 104, 104, 1), [[104, 104]]);
+      if (followPath(c, 72 * dt, dt)) { c.state = 'puff'; c.t = 0; c.pt = 0; msg('The critter is puffed out!', 2); }
       break;
     case 'puff':
       c.pt -= dt;
@@ -307,9 +307,20 @@ function wander(sx, sy, ex, ey, n) {
   }
   return pts;
 }
-function followPath(c, step) {
+// sometimes head for a decoy door, hesitate, then change his mind
+function fakeOut(c, realDoor, odds) {
+  if (Math.random() > .45) return [];
+  const opts = [0, 1, 2, 3].filter(d => d !== realDoor), dd = opts[Math.floor(Math.random() * opts.length)];
+  const pt = [DC[dd][0] - DX[dd] * 40, DC[dd][1] - DY[dd] * 40];
+  return wander(c.x, c.y, pt[0], pt[1], 1).concat([[pt[0], pt[1], .3]]);
+}
+function followPath(c, step, dt) {
+  if (c.pause > 0) { c.pause -= dt; return false; }
   const w = c.wp[0];
-  if (moveTo(c, w[0], w[1], step)) c.wp.shift();
+  if (moveTo(c, w[0], w[1], step)) {
+    c.wp.shift();
+    if (w[2] && Math.hypot(P.x - c.x, P.y - c.y) > 40) { c.pause = w[2]; sfx.chirp(); }
+  }
   return c.wp.length === 0;
 }
 
@@ -438,10 +449,6 @@ function drawCritter(c) {
   if (c.state === 'puff') R(x - 1, by + 3, 2, 3, '#f06080');
   else if (chuck) { R(x - 2, by + 2, 4, 3, '#402010'); R(x - 1, by + 4, 2, 1, '#f06080'); }
   else R(x - 1, by + 3, 2, 1, '#402010');
-  if (chuck) {
-    ctx.font = 'bold 7px monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
-    const tx = c.cn % 2 ? 'hee' : 'hee hee'; ctx.strokeText(tx, x, by - 13); ctx.fillText(tx, x, by - 13);
-  }
   R(x - 1, by - 9, 2, 5, '#2aa02a'); R(x - 4, by - 8, 3, 2, '#3ac83a'); R(x + 1, by - 7, 3, 2, '#3ac83a');
   const fs = Math.floor(G.time * 12) % 2;
   R(x - 4, by + 5 + fs, 3, 2, '#e08030'); R(x + 1, by + 5 + (1 - fs), 3, 2, '#e08030');
