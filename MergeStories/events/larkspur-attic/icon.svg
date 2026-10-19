@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#4a2c36"/><stop offset="1" stop-color="#1a1316"/></radialGradient>
+    <radialGradient id="sky" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#2c3550"/><stop offset="1" stop-color="#121628"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6d47e"/><stop offset="1" stop-color="#a8792c"/></linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#e4b84c" stop-opacity=".45"/><stop offset="1" stop-color="#e4b84c" stop-opacity="0"/></radialGradient>
+    <mask id="moon"><rect width="512" height="512" fill="#fff"/><circle cx="292" cy="236" r="62" fill="#000"/></mask>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- roof beams -->
+  <path d="M36 196 L256 52 L476 196" fill="none" stroke="#6b4a33" stroke-width="22" stroke-linejoin="round"/>
+  <circle cx="256" cy="282" r="200" fill="url(#glow)"/>
+  <!-- round attic window -->
+  <circle cx="256" cy="282" r="150" fill="url(#sky)" stroke="url(#gold)" stroke-width="22"/>
+  <circle cx="256" cy="282" r="76" fill="#f4e8d3" mask="url(#moon)"/>
+  <g fill="#f4e8d3"><circle cx="176" cy="216" r="4"/><circle cx="330" cy="356" r="3.5"/><circle cx="200" cy="350" r="3"/><circle cx="340" cy="190" r="3"/></g>
+  <path d="M256 132 V432 M106 282 H406" stroke="url(#gold)" stroke-width="12"/>
+  <!-- cat on the sill -->
+  <path d="M300 432 q-4 -42 18 -60 l-6 -26 l20 16 q14 -4 28 0 l20 -16 l-6 26 q22 18 18 60 z" fill="#0d0a0b"/>
+  <rect x="96" y="428" width="320" height="22" rx="6" fill="url(#gold)"/>
+</svg>
