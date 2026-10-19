@@ -50,7 +50,14 @@ Static browser apps, published with GitHub Pages from `main`
    **Test offline before shipping**: headless Chromium with the network off and with every request hanging,
    both from the file and served over http after the worker installs. The page must paint in under a second.
 
-## Merge games (`LarkspurAttic/`)
+## Merge games: work in `MergeStories/` only
+
+- **All merge-game work happens in `MergeStories/`** (the console engine plus story cartridges). The old standalone
+  games in `LarkspurAttic/` are frozen: don't edit them.
+- **Engine vs story.** UI, behaviour, item types, mechanics and reward *logic* go in the engine (`engine.js`,
+  `index.html`). A story (`events/<id>/event.js`) is configuration only: words, cast, chapters, orders, chains,
+  layout, reward numbers, art and music. A new kind of item goes into the engine first. See `MergeStories/README.md`.
+- Before balancing a new story, read `MergeStories/DESIGN.md` (lessons from finished events) and add new lessons there.
 
 - **Never reward two of the same item in one go** (orders, quests, passes, gifts, drops). Give one item of a
   higher level instead: the player could just merge the pair.
@@ -61,7 +68,7 @@ Static browser apps, published with GitHub Pages from `main`
 - Develop on the session branch, then open a PR to `main`.
 - **Ask the user a yes/no question (AskUserQuestion) before merging**, then squash-merge it yourself.
   Don't make them click through GitHub.
-  - **Exception: `LarkspurAttic/` (Larkspur Attic and the Sandbox).** Don't ask. Squash-merge the PR
+  - **Exception: `MergeStories/` and `LarkspurAttic/` (the merge games).** Don't ask. Squash-merge the PR
     automatically as soon as it's ready, then report as usual.
 - After merging, reply with: the live link with `?v=<n>` appended (cache-buster), what changed as
   plain bullets, and what was and wasn't tested. Pages takes about a minute to deploy.

@@ -1,10 +1,51 @@
-/* Merge Stories engine. Everything here is shared by every story; a story (a "cartridge") is loaded first
-   from events/<id>/event.js and defines EVENT plus its content: CONFIG, CHAINS, LAYOUT, zoneOfRow, CAST, CHAPTERS,
-   TASKS, taskRewards, sideRewards, PASS, FELIX, MOON_NOTES, P2, SHOP_ITEMS, REFLECTIONS, stageReward, GEN_STORY,
-   QUESTS, QUEST_RW, discRw. Story-specific words live in EVENT.terms, the look in EVENT.css, the tune in EVENT.music. */
+/* Merge Stories engine (the console). Everything here is shared by every story.
+   A story (a "cartridge", events/<id>/event.js) is configuration only: EVENT (title, terms, cover, css, music,
+   rewards, wheel), CONFIG, CHAINS, LAYOUT, CAST, CHAPTERS, TASKS, PASS, FELIX, MOON_NOTES, P2, SHOP_ITEMS,
+   REFLECTIONS, GEN_STORY, QUESTS. All behaviour lives here.
+   Framework item types use reserved chain keys; a story only names them and sets their numbers:
+     E  booster (tea): drop on a generator so its next taps find rare items more often. Can't be claimed.
+     C coins · X applause/xp · N pass points · H time skips · CP wheel tickets: tap twice to claim
+     ET egg timer (refills one generator) · V time chargers · Q donation boxes (free taps)
+     G/Y/O orchard: seedlings → tree (a generator that withers into a log) → fruit · Z compost bin · U stove
+     WH (any chain with wheel:true) prize wheel · the chain with story:true holds the lore items
+   See README.md for the full list. */
 const T = EVENT.terms;
 const WH_ = EVENT.wheel || {}, WHEEL_COST = WH_.cost || 10, WHEEL_N = WH_.n || 20,
-      WHEEL_SEGS = WH_.segs || [], WHEEL_LAST = WH_.last || [], WHEEL_INTRO = WH_.intro || [];
+      WHEEL_SEGS = WH_.segs || [], WHEEL_LAST = WH_.last || [], WHEEL_INTRO = WH_.intro || [],
+      WHEEL_LIGHT = WH_.light || [['C',1]], WHEEL_REPEAT = WH_.repeat || [['C',1]];
+const WHEEL_KEY = Object.keys(CHAINS).find(k=>CHAINS[k].wheel);
+const STORY_KEY = Object.keys(CHAINS).find(k=>CHAINS[k].story);
+/* ---------- rewards. A story sets the numbers in EVENT.rewards; how they're handed out lives here.
+   A table like [[30,2],[0,1]] means "value 30 or more gives 2, otherwise 1". */
+const RW = Object.assign({
+  order:   { coins:[[0,1]], xp:[[4,3],[2,2],[0,1]], points:[[3,2],[0,1]], tickets:null },
+  finale:  [['C',3],['X',4],['N',3]],
+  side:    { coins:[[0,1]], bigPoints:24, timerAt:12, timerChance:.3, tickets:null, lucky:[['C',1],['N',1]] },
+  stage:   l => l%4===0 ? [['H',1],['C',2]] : l%2 ? [['C',2]] : [['E',2]],
+  discovery: { coinsPerLevel:2, topCoins:0, xpFrom:5 },
+  quests:  [[['C',1],['E',1]],[['C',2],['E',2]],[['E',3],['H',1]],[['E',3],['H',2],['N',1]],[['E',4],['H',2],['N',2]],[['E',4],['H',3],['N',3]]],
+}, EVENT.rewards||{});
+const tierOf=(table,v)=>{ for(const [min,val] of table) if(v>=min) return val; return table[table.length-1][1]; };
+function taskRewards(t){
+  if(t.who==='O') return RW.finale;              // the last order of the story
+  const o=RW.order, rw=[['C',tierOf(o.coins,t.coins||0)],['X',tierOf(o.xp,t.ch)],['N',tierOf(o.points,t.ch)]];
+  if(o.tickets && CHAINS.CP) rw.push(['CP',tierOf(o.tickets,t.ch)]);   // one of each, never two of the same item
+  return rw;
+}
+function sideRewards(size,lucky){
+  const s=RW.side; if(lucky) return s.lucky;
+  const rw=[['C',tierOf(s.coins,size)],['N', size>=s.bigPoints&&Math.random()<.5?2:1]];
+  if(size>=s.timerAt && Math.random()<s.timerChance) rw.push(['ET',1]);
+  if(s.tickets && CHAINS.CP && (size>=s.tickets.always || Math.random()<s.tickets.chance)) rw.push(['CP',1]);
+  return rw;
+}
+const stageReward = l => RW.stage(l);
+/* collection reveal: coins per level (or only for a chain's top item) and applause for big finds */
+function discRw(k,l){ const d=RW.discovery, L=l+(CHAINS[k].gen?1:0);
+  return {c: d.coinsPerLevel ? d.coinsPerLevel*L : (l===maxL(k)&&l>1 ? d.topCoins : 0), x: L>=d.xpFrom ? L : 0}; }
+const QUEST_RW = RW.quests;
+/* the board: 9 rows × 7, four zones from the bottom up (rows 7-9 open, then 5-6, 3-4, 1-2) */
+const zoneOfRow = r => r>=6?0 : r>=4?1 : r>=2?2 : 3;
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -71,33 +112,54 @@ function ensureSide(){ S.side=S.side||[]; if(!S.sideOn) return; while(S.side.len
 /* winners' notes: every third Rosette Board reward unlocks one (the story told by past winners) */
 /* the first time you claim each rosette level, Dot's fete scrapbook has something to say */
 const FOCUS=[2,5,12,30,75], FOCUS_MULT=5;
+const isBoost = it => CHAINS[it.k].type==='boost';
 const canFocus=it=>isGen(it)&&typeof CHAINS[it.k].rare==='string'&&!!CHAINS[CHAINS[it.k].rare]&&CHAINS[CHAINS[it.k].rare].rare===true;
 function useOn(a,b){
   const A=S.cells[a].it, B=S.cells[b].it; if(!A||!B||!isGen(B)||S.cells[b].s!=='open') return false;
   const T=def(B);
   if(A.k==='ET'){
-    if(!T.charges){ SND.play('nope'); toast(`${def(A).e} That doesn’t need refilling.`); return true; }
+    if(!T.charges){ SND.play('nope'); flo(`${def(A).e} That doesn’t need refilling`, b); return true; }
     refreshCharges(B);
-    if(B.ch>=T.charges){ SND.play('nope'); toast(`${T.e} The ${T.n} is already full. Save the ${def(A).n} for when it runs dry.`); return true; }
+    if(B.ch>=T.charges){ SND.play('nope'); flo(`${T.e} Already full. Save the ${def(A).e} for later`, b); return true; }
     S.cells[a].it=null; B.ch=T.charges; B.t=now(); fx[b]='pop'; SND.play('unweb'); if(sel===a) sel=b;
-    toast(`${def(A).e} ${T.e} ${T.n} refilled`); save(); render(); return true;
+    flo(`${def(A).e} ${T.n} refilled`, b); save(); render(); return true;
   }
-  if(A.k==='E' && !A.st){
-    if(!canFocus(B)){ SND.play('nope'); toast(`${def(A).e} ${CHAINS.E.name} helps you focus on rare finds. Try a generator that has a rare chain.`); return true; }
+  if(isBoost(A) && !A.st){
+    if(!canFocus(B)){ SND.play('nope'); flo(`${def(A).e} Only works on a generator with rare finds`, b); return true; }
     const n=FOCUS[A.l-1]; S.cells[a].it=null; B.focus=(B.focus||0)+n; fx[b]='pop'; SND.play('drink'); if(sel===a) sel=b;
     const RC=CHAINS[CHAINS[B.k].rare];
-    toast(`${def(A).e} Focused: the next ${B.focus} taps find ${RC.items[0].e} ${RC.name.toLowerCase()} far more often`,2800); save(); render(); return true;
+    flo(`${def(A).e} Focused: ${B.focus} taps with ${FOCUS_MULT}× ${RC.items[0].e}`, b); save(); render(); return true;
   }
   return false;
 }
 function showShop(){
-  const row=it=>{ const p=it.price(), d= it.id==='TK'?{e:'🎟️',n:'10 Raffle Tickets'} : it.id==='ET'?CHAINS.ET.items[0] : it.id==='H1'?CHAINS.H.items[0] : {e:'⚡',n:`+${CONFIG.buyEnergy.amount} energy`};
+  const row=it=>{ const p=it.price(), d=shopLook(it);
     return `<div class="tier"><span class="tp">${d.e}</span><span class="tr" style="font-size:14px;letter-spacing:0">${d.n}<br><small style="color:var(--muted)">${it.what}</small></span><button class="sbtn" data-buy="${it.id}" ${S.coins<p?'disabled style="opacity:.5"':''}>🪙 ${p}</button></div>`; };
-  openModal(`<h2>🛒 ${P2.shopName}</h2><p style="color:var(--muted);font-size:13px">• ${P2.shopBlurb}<br>• Earn coins from orders and the ${CAST.S.name} stall<br>• Tickets and energy go straight in; the rest goes to your gifts 🎁</p>
+  openModal(`<h2>🛒 ${P2.shopName}</h2><p style="color:var(--muted);font-size:13px">• ${P2.shopBlurb}<br>• Earn coins from orders and the ${CAST.S.name} stall<br>• Tickets go straight in; the rest goes to your gifts 🎁</p>
     <p>🪙 ${S.coins} · 🎟️ ${S.chips||0}</p>${SHOP_ITEMS.map(row).join('')}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('modalBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{ const it=SHOP_ITEMS.find(x=>x.id===b.dataset.buy), p=it.price(); if(S.coins<p) return;
-    S.coins-=p; it.give(); SND.play('coin'); stat('shop'); save(); render(); showShop(); toast(it.id==='EN'?`+${CONFIG.buyEnergy.amount} ⚡`:it.id==='TK'?'+10 raffle tickets 🎟️':'Added to your gifts 🎁'); });
+    S.coins-=p; it.give(); SND.play('coin'); stat('shop'); save(); render(); showShop(); flo(it.id==='TK'?'+10 🎟️':'Added to your gifts 🎁'); });
 }
+const shopLook = it => it.id==='TK'?{e:'🎟️',n:'10 Raffle Tickets'} : it.id==='ET'?CHAINS.ET.items[0] : it.id==='H1'?CHAINS.H.items[0] : {e:'🛒',n:it.id};
+/* the mini shop: one item, offered right where you need it (a resting generator, the wheel when you're short).
+   Saves a trip to the menu. `use` runs after paying (e.g. refill this generator now). */
+function miniShop({id, title, sub, use, label}){
+  closeMini();
+  const it=SHOP_ITEMS.find(x=>x.id===id); if(!it) return false;
+  const p=it.price(), d=shopLook(it), ok=S.coins>=p;
+  const m=document.createElement('div'); m.id='mini';
+  m.innerHTML=`<button class="op-x" aria-label="Close">✕</button><div class="mini-h">${title}</div>${sub?`<p class="mini-s">${sub}</p>`:''}
+    <div class="mini-row"><span class="e">${d.e}</span><span class="n">${label||d.n}<small>You have 🪙 ${S.coins}</small></span>
+    <button class="bigbtn${ok?' gold':''}" id="miniBuy" ${ok?'':'disabled style="opacity:.5"'}>🪙 ${p}</button></div>
+    ${ok?'':`<p class="mini-s">Earn coins from orders and the ${CAST.S.name} stall</p>`}`;
+  document.body.appendChild(m);
+  m.querySelector('.op-x').onclick=closeMini;
+  if(ok) m.querySelector('#miniBuy').onclick=()=>{ if(S.coins<it.price()) return; S.coins-=it.price(); stat('shop'); SND.play('coin');
+    if(use) use(); else it.give(); closeMini(); save(); render(); };
+  SND.play('tap'); return true;
+}
+function closeMini(){ const m=$('mini'); if(m) m.remove(); }
+document.addEventListener('pointerdown',e=>{ const m=$('mini'); if(m && !m.contains(e.target)) closeMini(); },true);
 
 /* ---------- the Prize Wheel ----------
    20 segments, each painted with an old Mystery Prize under a dark bulb. A ticket spins it. You never win the old
@@ -115,9 +177,9 @@ function wheelPick(){ return Math.floor(Math.random()*WHEEL_N); }
 /* stop on segment idx: counts the visit and shakes out loose change. Returns {hits, n} */
 function wheelLand(idx){
   const hits=(S.wheel[idx]||0)+1; S.wheel[idx]=hits;
-  dropItems([['C',1]], wheelCell>=0?wheelCell:59); stat('wheel');
+  dropItems(hits===1?WHEEL_LIGHT:WHEEL_REPEAT, wheelCell>=0?wheelCell:59); stat('wheel');
   const n=wheelDone();
-  if(hits===1 && n===WHEEL_N) S.gifts.push(['H',2],['CP',2]);
+  if(hits===1 && n===WHEEL_N) S.gifts.push(['H',2],['C',3]);
   return {hits, n};
 }
 function wheelSVG(){
@@ -143,24 +205,25 @@ function wheelListHtml(withSpeakers){
 function openWheel(i){
   wheelCell=i;
   const done=wheelDone(), last=S.wheelLast, sg=last?WHEEL_SEGS[last.i]:null;
+  const got=l=>l.map(([k,lv])=>`${CHAINS[k].items[lv-1].e} ${CHAINS[k].items[lv-1].n}`).join(' + ')+' → on the board';
   const banner = !last ? '' : last.hits===1
-      ? `<div class="wbanner new"><div class="wb1">💡 Light ${last.n} of ${WHEEL_N} is back on!</div><div class="wb2">Under it: ${sg.e} ${sg.n}, ${sg.yr}<br>🪙 A penny fell out → on the board</div></div>`
+      ? `<div class="wbanner new"><div class="wb1">💡 Light ${last.n} of ${WHEEL_N} is back on!</div><div class="wb2">Under it: ${sg.e} ${sg.n}, ${sg.yr}<br>${got(WHEEL_LIGHT)}</div></div>`
       : last.hits===2
-      ? `<div class="wbanner"><div class="wb1">${sg.e} The ${sg.n} again</div><div class="wb2">✨ A little extra about it<br>🪙 A penny fell out → on the board</div></div>`
-      : `<div class="wbanner"><div class="wb1">Oh, the ${sg.n} again ${sg.e}</div><div class="wb2">Keep spinning!<br>🪙 A penny fell out → on the board</div></div>`;
+      ? `<div class="wbanner"><div class="wb1">${sg.e} The ${sg.n} again</div><div class="wb2">✨ A little extra about it<br>${got(WHEEL_REPEAT)}</div></div>`
+      : `<div class="wbanner"><div class="wb1">Oh, the ${sg.n} again ${sg.e}</div><div class="wb2">Some tickets back for your trouble<br>${got(WHEEL_REPEAT)}</div></div>`;
   openModal(`<h2>🎡 Prize Wheel</h2>
     <div class="wheelwrap"><div class="wheelptr">▼</div><div class="wheelclip"><div class="wheelspin" id="wheelSpin" style="transform:rotate(${S.wheelRot||0}deg)">${wheelSVG()}</div></div></div>
     <p style="text-align:center;margin:4px 0;font-variant-numeric:tabular-nums">💡 <b>${done}/${WHEEL_N}</b> lights on · 🎟️ ${S.chips||0} tickets</p>${banner}
     <div class="row-btns" style="justify-content:center;margin-top:4px"><button class="bigbtn gold" id="wheelGo" ${wheelBusy?'disabled':''}>Spin · ${WHEEL_COST} 🎟️</button><button class="bigbtn" id="wheelClose">Close</button></div>
     <h3>💡 Under the lights</h3>${wheelListHtml(false)||'<p style="color:var(--muted);font-size:13px">All dark so far. Each light shows an old Mystery Prize.</p>'}
-    <details class="howto"><summary>How it works</summary><p>• ${WHEEL_COST} raffle tickets 🎟️ per spin · every segment equally likely<br>• Stop on a dark segment: 💡 its light comes back on and you see the old prize under it<br>• You don’t win the old prizes. Every stop shakes out loose change 🪙<br>• Story orders need lights on</p></details>`);
+    <details class="howto"><summary>How it works</summary><p>• ${WHEEL_COST} raffle tickets 🎟️ per spin · every segment equally likely<br>• Stop on a dark segment: 💡 its light comes back on and you see the old prize under it<br>• You don’t win the old prizes<br>• A new light shakes out ${WHEEL_LIGHT.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')} · a lit one gives back ${WHEEL_REPEAT.map(([k,l])=>CHAINS[k].items[l-1].e+' '+CHAINS[k].items[l-1].n).join(' ')}<br>• Story orders need lights on</p></details>`);
   $('wheelClose').onclick=()=>{ if(!wheelBusy) closeModal(); };
   $('wheelGo').onclick=spinWheel;
   if(!S.wheelIntro){ S.wheelIntro=1; save(); playScene({clear:true, title:'The Prize Wheel', sub:'Twenty dark bulbs', lines:WHEEL_INTRO}); }
 }
 function spinWheel(){
   if(wheelBusy) return;
-  if((S.chips||0)<WHEEL_COST){ SND.play('nope'); showTicketHelp(); return; }
+  if((S.chips||0)<WHEEL_COST){ SND.play('nope'); ticketShop(); return; }
   S.wheelLast=null; const bn=$('modalBody').querySelector('.wbanner'); if(bn) bn.remove();
   S.chips-=WHEEL_COST; wheelBusy=true; save(); renderHud();
   const idx=wheelPick();
@@ -179,6 +242,12 @@ function spinWheel(){
     else if(r.hits===2){ SND.play('coins'); playScene({title:`${sg.e} The ${sg.n} again`, sub:'A little extra', lines:sg.tidbit}, ()=>openWheel(wheelCell)); }
     else SND.play('coin');
   },3300);
+}
+/* short of tickets: buy a spin right here, with where else tickets come from tucked underneath */
+function ticketShop(){
+  if(!miniShop({id:'TK', title:`🎟️ ${S.chips||0} of ${WHEEL_COST} tickets`, sub:'Buy a spin’s worth now', label:`${WHEEL_COST} raffle tickets`,
+    use:()=>{ S.chips=(S.chips||0)+10; flo('+10 🎟️'); if(!$('modal').hidden && $('wheelGo')) openWheel(wheelCell); }})) showTicketHelp();
+  else $('mini').insertAdjacentHTML('beforeend',`<details class="howto"><summary>Other ways to get tickets</summary><p>• Story orders<br>• 📦 Donation boxes<br>• ${CAST.S.name} sales<br>• 📖 Quests<br>• A lit wheel segment gives some back</p></details>`);
 }
 function showTicketHelp(){
   openModal(`<h2>🎟️ Out of tickets</h2><p>Each spin costs ${WHEEL_COST} tickets.</p><h3>Where tickets come from</h3>
@@ -410,9 +479,15 @@ function mkItem(k,l){
   if(k==='N' && typeof S!=='undefined' && S && !(S.moonSeen||{})[l] && !moonPending()) it.st=1;
   return it;
 }
-const WANTS=[['P',1],['P',2],['F',1],['F',2],['T',1],['T',2],['Y',1],['Y',2]];
-function pickWant(){ return WANTS[Math.floor(Math.random()*WANTS.length)]; }
-const FUEL={O:4,P:1};
+const WANTS=(CONFIG.bin&&CONFIG.bin.wants)||[];
+/* can the player make chain k right now? (an item of it is out, or a generator on the board drops it) */
+function obtainable(k){ if(typeof S==='undefined'||!S) return !!genFor(k);
+  return S.cells.some(c=>c.s==='open'&&c.it&&(c.it.k===k || (isGen(c.it)&&(CHAINS[c.it.k].main===k||(def(c.it).drop||[]).some(d=>d[0]===k))))); }
+/* the bin never asks for something you can't make yet (fruit before you've grown a tree) */
+function pickWant(){ const ok=WANTS.filter(w=>obtainable(w[0])), pool=ok.length?ok:WANTS.filter(w=>genFor(w[0]));
+  return pool[Math.floor(Math.random()*pool.length)]; }
+const FUEL=CONFIG.fuel||{};
+const fuelNames=()=>Object.keys(FUEL).map(k=>`${CHAINS[k].items[0].e} ${CHAINS[k].name.toLowerCase()}`).join(' or ');
 function fuelValue(it){ return FUEL[it.k] ? FUEL[it.k]*it.l : 0; }
 /* Time Chargers */
 const isCharger = it => !!(it && CHAINS[it.k].items[it.l-1].hours);
@@ -431,14 +506,14 @@ function chargerTick(){
   S.cells.forEach((c,i)=>{
     if(c.s!=='open'||!isCharger(c.it)||!c.it.on||t<c.it.end) return;
     around(i).forEach(n=>{ const g=S.cells[n].it; if(g&&isGen(g)&&def(g).charges){ refreshCharges(g); const miss=def(g).charges-g.ch; g.ch+=Math.ceil(miss*.75); if(g.ch>=def(g).charges) g.t=now(); fx[n]='pop'; } });
-    toast(`${def(c.it).e} ${def(c.it).n} ran out and topped up the generators around it`);
+    flo(`${def(c.it).e} Ran out and topped up its neighbours`, i);
     c.it=null; fx[i]='reveal'; if(sel===i) sel=-1; changed=true; SND.play('gift');
   });
   return changed;
 }
 function activateCharger(i){
   const it=S.cells[i].it; it.on=true; it.end=now()+chargerMs(it);
-  SND.play('magic'); toast(`${def(it).e} Switched on. Timed generators around it recharge twice as fast.`);
+  SND.play('magic'); flo(`${def(it).e} On: neighbours recharge ×2`, i);
   save(); render();
 }
 /* a story rosette is waiting to be tapped */
@@ -455,34 +530,34 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, sideOn:CONFIG.sideOpen?1:0, genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:0, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, energy:CONFIG.energyMax, eT:now(), coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, sideOn:CONFIG.sideOpen?1:0, salesBase:{}, genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:0, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
-  try{ const raw=localStorage.getItem(CONFIG.saveKey) || (CONFIG.legacySaveKey && localStorage.getItem(CONFIG.legacySaveKey)); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
+  try{ const raw=localStorage.getItem(CONFIG.saveKey) || (CONFIG.legacySaveKey && localStorage.getItem(CONFIG.legacySaveKey)); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(CHAINS.gK && s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
       s.xp=s.xp||0; s.pts=s.pts||0; s.passGot=s.passGot||{}; s.side=s.side||[];
-      if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; if(s.sideOn==null) s.sideOn=(s.ch>0||(s.sideDone||0)>0||(s.side||[]).length)?1:0; if((s.ch>0||(s.done||{})[3]) && !s.cells.some(c=>c.it&&c.it.k==='WH') && !(s.gifts||[]).some(g=>g[0]==='WH')) (s.gifts=s.gifts||[]).push(['WH',1]); delete s.wheelUnread; s.wheelLast=null;
+      if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; if(s.sideOn==null) s.sideOn=(s.ch>0||(s.sideDone||0)>0||(s.side||[]).length)?1:0; if(WHEEL_KEY && (s.ch>0||(s.done||{})[3]) && !s.cells.some(c=>c.it&&c.it.k===WHEEL_KEY) && !(s.gifts||[]).some(g=>g[0]===WHEEL_KEY)) (s.gifts=s.gifts||[]).push([WHEEL_KEY,1]); delete s.wheelUnread; s.wheelLast=null;
       if(!s.unrev) s.unrev={...s.disc}; // saves from before the collection: everything found so far waits to be revealed
       if(!s.stats){ const story=Object.keys(s.done||{}).length; s.stats={side:s.sideDone||0, story, disc:Object.keys(s.disc||{}).length}; }
-      s.qt=s.qt||{};
+      s.qt=s.qt||{}; s.salesBase=s.salesBase||{}; delete s.energy; delete s.eT; delete s.buys;
       if(!s.seenOrd){ s.seenOrd={}; TASKS.filter(t=>t.ch===s.ch&&!(s.done||{})[t.id]).slice(0,3).forEach(t=>s.seenOrd[t.id]=1); }
       return s; } } }catch(e){}
   return freshState();
 }
 function save(){ try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} }
 
-/* ============================================================ energy & charges */
-function tickEnergy(){
-  const M=CONFIG.energyMax, R=CONFIG.energyRegenMs;
-  if(S.energy>=M){ S.eT=now(); return; }
-  const g=Math.floor((now()-S.eT)/R);
-  if(g>0){ S.energy=Math.min(M,S.energy+g); S.eT+=g*R; if(S.energy>=M) S.eT=now(); }
-}
-function spendEnergy(n){ if(S.energy>=CONFIG.energyMax) S.eT=now(); S.energy-=n; }
+/* ============================================================ generator charges (no energy: taps are free, generators rest) */
 function refreshCharges(it){
   const d=def(it); if(!d.charges) return;
   if(it.ch>=d.charges){ it.t=now(); return; }
   const g=Math.floor((now()-it.t)/d.rechargeMs);
   if(g>0){ it.ch=Math.min(d.charges,it.ch+g); it.t+=g*d.rechargeMs; if(it.ch>=d.charges) it.t=now(); }
+}
+/* a resting generator: refill it now from the shop, or with an egg timer you already have */
+function restingShop(i){
+  const it=S.cells[i].it, d=def(it), have=S.cells.findIndex(c=>c.s==='open'&&c.it&&c.it.k==='ET');
+  if(have>=0){ fx[have]='hint'; render(); flo(`${d.e} Resting. Drag your ${CHAINS.ET.items[0].e} onto it`, i); return; }
+  miniShop({id:'ET', title:`${d.e} ${d.n} is resting`, sub:`Next one in ${fmt(nextChargeIn(it))} · or refill it now`, label:`Refill it now (${d.charges} taps)`,
+    use:()=>{ const g=S.cells[i].it; if(!g) return; g.ch=d.charges; g.t=now(); fx[i]='pop'; SND.play('unweb'); flo(`${CHAINS.ET.items[0].e} ${d.n} refilled`, i); }});
 }
 function nextChargeIn(it){ const d=def(it); return Math.max(0, Math.ceil((d.rechargeMs-(now()-it.t))/1000)); }
 
@@ -551,14 +626,13 @@ function produce(i){
   else {
     if(d.charges){
       refreshCharges(it);
-      if(it.ch<=0){ SND.play('nope'); if(d.free) toast(`${d.e} The ${d.n.toLowerCase()} is boiling. Ready in ${nextChargeIn(it)}s.`); else toast(`${d.e} The ${d.n} needs a rest. Next one in ${fmt(nextChargeIn(it))}.<br><small>Drag ${CHAINS.ET.items[0].e} ${CHAINS.ET.items[0].n} onto it to refill it now</small>`,3000); return; }
+      if(it.ch<=0){ SND.play('nope'); if(d.free) flo(`${d.e} Boiling… ready in ${nextChargeIn(it)}s`, i); else restingShop(i); return; }
     }
-    if(!d.free && S.energy<CONFIG.energyCost){ SND.play('nope'); toast(`Out of energy. Drink some tea, or buy a top-up at ${P2.shopName} (tap 🪙).`); return; }
   }
   const t=nearestEmpty(i);
-  if(t<0){ SND.play('nope'); toast('No room left. Merge or sell something first.'); fx[i]='pulse'; render(); return; }
+  if(t<0){ SND.play('nope'); flo('No room. Merge or sell something first', i); fx[i]='pulse'; render(); return; }
   if(d.fuelled) it.fuel--;
-  else { if(d.charges){ if(it.ch>=d.charges) it.t=now(); it.ch--; } if(!d.free) spendEnergy(CONFIG.energyCost); }
+  else if(d.charges){ if(it.ch>=d.charges) it.t=now(); it.ch--; }
   let [k,l]=pickDrop(it.focus>0 ? d.drop.map(x=>CHAINS[x[0]].rare===true?[x[0],x[1],x[2]*FOCUS_MULT]:x) : d.drop);
   if(it.focus>0) it.focus--;
   if(k==='N' && moonPending()){ const alt=d.drop.filter(x=>x[0]!=='N'); [k,l]=pickDrop(alt); } // one story rosette at a time
@@ -571,7 +645,7 @@ function produce(i){
     if(it.left<=0){
       S.cells[i].it = d.after ? mkItem(d.after[0],d.after[1]) : null; fx[i]='reveal'; SND.play('reveal');
       if(sel===i && !S.cells[i].it) sel=-1;
-      toast(d.after ? `${d.e} ${d.n} is spent. It leaves a ${CHAINS[d.after[0]].items[d.after[1]-1].e} behind.` : `${d.e} ${d.n} is empty and folds flat.`);
+      flo(d.after ? `${d.e} Spent. It leaves a ${CHAINS[d.after[0]].items[d.after[1]-1].e}` : `${d.e} Empty. It folds flat`, i);
     }
   }
   save(); render();
@@ -581,18 +655,18 @@ function feed(a,b){
   const A=S.cells[a].it, B=S.cells[b].it, T=def(B);
   if(T.want){
     const [wk,wl]=B.want, w=CHAINS[wk].items[wl-1];
-    if(A.k!==wk||A.l!==wl){ SND.play('nope'); toast(`${T.e} It wants ${w.e} ${w.n}, not that.`); return true; }
+    if(A.k!==wk||A.l!==wl){ SND.play('nope'); flo(`${T.e} Wants ${w.e} ${w.n}, not that`, b); return true; }
     S.cells[a].it=null;
     const t=nearestEmpty(b), l=Math.random()<.8?1:2;
-    if(t>=0){ S.cells[t].it=mkItem('G',l); fx[t]='spawn'; discover(S.cells[t].it); } else S.gifts.push(['G',l]);
+    const G=CONFIG.bin.gives; if(t>=0){ S.cells[t].it=mkItem(G,l); fx[t]='spawn'; discover(S.cells[t].it); } else S.gifts.push([G,l]);
     B.want=pickWant(); fx[b]='pop'; SND.play('merge',2); stat('compost');
-    toast(`${T.e} Composted. Out pops a ${CHAINS.G.items[l-1].e}`); save(); render(); return true;
+    flo(`${T.e} Out pops a ${CHAINS[CONFIG.bin.gives].items[l-1].e}`, b); save(); render(); return true;
   }
   if(T.fuelled){
     const fv=fuelValue(A);
-    if(!fv){ SND.play('nope'); toast(`${T.e} That won’t burn. Try a 🪵 log or some ${CHAINS.P.name.toLowerCase()}.`); return true; }
+    if(!fv){ SND.play('nope'); flo(`${T.e} That won’t burn. Try ${fuelNames()}`, b); return true; }
     S.cells[a].it=null; B.fuel=(B.fuel||0)+fv; fx[b]='pop'; SND.play('reveal');
-    toast(`${T.e} +${fv} fuel (${B.fuel} total)`); save(); render(); return true;
+    flo(`${T.e} +${fv} fuel`, b); save(); render(); return true;
   }
   return false;
 }
@@ -600,23 +674,21 @@ function feed(a,b){
 function claim(i){
   const it=S.cells[i].it, d=def(it), kind=CHAINS[it.k].claim; delete it.st; stat('claim');
   S.cells[i].it=null; sel=-1; fx[i]='pulse';
-  if(kind==='energy'){ S.energy+=d.v; SND.play('drink'); toast(`${d.e} +${d.v} ⚡`); }
-  else if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); toast(`${d.e} +🪙${d.v}`); }
+  if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); flo(`+🪙${d.v}`, i); }
   else if(kind==='points'){
-    S.pts+=d.v; SND.play('magic'); toast(`${d.e} +${d.v} ${T.passName} points${passReady()?' · a reward is ready '+CHAINS.N.items[0].e:''}`);
+    S.pts+=d.v; SND.play('magic'); flo(`${d.e} +${d.v}`, i); if(passReady()) flo(`${T.passName}: a reward is ready`);
     S.moonSeen=S.moonSeen||{};
     if(!S.moonSeen[it.l]){ S.moonSeen[it.l]=1; save(); setTimeout(()=>playScene({title:T.notesTitle, sub:d.n, lines:MOON_NOTES[it.l-1]}),250); }
   }
-  else if(kind==='chips'){ S.chips=(S.chips||0)+d.v; SND.play('coin'); toast(`${d.e} +${d.v} raffle ticket${d.v>1?'s':''}`); }
-  else if(kind==='skip'){ timeSkip(d.v); SND.play('unweb'); toast(`${d.e} Skipped ${d.v} minutes`); }
-  else { SND.play('unweb'); toast(`${d.e} +${d.v} applause`); addXP(d.v); }
+  else if(kind==='chips'){ S.chips=(S.chips||0)+d.v; SND.play('coin'); flo(`+${d.v} 🎟️`, i); }
+  else if(kind==='skip'){ timeSkip(d.v); SND.play('unweb'); flo(`${d.e} ${d.v} min skipped`, i); }
+  else { SND.play('unweb'); flo(`+${d.v} ⭐`, i); addXP(d.v); }
   save(); render();
 }
-/* time skip: fast-forwards energy refill and every generator cooldown */
+/* time skip: fast-forwards every generator's recharge */
 function timeSkip(min){
-  const ms=min*60000; tickEnergy(); if(S.energy<CONFIG.energyMax) S.eT-=ms;
+  const ms=min*60000;
   S.cells.forEach(c=>{ if(c.it&&isGen(c.it)&&def(c.it).charges){ c.it.t-=ms; refreshCharges(c.it); } });
-  tickEnergy();
 }
 function addXP(v){
   const before=stageOf(S.xp); S.xp+=v; const after=stageOf(S.xp);
@@ -625,7 +697,6 @@ function addXP(v){
     setTimeout(()=>{ SND.play('gift'); toast(`⭐ Stage level ${l}! A gift is waiting 🎁`,3000); },300);
   }
 }
-function energyPrice(){ const b=CONFIG.buyEnergy; return b.cost+(S.buys||0)*b.step; }
 function isRes(it){ return CHAINS[it.k].type==='res'; }
 /* put items on the board near the bottom; anything that doesn't fit goes to gifts */
 function dropItems(list, near=59){
@@ -646,7 +717,7 @@ function give(k,l){
 }
 function unwrap(i){
   const it=S.cells[i].it; delete it.wrap; fx[i]='reveal'; SND.play('gift'); sel=i;
-  if(it.k==='WH') S.chips=Math.max(S.chips||0,2*WHEEL_COST); // Dot hands over twenty: two spins to start
+  if(CHAINS[it.k].wheel) S.chips=Math.max(S.chips||0,2*WHEEL_COST); // the wheel comes with two spins' worth
   discover(it); save(); render();
 }
 function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&!a.on&&!b.on&&!a.wrap&&!b.wrap&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
@@ -654,11 +725,11 @@ function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&!a.on&&!b.on&&!a.wrap&&!b.wra
 function drop(a,b){
   if(b<0||a===b){ return; }
   const A=S.cells[a], B=S.cells[b];
-  if(B.s==='sheet'){ SND.play('nope'); toast(T.sheetBlocked); return; }
-  if(B.s==='box'){ SND.play('nope'); toast('Merge something next to that box to open it.'); return; }
+  if(B.s==='sheet'){ SND.play('nope'); flo(T.sheetBlocked, b); return; }
+  if(B.s==='box'){ SND.play('nope'); flo('Merge next to a box to open it', b); return; }
   if(B.s==='web'){
     if(canMerge(A.it,B.it)){ doMerge(a,b); }
-    else { SND.play('nope'); toast(`Stuck in cobwebs. Drop another ${def(B.it).e} ${def(B.it).n} on it to free it.`); }
+    else { SND.play('nope'); flo(`Stuck. Drop another ${def(B.it).e} on it`, b); }
     return;
   }
   // open
@@ -672,7 +743,7 @@ function drop(a,b){
 function doMerge(a,b){
   const A=S.cells[a], B=S.cells[b];
   const it=mkItem(A.it.k, A.it.l+1);
-  if(def(A.it).uses && def(it).uses && A.it.k==='Q'){ // two donation boxes: unopened pair makes a full big box
+  if(def(A.it).uses && def(A.it).free && def(it).uses){ // two donation boxes: an unopened pair makes a full big box
     const fa=A.it.left===def(A.it).uses, fb=B.it.left===def(B.it).uses;
     it.left = fa&&fb ? def(it).uses : A.it.left+B.it.left+2;
   }
@@ -686,12 +757,12 @@ function doMerge(a,b){
   save(); render();
 }
 
-function sellValue(it){ if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; return isGen(it)||isRes(it)||it.k==='ET'?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
+function sellValue(it){ if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; return isGen(it)||isRes(it)||isBoost(it)||it.k==='ET'?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
   S.coins+=v; S.cells[i].it=null; sel=-1; stat('sell');
   SND.play('coin');
-  toast(`Sold ${def(it).e} for 🪙${v}`);
+  flo(`Sold ${def(it).e} +🪙${v}`, i);
   save(); render();
 }
 
@@ -711,11 +782,13 @@ function activeTasks(){
   return TASKS.filter(t=>t.ch===S.ch && !S.done[t.id]).slice(0,3);
 }
 function openCount(k,l){ return S.cells.reduce((n,c)=>n+(c.s==='open'&&c.it&&c.it.k===k&&c.it.l===l?1:0),0); }
+/* sales:n orders count stall sales made since the order first appeared */
+function salesFor(t){ if(!t.sales) return 0; const b=S.salesBase||(S.salesBase={}); if(b[t.id]==null) b[t.id]=S.sideDone||0; return (S.sideDone||0)-b[t.id]; }
 function taskStatus(t){
   const need={}; t.need.forEach(([k,l])=>need[key(k,l)]=(need[key(k,l)]||0)+1);
   const have=t.need.map(([k,l])=>openCount(k,l)>=need[key(k,l)]);
-  const wok=!t.wheel || wheelDone()>=t.wheel;
-  return {have, wok, ready:have.every(Boolean)&&wok};
+  const wok=!t.wheel || wheelDone()>=t.wheel, sok=!t.sales || salesFor(t)>=t.sales;
+  return {have, wok, sok, ready:have.every(Boolean)&&wok&&sok};
 }
 function completeTask(t){
   // remove items, preferring ones not currently selected
@@ -728,12 +801,12 @@ function completeTask(t){
   SND.play('coins');
   if(t.side){
     S.side=S.side.filter(o=>o.id!==t.id); S.sideDone=(S.sideDone||0)+1; stat('side'); dropItems(t.rw); ensureSide();
-    toast(T.sideSold);
+    flo(T.sideSold);
     save(); render(); return;
   }
   S.done[t.id]=1; stat('story');
   if(t.side0) S.sideOn=1;
-  (t.gifts||[]).forEach(g=>{ if(g[0]==='WH' && (S.cells.some(c=>c.it&&c.it.k==='WH')||S.gifts.some(x=>x[0]==='WH'))) return; give(g[0],g[1]); });
+  (t.gifts||[]).forEach(g=>{ if(CHAINS[g[0]].wheel && (S.cells.some(c=>c.it&&c.it.k===g[0])||S.gifts.some(x=>x[0]===g[0]))) return; give(g[0],g[1]); });
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
   if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat, t.more);
@@ -768,12 +841,12 @@ function placeGift(){
   const t=nearestEmpty(59);
   if(t<0){ toast('No room for your gift. Clear a space first.'); return; }
   let gi=0;
-  if(moonPending()){ gi=S.gifts.findIndex(g=>g[0]!=='N'); if(gi<0){ SND.play('nope'); toast(`Tap the glowing ${T.tokenNoun} on the board first ${T.tokenIcon}`); return; } }
+  if(moonPending()){ gi=S.gifts.findIndex(g=>g[0]!=='N'); if(gi<0){ SND.play('nope'); flo(`Tap the glowing ${T.tokenNoun} first ${T.tokenIcon}`); return; } }
   const [k,l]=S.gifts.splice(gi,1)[0];
   S.cells[t].it=mkItem(k,l); fx[t]='spawn'; sel=t;
   SND.play('gift');
   discover(S.cells[t].it);
-  toast(`${def(S.cells[t].it).e} ${def(S.cells[t].it).n} placed on the board`);
+  flo(`${def(S.cells[t].it).e} on the board`, t);
   save(); render();
 }
 function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&(ch.main===k||ch.rare===k)); }
@@ -811,9 +884,11 @@ function showOrder(t){
   const ks=new Set(t.need.map(n=>n[0]));
   S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
   if(t.wheel && wd<t.wheel) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
+  if(t.sales && !st.sok) document.querySelectorAll('.order.side').forEach(o=>o.classList.add('hint'));
   const rows=t.need.map(([k,l],j)=>{ const d=CHAINS[k].items[l-1], g=genFor(k);
       return `<div class="op-need${st.have[j]?' have':''}"><span class="e">${d.e}</span><span class="n">${d.n}${g?`<small>${CHAINS[k].rare?'Rare find from':'From'} ${genLabel(g)}</small>`:''}</span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
-    + (t.wheel?`<div class="op-need${st.wok?' have':''}"><span class="e">💡</span><span class="n">${t.wheel} wheel lights on<small>${wd} lit so far</small></span><b>${st.wok?'✓':''}</b></div>`:'');
+    + (t.wheel?`<div class="op-need${st.wok?' have':''}"><span class="e">💡</span><span class="n">${t.wheel} wheel lights on<small>${wd} lit so far</small></span><b>${st.wok?'✓':''}</b></div>`:'')
+    + (t.sales?`<div class="op-need${st.sok?' have':''}"><span class="e">${CAST.S.av}</span><span class="n">${t.sales} ${CAST.S.name} sales<small>${Math.min(salesFor(t),t.sales)} done since this order came in</small></span><b>${st.sok?'✓':''}</b></div>`:'');
   const rw=(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ');
   const p=document.createElement('div'); p.id='orderPop';
   p.innerHTML=`<button class="op-x" aria-label="Close">✕</button><div class="op-who"><span class="av">${CAST[t.who].av}</span><b>${t.lucky?'🍀 Lucky find':CAST[t.who].name}</b></div>
@@ -838,7 +913,6 @@ function buildBoard(){
   }
 }
 function render(){
-  tickEnergy();
   const tasks=activeTasks();
   ensureSide();
   const needed=new Set(), sideNeeded=new Set(); tasks.forEach(t=>t.need.forEach(([k,l])=>needed.add(key(k,l)))); S.side.forEach(t=>t.need.forEach(([k,l])=>sideNeeded.add(key(k,l))));
@@ -861,9 +935,9 @@ function render(){
         if(isGen(c.it)){
           cls+=' isgen';
           if(CHAINS[c.it.k].wheel){ html+=`<i class="gen">${wheelDone()}/20</i>`; if(S.chips>0) html+=`<i class="slotchips">🎟️${S.chips}</i>`; }
-          else if(d.want){ const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="bubble">${w.e}<b class="arr">↓</b></i>`; cls+=' hungry'; }
+          else if(d.want){ if(!obtainable(c.it.want[0])){ c.it.want=pickWant(); save(); } const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="bubble">${w.e}<b class="arr">↓</b></i>`; cls+=' hungry'; }
           else if(d.fuelled){ if(c.it.fuel) html+=`<i class="gen">🔥${c.it.fuel}</i>`; else { html+=`<i class="bubble">🪵<b class="arr">↓</b></i>`; cls+=' cool hungry'; } }
-          else if(d.uses) html+=`<i class="gen">${d.free?'':'⚡'}${c.it.left}</i>`;
+          else if(d.uses) html+=`<i class="gen">${c.it.left}</i>`;
           else if(d.charges){
             refreshCharges(c.it);
             html+=`<i class="gen">${c.it.ch}/${d.charges}</i>`;
@@ -874,10 +948,9 @@ function render(){
               if(c.it.ch===0) cls+=' cool';
             }
           }
-          else html+=`<i class="gen">⚡</i>`;
           if(d.charges && chargedCell(i)){ cls+=' charged'; html+=`<i class="x2">×2</i>`; }
         } else {
-          if(isRes(c.it)) cls+=' res';
+          if(isRes(c.it)) cls+=' res'; else if(isBoost(c.it)) cls+=' boost';
           if(isCharger(c.it)){
             if(c.it.on){ const C=2*Math.PI*44, p=Math.max(0,(c.it.end-now())/chargerMs(c.it)); cls+=' charging';
               html+=`<svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="44"/><circle class="arc tc" cx="50" cy="50" r="44" stroke-dasharray="${(p*C).toFixed(1)} ${C.toFixed(1)}"/></svg><i class="gen">⏳${fmt(Math.ceil((c.it.end-now())/1000))}</i>`; }
@@ -904,8 +977,6 @@ function render(){
   if(S.genQ&&S.genQ.length&&!genBusy){ genBusy=true; setTimeout(playGenStory,450); }
 }
 function renderHud(){
-  $('energy').textContent=S.energy;
-  $('eTimer').textContent = S.energy<CONFIG.energyMax ? fmt(Math.ceil((CONFIG.energyRegenMs-(now()-S.eT))/1000)) : '';
   $('coins').textContent=S.coins; $('chips').textContent=S.chips||0;
   $('passIc').textContent=CHAINS.N.items[0].e; $('pts').textContent=S.pts||0; $('passDot').hidden=!passReady();
   { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
@@ -924,7 +995,7 @@ function renderOrders(tasks){
   const box=$('orders');
   box.innerHTML='';
   if(S.complete){
-    const has=S.disc['M8'];
+    const has=STORY_KEY && S.disc[key(STORY_KEY,maxL(STORY_KEY))];
     box.innerHTML=`<div class="empty done"><div><b>${T.doneTitle}</b>${has?T.doneHas:T.doneNot}${REFLECTIONS.length?'<button class="sbtn refl" id="reflBtn">✨ Reflections</button>':''}</div></div>`;
     const rb=box.querySelector('#reflBtn'); if(rb) rb.onclick=e=>{ e.stopPropagation(); showReflections(); };
   }
@@ -951,7 +1022,7 @@ function renderOrders(tasks){
     el.dataset.id=t.id;
     if(!t.side && (!(S.seenOrd||{})[t.id] || flying===String(t.id))) el.classList.add('incoming');
     el.innerHTML=`${!t.side&&!(S.readOrd||{})[t.id]?'<i class="opip" title="New story"></i>':''}<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
-      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">💡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}</div>
+      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">💡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}${t.sales?`<span class="need wh${st.sok?' have':''}">${CAST.S.av}<small>${Math.min(salesFor(t),t.sales)}/${t.sales}</small>${st.sok?'<i>✓</i>':''}</span>`:''}</div>
       <div class="act${st.ready&&!t.side?' rd':''}">${st.ready?(t.side?'Hand over':'✓ Ready'):(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     // tap the card for details; only the green "Hand over" strip delivers
     // story orders only hand over from their details popup; side orders can still go from the strip
@@ -975,16 +1046,16 @@ function renderInfo(){
   let ds='';
   if(ch.wheel){
     box.innerHTML=`<div class="big">🎡</div><div class="txt"><div class="nm">Prize Wheel<small>💡 ${wheelDone()}/20 lit</small></div><div class="ds">Tap to open. ${WHEEL_COST} 🎟️ per spin. New segments move the story on.</div></div><div class="btns"><button class="sbtn" id="wOpen">Spin</button><button class="sbtn" id="tkBtn">Get 🎟️</button></div>`;
-    $('wOpen').onclick=()=>openWheel(sel); $('tkBtn').onclick=showTicketHelp; return;
+    $('wOpen').onclick=()=>openWheel(sel); $('tkBtn').onclick=ticketShop; return;
   }
   if(isGen(it)){
     if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1]; ds=`Wants ${w.e} ${w.n}. Drag one onto it to get a seedling 🌱. It asks for something new each time.`; }
-    else if(d.fuelled) ds = it.fuel>0 ? `Tap again to cook. Uses fuel, not energy. ${it.fuel} fuel left.` : `Cold. Drag a 🪵 log (4 fuel) or bunting (1 per level) onto it.`;
-    else if(d.uses) ds=`Tap again${d.free?' (free)':` (⚡${CONFIG.energyCost})`}. ${it.left} left, then it ${d.after?'withers into a 🪵 log':'folds flat for good'}.${it.k==='Q'&&it.l===1?' Merge two unopened boxes for a 14-use Big Donation Box.':''}`;
-    else if(d.free){ refreshCharges(it); ds = it.ch>0 ? `Tap again to brew tea. Free. ${it.ch} left.` : `Boiling… ready in ${nextChargeIn(it)}s.`; }
-    else { ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}. Costs ⚡${CONFIG.energyCost}.`; if(d.charges) ds+= it.ch>0?` ${it.ch} left before a rest.`:` Resting: next in ${fmt(nextChargeIn(it))}.`;
+    else if(d.fuelled) ds = it.fuel>0 ? `Tap again to cook. ${it.fuel} fuel left.` : `Cold. Drag ${fuelNames()} onto it.`;
+    else if(d.uses) ds=`Tap again. ${it.left} left, then it ${d.after?`leaves a ${CHAINS[d.after[0]].items[d.after[1]-1].e}`:'folds flat for good'}.${d.free&&it.l<maxL(it.k)?` Merge two unopened ones for a ${ch.items[it.l].n}.`:''}`;
+    else if(d.free){ refreshCharges(it); ds = it.ch>0 ? `Tap again to brew. ${it.ch} left.` : `Boiling… ready in ${nextChargeIn(it)}s.`; }
+    else { ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}.`; if(d.charges) ds+= it.ch>0?` ${it.ch} left before a rest.`:` Resting: next in ${fmt(nextChargeIn(it))}.`;
       if(canFocus(it)) ds+= it.focus?` Focused for ${it.focus} more taps.`:` Drag ${CHAINS.E.items[0].e} onto it for better rare odds.`; }
-    if(it.l<maxL(it.k) && !d.want && !d.fuelled && it.k!=='Q') ds+=` Merge two to get a ${ch.items[it.l].n}.`;
+    if(it.l<maxL(it.k) && !d.want && !d.fuelled && !d.free) ds+=` Merge two to get a ${ch.items[it.l].n}.`;
     if(d.charges && chargedCell(sel)) ds+=' ⏱️ A Time Charger is doubling its recharge speed.';
   } else if(isCharger(it)){
     const here=Math.round(d.hours*60*CONFIG.chargerScale);
@@ -992,9 +1063,11 @@ function renderInfo(){
                : `Tap again to switch on. Runs ${here} min, doubling the recharge speed of timed generators around it. Can’t be merged once on.`+(it.l<maxL(it.k)?` Merge two for a ${ch.items[it.l].n}.`:'');
   } else if(it.st){
     ds=T.notesItem;
+  } else if(isBoost(it)){
+    ds=`Drag onto a generator: its next ${FOCUS[it.l-1]} taps find rare items ${FOCUS_MULT}× more often.`+(it.l<maxL(it.k)?` Merge two for ${FOCUS[it.l]} taps.`:' Top of the chain.');
   } else if(ch.type==='res'){
-    const unit = ch.claim==='energy'?'⚡' : ch.claim==='coins'?'🪙' : ch.claim==='skip'?'min time skip' : ch.claim==='points'?T.passName+' points' : ch.claim==='chips'?'🎟️ (raffle tickets)' : '⭐ applause';
-    if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min: refills energy and generator timers.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
+    const unit = ch.claim==='coins'?'🪙' : ch.claim==='skip'?'min time skip' : ch.claim==='points'?T.passName+' points' : ch.claim==='chips'?'🎟️ (raffle tickets)' : '⭐ applause';
+    if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min on every generator’s recharge.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
     else ds=`Tap again to collect +${d.v} ${unit}.`+(it.l<maxL(it.k)?` Merge two for +${ch.items[it.l].v}.`:' Top of the chain.');
   } else if(it.k==='ET'){
     ds=`Drag onto a generator to refill it straight away.`;
@@ -1024,7 +1097,7 @@ board.addEventListener('pointermove',e=>{
   if(!press.drag){
     if(Math.hypot(e.clientX-press.x,e.clientY-press.y)<8) return;
     if(c.s!=='open'||!c.it){ press=null; return; }
-    if(c.it.st){ press=null; toast(`Tap the glowing ${T.tokenNoun} to read it ${T.tokenIcon}`); return; }
+    if(c.it.st){ const pi=press.i; press=null; flo(`Tap to read it ${T.tokenIcon}`, pi); return; }
     press.drag=true; sellArm=false;
     ghost.textContent=def(c.it).e;
     board.children[press.i].classList.add('lift');
@@ -1054,9 +1127,9 @@ function cellAt(x,y){
 function tap(i){
   const c=S.cells[i];
   SND.play('tap');
-  if(c.s==='sheet'){ const n=CHAPTERS.findIndex(ch=>ch.zone===c.z)+1; toast(`${T.sheetTap} Opens in Chapter ${n}.`); return; }
-  if(c.s==='box'){ toast('Merge something next to this box to open it.'); return; }
-  if(c.s==='web'){ const d=def(c.it); toast(`${d.e} ${d.n} is stuck in cobwebs. Drop a matching one on it.`); sel=-1; render(); return; }
+  if(c.s==='sheet'){ const n=CHAPTERS.findIndex(ch=>ch.zone===c.z)+1; flo(`${T.sheetTap} Opens in Chapter ${n}`, i); return; }
+  if(c.s==='box'){ flo('Merge next to a box to open it', i); return; }
+  if(c.s==='web'){ const d=def(c.it); flo(`Stuck. Drop another ${d.e} on it`, i); sel=-1; render(); return; }
   if(!c.it){ sel=-1; sellArm=false; render(); return; }
   if(c.it.wrap){ unwrap(i); return; }
   if(c.it.st){ sel=i; claim(i); return; } // story rosette: one tap reads it
@@ -1064,6 +1137,7 @@ function tap(i){
   if(sel===i){
     if(isCharger(c.it) && !c.it.on){ activateCharger(i); return; }
     if(isGen(c.it)){ produce(i); return; }
+    if(isBoost(c.it)){ SND.play('nope'); flo(`${def(c.it).e} Drag me onto a generator for rarer finds`, i); return; }
     if(isRes(c.it)){ const ch=CHAINS[c.it.k]; if(ch.claimMax && c.it.l<maxL(c.it.k)){ SND.play('nope'); toast(`Merge up to a ${ch.items[maxL(c.it.k)-1].e} ${ch.items[maxL(c.it.k)-1].n} to claim ${T.passName} points`); return; } claim(i); return; }
     return;
   }
@@ -1107,6 +1181,19 @@ function closeToast(){
   cur.el.classList.add('out'); setTimeout(()=>{ cur.el.remove(); nextToast(); },150);
 }
 $('toast').addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); closeToast(); });
+/* flo: a small message that floats up from a tile (or the middle of the board) and fades. No tap needed, never queues.
+   Keep toast() for things you need to read or decide on. */
+let floN=0;
+function flo(html, cell){
+  if(storyOpen()){ return; }
+  const host=document.body, el=document.createElement('div'); el.className='flo'; el.innerHTML=html;
+  let x, y; const br=board.getBoundingClientRect();
+  if(cell!=null && cell>=0 && board.children[cell]){ const r=board.children[cell].getBoundingClientRect(); x=r.left+r.width/2; y=r.top+4; }
+  else { x=br.left+br.width/2; y=br.top+br.height*.42; }
+  y-= (floN%3)*20; floN++; setTimeout(()=>floN=Math.max(0,floN-1),900);
+  el.style.left=Math.max(70,Math.min(innerWidth-70,x))+'px'; el.style.top=y+'px';
+  host.appendChild(el); setTimeout(()=>el.remove(),1900);
+}
 function toast(html,ms=2200){
   if(storyOpen()){ heldToasts.push([html,ms]); return; }
   if(toastQ.some(t=>t[0]===html) || (toastCur&&toastCur.h===html)) return;
@@ -1230,13 +1317,13 @@ function claimQuest(id){
 }
 
 /* ============================================================ collection: new finds wait here, wrapped, until tapped */
-const rwTxt=r=>[r.c?`🪙${r.c}`:'', r.e?`⚡${r.e}`:'', r.x?`⭐${r.x}`:''].filter(Boolean).join(' ');
+const rwTxt=r=>[r.c?`🪙${r.c}`:'', r.x?`⭐${r.x}`:''].filter(Boolean).join(' ');
 function revealDisc(kk,el,quiet){
   if(!(S.unrev||{})[kk]) return null;
   const m=kk.match(/^([a-zA-Z]+?)(\d+)$/); if(!m||!CHAINS[m[1]]) { delete S.unrev[kk]; return null; }
   const k=m[1], l=+m[2], d=CHAINS[k].items[l-1], r=discRw(k,l);
   delete S.unrev[kk];
-  S.coins+=r.c; S.energy+=r.e; if(r.x) addXP(r.x);
+  S.coins+=r.c; if(r.x) addXP(r.x);
   if(el){ el.className='ci flip'; el.removeAttribute('data-rv'); el.removeAttribute('role'); el.innerHTML=`<span>${d.e}</span>${d.n}<b class="rw">+${rwTxt(r)}</b>`; }
   if(!quiet){ SND.play(l>=5?'gift':'coin'); save(); render(); bookCounts(); }
   return r;
@@ -1244,11 +1331,11 @@ function revealDisc(kk,el,quiet){
 function revealAll(){
   const els=[...$('modalBody').querySelectorAll('[data-rv]')]; if(!els.length) return;
   $('revAll').disabled=true;
-  const tot={c:0,e:0,x:0};
+  const tot={c:0,x:0};
   els.forEach((el,i)=>setTimeout(()=>{
-    const r=revealDisc(el.dataset.rv,el,true); if(r){ tot.c+=r.c; tot.e+=r.e; tot.x+=r.x; }
+    const r=revealDisc(el.dataset.rv,el,true); if(r){ tot.c+=r.c; tot.x+=r.x; }
     if(i%2===0) SND.play('coin');
-    if(i===els.length-1){ Object.keys(S.unrev||{}).forEach(kk=>{ const r2=revealDisc(kk,null,true); if(r2){ tot.c+=r2.c; tot.e+=r2.e; tot.x+=r2.x; } });
+    if(i===els.length-1){ Object.keys(S.unrev||{}).forEach(kk=>{ const r2=revealDisc(kk,null,true); if(r2){ tot.c+=r2.c; tot.x+=r2.x; } });
       SND.play('gift'); save(); render(); bookCounts(); const b=$('revAll'); if(b) b.parentNode.remove(); }
   }, i*110));
 }
@@ -1256,7 +1343,7 @@ function collectionHtml(){
   const un=Object.keys(S.unrev||{}).length;
   let h=`<p style="color:var(--muted);font-size:13px;margin-top:0">• New finds wait here, wrapped 🎁<br>• Tap one to reveal it and collect a reward<br>• Higher levels pay more</p>`;
   if(un>1) h+=`<div class="row-btns" style="margin-top:0"><button class="bigbtn gold" id="revAll">Reveal all ${un}</button></div>`;
-  const groups=[['Items',ch=>!ch.gen&&ch.type!=='res'&&ch.rare!==true],['Rare finds',ch=>!ch.gen&&ch.rare===true],['Resources',ch=>ch.type==='res'],['Generators',ch=>ch.gen]];
+  const groups=[['Items',ch=>!ch.gen&&!ch.type&&ch.rare!==true],['Rare finds',ch=>!ch.gen&&ch.rare===true],['Resources',ch=>ch.type==='res'||ch.type==='boost'],['Generators',ch=>ch.gen]];
   let hidden=0;
   groups.forEach(([name,fn])=>{
     const ks=Object.keys(CHAINS).filter(k=>fn(CHAINS[k]));
@@ -1330,9 +1417,7 @@ function runArrivals(){
 
 let resetArm=false;
 function showMenu(){
-  const b=CONFIG.buyEnergy;
   openModal(`<h2>${EVENT.title}</h2><p style="color:var(--muted)">${EVENT.tagline} · no timer · story ${EVENT.version}<br>Merge Stories ${VERSION}</p>
-    <h3>Energy</h3><p>⚡ ${S.energy} · refills 1 every ${CONFIG.energyRegenMs/60000} min up to ${CONFIG.energyMax}. Tea on the board tops you up past the cap. Price rises each time you buy.</p>
     <div class="row-btns"><button class="bigbtn gold" id="shopOpen">🛒 ${P2.shopName}</button></div>
     <h3>Sound</h3>
     <div class="row-btns" style="margin-top:0"><button class="bigbtn${SND.pref.music?' gold':''}" id="musBtn">♪ Music: ${SND.pref.music?'On':'Off'}</button><button class="bigbtn${SND.pref.sfx?' gold':''}" id="sfxBtn">Sound effects: ${SND.pref.sfx?'On':'Off'}</button></div>
@@ -1352,13 +1437,13 @@ const SOS_COOLDOWN=30*60000;
 function showSOS(){
   const left=k=>Math.max(0,Math.ceil(((S[k]||0)+SOS_COOLDOWN-now())/1000));
   const tl=left('sosT'), el=left('sosE');
-  openModal(`<h2>I’m stuck</h2><p style="color:var(--muted);font-size:13px">• For when there’s genuinely nothing to do<br>• Each one refills every 30 minutes<br>• Time skips and tea on the board are the better way</p>
+  openModal(`<h2>I’m stuck</h2><p style="color:var(--muted);font-size:13px">• For when there’s genuinely nothing to do<br>• Each one refills every 30 minutes<br>• Time skips and egg timers are the better way</p>
     <div class="row-btns"><button class="bigbtn${tl?'':' gold'}" id="sosT" ${tl?'disabled style="opacity:.5"':''}>⏳ Skip 5 minutes${tl?` · ${fmt(tl)}`:''}</button>
-    <button class="bigbtn${el?'':' gold'}" id="sosE" ${el?'disabled style="opacity:.5"':''}>⚡ +10 energy${el?` · ${fmt(el)}`:''}</button></div>
+    <button class="bigbtn${el?'':' gold'}" id="sosE" ${el?'disabled style="opacity:.5"':''}>${CHAINS.ET.items[0].e} An egg timer${el?` · ${fmt(el)}`:''}</button></div>
     <div class="row-btns"><button class="bigbtn" id="sosBack">Back</button></div>`);
   $('sosBack').onclick=showMenu;
-  if(!tl) $('sosT').onclick=()=>{ S.sosT=now(); timeSkip(5); SND.play('unweb'); toast('⏳ Skipped 5 minutes'); save(); render(); showSOS(); };
-  if(!el) $('sosE').onclick=()=>{ S.sosE=now(); S.energy+=10; SND.play('drink'); toast('⚡ +10 energy'); save(); render(); showSOS(); };
+  if(!tl) $('sosT').onclick=()=>{ S.sosT=now(); timeSkip(5); SND.play('unweb'); flo('⏳ 5 minutes skipped'); save(); render(); showSOS(); };
+  if(!el) $('sosE').onclick=()=>{ S.sosE=now(); S.gifts.push(['ET',1]); SND.play('gift'); flo('Added to your gifts 🎁'); save(); render(); showSOS(); };
 }
 function showPass(){
   const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;
@@ -1370,7 +1455,7 @@ function showPass(){
   });
   h+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
   openModal(h);
-  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>give(r[0],r[1])); SND.play('gift'); toast('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:T.lettersTitle, sub:`${T.letterWord} ${(i+1)/3} of ${FELIX.length}`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
+  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>give(r[0],r[1])); SND.play('gift'); flo('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:T.lettersTitle, sub:`${T.letterWord} ${(i+1)/3} of ${FELIX.length}`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
 }
 function showComplete(){
   openModal(`<h3 style="margin-top:0">Event complete</h3><h2>${EVENT.complete.title}</h2><p>${EVENT.complete.text}</p><p style="color:var(--muted)">${EVENT.complete.note}</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button>${REFLECTIONS.length?'<button class="bigbtn" id="reflGo">✨ Reflections</button>':''}</div>`);
@@ -1408,7 +1493,7 @@ window.addEventListener('resize',()=>{ fit(); if(toastCur) dockToast(); });
 /* the board is sized to the space left over, so refit whenever that space changes (orders, info bar, fonts) */
 if(window.ResizeObserver) new ResizeObserver(()=>{ fit(); if(toastCur) dockToast(); }).observe($('wrap'));
 setInterval(()=>{
-  const before=S.energy; tickEnergy(); renderHud();
+  renderHud();
   if(S.genQ&&S.genQ.length&&!genBusy){ genBusy=true; setTimeout(playGenStory,300); } // a waiting generator story plays once the screen is free
   if(chargerTick()){ save(); render(); }
   // charger countdown badges tick in place
@@ -1423,7 +1508,7 @@ setInterval(()=>{
     if(arc){ const C=2*Math.PI*44, p=Math.min(1,(now()-c.it.t)/d.rechargeMs); arc.setAttribute('stroke-dasharray',`${(p*C).toFixed(1)} ${C.toFixed(1)}`); board.children[i]._h=null; }
   });
   if(woke){ SND.play('unweb'); }
-  if(any||before!==S.energy){ save(); render(); }
+  if(any){ save(); render(); }
   else if(sel>=0 && S.cells[sel].it && def(S.cells[sel].it).charges) renderInfo();
 },1000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) render(); });

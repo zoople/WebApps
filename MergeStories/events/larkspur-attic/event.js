@@ -1,11 +1,11 @@
 /* Larkspur Attic: a Merge Stories cartridge (the Second Pass balance). Words, cast, chains, board, orders,
    balance, cover, colours and music for this story. The engine is shared. */
 const EVENT = {
-  id: 'larkspur-attic', title: 'Larkspur Attic', tagline: 'The Vanishing Moon', version: 'v7',
+  id: 'larkspur-attic', title: 'Larkspur Attic', tagline: 'The Vanishing Moon', version: 'v8',
   themeColor: '#1a1316',
   cover: { art: "<svg class=\"cover\" viewBox=\"0 0 360 230\" role=\"img\" aria-label=\"Moonlight through a round attic window onto a trunk and a black cat\"><defs><radialGradient id=\"atGlow\" cx=\".5\" cy=\".42\" r=\".6\"><stop offset=\"0\" stop-color=\"#4a2c36\"/><stop offset=\"1\" stop-color=\"#1a1316\"/></radialGradient><radialGradient id=\"atBeam\" cx=\".5\" cy=\"0\" r=\"1\"><stop offset=\"0\" stop-color=\"#f4e8d3\" stop-opacity=\".22\"/><stop offset=\"1\" stop-color=\"#f4e8d3\" stop-opacity=\"0\"/></radialGradient></defs><rect width=\"360\" height=\"230\" fill=\"url(#atGlow)\"/><path d=\"M0 0 L180 -40 L360 0 V20 L180 -18 L0 20Z\" fill=\"#2c1e22\"/><path d=\"M40 0 L40 230 M320 0 L320 230\" stroke=\"#3f2c21\" stroke-width=\"10\"/><path d=\"M0 28 L180 -8 L360 28\" stroke=\"#3f2c21\" stroke-width=\"12\" fill=\"none\"/><circle cx=\"180\" cy=\"78\" r=\"46\" fill=\"#0f1a2c\" stroke=\"#4a3427\" stroke-width=\"9\"/><path d=\"M180 32 V124 M134 78 H226\" stroke=\"#4a3427\" stroke-width=\"4\"/><circle cx=\"196\" cy=\"66\" r=\"15\" fill=\"#f4e8d3\"/><circle cx=\"190\" cy=\"62\" r=\"13\" fill=\"#0f1a2c\"/><g fill=\"#f4e8d3\" opacity=\".8\"><circle cx=\"160\" cy=\"60\" r=\"1.4\"/><circle cx=\"208\" cy=\"98\" r=\"1.1\"/><circle cx=\"165\" cy=\"100\" r=\"1\"/></g><path d=\"M150 124 L110 230 H250 L210 124Z\" fill=\"url(#atBeam)\"/><rect x=\"0\" y=\"196\" width=\"360\" height=\"34\" fill=\"#2c1e22\"/><path d=\"M0 196 H360\" stroke=\"#4a3427\" stroke-width=\"3\"/><g transform=\"translate(118 150)\"><rect width=\"96\" height=\"50\" rx=\"5\" fill=\"#a3303d\"/><rect y=\"0\" width=\"96\" height=\"16\" rx=\"5\" fill=\"#c9455a\"/><path d=\"M0 16 H96\" stroke=\"#e4b84c\" stroke-width=\"2\"/><rect x=\"40\" y=\"10\" width=\"16\" height=\"12\" rx=\"2\" fill=\"#e4b84c\"/><path d=\"M0 0 h8 v50 h-8z M88 0 h8 v50 h-8z\" fill=\"#e4b84c\" opacity=\".7\"/></g><g transform=\"translate(232 170)\" fill=\"#0b0809\"><ellipse cx=\"18\" cy=\"22\" rx=\"16\" ry=\"11\"/><circle cx=\"32\" cy=\"8\" r=\"9\"/><path d=\"M26 2 l3 -8 l4 7z M34 1 l4 -7 l2 8z\"/><path d=\"M2 24 q-14 -4 -8 -18\" stroke=\"#0b0809\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/></g><circle cx=\"263\" cy=\"177\" r=\"1.6\" fill=\"#e4b84c\"/><circle cx=\"268\" cy=\"177\" r=\"1.6\" fill=\"#e4b84c\"/><g fill=\"#e4b84c\"><path d=\"M74 150 l3 7 l7 1 l-5 5 l1 7 l-6 -4 l-6 4 l1 -7 l-5 -5 l7 -1z\" opacity=\".75\"/></g><text x=\"70\" y=\"192\" font-size=\"18\">🃏</text></svg>", sub: 'The Vanishing Moon',
     key: [["🌙", "Find out who Great-Aunt Odile really was"], ["🧩", "Merge and fill orders to clear her attic"], ["☀️", "No timer. Play at your own pace"]],
-    more: ["Tap a generator twice to make items", "Drag two matching items together to merge", "Merges open the boxes next to them", "Fill orders to uncover Odile’s story", "Tap coins, tea and stars twice to claim", "Generators need a rest after a while; ⏲️ egg timers refill one", "Drag tea onto a generator to focus it on rare finds", "Tap 🪙 for Mrs Pike’s shop", "Jumble Sale orders are always open", "Claim moons 🌑 for Moon Pass rewards; merged moons are worth more", "No timer. Play at your own pace", "📖 Quests and new finds pay out rewards"] },
+    more: ["Tap a generator twice to make items", "Drag two matching items together to merge", "Merges open the boxes next to them", "Fill orders to uncover Odile’s story", "Tap coins and stars twice to claim", "Generators are free to tap; they rest after a while and ⏲️ egg timers refill one", "Tea isn’t for drinking: drop it on a generator and it finds rare items more often", "Tap 🪙 for Mrs Pike’s shop", "Jumble Sale orders are always open", "Claim moons 🌑 for Moon Pass rewards; merged moons are worth more", "No timer. Play at your own pace", "📖 Quests and new finds pay out rewards"] },
   terms: {
     passName: 'Moon Pass', tokenNoun: 'moon', tokenIcon: '🌙',
     passHelp: '• Moon tokens 🌑 drop from generators and orders<br>• Tap twice to claim them any time: 🌑 1 · 🌒 3 · 🌓 7 · 🌕 16 points<br>• Merging first is worth more, but takes board space<br>• Every 3rd reward comes with a letter from Felix ✉️',
@@ -21,6 +21,14 @@ const EVENT = {
   complete: { title: 'The Vanishing Moon', text: 'You restored Odile’s attic and found out who she really was.',
     note: 'The board stays open. Merge as long as you like. The Circus Trunk chain has one level nobody has reached yet.' },
   css: ":root{--bg:#1a1316;--panel:#271c1f;--panel2:#30232a;--wood:#4a3427;--wood2:#3f2c21;--ink:#f4e8d3;--muted:#b8a387;--gold:#e4b84c;--velvet:#a3303d}\nbody{background-image:radial-gradient(120% 60% at 50% -10%, #3a2530 0%, transparent 60%)}\n#title{background-image:radial-gradient(90% 55% at 50% 30%,#4a2c36 0%,transparent 70%)}\n#board{box-shadow:0 0 0 3px #2a1d16,0 0 0 4px #6b4a33,0 14px 30px #0008}\n.cell.sheet{background:repeating-linear-gradient(115deg,#5e5248 0 7px,#544940 7px 15px)}\n.dlg{background:linear-gradient(180deg,#2e2125,#241a1d)}\n.overlay{background:#0d080acc}\n#scene.clear{background:#0d080a33}\n.order.side{background:#2a2420}\n#toast .t{background:linear-gradient(180deg,#3a2b1d,#2c2017);border-color:#e4b84c88}\n#title .go{background:linear-gradient(transparent,var(--bg) 30%)}",
+  /* reward numbers (the engine hands them out). Tables read "value or more → level": [[30,3],[14,2],[0,1]] */
+  rewards: {
+    order: { coins:[[30,3],[14,2],[0,1]], xp:[[4,3],[2,2],[0,1]], points:[[3,2],[0,1]] },
+    finale: [['C',4],['X',4],['N',3]],
+    side: { coins:[[28,4],[12,3],[4,2],[0,1]], bigPoints:24, timerAt:12, timerChance:.3, lucky:[['C',1],['N',1]] },   // a level-4 item pays a level-2 coin
+    discovery: { coinsPerLevel:2, xpFrom:5 },
+    quests: [[['C',1],['E',1]],[['C',2],['E',2]],[['E',3],['H',1]],[['E',3],['H',2],['N',1]],[['E',4],['H',2],['N',2]],[['E',4],['H',3],['N',3]]],
+  },
   wheel: null,
   /* slow, warm 4/4 chill: pads, sub bass, soft keys, a faint arpeggio */
   music: { bpm: 76, beats: 128,
@@ -57,10 +65,6 @@ const EVENT = {
 
 const CONFIG = {
   cols: 7, rows: 9,
-  energyMax: 50,          // Second Pass: a smaller tank so a session can run dry
-  energyRegenMs: 120000,  // 1 energy every 2 min, same as Merge Mansion
-  energyCost: 1,
-  buyEnergy: { cost: 60, step: 20, amount: 30 },  // price rises by `step` after each purchase
   saveKey: 'merge-stories:larkspur-attic', legacySaveKey: 'larkspur-attic-pass2',
   sideOpen: true,         // the Jumble Sale is open from the start
 };
@@ -79,7 +83,7 @@ const CHAINS = {
     {e:'🕯️',n:'Candle Stub'},{e:'💡',n:'Bulb'},{e:'🔦',n:'Torch'},{e:'🏮',n:'Paper Lantern'},
     {e:'🪔',n:'Oil Lamp'},{e:'🔆',n:'Spotlight'}]},
   /* resource chains: tap twice to claim, or merge first for a bigger payout (values follow Merge Mansion's 2/6/16/40/100 curve) */
-  E:{name:'Tea Time', type:'res', claim:'energy', items:[
+  E:{name:'Tea Time', type:'boost', items:[
     {e:'🍬',n:'Sugar Lump',v:2},{e:'🍪',n:'Biscuit',v:6},{e:'☕',n:'Cuppa',v:16},
     {e:'🧁',n:'Cupcake',v:40},{e:'🍰',n:'Victoria Sponge',v:100}]},
   C:{name:'Coins', type:'res', claim:'coins', items:[
@@ -144,7 +148,6 @@ const LAYOUT = [
   'oE1 ogD1 o. o. o. ogS1 oE1',
 ];
 
-const zoneOfRow = r => r>=6?0 : r>=4?1 : r>=2?2 : 3;
 
 const CAST = {
   N:{name:'', av:''},
@@ -177,7 +180,7 @@ const CHAPTERS = [
       ['T','There’s a fuse box up here. Why is there a fuse box in an attic?'],
       ['N','Theo flips the switch. A row of bulbs along the beam stutters on, then off, then on again. It sounds a bit like applause.'],
       ['N','The dust sheets over the next stretch of floor slide away. <em>(A Fuse Box is waiting in your gifts.)</em>'],
-      ['P','And you can’t clear an attic without tea. I’ve brought my kettle up. It’s on loan, mind. <em>(Free tea every few minutes.)</em>'],
+      ['P','And you can’t clear an attic without tea. I’ve brought my kettle up. It’s on loan, mind. <em>(Free tea every few minutes. Drop a cup on a generator and it finds rare things more often.)</em>'],
     ],
     outro:[
       ['N','The letters are tied in red ribbon, all addressed to the same name. Not Odile. “The Great Odelia.”'],
@@ -280,19 +283,7 @@ const TASKS = [
   {ch:5, who:'O', need:[['M',7]], coins:50, say:'“…a crystal, and someone who looks.”'},
 ];
 
-function taskRewards(t){
-  const c = t.coins>=30?3 : t.coins>=14?2 : 1;
-  const x = t.ch>=4?3 : t.ch>=2?2 : 1;
-  return t.who==='O' ? [['C',4],['X',4],['N',3]] : [['C',c],['X',x],['N',t.ch>=3?2:1]];
-}
 
-function sideRewards(size,lucky){
-  if(lucky) return [['C',1],['N',1]];
-  const c = size>=28?4 : size>=12?3 : size>=4?2 : 1;           // a level-4 item (size 8) now pays a level-2 coin
-  const rw=[['C',c],['N', size>=24&&Math.random()<.5?2:1]];
-  if(size>=12 && Math.random()<.3) rw.push(['ET',1]);
-  return rw;
-}
 
 const PASS=[
   {pts:15, rw:[['E',2]]},{pts:30, rw:[['H',1]]},{pts:50, rw:[['C',2],['X',2]]},{pts:65, rw:[['E',3]]},{pts:80, rw:[['gD',2]]},
@@ -319,8 +310,7 @@ const P2={ shopName:'Mrs Pike’s Odds & Ends', shopBlurb:'Mrs Pike sells whatev
 
 const SHOP_ITEMS=[
   {id:'ET', price:()=>30, what:'Refills one generator. Drag it onto the one you need', give:()=>S.gifts.push(['ET',1])},
-  {id:'H1', price:()=>90, what:'Skips time for everything: energy, generators, kettle', give:()=>S.gifts.push(['H',1])},
-  {id:'EN', price:()=>energyPrice(), what:'Energy straight into your tank', give:()=>{ S.energy+=CONFIG.buyEnergy.amount; S.buys=(S.buys||0)+1; }},
+  {id:'H1', price:()=>90, what:'Skips 15 minutes on every generator and the kettle', give:()=>S.gifts.push(['H',1])},
 ];
 
 const REFLECTIONS=[
@@ -341,7 +331,6 @@ const REFLECTIONS=[
   ['P','No, love. But he said he’d be looking up. I’d like to think he was.'],
 ];
 
-function stageReward(l){ return l%4===0 ? [['H',1],['C',2]] : l%2 ? [['C',2]] : [['E',2]]; }
 
 const GEN_STORY={
   gD1:[['T','A paper tray. Receipts, ration books, and one very old Valentine.'],['P','Odile kept everything. Every scrap. I always thought it was thrift.']],
@@ -369,13 +358,11 @@ const QUESTS=[
   {id:'rare',  ic:'💎', n:'Find rare items',       steps:[3,10,25,50,100]},
   {id:'story', ic:'📜', n:'Fill story orders',     steps:[3,10,20]},
   {id:'high',  ic:'🌟', n:'Make level 5+ items',   steps:[3,10,25,60]},
-  {id:'claim', ic:'🫖', n:'Claim tea, coins & stars', steps:[10,40,100,250]},
+  {id:'claim', ic:'🪙', n:'Claim coins, stars & moons', steps:[10,40,100,250]},
   {id:'open',  ic:'📦', n:'Open boxes & cobwebs',  steps:[10,25,45]},
   {id:'disc',  ic:'🧩', n:'Discover new items',    steps:[15,30,50,70]},
   {id:'sell',  ic:'🪙', n:'Sell items',            steps:[5,20,50]},
 ];
 
-const QUEST_RW=[[['C',1],['E',1]],[['C',2],['E',2]],[['E',3],['H',1]],[['E',3],['H',2],['N',1]],[['E',4],['H',2],['N',2]],[['E',4],['H',3],['N',3]]];
 
-const discRw=(k,l)=>{ const L=l+(CHAINS[k].gen?1:0); return {c:2*L, e:L>=3?3*(L-2):0, x:L>=5?L:0}; };
 

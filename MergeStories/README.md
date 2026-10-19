@@ -1,23 +1,71 @@
 # Merge Stories
 
-A merge-game console with stories as cartridges.
+A merge-game console. The stories are cartridges.
 
-- `index.html`: the console. It shows the story shelf, loads the chosen story, and handles self-update and the offline worker.
-- `engine.js`: the shared game: board, merging, orders, wheel, pass, shop, audio and UI. Engine fixes go here and reach every story.
+**The rule:**
+- The **engine** (`engine.js`, `index.html`) owns all behaviour: UI, item types, generators, the shop, the wheel, orders, rewards logic and audio.
+- A **story** (`events/<id>/event.js`) is configuration only: words, cast, chapters, orders, chains (names, emoji, numbers), board layout, reward numbers, cover art, colours and music.
+- A new kind of item or mechanic goes into the engine first. Then a story turns it on through config.
+
+Before balancing a new story, read the lessons in `DESIGN.md`.
+
+## Files
+- `index.html`: the console. It shows the story shelf, loads the chosen story, and handles self-update, the offline worker and every style.
+- `engine.js`: the shared game.
 - `catalog.js`: the shelf, with one line per story.
-- `events/<id>/event.js`: one story. It defines `EVENT`, which holds:
-  - title and version
-  - `terms` (story words)
-  - `cover`
-  - `css` (theme overrides)
-  - `complete`
-  - `wheel` (optional)
-  - `music` (tempo, mix and `compose()`)
-- Each `event.js` also holds the story's content blocks:
-  - CONFIG, CHAINS, LAYOUT, CAST, CHAPTERS, TASKS
-  - rewards, PASS, notes and letters
-  - shop, gen stories, quests
+- `events/<id>/event.js`: one story. See "What a story sets" below.
 - `events/<id>/icon.svg`: the story's card art.
+- `sw.js`: the offline cache. List new files in `SHELL` and bump `CACHE`.
+
+## Item types (reserved chain keys)
+
+A story names these chains and sets their numbers. The engine decides how they behave.
+
+| Key | Type | Behaviour |
+|---|---|---|
+| `E` | booster (`type:'boost'`) | Drop on a generator: its next 2/5/12/30/75 taps (by level) find its rare chain 5× more often. **Can't be claimed.** |
+| `C` | coins (`claim:'coins'`) | Tap twice to claim. Spent in the shop and the mini shop. |
+| `X` | applause/xp (`claim:'xp'`) | Fills the stage bar. Each stage gives a gift. |
+| `N` | pass points (`claim:'points'`) | Pass tiers, notes and letters. |
+| `H` | time skip (`claim:'skip'`) | Fast-forwards every generator's recharge. |
+| `CP` | wheel tickets (`claim:'chips'`) | 10 tickets per spin. |
+| `ET` | egg timer | Drop on a generator to refill it. |
+| `V` | time chargers (`hours`) | Nearby timed generators recharge ×2, then get topped up. |
+| `Q` | donation boxes (`free`, `uses`) | Free taps, then the box folds flat. Two unopened boxes merge into a full bigger box. |
+| `G`, `Y`, `O` | orchard | Seedlings merge into a tree (a generator with `uses`). The tree drops fruit, then leaves a log. |
+| `Z` | compost bin (`want`) | Asks for one item from `CONFIG.bin.wants` (only ones you can make right now) and gives `CONFIG.bin.gives`. |
+| `U` | stove (`fuelled`) | Burns items listed in `CONFIG.fuel`. |
+| any `wheel:true` chain | prize wheel | Uses `EVENT.wheel`. |
+| the `story:true` chain | lore items | Its top item is "the secret" for the ending banner. |
+| `g*` | generators | Use `charges` and `rechargeMs`. Taps are free (there is no energy), and generators rest when empty. |
+
+## What a story sets
+- `EVENT`:
+  - `id`, `title`, `tagline`, `version`, `themeColor`
+  - `cover`: `art`, `sub`, `key`, `more`
+  - `terms`: every story word
+  - `complete`
+  - `css`
+  - `music`: `bpm`, `beats`, `mix`, `pad`, `compose()`
+  - `wheel`: `cost`, `n`, `segs`, `last`, `intro`, `light`, `repeat`
+  - `rewards`: `order`, `finale`, `side`, `discovery`, `quests`, optional `stage`. Tables read "value or more → level".
+- `CONFIG`:
+  - `saveKey`, `legacySaveKey`
+  - `sideOpen`
+  - `chargerScale`
+  - `bin`, `fuel`
+- `CHAINS`
+- `LAYOUT` (9 rows × 7)
+- `CAST` (`S` is the side stall)
+- `CHAPTERS`
+- `TASKS`, which can also use:
+  - `wheel:n` (needs n wheel lights)
+  - `sales:n` (needs n stall sales made after the order appears)
+  - `gifts`
+  - `more`
+  - `side0`
+  - preset `id` (200+ keeps old saves lined up)
+- `PASS`, `FELIX` (letters), `MOON_NOTES`, `P2` (shop name), `SHOP_ITEMS` (ids `TK`, `ET`, `H1`), `REFLECTIONS`, `GEN_STORY`, `QUESTS`
 
 ## Add a story
 1. Copy an `events/<id>/` folder and rewrite its content.
