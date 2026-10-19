@@ -392,7 +392,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v16 · 17 Oct 2026';
+const VERSION='v17 · 19 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -873,7 +873,7 @@ function wheelSVG(){
     g+=`<path d="M${c},${c} L${p0[0].toFixed(1)},${p0[1].toFixed(1)} A${R},${R} 0 0 1 ${p1[0].toFixed(1)},${p1[1].toFixed(1)} Z" fill="${fill}" stroke="#123039" stroke-width="1.5" ${S.wheelLast&&S.wheelLast.hits===1&&S.wheelLast.i===i?' class="justlit"':''}/>`;
     const m=rad(a0+seg/2), tx=c+98*Math.cos(m), ty=c+98*Math.sin(m);
     g+= open ? `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="19" text-anchor="middle" dominant-baseline="central" transform="rotate(${a0+seg/2} ${tx.toFixed(1)} ${ty.toFixed(1)})">${WHEEL_SEGS[i].e}</text>`
-             : `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="15" font-weight="800" font-family="Karla,sans-serif" fill="#8fc2bd" text-anchor="middle" dominant-baseline="central">?</text>`;
+             : '';
   }
   return `<svg viewBox="0 0 280 280" width="100%" height="100%" aria-hidden="true">${g}<circle cx="140" cy="140" r="26" fill="#123039" stroke="#ffc94a" stroke-width="3"/><text x="140" y="141" font-size="22" text-anchor="middle" dominant-baseline="central">🎟️</text></svg>`;
 }
@@ -895,7 +895,7 @@ function openWheel(i){
     <div class="wheelwrap"><div class="wheelptr">▼</div><div class="wheelclip"><div class="wheelspin" id="wheelSpin" style="transform:rotate(${S.wheelRot||0}deg)">${wheelSVG()}</div></div></div>
     <p style="text-align:center;margin:4px 0;font-variant-numeric:tabular-nums">💡 <b>${done}/${WHEEL_N}</b> lights on · 🎟️ ${S.chips||0} tickets</p>${banner}
     <div class="row-btns" style="justify-content:center;margin-top:4px"><button class="bigbtn gold" id="wheelGo" ${wheelBusy?'disabled':''}>Spin · ${WHEEL_COST} 🎟️</button><button class="bigbtn" id="wheelClose">Close</button></div>
-    <p style="color:var(--muted);font-size:13px;margin:10px 0 0">• ${WHEEL_COST} raffle tickets 🎟️ per spin · every segment equally likely<br>• Stop on a dark ? segment: 💡 its light comes back on and you see the old prize under it<br>• You don’t win the old prizes. Every stop shakes out loose change 🪙<br>• Story orders need lights on</p>
+    <p style="color:var(--muted);font-size:13px;margin:10px 0 0">• ${WHEEL_COST} raffle tickets 🎟️ per spin · every segment equally likely<br>• Stop on a dark segment: 💡 its light comes back on and you see the old prize under it<br>• You don’t win the old prizes. Every stop shakes out loose change 🪙<br>• Story orders need lights on</p>
     <h3>💡 Under the lights</h3>${wheelListHtml(false)||'<p style="color:var(--muted);font-size:13px">All dark so far. Each light shows an old Mystery Prize.</p>'}`);
   $('wheelClose').onclick=()=>{ if(!wheelBusy) closeModal(); };
   $('wheelGo').onclick=spinWheel;
@@ -1346,7 +1346,7 @@ const GEN_STORY={
   U1:[['T','Fred’s old camping stove. Logs or old bunting in, tea out.'],['P','Best cup you’ll ever have, and it tastes faintly of 1979.']],
   gC1:[['N','The church clock’s spare works, ticking away in a box.'],['P','The vicar swears it runs fast. Put it near anything slow and see.']],
   G4:[['N','The sapling has grown into a proper little apple tree.'],['P','Fruit for the jam stall. It gives a few crops, then it’s firewood. That’s trees, love.']],
-  WH1:[['P','And there’s the old girl. Fred’s Prize Wheel. Not one turn since last summer.'],['T','Will she still go round?'],['P','She takes ten tickets a spin, love. Here, the last of last year’s roll. Ten, exactly.'],['N','<em>(Dot hands you ten raffle tickets 🎟️)</em>']],
+  WH1:[['P','And there’s the old girl. Fred’s Prize Wheel. Not one turn since last summer.'],['T','Will she still go round?'],['P','She takes ten tickets a spin, love. Here, the last of last year’s roll. Twenty, exactly. That’s two goes.'],['N','<em>(Dot hands you twenty raffle tickets 🎟️)</em>']],
 };
 let genBusy=false;
 function playGenStory(){
@@ -1475,7 +1475,7 @@ function give(k,l){
 }
 function unwrap(i){
   const it=S.cells[i].it; delete it.wrap; fx[i]='reveal'; SND.play('gift'); sel=i;
-  if(it.k==='WH') S.chips=Math.max(S.chips||0,WHEEL_COST); // Dot hands over enough for the first spin
+  if(it.k==='WH') S.chips=Math.max(S.chips||0,2*WHEEL_COST); // Dot hands over twenty: two spins to start
   discover(it); save(); render();
 }
 function canMerge(a,b){ return a&&b&&!a.st&&!b.st&&!a.on&&!b.on&&!a.wrap&&!b.wrap&&a.k===b.k&&a.l===b.l&&a.l<maxL(a.k); }
