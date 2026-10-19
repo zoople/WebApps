@@ -54,3 +54,4 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
   - Spread the big asks across chapters 4–6.
 - **Merge bonuses (stars from merging numbers) make lots of points.** Size the pass tiers from a bot run, not by guessing.
 - **A feeder that pays 6 at once needs room.** The starting board needs about 8 free tiles.
+- **Avoid keycap emoji (0️⃣ 1️⃣…) and other combined sequences.** On some phones the digit comes from the game font and the keycap box shows as a broken square. Use `tile:true` with plain characters instead.

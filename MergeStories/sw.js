@@ -3,7 +3,7 @@
    quietly fetches the latest in the background; the console's "new version" check then offers the update.
    Engine and cartridges are requested as file?v=<version>, so after an update the new index never runs
    against an old engine: a version it hasn't stored yet comes from the network (with a short timeout). */
-const PREFIX = 'merge-stories-', CACHE = PREFIX + 'v3';
+const PREFIX = 'merge-stories-', CACHE = PREFIX + 'v4';
 const SHELL = ['./', 'index.html', 'catalog.js', 'engine.js', 'merge-stories.webmanifest',
   'events/larkspur-attic/event.js', 'events/larkspur-attic/icon.svg',
   'events/pennywhistle-fete/event.js', 'events/pennywhistle-fete/icon.svg',
