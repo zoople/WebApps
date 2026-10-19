@@ -30,14 +30,17 @@ A story names these chains and sets their numbers. The engine decides how they b
 | `H` | time skip (`claim:'skip'`) | Fast-forwards every generator's recharge. |
 | `CP` | wheel tickets (`claim:'chips'`) | 10 tickets per spin. |
 | `ET` | egg timer | Drop on a generator to refill it. |
+| `DR` (any `dust:true` chain) | dust remover | Drop on a cobwebbed tile to clear it. The item underneath is yours. |
 | `V` | time chargers (`hours`) | Nearby timed generators recharge ×2, then get topped up. |
 | `Q` | donation boxes (`free`, `uses`) | Free taps, then the box folds flat. Two unopened boxes merge into a full bigger box. |
 | `G`, `Y`, `O` | orchard | Seedlings merge into a tree (a generator with `uses`). The tree drops fruit, then leaves a log. |
-| `Z` | compost bin (`want`) | Asks for one item from `CONFIG.bin.wants` (only ones you can make right now) and gives `CONFIG.bin.gives`. |
+| any `want:true` item | feeder (compost bin, mulcher) | Asks for one item from its `wants` (or `CONFIG.bin.wants`), only ones you can make right now. Gives `count` × `gives` at `giveL` (default: one, level 1 or 2). |
 | `U` | stove (`fuelled`) | Burns items listed in `CONFIG.fuel`. |
 | any `wheel:true` chain | prize wheel | Uses `EVENT.wheel`. |
 | the `story:true` chain | lore items | Its top item is "the secret" for the ending banner. |
-| `g*` | generators | Use `charges` and `rechargeMs`. Taps are free (there is no energy), and generators rest when empty. |
+| `g*` | generators | Use `charges` and `rechargeMs`. Taps are free (there is no energy), and generators rest when empty. A spare generator (another of its kind is on the board) can be sold. Your last one can't. |
+| any chain | generators inside a chain | Any item can be `gen:true` with its own `drop` (an orchard tree, or garden furniture that makes story pieces). Generators can drop other generators. |
+| any chain | `mergeBonus:{from, give}` | Merging up to level `from` or higher also drops `give` (Bellavista: numbers 2+ drop a star). |
 
 ## What a story sets
 - `EVENT`:
@@ -65,7 +68,14 @@ A story names these chains and sets their numbers. The engine decides how they b
   - `more`
   - `side0`
   - preset `id` (200+ keeps old saves lined up)
-- `PASS`, `FELIX` (letters), `MOON_NOTES`, `P2` (shop name), `SHOP_ITEMS` (ids `TK`, `ET`, `H1`), `REFLECTIONS`, `GEN_STORY`, `QUESTS`
+- `PASS`, `FELIX` (letters), `MOON_NOTES`, `P2` (shop name), `REFLECTIONS`, `GEN_STORY`, `QUESTS`
+- `SHOP_ITEMS` (data only), with one of:
+  - `item:[k,l]`
+  - `chips:n`
+- Each shop item also sets:
+  - `price`: a number, or `{base, mult, max}` (goes up with each purchase)
+  - `what`
+- The mini shop offers the item with id `ET` at a resting generator, and `TK` at the wheel.
 
 ## Add a story
 1. Copy an `events/<id>/` folder and rewrite its content.

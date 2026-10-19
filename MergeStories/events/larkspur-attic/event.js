@@ -309,8 +309,8 @@ const MOON_NOTES=[
 const P2={ shopName:'Mrs Pike’s Odds & Ends', shopBlurb:'Mrs Pike sells whatever turns up in her own loft' };
 
 const SHOP_ITEMS=[
-  {id:'ET', price:()=>30, what:'Refills one generator. Drag it onto the one you need', give:()=>S.gifts.push(['ET',1])},
-  {id:'H1', price:()=>90, what:'Skips 15 minutes on every generator and the kettle', give:()=>S.gifts.push(['H',1])},
+  {id:'ET', item:['ET',1], price:30, what:'Refills one generator. Drag it onto the one you need'},
+  {id:'H1', item:['H',1], price:90, what:'Skips 15 minutes on every generator and the kettle'},
 ];
 
 const REFLECTIONS=[
