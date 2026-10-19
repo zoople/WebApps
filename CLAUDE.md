@@ -20,6 +20,8 @@ Static browser apps, published with GitHub Pages from `main`
    offer an "Update now" button that reloads with `?v=<version>`.
 4. **Touch first.** Thumbstick for movement (never tap-to-move), big targets, no hover-only UI.
 5. **Guidance text is short bullet points**, never paragraphs.
+   **Game first, instructions last:** screens and pop-ups lead with the game (the board, the wheel, the button). Detailed rules
+   and how-tos go in a collapsed "How it works" section at the bottom, closed by default.
 6. **Synth audio must never crackle.** This has had to be fixed repeatedly; build it right first time.
    Crackle on phones comes from CPU underruns and speaker overload, not just bad envelopes. Always:
    - `new AudioContext({latencyHint:'playback'})` (bigger buffers on Android), with a plain fallback.

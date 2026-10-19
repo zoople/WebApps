@@ -37,6 +37,11 @@
   color-scheme:dark;
 }
 [hidden]{display:none!important}
+.howto{margin-top:14px;border-top:1px solid #ffffff14;padding-top:6px}
+.howto summary{cursor:pointer;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:6px 0;list-style:none}
+.howto summary::-webkit-details-marker{display:none}.howto summary::after{content:" ▾"}.howto[open] summary::after{content:" ▴"}
+.howto p{font-size:13px;color:var(--muted);margin:4px 0 0;line-height:1.5}
+
 #scene{z-index:55}
 #scene.clear{background:#06161b33;justify-content:flex-start;padding-top:calc(12px + env(safe-area-inset-top,0px))} /* sits at the top so the board (and the wheel) stay visible */
 .dlg .dtitle{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--gold);margin-bottom:6px}.dlg .dtitle span{color:var(--muted);font-weight:600} /* story scenes sit above pop-ups like the wheel */
@@ -392,7 +397,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <div id="ghost"></div>
 
 <script>
-const VERSION='v17 · 19 Oct 2026';
+const VERSION='v18 · 19 Oct 2026';
 /* ============================================================
    LARKSPUR ATTIC — event #1 of a Merge-Mansion-style event game
    All tuning lives in CONFIG / CHAINS / LAYOUT / TASKS / CHAPTERS
@@ -895,8 +900,8 @@ function openWheel(i){
     <div class="wheelwrap"><div class="wheelptr">▼</div><div class="wheelclip"><div class="wheelspin" id="wheelSpin" style="transform:rotate(${S.wheelRot||0}deg)">${wheelSVG()}</div></div></div>
     <p style="text-align:center;margin:4px 0;font-variant-numeric:tabular-nums">💡 <b>${done}/${WHEEL_N}</b> lights on · 🎟️ ${S.chips||0} tickets</p>${banner}
     <div class="row-btns" style="justify-content:center;margin-top:4px"><button class="bigbtn gold" id="wheelGo" ${wheelBusy?'disabled':''}>Spin · ${WHEEL_COST} 🎟️</button><button class="bigbtn" id="wheelClose">Close</button></div>
-    <p style="color:var(--muted);font-size:13px;margin:10px 0 0">• ${WHEEL_COST} raffle tickets 🎟️ per spin · every segment equally likely<br>• Stop on a dark segment: 💡 its light comes back on and you see the old prize under it<br>• You don’t win the old prizes. Every stop shakes out loose change 🪙<br>• Story orders need lights on</p>
-    <h3>💡 Under the lights</h3>${wheelListHtml(false)||'<p style="color:var(--muted);font-size:13px">All dark so far. Each light shows an old Mystery Prize.</p>'}`);
+    <h3>💡 Under the lights</h3>${wheelListHtml(false)||'<p style="color:var(--muted);font-size:13px">All dark so far. Each light shows an old Mystery Prize.</p>'}
+    <details class="howto"><summary>How it works</summary><p>• ${WHEEL_COST} raffle tickets 🎟️ per spin · every segment equally likely<br>• Stop on a dark segment: 💡 its light comes back on and you see the old prize under it<br>• You don’t win the old prizes. Every stop shakes out loose change 🪙<br>• Story orders need lights on</p></details>`);
   $('wheelClose').onclick=()=>{ if(!wheelBusy) closeModal(); };
   $('wheelGo').onclick=spinWheel;
   if(!S.wheelIntro){ S.wheelIntro=1; save(); playScene({clear:true, title:'The Prize Wheel', sub:'Twenty dark bulbs', lines:WHEEL_INTRO}); }
