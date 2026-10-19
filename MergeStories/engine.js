@@ -8,6 +8,9 @@
      ET egg timer (refills one generator) · V time chargers · Q donation boxes (free taps)
      G/Y/O orchard: seedlings → tree (a generator that withers into a log) → fruit · Z compost bin · U stove
      WH (any chain with wheel:true) prize wheel · the chain with story:true holds the lore items
+     DR dust remover: drop on a cobweb tile to clear it
+   Chain options: mergeBonus {from, give} (merging to level `from`+ also drops `give`); an item with want:true is a
+   feeder (wants/gives/count/giveL on the item, or CONFIG.bin). SHOP_ITEMS are data: see shopPrice/shopGive.
    See README.md for the full list. */
 const T = EVENT.terms;
 const WH_ = EVENT.wheel || {}, WHEEL_COST = WH_.cost || 10, WHEEL_N = WH_.n || 20,
@@ -74,7 +77,7 @@ function sideTargets(){
   // chains you can actually make right now: each generator on the board gives its main chain and its rare chain
   const m=new Map();
   S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&isGen(c.it)){ const ch=CHAINS[c.it.k];
-    if(ch.main&&ch.main!=='E'&&ch.main!=='M'&&ch.main!=='V') m.set(ch.main,false);
+    if(ch.main&&ch.main!=='E'&&ch.main!=='M'&&ch.main!=='V'&&!CHAINS[ch.main].gen&&!CHAINS[ch.main].story) m.set(ch.main,false);
     if(typeof ch.rare==='string'&&CHAINS[ch.rare]&&!CHAINS[ch.rare].type) m.set(ch.rare,true); } });
   return [...m].map(([k,rare])=>({k,rare}));
 }
@@ -133,29 +136,35 @@ function useOn(a,b){
   return false;
 }
 function showShop(){
-  const row=it=>{ const p=it.price(), d=shopLook(it);
+  const row=it=>{ const p=shopPrice(it), d=shopLook(it);
     return `<div class="tier"><span class="tp">${d.e}</span><span class="tr" style="font-size:14px;letter-spacing:0">${d.n}<br><small style="color:var(--muted)">${it.what}</small></span><button class="sbtn" data-buy="${it.id}" ${S.coins<p?'disabled style="opacity:.5"':''}>🪙 ${p}</button></div>`; };
-  openModal(`<h2>🛒 ${P2.shopName}</h2><p style="color:var(--muted);font-size:13px">• ${P2.shopBlurb}<br>• Earn coins from orders and the ${CAST.S.name} stall<br>• Tickets go straight in; the rest goes to your gifts 🎁</p>
-    <p>🪙 ${S.coins} · 🎟️ ${S.chips||0}</p>${SHOP_ITEMS.map(row).join('')}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
-  $('modalBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{ const it=SHOP_ITEMS.find(x=>x.id===b.dataset.buy), p=it.price(); if(S.coins<p) return;
-    S.coins-=p; it.give(); SND.play('coin'); stat('shop'); save(); render(); showShop(); flo(it.id==='TK'?'+10 🎟️':'Added to your gifts 🎁'); });
+  openModal(`<h2>🛒 ${P2.shopName}</h2><p style="color:var(--muted);font-size:13px">• ${P2.shopBlurb}<br>• ${earnLine()}<br>• ${CHAINS.CP?'Tickets go straight in; the rest goes':'Everything goes'} to your gifts 🎁${SHOP_ITEMS.some(x=>typeof x.price==='object')?'<br>• Some prices go up each time you buy':''}</p>
+    <p>🪙 ${S.coins}${CHAINS.CP?` · 🎟️ ${S.chips||0}`:''}</p>${SHOP_ITEMS.map(row).join('')}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
+  $('modalBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{ const it=SHOP_ITEMS.find(x=>x.id===b.dataset.buy), p=shopPrice(it); if(S.coins<p) return;
+    S.coins-=p; shopGive(it); SND.play('coin'); stat('shop'); save(); render(); showShop(); flo(it.chips?`+${it.chips} 🎟️`:'Added to your gifts 🎁'); });
 }
-const shopLook = it => it.id==='TK'?{e:'🎟️',n:'10 Raffle Tickets'} : it.id==='ET'?CHAINS.ET.items[0] : it.id==='H1'?CHAINS.H.items[0] : {e:'🛒',n:it.id};
+const shopLook = it => it.chips ? {e:'🎟️',n:`${it.chips} Raffle Tickets`} : it.item ? {e:CHAINS[it.item[0]].items[it.item[1]-1].e, n:CHAINS[it.item[0]].items[it.item[1]-1].n} : {e:'🛒',n:it.id};
+/* prices: a number, or {base, mult, max} that goes up each time you buy (counted per item, per story) */
+function shopPrice(it){ const p=it.price; if(typeof p==='number') return p; if(typeof p==='function') return p();
+  const n=(S.shopN||{})[it.id]||0; return Math.min(p.max||1e9, Math.round(p.base*Math.pow(p.mult||1,n))); }
+function shopGive(it){ (S.shopN=S.shopN||{})[it.id]=((S.shopN||{})[it.id]||0)+1;
+  if(it.chips) S.chips=(S.chips||0)+it.chips; else if(it.item) S.gifts.push(it.item); else if(it.give) it.give(); }
+const earnLine = () => `Earn coins from orders${CAST.S&&S.sideOn?` and the ${CAST.S.name} stall`:''}`;
 /* the mini shop: one item, offered right where you need it (a resting generator, the wheel when you're short).
    Saves a trip to the menu. `use` runs after paying (e.g. refill this generator now). */
 function miniShop({id, title, sub, use, label}){
   closeMini();
   const it=SHOP_ITEMS.find(x=>x.id===id); if(!it) return false;
-  const p=it.price(), d=shopLook(it), ok=S.coins>=p;
+  const p=shopPrice(it), d=shopLook(it), ok=S.coins>=p;
   const m=document.createElement('div'); m.id='mini';
   m.innerHTML=`<button class="op-x" aria-label="Close">✕</button><div class="mini-h">${title}</div>${sub?`<p class="mini-s">${sub}</p>`:''}
     <div class="mini-row"><span class="e">${d.e}</span><span class="n">${label||d.n}<small>You have 🪙 ${S.coins}</small></span>
     <button class="bigbtn${ok?' gold':''}" id="miniBuy" ${ok?'':'disabled style="opacity:.5"'}>🪙 ${p}</button></div>
-    ${ok?'':`<p class="mini-s">Earn coins from orders and the ${CAST.S.name} stall</p>`}`;
+    ${ok?'':`<p class="mini-s">${earnLine()}</p>`}`;
   document.body.appendChild(m);
   m.querySelector('.op-x').onclick=closeMini;
-  if(ok) m.querySelector('#miniBuy').onclick=()=>{ if(S.coins<it.price()) return; S.coins-=it.price(); stat('shop'); SND.play('coin');
-    if(use) use(); else it.give(); closeMini(); save(); render(); };
+  if(ok) m.querySelector('#miniBuy').onclick=()=>{ const pp=shopPrice(it); if(S.coins<pp) return; S.coins-=pp; stat('shop'); SND.play('coin');
+    if(use){ (S.shopN=S.shopN||{})[it.id]=((S.shopN||{})[it.id]||0)+1; use(); } else shopGive(it); closeMini(); save(); render(); };
   SND.play('tap'); return true;
 }
 function closeMini(){ const m=$('mini'); if(m) m.remove(); }
@@ -247,11 +256,11 @@ function spinWheel(){
 function ticketShop(){
   if(!miniShop({id:'TK', title:`🎟️ ${S.chips||0} of ${WHEEL_COST} tickets`, sub:'Buy a spin’s worth now', label:`${WHEEL_COST} raffle tickets`,
     use:()=>{ S.chips=(S.chips||0)+10; flo('+10 🎟️'); if(!$('modal').hidden && $('wheelGo')) openWheel(wheelCell); }})) showTicketHelp();
-  else $('mini').insertAdjacentHTML('beforeend',`<details class="howto"><summary>Other ways to get tickets</summary><p>• Story orders<br>• 📦 Donation boxes<br>• ${CAST.S.name} sales<br>• 📖 Quests<br>• A lit wheel segment gives some back</p></details>`);
+  else $('mini').insertAdjacentHTML('beforeend',`<details class="howto"><summary>Other ways to get tickets</summary><p>• Story orders<br>• 📦 Donation boxes<br>${CAST.S?`• ${CAST.S.name} sales<br>`:''}• 📖 Quests<br>• A lit wheel segment gives some back</p></details>`);
 }
 function showTicketHelp(){
   openModal(`<h2>🎟️ Out of tickets</h2><p>Each spin costs ${WHEEL_COST} tickets.</p><h3>Where tickets come from</h3>
-    <p style="font-size:14px;line-height:1.6">• Every story order pays tickets<br>• 📦 Donation boxes<br>• Every ${CAST.S.name} sale<br>• 📖 Quests<br>• ${P2.shopName}: 10 for 🪙 80</p>
+    <p style="font-size:14px;line-height:1.6">• Every story order pays tickets<br>• 📦 Donation boxes<br>${CAST.S?`• Every ${CAST.S.name} sale<br>`:''}• 📖 Quests<br>• ${P2.shopName}: 10 for 🪙 80</p>
     <div class="row-btns"><button class="bigbtn gold" id="tkShop">🛒 ${P2.shopName}</button><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('tkShop').onclick=showShop;
 }
@@ -475,16 +484,18 @@ function mkItem(k,l){
   if(d.charges){ it.ch=d.charges; it.t=now(); }
   if(d.uses) it.left=d.uses;
   if(d.fuelled) it.fuel=0;
-  if(d.want) it.want=pickWant();
+  if(d.want) it.want=pickWant(d);
   if(k==='N' && typeof S!=='undefined' && S && !(S.moonSeen||{})[l] && !moonPending()) it.st=1;
   return it;
 }
 const WANTS=(CONFIG.bin&&CONFIG.bin.wants)||[];
+/* a feeder item (want:true) can carry its own wants/gives/count/giveL; otherwise CONFIG.bin applies */
+const feedSpec = d => ({ wants:d.wants||WANTS, gives:d.gives||(CONFIG.bin&&CONFIG.bin.gives), count:d.count||1, giveL:d.giveL||null });
 /* can the player make chain k right now? (an item of it is out, or a generator on the board drops it) */
 function obtainable(k){ if(typeof S==='undefined'||!S) return !!genFor(k);
   return S.cells.some(c=>c.s==='open'&&c.it&&(c.it.k===k || (isGen(c.it)&&(CHAINS[c.it.k].main===k||(def(c.it).drop||[]).some(d=>d[0]===k))))); }
 /* the bin never asks for something you can't make yet (fruit before you've grown a tree) */
-function pickWant(){ const ok=WANTS.filter(w=>obtainable(w[0])), pool=ok.length?ok:WANTS.filter(w=>genFor(w[0]));
+function pickWant(d){ const W=feedSpec(d||{}).wants, ok=W.filter(w=>obtainable(w[0])), pool=ok.length?ok:W.filter(w=>genFor(w[0])).length?W.filter(w=>genFor(w[0])):W;
   return pool[Math.floor(Math.random()*pool.length)]; }
 const FUEL=CONFIG.fuel||{};
 const fuelNames=()=>Object.keys(FUEL).map(k=>`${CHAINS[k].items[0].e} ${CHAINS[k].name.toLowerCase()}`).join(' or ');
@@ -556,6 +567,7 @@ function refreshCharges(it){
 function restingShop(i){
   const it=S.cells[i].it, d=def(it), have=S.cells.findIndex(c=>c.s==='open'&&c.it&&c.it.k==='ET');
   if(have>=0){ fx[have]='hint'; render(); flo(`${d.e} Resting. Drag your ${CHAINS.ET.items[0].e} onto it`, i); return; }
+  if(!SHOP_ITEMS.some(x=>x.id==='ET')){ flo(`${d.e} Resting. Back in ${fmt(nextChargeIn(it))}`, i); return; }
   miniShop({id:'ET', title:`${d.e} ${d.n} is resting`, sub:`Next one in ${fmt(nextChargeIn(it))} · or refill it now`, label:`Refill it now (${d.charges} taps)`,
     use:()=>{ const g=S.cells[i].it; if(!g) return; g.ch=d.charges; g.t=now(); fx[i]='pop'; SND.play('unweb'); flo(`${CHAINS.ET.items[0].e} ${d.n} refilled`, i); }});
 }
@@ -621,7 +633,7 @@ function discover(it, quiet){
 function produce(i){
   const it=S.cells[i].it, d=def(it);
   if(CHAINS[it.k].wheel){ openWheel(i); return; }
-  if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1]; SND.play('nope'); toast(`${d.e} Wants ${w.e} ${w.n}. Drag one onto it for a seedling 🌱`); return; }
+  if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1], F=feedSpec(d); SND.play('nope'); flo(`${d.e} Wants ${w.e}. Drop one on it for ${F.count>1?F.count+'× ':''}${CHAINS[F.gives].items[0].e}`, i); return; }
   if(d.fuelled){ if(!(it.fuel>0)){ SND.play('nope'); toast(`${d.e} The stove is cold. Drag a 🪵 log or some ${CHAINS.P.name.toLowerCase()} onto it.`); return; } }
   else {
     if(d.charges){
@@ -657,10 +669,11 @@ function feed(a,b){
     const [wk,wl]=B.want, w=CHAINS[wk].items[wl-1];
     if(A.k!==wk||A.l!==wl){ SND.play('nope'); flo(`${T.e} Wants ${w.e} ${w.n}, not that`, b); return true; }
     S.cells[a].it=null;
-    const t=nearestEmpty(b), l=Math.random()<.8?1:2;
-    const G=CONFIG.bin.gives; if(t>=0){ S.cells[t].it=mkItem(G,l); fx[t]='spawn'; discover(S.cells[t].it); } else S.gifts.push([G,l]);
-    B.want=pickWant(); fx[b]='pop'; SND.play('merge',2); stat('compost');
-    flo(`${T.e} Out pops a ${CHAINS[CONFIG.bin.gives].items[l-1].e}`, b); save(); render(); return true;
+    const F=feedSpec(T), G=F.gives; let shown='', over=0;
+    for(let n=0;n<F.count;n++){ const l=F.giveL||(Math.random()<.8?1:2), t=nearestEmpty(b); shown=CHAINS[G].items[l-1].e;
+      if(t>=0){ S.cells[t].it=mkItem(G,l); fx[t]='spawn'; discover(S.cells[t].it); } else { S.gifts.push([G,l]); over++; } }
+    B.want=pickWant(T); fx[b]='pop'; SND.play('merge',2); stat('compost');
+    flo(`${T.e} Out pop ${F.count>1?F.count+'× ':''}${shown}${over?` (${over} to 🎁)`:''}`, b); save(); render(); return true;
   }
   if(T.fuelled){
     const fv=fuelValue(A);
@@ -727,6 +740,9 @@ function drop(a,b){
   const A=S.cells[a], B=S.cells[b];
   if(B.s==='sheet'){ SND.play('nope'); flo(T.sheetBlocked, b); return; }
   if(B.s==='box'){ SND.play('nope'); flo('Merge next to a box to open it', b); return; }
+  if(B.s==='web' && A.it && CHAINS[A.it.k].dust){
+    A.it=null; B.s='open'; fx[b]='reveal'; SND.play('unweb'); stat('open'); if(sel===a) sel=b; if(B.it) discover(B.it); revealAround(b);
+    flo('✨ Cobwebs cleared', b); save(); render(); return; }
   if(B.s==='web'){
     if(canMerge(A.it,B.it)){ doMerge(a,b); }
     else { SND.play('nope'); flo(`Stuck. Drop another ${def(B.it).e} on it`, b); }
@@ -753,11 +769,15 @@ function doMerge(a,b){
   revealAround(b);
   discover(it);
   if(!isGen(it) && !isRes(it) && it.l>=5){ const t=nearestEmpty(b); if(t>=0){ S.cells[t].it=mkItem('X',1); fx[t]='spawn'; } }
+  const mb=CHAINS[it.k].mergeBonus; if(mb && it.l>=mb.from) dropItems([mb.give], b);
   sel=b;
   save(); render();
 }
 
-function sellValue(it){ if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; return isGen(it)||isRes(it)||isBoost(it)||it.k==='ET'?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
+/* a spare generator (another of its kind is on the board) can be sold, so extras never clog the board;
+   your last one can't, so you can never sell yourself into a corner */
+const spareGen = it => isGen(it) && !CHAINS[it.k].wheel && S.cells.some(c=>c.s==='open'&&c.it&&c.it!==it&&c.it.k===it.k);
+function sellValue(it){ if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; if(spareGen(it)) return it.l*2; return isGen(it)||isRes(it)||isBoost(it)||it.k==='ET'||CHAINS[it.k].dust?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
   S.coins+=v; S.cells[i].it=null; sel=-1; stat('sell');
@@ -849,7 +869,9 @@ function placeGift(){
   flo(`${def(S.cells[t].it).e} on the board`, t);
   save(); render();
 }
-function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&(ch.main===k||ch.rare===k)); }
+function genFor(k){ return Object.values(CHAINS).find(ch=>ch.gen&&(ch.main===k||ch.rare===k))
+  || Object.values(CHAINS).find(ch=>ch.items.some(d=>d.gen&&(d.drop||[]).some(x=>x[0]===k)))
+  || Object.values(CHAINS).find(ch=>ch.items.some(d=>d.want&&feedSpec(d).gives===k)); }
 function hintTask(t){
   if(t.wheel && wheelDone()<t.wheel && t.need.every(([k,l])=>openCount(k,l)>0)){
     S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
@@ -875,6 +897,7 @@ function deliver(t){
 }
 /* name the generator you'd actually use: your highest level one on the board (level 1 if you have none) */
 function genLabel(g){ const gk=Object.keys(CHAINS).find(x=>CHAINS[x]===g); let l=0;
+  if(!g.gen){ const d=g.items.find(d=>d.gen||d.want); return `${d.e} ${d.n}`; }
   S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&c.it.k===gk&&c.it.l>l) l=c.it.l; });
   const d=g.items[Math.max(1,l)-1]; return `${d.e} ${d.n}`; }
 function closeOrder(){ const p=$('orderPop'); if(p) p.remove(); }
@@ -935,7 +958,7 @@ function render(){
         if(isGen(c.it)){
           cls+=' isgen';
           if(CHAINS[c.it.k].wheel){ html+=`<i class="gen">${wheelDone()}/20</i>`; if(S.chips>0) html+=`<i class="slotchips">🎟️${S.chips}</i>`; }
-          else if(d.want){ if(!obtainable(c.it.want[0])){ c.it.want=pickWant(); save(); } const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="bubble">${w.e}<b class="arr">↓</b></i>`; cls+=' hungry'; }
+          else if(d.want){ if(!obtainable(c.it.want[0])){ c.it.want=pickWant(d); save(); } const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="bubble">${w.e}<b class="arr">↓</b></i>`; cls+=' hungry'; }
           else if(d.fuelled){ if(c.it.fuel) html+=`<i class="gen">🔥${c.it.fuel}</i>`; else { html+=`<i class="bubble">🪵<b class="arr">↓</b></i>`; cls+=' cool hungry'; } }
           else if(d.uses) html+=`<i class="gen">${c.it.left}</i>`;
           else if(d.charges){
@@ -1049,11 +1072,11 @@ function renderInfo(){
     $('wOpen').onclick=()=>openWheel(sel); $('tkBtn').onclick=ticketShop; return;
   }
   if(isGen(it)){
-    if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1]; ds=`Wants ${w.e} ${w.n}. Drag one onto it to get a seedling 🌱. It asks for something new each time.`; }
+    if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1], F=feedSpec(d); ds=`Wants ${w.e} ${w.n}. Drop one on it to get ${F.count>1?F.count+' × ':'a '}${CHAINS[F.gives].items[0].e} ${CHAINS[F.gives].items[0].n}. It asks for something new each time.`; }
     else if(d.fuelled) ds = it.fuel>0 ? `Tap again to cook. ${it.fuel} fuel left.` : `Cold. Drag ${fuelNames()} onto it.`;
     else if(d.uses) ds=`Tap again. ${it.left} left, then it ${d.after?`leaves a ${CHAINS[d.after[0]].items[d.after[1]-1].e}`:'folds flat for good'}.${d.free&&it.l<maxL(it.k)?` Merge two unopened ones for a ${ch.items[it.l].n}.`:''}`;
     else if(d.free){ refreshCharges(it); ds = it.ch>0 ? `Tap again to brew. ${it.ch} left.` : `Boiling… ready in ${nextChargeIn(it)}s.`; }
-    else { ds=`Tap again to make ${CHAINS[ch.main].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}.`; if(d.charges) ds+= it.ch>0?` ${it.ch} left before a rest.`:` Resting: next in ${fmt(nextChargeIn(it))}.`;
+    else { const mk=ch.main||[...(d.drop||[])].sort((x,y)=>y[2]-x[2])[0][0]; ds=`Tap again to make ${CHAINS[mk].name.toLowerCase()}${ch.rare?`, sometimes a rare ${CHAINS[ch.rare].name.toLowerCase()} item`:''}.`; if(d.charges) ds+= it.ch>0?` ${it.ch} left before a rest.`:` Resting: next in ${fmt(nextChargeIn(it))}.`;
       if(canFocus(it)) ds+= it.focus?` Focused for ${it.focus} more taps.`:` Drag ${CHAINS.E.items[0].e} onto it for better rare odds.`; }
     if(it.l<maxL(it.k) && !d.want && !d.fuelled && !d.free) ds+=` Merge two to get a ${ch.items[it.l].n}.`;
     if(d.charges && chargedCell(sel)) ds+=' ⏱️ A Time Charger is doubling its recharge speed.';
@@ -1069,6 +1092,8 @@ function renderInfo(){
     const unit = ch.claim==='coins'?'🪙' : ch.claim==='skip'?'min time skip' : ch.claim==='points'?T.passName+' points' : ch.claim==='chips'?'🎟️ (raffle tickets)' : '⭐ applause';
     if(ch.claim==='skip') ds=`Tap again to skip ${d.v} min on every generator’s recharge.`+(it.l<maxL(it.k)?` Merge two for ${ch.items[it.l].v} min.`:'');
     else ds=`Tap again to collect +${d.v} ${unit}.`+(it.l<maxL(it.k)?` Merge two for +${ch.items[it.l].v}.`:' Top of the chain.');
+  } else if(ch.dust){
+    ds=`Drag onto a cobweb tile to clear it. The item underneath is yours.`;
   } else if(it.k==='ET'){
     ds=`Drag onto a generator to refill it straight away.`;
   } else {

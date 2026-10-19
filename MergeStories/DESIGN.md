@@ -43,3 +43,14 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
 - Attic (cosy mystery about who someone was) is the favourite so far. Fete (joyful, wholesome) was good, but a step behind.
 - Big reveals get a short scene (3–5 lines, 2+ speakers) right when they happen, and Reflections retell them at the end. See the vault's Story Notes.
 - A side character who drives a mechanic works best with a small arc of their own (Mrs Hale: Ron, 1976, the roof).
+
+## Generator trees (Bellavista Gardens, rebuilt from Merge Mansion's Ignatius Boulton event)
+- **Generators that make generators clog the board.** A pallet that drops tills and clocks filled the board with spares in testing.
+  - Spare generators can now be sold. Your last one of a kind can't.
+  - Give every generator chain at least two levels, so duplicates can merge.
+- **Never let an order eat a progression piece.** An order that took the statue made the stonemason's yard impossible to build.
+  - Ask for what the piece *makes* instead.
+- **Watch the last chapter.** The first balance put half the taps into chapter 6 (two "9"s and two big story items).
+  - Spread the big asks across chapters 4–6.
+- **Merge bonuses (stars from merging numbers) make lots of points.** Size the pass tiers from a bot run, not by guessing.
+- **A feeder that pays 6 at once needs room.** The starting board needs about 8 free tiles.

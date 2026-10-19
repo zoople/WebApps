@@ -434,9 +434,9 @@ const MOON_NOTES=[
 const P2={ shopName:'Dot’s Tombola Table', shopBlurb:'Dot sells whatever’s left from the tombola. All proceeds to the church roof' };
 
 const SHOP_ITEMS=[
-  {id:'TK', price:()=>80, what:'Ten raffle tickets: one spin of the Prize Wheel', give:()=>{ S.chips=(S.chips||0)+10; }},
-  {id:'ET', price:()=>40, what:'Refills one generator. Drag it onto the one you need', give:()=>S.gifts.push(['ET',1])},
-  {id:'H1', price:()=>90, what:'Skips 15 minutes on every generator and the urn', give:()=>S.gifts.push(['H',1])},
+  {id:'TK', chips:10, price:80, what:'Ten raffle tickets: one spin of the Prize Wheel'},
+  {id:'ET', item:['ET',1], price:40, what:'Refills one generator. Drag it onto the one you need'},
+  {id:'H1', item:['H',1], price:90, what:'Skips 15 minutes on every generator and the urn'},
 ];
 
 const REFLECTIONS=[

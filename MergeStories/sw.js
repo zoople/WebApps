@@ -3,10 +3,11 @@
    quietly fetches the latest in the background; the console's "new version" check then offers the update.
    Engine and cartridges are requested as file?v=<version>, so after an update the new index never runs
    against an old engine: a version it hasn't stored yet comes from the network (with a short timeout). */
-const PREFIX = 'merge-stories-', CACHE = PREFIX + 'v2';
+const PREFIX = 'merge-stories-', CACHE = PREFIX + 'v3';
 const SHELL = ['./', 'index.html', 'catalog.js', 'engine.js', 'merge-stories.webmanifest',
   'events/larkspur-attic/event.js', 'events/larkspur-attic/icon.svg',
   'events/pennywhistle-fete/event.js', 'events/pennywhistle-fete/icon.svg',
+  'events/bellavista-gardens/event.js', 'events/bellavista-gardens/icon.svg',
   'icons/icon.svg', 'icons/icon-32.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 // also file each script under the exact ?v= the console will ask for, so even the first launch with no network is instant
 const tagged = c => c.match('index.html').then(r => r.text()).then(t => {
