@@ -1,11 +1,11 @@
 /* Pennywhistle Fete: a Merge Stories cartridge. Everything that makes this story itself lives here:
    words, cast, chains, board, orders, balance, wheel, cover, colours and music. The engine is shared. */
 const EVENT = {
-  id: 'pennywhistle-fete', title: 'Pennywhistle Fete', tagline: 'The Mystery Prize', version: 'v18',
+  id: 'pennywhistle-fete', title: 'Pennywhistle Fete', tagline: 'The Mystery Prize', version: 'v19',
   themeColor: '#14303a',
   cover: { art: "<svg class=\"cover\" viewBox=\"0 0 360 230\" role=\"img\" aria-label=\"A prize wheel on the village green at sunset, under bunting\"><defs><linearGradient id=\"cvSky\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#173f4c\"/><stop offset=\".55\" stop-color=\"#2f7a80\"/><stop offset=\".85\" stop-color=\"#f0a46a\"/><stop offset=\"1\" stop-color=\"#ffd27a\"/></linearGradient><radialGradient id=\"cvGlow\" cx=\".5\" cy=\".5\" r=\".5\"><stop offset=\"0\" stop-color=\"#ffe9a0\" stop-opacity=\".55\"/><stop offset=\"1\" stop-color=\"#ffe9a0\" stop-opacity=\"0\"/></radialGradient></defs><rect width=\"360\" height=\"230\" fill=\"url(#cvSky)\"/><circle cx=\"292\" cy=\"160\" r=\"30\" fill=\"#ffd27a\" opacity=\".85\"/><rect y=\"160\" width=\"360\" height=\"16\" fill=\"#2b7487\"/><path d=\"M0 166h360\" stroke=\"#ffe3a8\" stroke-opacity=\".35\" stroke-width=\"1.5\" stroke-dasharray=\"14 10\"/><path d=\"M0 178 Q90 160 180 172 T360 168 V230 H0Z\" fill=\"#4f8a4b\"/><path d=\"M0 200 Q120 186 240 198 T360 194 V230 H0Z\" fill=\"#3f7640\"/><g transform=\"translate(18,140)\"><rect x=\"0.0\" y=\"16.1\" width=\"11.7\" height=\"29.9\" fill=\"#e8547a\"/><rect x=\"11.7\" y=\"16.1\" width=\"11.7\" height=\"29.9\" fill=\"#fdf6e3\"/><rect x=\"23.3\" y=\"16.1\" width=\"11.7\" height=\"29.9\" fill=\"#e8547a\"/><rect x=\"35.0\" y=\"16.1\" width=\"11.7\" height=\"29.9\" fill=\"#fdf6e3\"/><rect x=\"46.7\" y=\"16.1\" width=\"11.7\" height=\"29.9\" fill=\"#e8547a\"/><rect x=\"58.3\" y=\"16.1\" width=\"11.7\" height=\"29.9\" fill=\"#fdf6e3\"/><path d=\"M-4 17.0 L35.0 0 L74 17.0Z\" fill=\"#e8547a\"/><path d=\"M35.0 0 v-8\" stroke=\"#fdf6e3\" stroke-width=\"1.5\"/><path d=\"M35.0 -8 l7 3 l-7 3z\" fill=\"#ffc94a\"/><path d=\"M26.6 46 L35.0 23.0 L43.4 46Z\" fill=\"#7a2a3e\" opacity=\".6\"/></g><g transform=\"translate(300,150)\"><rect x=\"0.0\" y=\"10.5\" width=\"7.3\" height=\"19.5\" fill=\"#e8547a\"/><rect x=\"7.3\" y=\"10.5\" width=\"7.3\" height=\"19.5\" fill=\"#fdf6e3\"/><rect x=\"14.7\" y=\"10.5\" width=\"7.3\" height=\"19.5\" fill=\"#e8547a\"/><rect x=\"22.0\" y=\"10.5\" width=\"7.3\" height=\"19.5\" fill=\"#fdf6e3\"/><rect x=\"29.3\" y=\"10.5\" width=\"7.3\" height=\"19.5\" fill=\"#e8547a\"/><rect x=\"36.7\" y=\"10.5\" width=\"7.3\" height=\"19.5\" fill=\"#fdf6e3\"/><path d=\"M-4 11.1 L22.0 0 L48 11.1Z\" fill=\"#e8547a\"/><path d=\"M22.0 0 v-8\" stroke=\"#fdf6e3\" stroke-width=\"1.5\"/><path d=\"M22.0 -8 l7 3 l-7 3z\" fill=\"#ffc94a\"/><path d=\"M16.7 30 L22.0 15.0 L27.3 30Z\" fill=\"#7a2a3e\" opacity=\".6\"/></g><circle cx=\"180\" cy=\"104\" r=\"86\" fill=\"url(#cvGlow)\"/><path d=\"M146 190 L180 104 L214 190\" stroke=\"#123039\" stroke-width=\"7\" fill=\"none\" stroke-linecap=\"round\"/><g transform=\"translate(180,104)\"><circle r=\"65\" fill=\"#123039\"/><g class=\"spin\"><path d=\"M0 0 L0.0 -60.0 A60 60 0 0 1 30.0 -52.0Z\" fill=\"#e8547a\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L30.0 -52.0 A60 60 0 0 1 52.0 -30.0Z\" fill=\"#ffc94a\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L52.0 -30.0 A60 60 0 0 1 60.0 0.0Z\" fill=\"#4fb3a9\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L60.0 0.0 A60 60 0 0 1 52.0 30.0Z\" fill=\"#8f9cf0\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L52.0 30.0 A60 60 0 0 1 30.0 52.0Z\" fill=\"#e8547a\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L30.0 52.0 A60 60 0 0 1 0.0 60.0Z\" fill=\"#ffc94a\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L0.0 60.0 A60 60 0 0 1 -30.0 52.0Z\" fill=\"#4fb3a9\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L-30.0 52.0 A60 60 0 0 1 -52.0 30.0Z\" fill=\"#8f9cf0\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L-52.0 30.0 A60 60 0 0 1 -60.0 0.0Z\" fill=\"#e8547a\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L-60.0 0.0 A60 60 0 0 1 -52.0 -30.0Z\" fill=\"#ffc94a\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L-52.0 -30.0 A60 60 0 0 1 -30.0 -52.0Z\" fill=\"#4fb3a9\" stroke=\"#123039\" stroke-width=\"1.5\"/><path d=\"M0 0 L-30.0 -52.0 A60 60 0 0 1 -0.0 -60.0Z\" fill=\"#8f9cf0\" stroke=\"#123039\" stroke-width=\"1.5\"/><circle class=\"bulb\" cx=\"15.8\" cy=\"-58.9\" r=\"3.4\" style=\"animation-delay:0.00s\"/><circle class=\"bulb\" cx=\"43.1\" cy=\"-43.1\" r=\"3.4\" style=\"animation-delay:0.13s\"/><circle class=\"bulb\" cx=\"58.9\" cy=\"-15.8\" r=\"3.4\" style=\"animation-delay:0.26s\"/><circle class=\"bulb\" cx=\"58.9\" cy=\"15.8\" r=\"3.4\" style=\"animation-delay:0.39s\"/><circle class=\"bulb\" cx=\"43.1\" cy=\"43.1\" r=\"3.4\" style=\"animation-delay:0.52s\"/><circle class=\"bulb\" cx=\"15.8\" cy=\"58.9\" r=\"3.4\" style=\"animation-delay:0.65s\"/><circle class=\"bulb\" cx=\"-15.8\" cy=\"58.9\" r=\"3.4\" style=\"animation-delay:0.78s\"/><circle class=\"bulb\" cx=\"-43.1\" cy=\"43.1\" r=\"3.4\" style=\"animation-delay:0.91s\"/><circle class=\"bulb\" cx=\"-58.9\" cy=\"15.8\" r=\"3.4\" style=\"animation-delay:1.04s\"/><circle class=\"bulb\" cx=\"-58.9\" cy=\"-15.8\" r=\"3.4\" style=\"animation-delay:1.17s\"/><circle class=\"bulb\" cx=\"-43.1\" cy=\"-43.1\" r=\"3.4\" style=\"animation-delay:1.30s\"/><circle class=\"bulb\" cx=\"-15.8\" cy=\"-58.9\" r=\"3.4\" style=\"animation-delay:1.43s\"/></g><circle r=\"11\" fill=\"#123039\" stroke=\"#ffc94a\" stroke-width=\"2.5\"/><path d=\"M-8 -72 h16 l-8 13z\" fill=\"#fdf6e3\"/></g><path d=\"M-5 6 Q180 38 365 6\" stroke=\"#fdf6e3\" stroke-opacity=\".8\" stroke-width=\"1.2\" fill=\"none\"/><path d=\"M0.2 8.2 h16 l-8 14z\" fill=\"#e8547a\"/><path d=\"M26.6 12.1 h16 l-8 14z\" fill=\"#ffc94a\"/><path d=\"M53.1 15.4 h16 l-8 14z\" fill=\"#4fb3a9\"/><path d=\"M79.5 18.0 h16 l-8 14z\" fill=\"#8f9cf0\"/><path d=\"M105.9 20.0 h16 l-8 14z\" fill=\"#e8547a\"/><path d=\"M132.4 21.3 h16 l-8 14z\" fill=\"#ffc94a\"/><path d=\"M158.8 21.9 h16 l-8 14z\" fill=\"#4fb3a9\"/><path d=\"M185.2 21.9 h16 l-8 14z\" fill=\"#8f9cf0\"/><path d=\"M211.6 21.3 h16 l-8 14z\" fill=\"#e8547a\"/><path d=\"M238.1 20.0 h16 l-8 14z\" fill=\"#ffc94a\"/><path d=\"M264.5 18.0 h16 l-8 14z\" fill=\"#4fb3a9\"/><path d=\"M290.9 15.4 h16 l-8 14z\" fill=\"#8f9cf0\"/><path d=\"M317.4 12.1 h16 l-8 14z\" fill=\"#e8547a\"/><path d=\"M343.8 8.2 h16 l-8 14z\" fill=\"#ffc94a\"/><path d=\"M-5 26 Q180 70 365 26\" stroke=\"#fdf6e3\" stroke-opacity=\".8\" stroke-width=\"1.2\" fill=\"none\"/><path d=\"M0.2 29.0 h16 l-8 14z\" fill=\"#4fb3a9\"/><path d=\"M26.6 34.4 h16 l-8 14z\" fill=\"#8f9cf0\"/><path d=\"M53.1 38.9 h16 l-8 14z\" fill=\"#e8547a\"/><path d=\"M79.5 42.5 h16 l-8 14z\" fill=\"#ffc94a\"/><path d=\"M105.9 45.2 h16 l-8 14z\" fill=\"#4fb3a9\"/><path d=\"M132.4 47.0 h16 l-8 14z\" fill=\"#8f9cf0\"/><path d=\"M158.8 47.9 h16 l-8 14z\" fill=\"#e8547a\"/><path d=\"M185.2 47.9 h16 l-8 14z\" fill=\"#ffc94a\"/><path d=\"M211.6 47.0 h16 l-8 14z\" fill=\"#4fb3a9\"/><path d=\"M238.1 45.2 h16 l-8 14z\" fill=\"#8f9cf0\"/><path d=\"M264.5 42.5 h16 l-8 14z\" fill=\"#e8547a\"/><path d=\"M290.9 38.9 h16 l-8 14z\" fill=\"#ffc94a\"/><path d=\"M317.4 34.4 h16 l-8 14z\" fill=\"#4fb3a9\"/><path d=\"M343.8 29.0 h16 l-8 14z\" fill=\"#8f9cf0\"/><text x=\"250\" y=\"212\" font-size=\"22\">🐕</text><text x=\"120\" y=\"216\" font-size=\"16\">🎈</text></svg>", sub: 'The Mystery Prize',
     key: [["🎡", "Spin the Prize Wheel to light up sixty years of old prizes"], ["🧩", "Merge and fill orders to find out who leaves the Mystery Prize"], ["☀️", "No timer. Play at your own pace"]],
-    more: ["Tap a generator twice to make items; drag two matching items together to merge", "Story orders and the White Elephant pay 🎟️ tickets; 10 tickets spin the wheel", "You don’t win the old prizes on the wheel; every stop shakes out loose change 🪙", "Generators need a rest; ⏲️ egg timers refill one", "Drag tea onto a generator to focus it on rare finds", "📦 Donation boxes are free, then fold flat", "🗑️ Feed the compost bin, grow 🌳 apple trees, burn 🪵 logs in the ♨️ stove for tea", "⏱️ Time chargers make generators around them recharge twice as fast", "Tap 🪙 for Dot’s tombola table"] },
+    more: ["Tap a generator twice to make items; drag two matching items together to merge", "Generators are free to tap; they rest after a while", "Story orders and the White Elephant pay 🎟️ tickets; 10 tickets spin the wheel", "Mrs Hale’s story orders need sales at her White Elephant stall", "You don’t win the old prizes on the wheel; a segment that’s already lit gives some tickets back", "Generators need a rest; ⏲️ egg timers refill one", "Tea isn’t for drinking: drop it on a generator and it finds rare items more often", "📦 Donation boxes are free, then fold flat", "🗑️ Feed the compost bin, grow 🌳 apple trees, burn 🪵 logs in the ♨️ stove for tea", "⏱️ Time chargers make generators around them recharge twice as fast", "Tap 🪙 for Dot’s tombola table"] },
   terms: {
     passName: 'Rosette Board', tokenNoun: 'rosette', tokenIcon: '🎗️',
     passHelp: '• Rosettes 🎗️ drop from generators and orders<br>• Tap twice to claim them any time: 🎗️ 1 · 🏵️ 3 · 🥈 7 · 🥇 16 points<br>• Merging first is worth more, but takes board space<br>• Every 3rd reward comes with a note from a past winner 💌',
@@ -20,8 +20,18 @@ const EVENT = {
   },
   complete: { title: 'The Mystery Prize', text: 'You ran the Prize Wheel and found out who’s been leaving the Mystery Prize since 1962. Next year it’s your turn.',
     note: 'The board stays open. Merge as long as you like. The Lost Property Box chain has one level nobody has reached yet.' },
+  /* reward numbers (the engine hands them out). Tables read "value or more → level": [[30,2],[0,1]] */
+  rewards: {
+    order: { coins:[[30,2],[0,1]], xp:[[4,3],[2,2],[0,1]], points:[[3,2],[0,1]], tickets:[[3,2],[0,1]] },
+    finale: [['C',3],['X',4],['N',3],['CP',2]],
+    side: { coins:[[24,2],[0,1]], bigPoints:24, timerAt:12, timerChance:.3, tickets:{always:12, chance:.5}, lucky:[['C',1],['N',1]] },
+    discovery: { coinsPerLevel:0, topCoins:5, xpFrom:1 },   // coins only for a chain's top item
+    quests: [[['C',1],['CP',1]],[['E',2],['CP',2]],[['E',2],['CP',2]],[['E',3],['H',1],['N',1]],[['E',3],['CP',2],['N',2]],[['E',3],['H',1],['N',3]]],
+  },
   css: '',   /* the engine's default look is this story's */
   wheel: { cost: 10, n: 20,
+    light: [['C',1]],     // a new light shakes out a penny
+    repeat: [['CP',2]],   // a lit segment gives a Ticket Strip back, so a late run of repeats still refunds something
     segs: [
   {e:'🍬', n:'Humbugs', yr:1964, story:[['N','1964. A jar of humbugs, wrapped in a hanky. Tag: “From a friend.”'],['P','Humbugs! Fred the fisherman won those. He sucked one all the way through the sermon.']],
    tidbit:[['N','Fred kept one humbug in his top pocket for a whole year, “for emergencies”. There was never an emergency.']]},
@@ -134,10 +144,8 @@ const EVENT = {
 const CONFIG = {
   chargerScale: 1/6,     // a 2h Merge Mansion charger runs 20 min here
   cols: 7, rows: 9,
-  energyMax: 50,          // Second Pass: a smaller tank so a session can run dry
-  energyRegenMs: 120000,  // 1 energy every 2 min, same as Merge Mansion
-  energyCost: 1,
-  buyEnergy: { cost: 60, step: 20, amount: 30 },  // price rises by `step` after each purchase
+  bin: { wants:[['P',1],['P',2],['F',1],['F',2],['T',1],['T',2],['Y',1],['Y',2]], gives:'G' },  // what the compost bin asks for, and what it gives
+  fuel: { O:4, P:1 },     // stove fuel per item level
   saveKey:'merge-stories:pennywhistle-fete', legacySaveKey:'pennywhistle-fete',  // Second Pass: its own save, the original game is untouched  // v12: order list rebalanced, fresh start
 };
 
@@ -155,7 +163,7 @@ const CHAINS = {
     {e:'🔔',n:'Bell'},{e:'🥁',n:'Drum'},{e:'🎺',n:'Trumpet'},{e:'🎷',n:'Saxophone'},
     {e:'📯',n:'Post Horn'},{e:'🎼',n:'Band Score'}]},
   /* resource chains: tap twice to claim, or merge first for a bigger payout (values follow Merge Mansion's 2/6/16/40/100 curve) */
-  E:{name:'Tea Time', type:'res', claim:'energy', items:[
+  E:{name:'Tea Time', type:'boost', items:[
     {e:'🍬',n:'Sugar Lump',v:2},{e:'🍪',n:'Biscuit',v:6},{e:'☕',n:'Cuppa',v:16},
     {e:'🧁',n:'Cupcake',v:40},{e:'🍰',n:'Victoria Sponge',v:100}]},
   C:{name:'Coins', type:'res', claim:'coins', items:[
@@ -167,7 +175,7 @@ const CHAINS = {
   N:{name:'Rosettes', type:'res', claim:'points', items:[
     {e:'🎗️',n:'Ribbon',v:1},{e:'🏵️',n:'Rosette',v:3},{e:'🥈',n:'Silver Medal',v:7},{e:'🥇',n:'Gold Medal',v:16}]},
   H:{name:'Time Skips', type:'res', claim:'skip', items:[{e:'⏳',n:'Hourglass',v:15},{e:'⌛',n:'Sand Timer',v:60},{e:'🗓️',n:'Calendar Page',v:240}]},
-  CP:{name:'Raffle Tickets', type:'res', claim:'chips', items:[{e:'🎟️',n:'Raffle Ticket',v:1},{e:'🎫',n:'Ticket Strip',v:3},{e:'🧾',n:'Ticket Roll',v:8}]},
+  CP:{name:'Raffle Tickets', type:'res', claim:'chips', items:[{e:'🎟️',n:'Raffle Ticket',v:1},{e:'🎫',n:'Ticket Strip',v:3},{e:'🧾',n:'Ticket Roll',v:10}]},
   /* rare chains: each generator's occasional bonus drop */
   K:{name:'Keepsakes', rare:true, items:[{e:'🔑',n:'Old Key'},{e:'🧸',n:'Teddy Bear'},{e:'📻',n:'Wireless'},{e:'📸',n:'Box Camera'}]},
   B:{name:'Dressing Up', rare:true, items:[{e:'🔘',n:'Button'},{e:'🎀',n:'Silk Bow'},{e:'👒',n:'Sun Hat'},{e:'👑',n:'May Queen Crown'}]},
@@ -193,7 +201,7 @@ const CHAINS = {
     {e:'🌳',n:'Apple Tree', gen:true, uses:10, after:['O',1], drop:[['Y',1,70],['Y',2,20],['O',1,10]]}]},
   Y:{name:'Orchard Fruit', items:[{e:'🍒',n:'Cherries'},{e:'🍎',n:'Apple'},{e:'🍐',n:'Pear'},{e:'🍑',n:'Peach'},{e:'🥧',n:'Fruit Pie'}]},
   O:{name:'Firewood', items:[{e:'🪵',n:'Log'}]},
-  /* fed generators: the bin wants a specific item, the stove burns fuel instead of energy */
+  /* fed generators: the bin wants a specific item (CONFIG.bin), the stove burns fuel (CONFIG.fuel) */
   Z:{name:'Compost Bin', gen:true, items:[{e:'🗑️',n:'Compost Bin', want:true}]},
   U:{name:'Camping Stove', gen:true, main:'E', items:[{e:'♨️',n:'Camping Stove', fuelled:true, drop:[['E',1,55],['E',2,30],['E',3,10],['Y',2,5]]}]},
   /* Time Chargers: shards from the church clock merge up into a charger. Tap to switch on: timed generators in the
@@ -241,7 +249,6 @@ const LAYOUT = [
   'oE1 ogD1 o. o. o. ogS1 oE1',
 ];
 
-const zoneOfRow = r => r>=6?0 : r>=4?1 : r>=2?2 : 3;
 
 const CAST = {
   N:{name:'', av:''},
@@ -365,6 +372,7 @@ const TASKS = [
   // ch2 — zone 1, microphone
   {beat:['T','I can now play the drum. Badly. Hey, there’s writing on the rafters. Names, painted, one a year.'], ch:1, who:'T', need:[['L',2]], coins:12, say:'Is that a drum? Can I have the drum? I’ve always wanted the drum.'},
   {beat:['P','Sixty-odd years I’ve been tying flags to that gate. My knees have opinions.'], ch:1, who:'P', need:[['P',4]], coins:14, say:'Crossed flags for the gate, love. It’s not a fete without flags on the gate.'},
+  {id:201, ch:1, who:'H', sales:3, need:[['F',3]], coins:12, say:'Stall’s looking bare, dear. Help me shift three lots at the White Elephant, and bring a potato for the window. A good potato sells a stall.', beat:['H','Three sales before lunch. Ron would have said I was showing off. He’d have been right.'], more:[['T','Who’s Ron?'],['H','My husband, dear. Forty years of him. Mind that pennant, it’s sold.']]},
   {beat:['M','(He rolls the cabbage under a trestle and lies on it, guarding.)'], ch:1, who:'M', need:[['F',4]], coins:12, say:'(Biscuit has found a cabbage-shaped hole in his life.)'},
   {beat:['T','Ding! And look: every name on the rafters has a little star by it. Every one a Mystery Prize winner.'], ch:1, who:'T', wheel:2, need:[['T',3],['L',1]], coins:14, say:'A dartboard and a bell for ring-the-bell. And keep that wheel spinning, people want to see it.'},
   {beat:['P','Poor Mr Buttons. Nobody ever picks a teddy with one eye. We’ll find him a home.'], ch:1, who:'P', need:[['P',4],['K',2]], coins:16, say:'More flags, and that teddy. He was a tombola prize in 1979 and nobody’s ever won him.'},
@@ -372,6 +380,7 @@ const TASKS = [
   // ch3 — zone 2, lost property box
   {beat:['N','There are dozens of mice in the Lost Property Box. Every single one is wearing a rosette.'], ch:2, who:'M', need:[['M',2]], coins:16, say:'(He drops a knitted mouse at your feet. He would like all of them, please.)'},
   {beat:['T','Hook-a-crab. Revolutionary. Pennywhistle isn’t ready.'], ch:2, who:'T', need:[['L',4],['W',2]], coins:18, say:'A sax and that toy crab. The crab’s for the hook-a-duck. Ducks are expensive.'},
+  {id:202, ch:2, who:'H', sales:4, need:[['B',2]], coins:18, say:'Four more sales at my stall, dear, and a silk bow for my hat. The vicar’s coming round and I won’t be outdressed by a vicar.', beat:['H','The vicar bought a teapot with no lid. He called it “characterful”. That’s the roof another inch nearer.'], more:[['P','She’s raised more for that roof than the vicar has, love.'],['H','The vicar has a very nice voice. That’s all he has.']]},
   {beat:['P','Fred won the Mystery Prize in 1964. Humbugs. Ever so pleased, he was. His boat had just gone down, you know.'], ch:2, who:'P', need:[['F',5]], coins:18, say:'Sweetcorn for the veg show. Old Fred once grew corn taller than the church.'},
   {beat:['T','Spiky writing. Not curly. Not the vicar. Interesting. VERY interesting.'], ch:2, who:'T', wheel:3, need:[['M',3]], coins:20, say:'If there’s a painted doll in that trunk, I want to see the tag. And spin the wheel, the old prizes have tags too.'},
   {beat:['M','(He catches one. It pops. He is astonished, then delighted.)'], ch:2, who:'M', need:[['P',5]], coins:18, say:'(Biscuit wants to chase a balloon bunch. He has never caught one. He lives in hope.)'},
@@ -379,6 +388,7 @@ const TASKS = [
   // ch4 — zone 3
   {beat:['P','There’s me, by the wheel, 1990. Hair like a dandelion clock.'], ch:3, who:'P', need:[['M',4]], coins:22, say:'That jigsaw of the green. Let me do the corners, I always do the corners.'},
   {beat:['T','Sun, rain and a seagull attack, all in one afternoon. Normal Saturday.'], ch:3, who:'T', need:[['T',5],['W',3]], coins:22, say:'Cricket bat and a beach brolly. The stall has to survive Pennywhistle weather.'},
+  {id:203, ch:3, who:'H', sales:5, need:[['L',3]], coins:22, say:'Five more lots, dear. And if you find a trumpet, I’ll have it. Ron played one. Very badly.', beat:['H','1976 was a hot summer. Ron had just gone, and I stood by that wheel feeling sorry for myself.'], more:[['H','Then it stopped on the Mystery Prize. A bottle of cordial. I drank it on the spot, in front of everyone.'],['T','Wait. YOU won the Mystery Prize? Then you’re in the gang!'],['H','Gang? Don’t be silly, dear. And I’m not saying another word. A lady is allowed one secret.'],['P','<em>(Dot is suddenly very interested in the tea urn.)</em>']]},
   {beat:['N','Biscuit’s stall sells one sweetcorn, at no price. Three people queue anyway.'], ch:3, who:'M', need:[['F',5],['P',6]], coins:22, say:'(He wants a stall sign and some sweetcorn. He seems to think he runs a stall now.)'},
   {beat:['T','Two thousand and three. Dot blamed the Scouts for a decade. So who’s the spoon thief? WHO?'], ch:3, who:'T', wheel:5, need:[['M',5]], coins:26, say:'The wind chime! Those are tea tent spoons, I know it. Spin the wheel too, I need more suspects.'},
   {beat:['P','Best in show goes to… Mrs Hale. Don’t look at me like that, it’s a very good marrow.'], ch:3, who:'P', need:[['B',3],['F',6]], coins:20, say:'A sun hat and the prize marrow, love. I’m judging the veg and I’ll do it in style.'},
@@ -386,6 +396,7 @@ const TASKS = [
   // ch5
   {beat:['T','That was a fanfare. Everyone heard it. The ducks heard it.'], ch:4, who:'T', need:[['T',6],['L',5]], coins:28, say:'Kite and post horn. Opening fanfare. I’ve been practising. Don’t run.'},
   {beat:['P','Sixty years of marrow parades. I’ve only cried at about forty of them.'], ch:4, who:'P', need:[['F',6],['L',6]], coins:30, say:'The marrow and the band score. Every fete ends with the marrow parade and a march.'},
+  {id:204, ch:4, who:'H', sales:6, need:[['P',6]], coins:30, say:'Six more lots and a proper stall sign, dear. Last push. The roofer comes on Monday.', beat:['H','That’s it. The last of the jumble, and the roof is paid for. Fifty years of other people’s teapots.'], more:[['P','The whole roof, Bea?'],['H','The whole roof, Dot. Don’t you dare cry, you’ll set me off.'],['T','I’ve never seen Mrs Hale cry.'],['H','And you still haven’t, dear. It’s hay fever.']]},
   {beat:['N','Peace is made. Seagull and terrier share the popcorn. Mostly.'], ch:4, who:'M', need:[['M',5],['R',3]], coins:30, say:'(Biscuit and a seagull are both eyeing the wind chime. Popcorn might settle it.)'},
   {beat:['T','“Welcome to Pennywhistle Fete.” Look at that arch. I could cry. I won’t. I might.'], ch:4, who:'T', wheel:6, need:[['P',7],['K',3]], coins:30, say:'The Welcome Arch, and that wireless for announcements. And the wheel, nearly all of it. Big entrance.'},
   {beat:['P','The kite marrow. Nobody remembers why. Nobody would dare stop.'], x:1, ch:4, who:'P', need:[['F',6],['T',6]], coins:30, say:'Hold the marrow steady while I tie the kite on, love. Don’t ask why. Tradition.'},
@@ -397,21 +408,7 @@ const TASKS = [
   {ch:5, who:'O', wheel:7, need:[['M',7]], coins:50, say:'“For the wheel. From a friend.”'},
 ];
 
-function taskRewards(t){
-  const c = t.coins>=30?2 : 1;   // coins are scarce: 2 or 5 per story order
-  const x = t.ch>=4?3 : t.ch>=2?2 : 1;
-  const tk = [['CP', t.ch>=3?2:1]];   // one ticket item per order, never two of the same: 🎟️ 1 early, 🎫 3 later
-  return t.who==='O' ? [['C',3],['X',4],['N',3],['CP',2]] : [['C',c],['X',x],['N',t.ch>=3?2:1],...tk];
-}
 
-function sideRewards(size,lucky){
-  if(lucky) return [['C',1],['N',1]];
-  const c = size>=24?2 : 1;           // a penny, or a fiver for a big sale: the stall pays mostly in tickets and rosettes
-  const rw=[['C',c],['N', size>=24&&Math.random()<.5?2:1]];
-  if(size>=12 && Math.random()<.3) rw.push(['ET',1]);
-  if(size>=12 || Math.random()<.5) rw.push(['CP',1]);   // big sales always pay a ticket, small ones half the time
-  return rw;
-}
 
 const PASS=[
   {pts:15, rw:[['E',2]]},{pts:30, rw:[['H',1]]},{pts:50, rw:[['C',2],['X',2]]},{pts:65, rw:[['E',3]]},{pts:80, rw:[['gD',2]]},
@@ -439,8 +436,7 @@ const P2={ shopName:'Dot’s Tombola Table', shopBlurb:'Dot sells whatever’s l
 const SHOP_ITEMS=[
   {id:'TK', price:()=>80, what:'Ten raffle tickets: one spin of the Prize Wheel', give:()=>{ S.chips=(S.chips||0)+10; }},
   {id:'ET', price:()=>40, what:'Refills one generator. Drag it onto the one you need', give:()=>S.gifts.push(['ET',1])},
-  {id:'H1', price:()=>90, what:'Skips time for everything: energy, generators, the urn', give:()=>S.gifts.push(['H',1])},
-  {id:'EN', price:()=>energyPrice(), what:'Energy straight into your tank', give:()=>{ S.energy+=CONFIG.buyEnergy.amount; S.buys=(S.buys||0)+1; }},
+  {id:'H1', price:()=>90, what:'Skips 15 minutes on every generator and the urn', give:()=>S.gifts.push(['H',1])},
 ];
 
 const REFLECTIONS=[
@@ -461,7 +457,6 @@ const REFLECTIONS=[
   ['P','Same time next year, love. Bring a ticket. Or don’t. You’re part of it now.'],
 ];
 
-function stageReward(l){ return l%4===0 ? [['H',1],['C',2]] : l%2 ? [['C',2]] : [['E',2]]; }
 
 const GEN_STORY={
   gD1:[['P','My craft box. Crayons, crepe paper, and sixty years of glitter that will never, ever come out.'],['T','Every flag on the green started life in that box.']],
@@ -497,13 +492,11 @@ const QUESTS=[
   {id:'rare',  ic:'💎', n:'Find rare items',       steps:[3,10,25,50,100]},
   {id:'story', ic:'📜', n:'Fill story orders',     steps:[3,10,20]},
   {id:'high',  ic:'🌟', n:'Make level 5+ items',   steps:[3,10,25,60]},
-  {id:'claim', ic:'🫖', n:'Claim tea, coins & stars', steps:[10,40,100,250]},
+  {id:'claim', ic:'🪙', n:'Claim coins, stars & tickets', steps:[10,40,100,250]},
   {id:'open',  ic:'📦', n:'Open boxes & cobwebs',  steps:[10,25,45]},
   {id:'disc',  ic:'🧩', n:'Discover new items',    steps:[15,30,50,70]},
   {id:'sell',  ic:'🪙', n:'Sell items',            steps:[5,20,50]},
 ];
 
-const QUEST_RW=[[['C',1],['CP',1]],[['E',2],['CP',2]],[['E',2],['CP',2]],[['E',3],['H',1],['N',1]],[['E',3],['CP',2],['N',2]],[['E',3],['H',1],['N',3]]]; // light on energy, so it stays worth buying
 
-const discRw=(k,l)=>{ const L=l+(CHAINS[k].gen?1:0); return {c:l===maxL(k)&&l>1?5:0, e:L>=4?2*(L-3):0, x:L}; }; // coins only for a chain's top; a little energy for big finds
 

@@ -134,7 +134,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .xprow{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .xpbtn{flex:1;display:flex;align-items:center;gap:8px;padding:0;text-align:left;color:inherit;min-width:0}
 /* compact HUD so the gift, full-screen, book and menu buttons fit at 360 px */
-@media (max-width:390px){ .top #eTimer{display:none} .top .pill{font-size:13px;padding:4px 7px 4px 5px} }
+@media (max-width:390px){ .top .pill{font-size:13px;padding:4px 7px 4px 5px} }
 .top{gap:5px}.top .pill{padding:4px 8px 4px 6px;gap:4px}.top .iconbtn{width:34px;height:34px;flex:none}.top .spacer{min-width:0}
 .passbtn{position:relative;display:flex;align-items:center;gap:4px;background:#1f2238;border:1px solid #8ea0ff44;border-radius:999px;padding:2px 9px;font-size:12px;color:#dfe4ff}
 .passbtn .dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--velvet);box-shadow:0 0 0 2px var(--bg)}
@@ -343,6 +343,24 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 @keyframes nudge{50%{transform:scale(1.07)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+/* ---------- floating messages: rise from the tile and fade, no tap needed ---------- */
+.flo{position:fixed;z-index:65;transform:translate(-50%,0);pointer-events:none;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  background:#0d1f26e6;color:var(--ink);border:1px solid #ffffff22;border-radius:999px;padding:4px 11px;font-size:13px;font-weight:800;
+  box-shadow:0 6px 16px #0008;animation:floUp 1.9s ease-out forwards}
+@keyframes floUp{0%{opacity:0;transform:translate(-50%,8px) scale(.9)}12%{opacity:1;transform:translate(-50%,0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-46px)}}
+/* ---------- the mini shop: one item, right where you need it ---------- */
+#mini{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));margin:0 auto;max-width:440px;z-index:60;
+  background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-radius:14px;padding:12px 12px 10px;box-shadow:0 14px 34px #000c;animation:tin .18s ease-out}
+#mini .op-x{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:50%;background:#ffffff14;font-size:14px;display:grid;place-items:center;color:var(--ink)}
+#mini .mini-h{font-weight:800;font-size:16px;margin-right:36px}
+#mini .mini-s{margin:4px 0 0;color:var(--muted);font-size:13px}
+#mini .mini-row{display:flex;align-items:center;gap:10px;margin-top:10px}
+#mini .mini-row .e{font-size:30px;width:38px;text-align:center}
+#mini .mini-row .n{flex:1;font-weight:700;font-size:14px}#mini .mini-row small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+#mini .bigbtn{margin:0;white-space:nowrap}
+#mini details.howto{margin-top:8px}
+.order.hint{animation:hint 1.2s ease-in-out 2}
+.cell.boost .em{filter:drop-shadow(0 0 5px #ffd77a99)}
 /* ---------- the console: pick a story (a cartridge) ---------- */
 #console{position:fixed;inset:0;z-index:72;overflow-y:auto;background:#101018;background-image:radial-gradient(90% 50% at 50% 0%,#2a2a48 0%,transparent 70%);color:#f4f1ea;padding:calc(22px + env(safe-area-inset-top,0px)) 18px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
 #console h1{font-family:var(--display);font-weight:400;font-size:40px;margin:4px 0 0;color:#ffd77a;text-shadow:0 3px 0 #0006}
@@ -383,7 +401,6 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 
 <div id="app">
   <header class="top">
-    <div class="pill" title="Energy"><span>⚡</span><b id="energy">100</b><small id="eTimer"></small></div>
     <button class="pill" id="coinPill" title="Shop" aria-label="Coins, tickets and shop"><span>🪙</span><b id="coins">0</b><span id="chipsIc">🎟️</span><b id="chips">0</b><i class="plus">+</i></button>
     <span class="spacer"></span>
     <button class="pill gift" id="giftBtn" hidden>🎁 <b id="giftCount">1</b></button>
@@ -409,7 +426,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <script>
 /* Merge Stories: the console. With no story chosen it shows the shelf; once you pick one, that story's
    cartridge (events/<id>/event.js) and the shared engine load, and the story owns the front screen from then on. */
-const VERSION='v1 · 19 Oct 2026';
+const VERSION='v2 · 19 Oct 2026';
 const CURRENT_KEY='merge-stories:current';
 function ejectStory(){ try{ localStorage.removeItem(CURRENT_KEY); }catch(e){} location.href=location.pathname; }
 (function(){
