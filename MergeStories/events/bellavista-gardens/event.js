@@ -5,7 +5,7 @@
    stars fill the Star Board, which pays out the statue fragments; the statue becomes a stonemason's yard that
    carves the final piece. Everything here is configuration; the engine does the rest. */
 const EVENT = {
-  id: 'bellavista-gardens', title: 'Bellavista Gardens', tagline: 'The Girl with the Oranges', version: 'v1',
+  id: 'bellavista-gardens', title: 'Bellavista Gardens', tagline: 'The Girl with the Oranges', version: 'v2',
   themeColor: '#18241a',
   cover: { art: `<svg class="cover" viewBox="0 0 360 230" role="img" aria-label="An overgrown walled garden with an empty statue plinth, an orange tree and a tortoise"><defs><linearGradient id="bgSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d4a3a"/><stop offset="1" stop-color="#18241a"/></linearGradient><radialGradient id="bgSun" cx=".72" cy=".28" r=".5"><stop offset="0" stop-color="#f6c66b" stop-opacity=".55"/><stop offset="1" stop-color="#f6c66b" stop-opacity="0"/></radialGradient></defs><rect width="360" height="230" fill="url(#bgSky)"/><rect width="360" height="230" fill="url(#bgSun)"/><path d="M0 120 H360 V230 H0Z" fill="#203222"/><g fill="#8a4f35"><rect x="0" y="104" width="360" height="18"/><path d="M0 104 h360" stroke="#a8644a" stroke-width="3"/></g><g stroke="#6e3f2b" stroke-width="1"><path d="M30 104v18M70 104v18M110 104v18M250 104v18M290 104v18M330 104v18"/></g><g transform="translate(150 54)"><rect x="0" y="0" width="12" height="76" fill="#cfc7b4"/><rect x="48" y="0" width="12" height="76" fill="#cfc7b4"/><path d="M0 0 Q30 -26 60 0" stroke="#3a3a36" stroke-width="4" fill="none"/><path d="M8 8 L52 8 M8 30 L52 30 M18 8 V76 M30 8 V76 M42 8 V76" stroke="#2b2b28" stroke-width="2.5"/></g><g transform="translate(70 112)"><rect x="-14" y="18" width="28" height="30" fill="#bdb5a2"/><rect x="-18" y="14" width="36" height="6" fill="#d9d1bd"/><rect x="-18" y="46" width="36" height="6" fill="#d9d1bd"/><text x="0" y="40" font-size="10" text-anchor="middle" fill="#6b6455">?</text></g><g transform="translate(280 70)"><rect x="-3" y="34" width="6" height="40" fill="#5b3a26"/><circle cx="0" cy="22" r="30" fill="#2f6b3a"/><circle cx="-14" cy="14" r="5" fill="#f0a63a"/><circle cx="10" cy="8" r="5" fill="#f0a63a"/><circle cx="14" cy="30" r="5" fill="#f0a63a"/><circle cx="-6" cy="34" r="5" fill="#f0a63a"/><path d="M-18 74 h36 l-6 22 h-24z" fill="#b5653f"/></g><g fill="#1e3a24"><path d="M0 150 q20 -30 40 0 q20 -26 40 0 q14 -20 30 0 V230 H0Z"/><path d="M360 160 q-20 -30 -40 0 q-18 -24 -36 0 V230 H360Z"/></g><g transform="translate(196 186)"><ellipse cx="0" cy="0" rx="20" ry="11" fill="#6b5a35"/><path d="M-14 -4 q14 -16 28 0" fill="#857043"/><circle cx="22" cy="-2" r="5" fill="#7c6a40"/><circle cx="24" cy="-3" r="1" fill="#111"/></g><circle cx="196" cy="160" r="5" fill="#f0a63a"/><path d="M196 155 l2 -4" stroke="#2f6b3a" stroke-width="2"/></svg>`,
     sub: 'The Girl with the Oranges',
@@ -80,9 +80,9 @@ const CONFIG = {
 
 const CHAINS = {
   /* brass numbers 0–9, from the telephones. Merging to "2" and up shakes out a star. Fuel for the mulcher. */
-  D:{name:'Brass Numbers', mergeBonus:{from:3, give:['N',1]}, items:[
-    {e:'0️⃣',n:'Zero'},{e:'1️⃣',n:'One'},{e:'2️⃣',n:'Two'},{e:'3️⃣',n:'Three'},{e:'4️⃣',n:'Four'},
-    {e:'5️⃣',n:'Five'},{e:'6️⃣',n:'Six'},{e:'7️⃣',n:'Seven'},{e:'8️⃣',n:'Eight'},{e:'9️⃣',n:'Nine'}]},
+  D:{name:'Brass Numbers', tile:true, mergeBonus:{from:3, give:['N',1]}, items:[
+    {e:'0',n:'Zero'},{e:'1',n:'One'},{e:'2',n:'Two'},{e:'3',n:'Three'},{e:'4',n:'Four'},
+    {e:'5',n:'Five'},{e:'6',n:'Six'},{e:'7',n:'Seven'},{e:'8',n:'Eight'},{e:'9',n:'Nine'}]},
   /* the garden: seedlings from the mulcher grow into garden furniture; the top three make story pieces */
   GB:{name:'The Garden', items:[
     {e:'🌱',n:'Seedlings'},{e:'🌿',n:'Cuttings'},{e:'🪴',n:'Potted Shrub'},{e:'🌳',n:'Topiary Tree'},{e:'🪑',n:'Garden Bench'},

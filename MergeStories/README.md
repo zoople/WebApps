@@ -40,6 +40,7 @@ A story names these chains and sets their numbers. The engine decides how they b
 | the `story:true` chain | lore items | Its top item is "the secret" for the ending banner. |
 | `g*` | generators | Use `charges` and `rechargeMs`. Taps are free (there is no energy), and generators rest when empty. A spare generator (another of its kind is on the board) can be sold. Your last one can't. |
 | any chain | generators inside a chain | Any item can be `gen:true` with its own `drop` (an orchard tree, or garden furniture that makes story pieces). Generators can drop other generators. |
+| any chain | `tile:true` | Items are plain characters (e.g. digits) drawn as brass discs. Use this instead of keycap emoji (0️⃣), which some phones can't draw. |
 | any chain | `mergeBonus:{from, give}` | Merging up to level `from` or higher also drops `give` (Bellavista: numbers 2+ drop a star). |
 
 ## What a story sets

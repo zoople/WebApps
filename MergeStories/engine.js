@@ -909,7 +909,7 @@ function showOrder(t){
   if(t.wheel && wd<t.wheel) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
   if(t.sales && !st.sok) document.querySelectorAll('.order.side').forEach(o=>o.classList.add('hint'));
   const rows=t.need.map(([k,l],j)=>{ const d=CHAINS[k].items[l-1], g=genFor(k);
-      return `<div class="op-need${st.have[j]?' have':''}"><span class="e">${d.e}</span><span class="n">${d.n}${g?`<small>${CHAINS[k].rare?'Rare find from':'From'} ${genLabel(g)}</small>`:''}</span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
+      return `<div class="op-need${st.have[j]?' have':''}${CHAINS[k].tile?' tile':''}"><span class="e">${d.e}</span><span class="n">${d.n}${g?`<small>${CHAINS[k].rare?'Rare find from':'From'} ${genLabel(g)}</small>`:''}</span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
     + (t.wheel?`<div class="op-need${st.wok?' have':''}"><span class="e">💡</span><span class="n">${t.wheel} wheel lights on<small>${wd} lit so far</small></span><b>${st.wok?'✓':''}</b></div>`:'')
     + (t.sales?`<div class="op-need${st.sok?' have':''}"><span class="e">${CAST.S.av}</span><span class="n">${t.sales} ${CAST.S.name} sales<small>${Math.min(salesFor(t),t.sales)} done since this order came in</small></span><b>${st.sok?'✓':''}</b></div>`:'');
   const rw=(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ');
@@ -952,7 +952,7 @@ function render(){
     else if(c.it){
       const d=def(c.it);
       if(c.s==='web') cls+=' web';
-      html=`<span class="em">${d.e}</span>`;
+      html=`<span class="em">${d.e}</span>`; if(CHAINS[c.it.k].tile) cls+=' tile';
       if(c.it.wrap){ html='<span class="em">🎁</span><b class="musttag">Open</b>'; cls+=' must'; }
       else if(c.s==='open'){
         if(isGen(c.it)){
@@ -1045,7 +1045,7 @@ function renderOrders(tasks){
     el.dataset.id=t.id;
     if(!t.side && (!(S.seenOrd||{})[t.id] || flying===String(t.id))) el.classList.add('incoming');
     el.innerHTML=`${!t.side&&!(S.readOrd||{})[t.id]?'<i class="opip" title="New story"></i>':''}<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
-      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">💡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}${t.sales?`<span class="need wh${st.sok?' have':''}">${CAST.S.av}<small>${Math.min(salesFor(t),t.sales)}/${t.sales}</small>${st.sok?'<i>✓</i>':''}</span>`:''}</div>
+      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}${CHAINS[k].tile?' tile':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">💡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}${t.sales?`<span class="need wh${st.sok?' have':''}">${CAST.S.av}<small>${Math.min(salesFor(t),t.sales)}/${t.sales}</small>${st.sok?'<i>✓</i>':''}</span>`:''}</div>
       <div class="act${st.ready&&!t.side?' rd':''}">${st.ready?(t.side?'Hand over':'✓ Ready'):(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     // tap the card for details; only the green "Hand over" strip delivers
     // story orders only hand over from their details popup; side orders can still go from the strip
