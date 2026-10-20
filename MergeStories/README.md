@@ -1,5 +1,7 @@
 # Merge Stories
 
+Merge 2 Events with cozy stories.
+
 A merge-game console. The stories are cartridges.
 
 **The rule:**
