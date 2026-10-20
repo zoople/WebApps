@@ -251,7 +251,7 @@ async function describe(folder, file, rawBase, pagesBase, strip, branch, prev){
   var live = /^index\.html?$/i.test(file) ? liveDir : liveDir + encPath(file);   // the actual page to open
   var app = {folder: folder, file: file, name: prettify(folder), summary: "", liveUrl: live, live: "unknown",
              src: "https://github.com/" + config.user + "/" + config.repo + "/tree/" + encodeURIComponent(branch) + "/" + subEnc,
-             icon: prev && prev.icon || null, hasCopy: !!(prev && prev.hasCopy)};
+             icon: prev && !prev.iconGen && prev.icon || null, hasCopy: !!(prev && prev.hasCopy)};
 
   // Does the published page actually exist? GitHub Pages sends CORS headers, so a HEAD tells us the real status.
   var probe = fetchT(live, 7000, {method: "HEAD"})
@@ -264,7 +264,7 @@ async function describe(folder, file, rawBase, pagesBase, strip, branch, prev){
     Object.defineProperty(app, "_html", {value: html, enumerable: false});
     var doc = new DOMParser().parseFromString(html, "text/html");
     var t = doc.querySelector("title"); if (t && t.textContent.trim()) app.name = t.textContent.trim();
-    var d = doc.querySelector('meta[name="description"]'); if (d && d.getAttribute("content")) app.summary = d.getAttribute("content").trim();
+    var d = doc.querySelector('meta[name="description"]'); if (d && d.getAttribute("content")) app.metaSummary = d.getAttribute("content").trim();
     var l = doc.querySelector('link[rel~="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]');
     if (l && l.getAttribute("href")){
       var href = l.getAttribute("href").trim();
@@ -283,17 +283,30 @@ async function describe(folder, file, rawBase, pagesBase, strip, branch, prev){
             var r = await fetchT(iconUrl, 6000);
             if (r.ok){ var b = await r.blob(); if (b.size < 60000 && /^image\//.test(b.type || "image/")) app.icon = await blobToDataUrl(b); }
           } catch(e) {}
-          if (!/^data:/i.test(app.icon) && prev && /^data:/i.test(prev.icon || "")) app.icon = prev.icon;
+          if (!/^data:/i.test(app.icon) && prev && !prev.iconGen && /^data:/i.test(prev.icon || "")) app.icon = prev.icon;
         }
       }
     }
   }
-  if (!app.summary){
-    var md = await fetchT(rawBase + subEnc + "/README.md").then(function(r){ return r.ok ? r.text() : null; }).catch(function(){ return null; });
-    if (md) app.summary = readmeSnippet(md);
-  }
+  // The folder's README.md is the description. Fall back to the page's meta description only when there isn't one.
+  var md = await fetchT(rawBase + subEnc + "/README.md").then(function(r){ return r.ok ? r.text() : null; }).catch(function(){ return null; });
+  if (md) app.summary = readmeSnippet(md);
+  if (!app.summary && app.metaSummary) app.summary = app.metaSummary;
+  delete app.metaSummary;
+  // No favicon on the lead page: draw one from the description so every card still has its own icon.
+  if (!app.icon){ app.icon = generatedIcon(app.name, app.summary); app.iconGen = true; }
   await probe;
   return app;
+}
+// A deterministic tile: hue from the description, glyph from the name.
+function generatedIcon(name, summary){
+  var seed = (summary || name), h = 0;
+  for (var i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
+  var h2 = (h + 40) % 360, ch = (name.replace(/[^A-Za-z0-9]/g, "").charAt(0) || "?").toUpperCase();
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="hsl(' + h + ',55%,38%)"/><stop offset="1" stop-color="hsl(' + h2 + ',60%,24%)"/></linearGradient></defs>' +
+    '<rect width="64" height="64" fill="url(#g)"/><text x="32" y="43" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="700" fill="#fff">' + ch + '</text></svg>';
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
 function readmeSnippet(md){
   var text = md
@@ -304,7 +317,7 @@ function readmeSnippet(md){
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/[*_`>]/g, "")
     .replace(/\s+/g, " ").trim();
-  return text.length > 160 ? text.slice(0, 157).replace(/\s+\S*$/, "") + "…" : text;
+  return text.length > 240 ? text.slice(0, 237).replace(/\s+\S*$/, "") + "…" : text;
 }
 function prettify(s){ return s.replace(/[-_]+/g, " ").replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }
 
@@ -443,7 +456,7 @@ idb("readonly", function(st){ return st.get("dir"); }).then(function(h){ if (h &
 if (config.user && config.repo) sync(); else openSettings();
 
 /* ---------- version, self-update, offline worker ---------- */
-var VERSION = "v1", VERSION_DATE = "20 Oct 2026";
+var VERSION = "v2", VERSION_DATE = "20 Oct 2026";
 $("ver").textContent = "Version " + VERSION + " · " + VERSION_DATE;
 (function(){
   var ua = navigator.userAgent || "";
