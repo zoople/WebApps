@@ -2,7 +2,7 @@
    no internet (or a hanging one). Each launch shows the stored copy straight away and quietly fetches the
    latest in the background; the app's own "new version" check then offers the update. */
 const PREFIX = 'bridgeburn-', CACHE = PREFIX + 'v1';
-const SHELL = ['bridgeburn.html', 'bridgeburn.webmanifest', 'bridgeburn-icons/icon.svg', 'bridgeburn-icons/icon-32.png', 'bridgeburn-icons/icon-180.png', 'bridgeburn-icons/icon-192.png', 'bridgeburn-icons/icon-512.png'];
+const SHELL = ['bridgeburn.html', 'bridgeburn.webmanifest', 'icons/icon.svg', 'icons/icon-32.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys()
   .then(ks => Promise.all(ks.filter(k => k.startsWith(PREFIX) && k !== CACHE).map(k => caches.delete(k))))
