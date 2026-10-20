@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Web Apps</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="portfolio.webmanifest">
+<meta name="theme-color" content="#0b1020">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Web Apps">
+<style>
+:root{--bg:#0b1020;--panel:#131b30;--panel2:#0e1528;--line:#24314f;--text:#e8ecf5;--muted:#93a1ba;--accent:#818cf8;--accent2:#6366f1;--amber:#f5b544;--red:#fb7185;--green:#34d399}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.ver{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;color:var(--muted);padding:6px 16px;padding-left:max(16px,env(safe-area-inset-left))}
+.ver .btn{padding:4px 10px;min-height:0;font-size:12px}
+svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:16px}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--accent2);display:grid;place-items:center;color:#fff;flex:none}
+.title{flex:1;min-width:160px}
+.title h1{margin:0;font-size:18px}
+.title p{margin:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.title p.err{color:var(--red)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-height:40px;font-size:14px;text-decoration:none;color:var(--text);white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn.primary:hover{background:#5458e8}
+.btn.icon{padding:8px;width:40px;justify-content:center}
+.btn .amber{color:var(--amber)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;margin-bottom:16px}
+.search{position:relative;flex:1;min-width:200px;max-width:360px}
+.search svg{position:absolute;left:12px;top:11px;color:var(--muted)}
+.search input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:9px 12px 9px 38px;outline:none}
+.search input:focus{border-color:var(--accent)}
+.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;transition:border-color .15s}
+.card:hover{border-color:rgba(129,140,248,.55)}
+.card-head{display:flex;gap:12px;align-items:center;min-width:0}
+.ico{width:42px;height:42px;border-radius:11px;flex:none;background:rgba(99,102,241,.18);border:1px solid rgba(129,140,248,.35);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:18px;overflow:hidden}
+.ico img{width:100%;height:100%;object-fit:contain;padding:4px;background:var(--panel2)}
+.card h3{margin:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card code{font-size:12px;color:var(--muted)}
+.card p{margin:0;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+.card-foot{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.card-foot .btn{flex:1;justify-content:center;font-size:13px}
+.warnline{font-size:12px;color:var(--amber);margin-top:-4px}
+.empty{text-align:center;padding:48px 16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;color:var(--muted)}
+.empty h3{color:var(--text);margin:8px 0 4px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal.on{display:flex}
+.dialog{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;width:100%;max-width:420px;position:relative}
+.dialog h2{margin:0 0 14px;font-size:17px;display:flex;align-items:center;gap:8px}
+.dialog label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin:12px 0 4px}
+.dialog input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:none}
+.dialog input:focus{border-color:var(--accent)}
+.dialog .close{position:absolute;top:12px;right:12px;background:none;border:0;color:var(--muted);padding:6px}
+.dialog .btn.primary{width:100%;justify-content:center;margin-top:18px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1e293b;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;max-width:calc(100% - 32px);z-index:30;display:none;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast.on{display:block}
+.toast a{color:var(--accent)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M3 21v-5h5"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header>
+    <div class="logo"><svg class="i" style="width:22px;height:22px"><use href="#i-grid"/></svg></div>
+    <div class="title"><h1>Web Apps</h1><p id="status">Loading…</p></div>
+    <div class="actions">
+      <button class="btn" id="folderBtn" title="Pick the local folder holding your app folders"><svg class="i amber"><use href="#i-folder"/></svg><span id="folderLbl">Set offline folder</span></button>
+      <button class="btn icon" id="settingsBtn" title="Repository settings" aria-label="Settings"><svg class="i"><use href="#i-gear"/></svg></button>
+      <button class="btn icon" id="fsBtn" title="Full screen" aria-label="Full screen"><svg class="i"><use href="#i-expand"/></svg></button>
+      <button class="btn primary" id="dlBtn"><svg class="i"><use href="#i-download"/></svg>Download HTML</button>
+    </div>
+  </header>
+  <div class="ver" id="verRow"><span id="ver"></span><button class="btn" id="updBtn" style="display:none">Update now</button><span id="iosHint" style="display:none">On iPhone: Share, then Add to Home Screen, for full screen.</span></div>
+
+  <div class="controls">
+    <div class="search"><svg class="i"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Search apps…" autocomplete="off"></div>
+    <button class="btn" id="syncBtn"><svg class="i"><use href="#i-refresh"/></svg>Sync GitHub</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none">
+    <svg class="i" style="width:40px;height:40px"><use href="#i-folder"/></svg>
+    <h3>No apps</h3><div id="emptyMsg"></div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="mt">
+    <button class="close" id="closeBtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+    <h2 id="mt"><svg class="i" style="color:var(--accent)"><use href="#i-gear"/></svg>Repository</h2>
+    <label for="cfgUser">GitHub username</label><input id="cfgUser" autocomplete="off" spellcheck="false">
+    <label for="cfgRepo">Repository</label><input id="cfgRepo" autocomplete="off" spellcheck="false">
+    <label for="cfgPath">Subfolder (blank for repo root)</label><input id="cfgPath" placeholder="web-apps" autocomplete="off" spellcheck="false">
+    <button class="btn primary" id="saveBtn">Save &amp; sync</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+// Snapshot the page source before anything renders, for "Download HTML".
+var PRISTINE = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+
+var $ = function(id){ return document.getElementById(id); };
+function load(key, fallback){ try { var v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch(e){ return fallback; } }
+function save(key, v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+var config = load("app_config", {user:"zoople", repo:"WebApps", path:""});
+var apps = load("cached_apps", []);
+var lastSync = load("last_sync", 0);
+if (!Array.isArray(apps)) apps = [];
+var dirHandle = null;
+
+/* ---------- UI helpers ---------- */
+var toastTimer;
+function toast(html, ms){
+  var t = $("toast"); t.innerHTML = html; t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove("on"); }, ms || 3500);
+}
+function setStatus(text, isErr){ var s = $("status"); s.textContent = text; s.className = isErr ? "err" : ""; }
+function repoLabel(){ return config.user + "/" + config.repo + (config.path ? "/" + config.path : ""); }
+function ago(t){
+  if (!t) return "never synced";
+  var m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return "synced just now";
+  if (m < 60) return "synced " + m + " min ago";
+  var h = Math.round(m / 60); if (h < 48) return "synced " + h + " h ago";
+  return "synced " + Math.round(h / 24) + " days ago";
+}
+function idleStatus(){
+  if (!config.user || !config.repo) setStatus("Set a repository in settings");
+  else setStatus(repoLabel() + " · " + ago(lastSync));
+}
+
+/* ---------- network with timeout (a hanging network must not hang the UI) ---------- */
+function fetchT(url, ms, init){
+  var ctl = typeof AbortController === "function" ? new AbortController() : null;
+  var timer = setTimeout(function(){ if (ctl) ctl.abort(); }, ms || 8000);
+  return Promise.race([
+    fetch(url, Object.assign({}, init || {}, ctl ? {signal: ctl.signal} : {})),
+    new Promise(function(_, rej){ setTimeout(function(){ rej(new Error("timeout")); }, (ms || 8000) + 200); })
+  ]).finally(function(){ clearTimeout(timer); });
+}
+function blobToDataUrl(b){
+  return new Promise(function(res, rej){ var r = new FileReader(); r.onload = function(){ res(r.result); }; r.onerror = rej; r.readAsDataURL(b); });
+}
+
+/* ---------- GitHub sync ---------- */
+var syncing = false;
+async function sync(){
+  if (syncing || !config.user || !config.repo) return;
+  if (navigator.onLine === false){ setStatus(repoLabel() + " · offline, showing cached apps"); return; }
+  syncing = true; $("syncBtn").classList.add("spin"); setStatus("Syncing " + repoLabel() + "…");
+  var api = "https://api.github.com/repos/" + encodeURIComponent(config.user) + "/" + encodeURIComponent(config.repo);
+  try {
+    var repoRes = await fetchT(api);
+    if (!repoRes.ok) throw new Error(repoRes.status === 404 ? "repository not found" : repoRes.status === 403 ? "GitHub rate limit hit, try again later" : "GitHub error " + repoRes.status);
+    var branch = (await repoRes.json()).default_branch || "main";
+
+    // One call lists every file in the repo, so we can find each app's HTML file without a request per folder.
+    var treeRes = await fetchT(api + "/git/trees/" + encodeURIComponent(branch) + "?recursive=1", 15000);
+    if (!treeRes.ok) throw new Error(treeRes.status === 403 ? "GitHub rate limit hit, try again later" : "GitHub error " + treeRes.status);
+    var treeJson = await treeRes.json();
+    var prefix = config.path ? config.path + "/" : "";
+    var found = {}, any = false;
+    (treeJson.tree || []).forEach(function(it){
+      if (it.type !== "blob" || it.path.indexOf(prefix) !== 0) return;
+      any = true;
+      var rest = it.path.slice(prefix.length), k = rest.indexOf("/");
+      if (k < 1 || rest.charAt(0) === ".") return;              // loose file in the root path, or a dot-folder
+      var folder = rest.slice(0, k), inner = rest.slice(k + 1);
+      if (/\.html?$/i.test(inner)) (found[folder] = found[folder] || []).push(inner);
+    });
+    if (!any && config.path) throw new Error("folder \"" + config.path + "\" not found");
+
+    // Ask GitHub where the site really lives (custom domain, docs/ source folder...). Fall back to the default pattern.
+    var pagesBase = "https://" + config.user.toLowerCase() + ".github.io/";
+    if (config.repo.toLowerCase() !== config.user.toLowerCase() + ".github.io") pagesBase += config.repo + "/";
+    var strip = "";
+    try {
+      var pr = await fetchT(api + "/pages");
+      if (pr.ok){
+        var pj = await pr.json();
+        if (pj.html_url) pagesBase = pj.html_url.replace(/\/?$/, "/");
+        if (pj.source && pj.source.path === "/docs") strip = "docs/";
+      }
+    } catch(e) {}
+    var rawBase = "https://raw.githubusercontent.com/" + config.user + "/" + config.repo + "/" + branch + "/";
+    var old = {}; apps.forEach(function(a){ old[a.folder] = a; });
+
+    var names = Object.keys(found);
+    var results = await Promise.all(names.map(function(n){ return describe(n, pickHtml(found[n]), rawBase, pagesBase, strip, branch, old[n]); }));
+    idb("readwrite", function(st){ results.forEach(function(a){ if (a._html) st.put(a._html, "app:" + a.folder); }); }).catch(function(){});
+    apps = results.filter(Boolean).sort(function(a, b){ return a.name.localeCompare(b.name); });
+    lastSync = Date.now();
+    save("cached_apps", apps); save("last_sync", lastSync);
+    render(); idleStatus();
+    if (treeJson.truncated) toast("This repo is very large, so GitHub gave a partial file list. Some apps may be missing.", 6000);
+  } catch(err) {
+    var msg = err && err.name === "AbortError" || /timeout|fetch|network/i.test(err && err.message) ? "couldn't reach GitHub" : (err && err.message) || "sync failed";
+    setStatus(repoLabel() + " · " + msg + (apps.length ? ", showing cached apps" : ""), true);
+  } finally {
+    syncing = false; $("syncBtn").classList.remove("spin");
+  }
+}
+
+// First HTML file in a folder: shallowest first, index.html winning ties, then alphabetical.
+function pickHtml(files){
+  return files.slice().sort(function(a, b){
+    var da = a.split("/").length, db = b.split("/").length;
+    if (da !== db) return da - db;
+    var ia = /^index\.html?$/i.test(a) ? 0 : 1, ib = /^index\.html?$/i.test(b) ? 0 : 1;
+    return ia - ib || a.localeCompare(b);
+  })[0];
+}
+function encPath(p){ return p.split("/").map(encodeURIComponent).join("/"); }
+
+async function describe(folder, file, rawBase, pagesBase, strip, branch, prev){
+  var sub = (config.path ? config.path + "/" : "") + folder;
+  var subEnc = sub.split("/").map(encodeURIComponent).join("/");
+  var liveSub = strip && sub.indexOf(strip) === 0 ? sub.slice(strip.length) : sub;
+  var liveDir = pagesBase + encPath(liveSub) + "/";
+  var live = /^index\.html?$/i.test(file) ? liveDir : liveDir + encPath(file);   // the actual page to open
+  var app = {folder: folder, file: file, name: prettify(folder), summary: "", liveUrl: live, live: "unknown",
+             src: "https://github.com/" + config.user + "/" + config.repo + "/tree/" + encodeURIComponent(branch) + "/" + subEnc,
+             icon: prev && prev.icon || null, hasCopy: !!(prev && prev.hasCopy)};
+
+  // Does the published page actually exist? GitHub Pages sends CORS headers, so a HEAD tells us the real status.
+  var probe = fetchT(live, 7000, {method: "HEAD"})
+    .then(function(r){ app.live = r.ok ? "ok" : (r.status === 404 ? "missing" : "unknown"); })
+    .catch(function(){ app.live = "unknown"; });
+
+  var html = await fetchT(rawBase + subEnc + "/" + encPath(file)).then(function(r){ return r.ok ? r.text() : null; }).catch(function(){ return null; });
+  if (html){
+    app.hasCopy = true;
+    Object.defineProperty(app, "_html", {value: html, enumerable: false});
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    var t = doc.querySelector("title"); if (t && t.textContent.trim()) app.name = t.textContent.trim();
+    var d = doc.querySelector('meta[name="description"]'); if (d && d.getAttribute("content")) app.summary = d.getAttribute("content").trim();
+    var l = doc.querySelector('link[rel~="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]');
+    if (l && l.getAttribute("href")){
+      var href = l.getAttribute("href").trim();
+      var iconUrl;
+      if (/^data:/i.test(href)) iconUrl = href;
+      else try {
+        // Resolve the way a browser would against the published page, then read the file from raw (CORS-friendly).
+        var abs = new URL(href, liveDir + encPath(file)).href;
+        iconUrl = abs.indexOf(pagesBase) === 0 ? rawBase + strip + abs.slice(pagesBase.length) : abs;
+      } catch(e) {}
+      if (iconUrl){
+        app.icon = iconUrl;
+        if (!/^data:/i.test(iconUrl)) {
+          // Cache small icons inline so they still show offline.
+          try {
+            var r = await fetchT(iconUrl, 6000);
+            if (r.ok){ var b = await r.blob(); if (b.size < 60000 && /^image\//.test(b.type || "image/")) app.icon = await blobToDataUrl(b); }
+          } catch(e) {}
+          if (!/^data:/i.test(app.icon) && prev && /^data:/i.test(prev.icon || "")) app.icon = prev.icon;
+        }
+      }
+    }
+  }
+  if (!app.summary){
+    var md = await fetchT(rawBase + subEnc + "/README.md").then(function(r){ return r.ok ? r.text() : null; }).catch(function(){ return null; });
+    if (md) app.summary = readmeSnippet(md);
+  }
+  await probe;
+  return app;
+}
+function readmeSnippet(md){
+  var text = md
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .split("\n").filter(function(line){ return !/^\s*(#|!\[|\[!\[|<|---|===|\|)/.test(line); }).join(" ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`>]/g, "")
+    .replace(/\s+/g, " ").trim();
+  return text.length > 160 ? text.slice(0, 157).replace(/\s+\S*$/, "") + "…" : text;
+}
+function prettify(s){ return s.replace(/[-_]+/g, " ").replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }
+
+/* ---------- rendering ---------- */
+function render(){
+  var q = $("q").value.trim().toLowerCase();
+  var list = apps.filter(function(a){ return !q || (a.name + " " + a.folder + " " + (a.summary || "")).toLowerCase().indexOf(q) >= 0; });
+  var grid = $("grid"); grid.innerHTML = "";
+  $("empty").style.display = list.length ? "none" : "block";
+  if (!list.length){
+    $("emptyMsg").textContent = q ? "Nothing matches \"" + $("q").value + "\"." :
+      (!config.user || !config.repo) ? "Open settings and point this at your GitHub repo." :
+      "Sync to load the app folders in " + repoLabel() + ".";
+  }
+  list.forEach(function(a){
+    var card = document.createElement("div"); card.className = "card";
+    card.innerHTML =
+      '<div class="card-head"><div class="ico">' + esc(a.name.charAt(0).toUpperCase()) + '</div>' +
+      '<div style="min-width:0"><h3>' + esc(a.name) + '</h3><code>' + esc(a.folder) + '</code></div></div>' +
+      '<p>' + esc(a.summary || "No description.") + '</p>' +
+      '<div class="card-foot">' +
+        '<button class="btn off" title="Open the copy saved on this device"><svg class="i amber"><use href="#i-folder"/></svg>Offline</button>' +
+        (a.live === "missing"
+          ? '<a class="btn" target="_blank" rel="noopener" title="Not published on GitHub Pages"><svg class="i"><use href="#i-external"/></svg>Source</a>'
+          : '<a class="btn primary" target="_blank" rel="noopener"><svg class="i"><use href="#i-external"/></svg>Launch</a>') +
+      '</div>' +
+      (a.live === "missing" ? '<div class="warnline">Not live on GitHub Pages (404). Check Pages is on for this repo and has deployed. Offline still works.</div>' : '');
+    card.querySelector(".card-foot a").href = a.live === "missing" ? a.src : a.liveUrl;
+    if (a.icon){
+      var img = new Image(); img.alt = "";
+      img.onload = function(){ var box = card.querySelector(".ico"); box.textContent = ""; box.appendChild(img); };
+      img.src = a.icon;
+    }
+    card.querySelector(".off").addEventListener("click", function(){ launchOffline(a.folder); });
+    grid.appendChild(card);
+  });
+}
+
+/* ---------- offline folder (persisted across reloads via IndexedDB) ---------- */
+function idb(mode, fn){
+  return new Promise(function(res, rej){
+    if (!window.indexedDB) return rej(new Error("no idb"));
+    var o = indexedDB.open("portfolio", 1);
+    o.onupgradeneeded = function(){ o.result.createObjectStore("kv"); };
+    o.onerror = function(){ rej(o.error); };
+    o.onsuccess = function(){
+      var tx = o.result.transaction("kv", mode), st = tx.objectStore("kv"), r = fn(st);
+      tx.oncomplete = function(){ res(r && r.result); o.result.close(); };
+      tx.onerror = function(){ rej(tx.error); };
+    };
+  });
+}
+function folderLabel(){ $("folderLbl").textContent = dirHandle ? "Local: " + dirHandle.name : "Set offline folder"; }
+async function pickFolder(){
+  if (!("showDirectoryPicker" in window)){
+    toast("This browser can't pick folders (desktop Chromium can). Offline will use the copies saved during sync instead.", 6000);
+    return false;
+  }
+  try {
+    dirHandle = await window.showDirectoryPicker({id: "webapps", mode: "read"});
+    idb("readwrite", function(st){ return st.put(dirHandle, "dir"); }).catch(function(){});
+    folderLabel(); toast("Offline folder set: " + esc(dirHandle.name));
+    return true;
+  } catch(e) { return false; }
+}
+async function launchOffline(folder){
+  // 1. the chosen local folder (always the freshest copy)
+  if (dirHandle){
+    try {
+      if (dirHandle.queryPermission && (await dirHandle.queryPermission({mode: "read"})) !== "granted"){
+        if ((await dirHandle.requestPermission({mode: "read"})) !== "granted") throw new Error("permission denied");
+      }
+      var rec = apps.filter(function(a){ return a.folder === folder; })[0], parts = ((rec && rec.file) || "index.html").split("/");
+      var dir = await dirHandle.getDirectoryHandle(folder);
+      for (var pi = 0; pi < parts.length - 1; pi++) dir = await dir.getDirectoryHandle(parts[pi]);
+      var fh = await dir.getFileHandle(parts[parts.length - 1]);
+      return openHtml(await (await fh.getFile()).text());
+    } catch(e) { /* fall through to the saved copy */ }
+  }
+  // 2. the copy saved during the last sync (works on phones too)
+  try {
+    var html = await idb("readonly", function(st){ return st.get("app:" + folder); });
+    if (html) return openHtml(html);
+  } catch(e) {}
+  toast("No offline copy of <code>" + esc(folder) + "</code> yet. Sync once while online" + ("showDirectoryPicker" in window ? ", or set the offline folder." : "."), 6000);
+}
+function openHtml(html){
+  var url = URL.createObjectURL(new Blob([html], {type: "text/html"}));
+  openUrl(url);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+}
+function openUrl(url){
+  var w = window.open(url, "_blank");
+  if (!w) toast('Pop-up blocked. <a href="' + esc(url) + '" target="_blank" rel="noopener">Open it here</a>.', 10000);
+}
+
+/* ---------- settings ---------- */
+function openSettings(){ $("cfgUser").value = config.user; $("cfgRepo").value = config.repo; $("cfgPath").value = config.path; $("modal").classList.add("on"); $("cfgUser").focus(); }
+function closeSettings(){ $("modal").classList.remove("on"); }
+$("settingsBtn").addEventListener("click", openSettings);
+$("closeBtn").addEventListener("click", closeSettings);
+$("modal").addEventListener("click", function(e){ if (e.target === this) closeSettings(); });
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeSettings(); });
+$("saveBtn").addEventListener("click", function(){
+  var nu = $("cfgUser").value.trim(), nr = $("cfgRepo").value.trim(), np = $("cfgPath").value.trim().replace(/^\/+|\/+$/g, "");
+  var changed = nu !== config.user || nr !== config.repo || np !== config.path;
+  config = {user: nu, repo: nr, path: np}; save("app_config", config);
+  if (changed){ apps = []; lastSync = 0; save("cached_apps", apps); save("last_sync", 0); render(); }
+  closeSettings(); idleStatus(); sync();
+});
+
+/* ---------- misc ---------- */
+$("q").addEventListener("input", render);
+$("syncBtn").addEventListener("click", sync);
+$("folderBtn").addEventListener("click", pickFolder);
+$("dlBtn").addEventListener("click", function(){
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([PRISTINE], {type: "text/html"}));
+  a.download = "web-apps-portfolio.html";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+});
+$("fsBtn").addEventListener("click", function(){
+  var d = document, el = d.documentElement;
+  try {
+    if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+    else (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  } catch(e) { toast("Full screen isn't available here."); }
+});
+window.addEventListener("online", function(){ sync(); });
+window.addEventListener("offline", idleStatus);
+
+/* ---------- boot ---------- */
+render(); idleStatus(); folderLabel();
+idb("readonly", function(st){ return st.get("dir"); }).then(function(h){ if (h && !dirHandle){ dirHandle = h; folderLabel(); } }).catch(function(){});
+if (config.user && config.repo) sync(); else openSettings();
+
+/* ---------- version, self-update, offline worker ---------- */
+var VERSION = "v1", VERSION_DATE = "20 Oct 2026";
+$("ver").textContent = "Version " + VERSION + " · " + VERSION_DATE;
+(function(){
+  var ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/.test(ua) && !navigator.standalone) $("iosHint").style.display = "";
+  function check(){
+    if (!/^https?:/.test(location.protocol) || !navigator.onLine) return;
+    var ctl = new AbortController(), t = setTimeout(function(){ ctl.abort(); }, 6000);
+    fetch(location.pathname + "?_=" + Date.now(), {cache:"no-store", signal: ctl.signal}).then(function(r){ return r.text(); }).then(function(txt){
+      clearTimeout(t);
+      var m = txt.match(/var VERSION = "([^"]+)"/);
+      if (m && m[1] !== VERSION){ $("updBtn").style.display = ""; $("updBtn").textContent = "Update now (" + m[1] + ")"; $("updBtn").onclick = function(){ location.href = location.pathname + "?v=" + encodeURIComponent(m[1]); }; }
+    }).catch(function(){ clearTimeout(t); });
+  }
+  check(); setInterval(check, 5 * 60 * 1000);
+  if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(function(){});
+})();
+})();
+</script>
+</body>
+</html>
