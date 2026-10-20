@@ -224,7 +224,7 @@ async function sync(){
     var old = {}; apps.forEach(function(a){ old[a.folder] = a; });
 
     var names = Object.keys(found);
-    var results = await Promise.all(names.map(function(n){ return describe(n, pickHtml(found[n]), rawBase, pagesBase, strip, branch, old[n]); }));
+    var results = await Promise.all(names.map(function(n){ return describe(n, pickHtml(found[n], n), rawBase, pagesBase, strip, branch, old[n]); }));
     idb("readwrite", function(st){ results.forEach(function(a){ if (a._html) st.put(a._html, "app:" + a.folder); }); }).catch(function(){});
     apps = results.filter(Boolean).sort(function(a, b){ return a.name.localeCompare(b.name); });
     lastSync = Date.now();
@@ -239,11 +239,15 @@ async function sync(){
   }
 }
 
-// First HTML file in a folder: shallowest first, index.html winning ties, then alphabetical.
-function pickHtml(files){
+// Lead HTML file in a folder: shallowest first, then the file named after the folder (CircuitsFromScratch/circuits-from-scratch.html),
+// then index.html, then alphabetical.
+function pickHtml(files, folder){
+  var key = function(f){ return f.replace(/\.html?$/i, "").replace(/[^a-z0-9]/gi, "").toLowerCase(); };
   return files.slice().sort(function(a, b){
     var da = a.split("/").length, db = b.split("/").length;
     if (da !== db) return da - db;
+    var na = key(a) === key(folder) ? 0 : 1, nb = key(b) === key(folder) ? 0 : 1;
+    if (na !== nb) return na - nb;
     var ia = /^index\.html?$/i.test(a) ? 0 : 1, ib = /^index\.html?$/i.test(b) ? 0 : 1;
     return ia - ib || a.localeCompare(b);
   })[0];
@@ -473,7 +477,7 @@ idb("readonly", function(st){ return st.get("dir"); }).then(function(h){ if (h &
 if (config.user && config.repo) sync(); else openSettings();
 
 /* ---------- version, self-update, offline worker ---------- */
-var VERSION = "v3", VERSION_DATE = "20 Oct 2026";
+var VERSION = "v4", VERSION_DATE = "20 Oct 2026";
 $("ver").textContent = "Version " + VERSION + " · " + VERSION_DATE;
 (function(){
   var ua = navigator.userAgent || "";
