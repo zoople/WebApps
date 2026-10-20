@@ -52,6 +52,11 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--
 .card h3{margin:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card code{font-size:12px;color:var(--muted)}
 .card p{margin:0;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+.star{margin-left:auto;flex:none;width:44px;height:44px;margin:-8px -8px -8px auto;background:none;border:0;border-radius:12px;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.star svg{width:22px;height:22px;fill:none}
+.star.on{color:#f5b942}
+.star.on svg{fill:currentColor}
+.card.starred{border-color:rgba(245,185,66,.45)}
 .card-foot{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:12px}
 .card-foot .btn{flex:1;justify-content:center;font-size:13px}
 .warnline{font-size:12px;color:var(--amber);margin-top:-4px}
@@ -81,6 +86,7 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M3 21v-5h5"/></symbol>
   <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
 </svg>
 
@@ -135,6 +141,7 @@ function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(
 
 var config = load("app_config", {user:"zoople", repo:"WebApps", path:""});
 var apps = load("cached_apps", []);
+var starred = load("starred", []); if (!Array.isArray(starred)) starred = [];
 var lastSync = load("last_sync", 0);
 if (!Array.isArray(apps)) apps = [];
 var dirHandle = null;
@@ -217,7 +224,7 @@ async function sync(){
     var old = {}; apps.forEach(function(a){ old[a.folder] = a; });
 
     var names = Object.keys(found);
-    var results = await Promise.all(names.map(function(n){ return describe(n, pickHtml(found[n]), rawBase, pagesBase, strip, branch, old[n]); }));
+    var results = await Promise.all(names.map(function(n){ return describe(n, pickHtml(found[n], n), rawBase, pagesBase, strip, branch, old[n]); }));
     idb("readwrite", function(st){ results.forEach(function(a){ if (a._html) st.put(a._html, "app:" + a.folder); }); }).catch(function(){});
     apps = results.filter(Boolean).sort(function(a, b){ return a.name.localeCompare(b.name); });
     lastSync = Date.now();
@@ -232,11 +239,15 @@ async function sync(){
   }
 }
 
-// First HTML file in a folder: shallowest first, index.html winning ties, then alphabetical.
-function pickHtml(files){
+// Lead HTML file in a folder: shallowest first, then the file named after the folder (CircuitsFromScratch/circuits-from-scratch.html),
+// then index.html, then alphabetical.
+function pickHtml(files, folder){
+  var key = function(f){ return f.replace(/\.html?$/i, "").replace(/[^a-z0-9]/gi, "").toLowerCase(); };
   return files.slice().sort(function(a, b){
     var da = a.split("/").length, db = b.split("/").length;
     if (da !== db) return da - db;
+    var na = key(a) === key(folder) ? 0 : 1, nb = key(b) === key(folder) ? 0 : 1;
+    if (na !== nb) return na - nb;
     var ia = /^index\.html?$/i.test(a) ? 0 : 1, ib = /^index\.html?$/i.test(b) ? 0 : 1;
     return ia - ib || a.localeCompare(b);
   })[0];
@@ -251,7 +262,7 @@ async function describe(folder, file, rawBase, pagesBase, strip, branch, prev){
   var live = /^index\.html?$/i.test(file) ? liveDir : liveDir + encPath(file);   // the actual page to open
   var app = {folder: folder, file: file, name: prettify(folder), summary: "", liveUrl: live, live: "unknown",
              src: "https://github.com/" + config.user + "/" + config.repo + "/tree/" + encodeURIComponent(branch) + "/" + subEnc,
-             icon: prev && prev.icon || null, hasCopy: !!(prev && prev.hasCopy)};
+             icon: prev && !prev.iconGen && prev.icon || null, hasCopy: !!(prev && prev.hasCopy)};
 
   // Does the published page actually exist? GitHub Pages sends CORS headers, so a HEAD tells us the real status.
   var probe = fetchT(live, 7000, {method: "HEAD"})
@@ -264,7 +275,7 @@ async function describe(folder, file, rawBase, pagesBase, strip, branch, prev){
     Object.defineProperty(app, "_html", {value: html, enumerable: false});
     var doc = new DOMParser().parseFromString(html, "text/html");
     var t = doc.querySelector("title"); if (t && t.textContent.trim()) app.name = t.textContent.trim();
-    var d = doc.querySelector('meta[name="description"]'); if (d && d.getAttribute("content")) app.summary = d.getAttribute("content").trim();
+    var d = doc.querySelector('meta[name="description"]'); if (d && d.getAttribute("content")) app.metaSummary = d.getAttribute("content").trim();
     var l = doc.querySelector('link[rel~="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]');
     if (l && l.getAttribute("href")){
       var href = l.getAttribute("href").trim();
@@ -283,28 +294,42 @@ async function describe(folder, file, rawBase, pagesBase, strip, branch, prev){
             var r = await fetchT(iconUrl, 6000);
             if (r.ok){ var b = await r.blob(); if (b.size < 60000 && /^image\//.test(b.type || "image/")) app.icon = await blobToDataUrl(b); }
           } catch(e) {}
-          if (!/^data:/i.test(app.icon) && prev && /^data:/i.test(prev.icon || "")) app.icon = prev.icon;
+          if (!/^data:/i.test(app.icon) && prev && !prev.iconGen && /^data:/i.test(prev.icon || "")) app.icon = prev.icon;
         }
       }
     }
   }
-  if (!app.summary){
-    var md = await fetchT(rawBase + subEnc + "/README.md").then(function(r){ return r.ok ? r.text() : null; }).catch(function(){ return null; });
-    if (md) app.summary = readmeSnippet(md);
-  }
+  // The folder's README.md is the description. Fall back to the page's meta description only when there isn't one.
+  var md = await fetchT(rawBase + subEnc + "/README.md").then(function(r){ return r.ok ? r.text() : null; }).catch(function(){ return null; });
+  if (md) app.summary = readmeSnippet(md);
+  if (!app.summary && app.metaSummary) app.summary = app.metaSummary;
+  delete app.metaSummary;
+  // No favicon on the lead page: draw one from the description so every card still has its own icon.
+  if (!app.icon){ app.icon = generatedIcon(app.name, app.summary); app.iconGen = true; }
   await probe;
   return app;
+}
+// A deterministic tile: hue from the description, glyph from the name.
+function generatedIcon(name, summary){
+  var seed = (summary || name), h = 0;
+  for (var i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
+  var h2 = (h + 40) % 360, ch = (name.replace(/[^A-Za-z0-9]/g, "").charAt(0) || "?").toUpperCase();
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="hsl(' + h + ',55%,38%)"/><stop offset="1" stop-color="hsl(' + h2 + ',60%,24%)"/></linearGradient></defs>' +
+    '<rect width="64" height="64" fill="url(#g)"/><text x="32" y="43" text-anchor="middle" font-family="Georgia,serif" font-size="34" font-weight="700" fill="#fff">' + ch + '</text></svg>';
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
 function readmeSnippet(md){
   var text = md
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
-    .split("\n").filter(function(line){ return !/^\s*(#|!\[|\[!\[|<|---|===|\|)/.test(line); }).join(" ")
+    .split(/\n\s*\n/).map(function(para){ return para.split("\n").filter(function(line){ return !/^\s*(#|!\[|\[!\[|<|---|===|\|)/.test(line); }).join(" ").trim(); })
+    .filter(Boolean)[0] || ""
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/[*_`>]/g, "")
     .replace(/\s+/g, " ").trim();
-  return text.length > 160 ? text.slice(0, 157).replace(/\s+\S*$/, "") + "…" : text;
+  return text.length > 240 ? text.slice(0, 237).replace(/\s+\S*$/, "") + "…" : text;
 }
 function prettify(s){ return s.replace(/[-_]+/g, " ").replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }
 
@@ -312,6 +337,8 @@ function prettify(s){ return s.replace(/[-_]+/g, " ").replace(/\b\w/g, function(
 function render(){
   var q = $("q").value.trim().toLowerCase();
   var list = apps.filter(function(a){ return !q || (a.name + " " + a.folder + " " + (a.summary || "")).toLowerCase().indexOf(q) >= 0; });
+  // Starred apps float to the top; each group stays alphabetical.
+  list.sort(function(a, b){ return (starred.indexOf(b.folder) >= 0) - (starred.indexOf(a.folder) >= 0) || a.name.localeCompare(b.name); });
   var grid = $("grid"); grid.innerHTML = "";
   $("empty").style.display = list.length ? "none" : "block";
   if (!list.length){
@@ -323,7 +350,8 @@ function render(){
     var card = document.createElement("div"); card.className = "card";
     card.innerHTML =
       '<div class="card-head"><div class="ico">' + esc(a.name.charAt(0).toUpperCase()) + '</div>' +
-      '<div style="min-width:0"><h3>' + esc(a.name) + '</h3><code>' + esc(a.folder) + '</code></div></div>' +
+      '<div style="min-width:0"><h3>' + esc(a.name) + '</h3><code>' + esc(a.folder) + '</code></div>' +
+      '<button class="star" aria-label="Star"><svg class="i"><use href="#i-star"/></svg></button></div>' +
       '<p>' + esc(a.summary || "No description.") + '</p>' +
       '<div class="card-foot">' +
         '<button class="btn off" title="Open the copy saved on this device"><svg class="i amber"><use href="#i-folder"/></svg>Offline</button>' +
@@ -338,6 +366,13 @@ function render(){
       img.onload = function(){ var box = card.querySelector(".ico"); box.textContent = ""; box.appendChild(img); };
       img.src = a.icon;
     }
+    var on = starred.indexOf(a.folder) >= 0, sb = card.querySelector(".star");
+    sb.classList.toggle("on", on); card.classList.toggle("starred", on); sb.setAttribute("aria-pressed", on);
+    sb.addEventListener("click", function(){
+      var i = starred.indexOf(a.folder);
+      if (i >= 0) starred.splice(i, 1); else starred.push(a.folder);
+      save("starred", starred); render();
+    });
     card.querySelector(".off").addEventListener("click", function(){ launchOffline(a.folder); });
     grid.appendChild(card);
   });
@@ -443,7 +478,7 @@ idb("readonly", function(st){ return st.get("dir"); }).then(function(h){ if (h &
 if (config.user && config.repo) sync(); else openSettings();
 
 /* ---------- version, self-update, offline worker ---------- */
-var VERSION = "v1", VERSION_DATE = "20 Oct 2026";
+var VERSION = "v5", VERSION_DATE = "20 Oct 2026";
 $("ver").textContent = "Version " + VERSION + " · " + VERSION_DATE;
 (function(){
   var ua = navigator.userAgent || "";

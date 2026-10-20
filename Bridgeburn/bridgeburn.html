@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Bridgeburn</title>
-<link rel="icon" type="image/png" sizes="32x32" href="bridgeburn-icons/icon-32.png">
-<link rel="apple-touch-icon" href="bridgeburn-icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="manifest" href="bridgeburn.webmanifest">
 <meta name="theme-color" content="#12171f">
 <style id="embedded-fonts">/* Fonts embedded so the app starts instantly offline. SIL Open Font License, from github.com/google/fonts */
@@ -3326,7 +3326,7 @@ async function checkUpdate(){
 }
 checkUpdate(); setInterval(checkUpdate, 4 * 60 * 1000);
 // offline: keep the app on the phone so it opens with no internet
-if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('bridgeburn-sw.js', { scope: './bridgeburn' }).catch(() => {});
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
 window.__bb = { get G(){ return G; }, step, findSpot, deploy, deployKey, drillRound, openDrill, rivalDeck, newDeck, start, renderHand, DRILLS, startDrill, analyzeDeck, coachReport, openAcademy, openChallenge, get CHAL(){ return CHAL; } };
 })();
 </script>

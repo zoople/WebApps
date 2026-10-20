@@ -9,7 +9,7 @@ Static browser apps, published with GitHub Pages from `main`
 1. **Be full screen.** In `<head>`: `viewport-fit=cover`, a `<link rel="manifest">` with
    `"display": "fullscreen"`, `theme-color`, `apple-mobile-web-app-capable`,
    `mobile-web-app-capable`, an `apple-touch-icon` and a favicon. Ship the manifest and PNG icons
-   (32/180/192/512) next to the app (see `HarvestHollow/` and `bridgeburn.webmanifest`).
+   (32/180/192/512) next to the app (see `HarvestHollow/`).
    Add an in-app full-screen toggle and request full screen on the first Play tap
    (`requestFullscreen({navigationUI:'hide'})`, with the `webkit` fallback). On iOS Safari
    (no Fullscreen API) show a one-line "Share → Add to Home Screen" hint.
@@ -46,14 +46,14 @@ Static browser apps, published with GitHub Pages from `main`
    leaves a blank screen on a weak connection. Embed fonts with
    `python3 tools/embed-fonts.py <app.html> <google/fonts checkout> "Family|file.ttf|style|weight[|wght=min:max]"`.
    Register an offline service worker next to the app (copy `Grace/sw.js`, list the app's files, use its own
-   cache prefix; root apps scope it, e.g. `bridgeburn-sw.js` with `{scope:'./bridgeburn'}`).
+   cache prefix; every app lives in its own folder, so the worker needs no scope).
    **Test offline before shipping**: headless Chromium with the network off and with every request hanging,
    both from the file and served over http after the worker installs. The page must paint in under a second.
 
 ## Merge games: work in `MergeStories/` only
 
 - **All merge-game work happens in `MergeStories/`** (the console engine plus story cartridges). The old standalone
-  games in `LarkspurAttic/` are frozen: don't edit them.
+  games in `MergeArchive/LarkspurAttic/` are frozen: don't edit them.
 - **Engine vs story.** UI, behaviour, item types, mechanics and reward *logic* go in the engine (`engine.js`,
   `index.html`). A story (`events/<id>/event.js`) is configuration only: words, cast, chapters, orders, chains,
   layout, reward numbers, art and music. A new kind of item goes into the engine first. See `MergeStories/README.md`.
@@ -68,7 +68,7 @@ Static browser apps, published with GitHub Pages from `main`
 - Develop on the session branch, then open a PR to `main`.
 - **Ask the user a yes/no question (AskUserQuestion) before merging**, then squash-merge it yourself.
   Don't make them click through GitHub.
-  - **Exception: `MergeStories/` and `LarkspurAttic/` (the merge games).** Don't ask. Squash-merge the PR
+  - **Exception: `MergeStories/` and `MergeArchive/` (the merge games).** Don't ask. Squash-merge the PR
     automatically as soon as it's ready, then report as usual.
 - After merging, reply with: the live link with `?v=<n>` appended (cache-buster), what changed as
   plain bullets, and what was and wasn't tested. Pages takes about a minute to deploy.
