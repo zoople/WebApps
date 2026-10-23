@@ -86,7 +86,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p shots; exec > >(tee shots/emu.log) 2>&1
-          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb xdotool imagemagick libfuse2 mesa-utils libgl1-mesa-dri libegl1 libxkbcommon-x11-0 libxcb-cursor0 > /dev/null 2>&1 || true
+          set +e +o pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb xdotool imagemagick libfuse2 mesa-utils libgl1-mesa-dri libegl1 libopengl0 libglx-mesa0 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-image0 libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 libpulse0 libsdl2-2.0-0 > /dev/null 2>&1 || true
           rel=$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/azahar-emu/azahar/releases/latest)
           echo "$rel" | jq -r '.tag_name, (.assets[].name)'
           url=$(echo "$rel" | jq -r '[.assets[] | select(.name|test("\\.appimage$";"i"))][0].browser_download_url')
@@ -95,9 +96,9 @@ jobs:
           file emu.dl
           case "$url" in *.tar.gz|*.tgz) mkdir -p ex && tar -xzf emu.dl -C ex && APP=$(find ex -iname '*.AppImage' | head -1);; *.zip) mkdir -p ex && unzip -q emu.dl -d ex && APP=$(find ex -iname '*.AppImage' | head -1);; *) APP=./emu.dl;; esac
           chmod +x "$APP"; "$APP" --appimage-extract > /dev/null; ls squashfs-root | head
-          BIN=$(find squashfs-root -type f -name "azahar*" -perm -u+x | grep -v -i "room\|\.so" | head -1); [ -z "$BIN" ] && BIN=squashfs-root/AppRun; find squashfs-root -maxdepth 2 | head -20; echo "BIN=$BIN"
+          BIN=$(find squashfs-root -type f -name "azahar*" -perm -u+x | grep -v -i "room\|\.so" | head -1); BIN=squashfs-root/AppRun; find squashfs-root -maxdepth 2 | head -20; echo "BIN=$BIN"
           export LIBGL_ALWAYS_SOFTWARE=1 QT_QPA_PLATFORM=xcb
-          Xvfb :99 -screen 0 1280x1024x24 & sleep 2; export DISPLAY=:99
+          Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 & sleep 2; export DISPLAY=:99
           "$BIN" out/grace.3dsx > shots/azahar.log 2>&1 &
           sleep 30; import -window root shots/01-title.png
           key() { xdotool search --onlyvisible --name . windowactivate --sync 2>/dev/null; xdotool keydown "$1"; sleep 0.25; xdotool keyup "$1"; }
@@ -105,7 +106,7 @@ jobs:
           for i in 1 2 3 4; do key a; sleep 1; done; sleep 4; import -window root shots/03-play.png
           xdotool keydown Up; sleep 2; xdotool keyup Up; sleep 6; import -window root shots/04-play.png
           key m; sleep 2; import -window root shots/05-pause.png
-          tail -40 shots/azahar.log || true
+          xdotool search --name . getwindowname %@ 2>/dev/null | head; tail -40 shots/azahar.log; exit 0
       - name: Publish shots
         if: always()
         uses: softprops/action-gh-release@v2
