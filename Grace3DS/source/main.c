@@ -906,7 +906,7 @@ static void drawTopOverlay(void) {
 // ------------------------------------------------------------------ drawing: bottom screen (all UI)
 typedef struct { float x, y, w, h; } Rect;
 static int inRect(Rect r, int x, int y) { return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; }
-static Rect tileRect(int i) { int row = i < 6 ? 0 : 1, col = i < 6 ? i : i - 6; float w = 50, h = 34, gap = 3; float x0 = row == 0 ? 6 : 6 + (w + gap) / 2; return (Rect){x0 + col * (w + gap), 78 + row * (h + gap), w, h}; }
+static Rect tileRect(int i) { int row = i < 6 ? 0 : 1, col = i < 6 ? i : i - 6, n = row == 0 ? 6 : 5; float w = 48, h = 34, gap = 3; float x0 = (BW - (n * w + (n - 1) * gap)) / 2; return (Rect){x0 + col * (w + gap), 78 + row * (h + gap), w, h}; }
 static int tipBuff = -1; static float tipT = 0;
 static void panel(Rect r, u32 fill, u32 edge) { C2D_DrawRectSolid(r.x, r.y, 0, r.w, r.h, edge); C2D_DrawRectSolid(r.x + 1, r.y + 1, 0, r.w - 2, r.h - 2, fill); }
 static u32 tierCol(int t) { return t == T_L ? cGilt : t == T_R ? cAcid : cMuted; }
