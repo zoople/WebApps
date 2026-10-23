@@ -1,0 +1,14 @@
+name: Grace 3DS
+on:
+  push:
+    paths: ['Grace3DS/**', '.github/workflows/grace3ds.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo probe && ls $DEVKITPRO
