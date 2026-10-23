@@ -93,9 +93,9 @@ jobs:
           echo "asset: $url"
           curl -sSL "$url" -o emu.dl
           file emu.dl
-          case "$url" in *.tar.gz|*.tgz) mkdir -p ex && tar -xzf emu.dl -C ex && APP=$(find ex -iname '*.AppImage' | head -1);; *.zip) mkdir -p ex && unzip -q emu.dl -d ex && APP=$(find ex -iname '*.AppImage' | head -1);; *) APP=emu.dl;; esac
+          case "$url" in *.tar.gz|*.tgz) mkdir -p ex && tar -xzf emu.dl -C ex && APP=$(find ex -iname '*.AppImage' | head -1);; *.zip) mkdir -p ex && unzip -q emu.dl -d ex && APP=$(find ex -iname '*.AppImage' | head -1);; *) APP=./emu.dl;; esac
           chmod +x "$APP"; "$APP" --appimage-extract > /dev/null; ls squashfs-root | head
-          BIN=$(find squashfs-root -maxdepth 3 -type f -name 'azahar*' -perm -u+x | grep -v room | head -1); echo "BIN=$BIN"
+          BIN=$(find squashfs-root -type f -name "azahar*" -perm -u+x | grep -v -i "room\|\.so" | head -1); [ -z "$BIN" ] && BIN=squashfs-root/AppRun; find squashfs-root -maxdepth 2 | head -20; echo "BIN=$BIN"
           export LIBGL_ALWAYS_SOFTWARE=1 QT_QPA_PLATFORM=xcb
           Xvfb :99 -screen 0 1280x1024x24 & sleep 2; export DISPLAY=:99
           "$BIN" out/grace.3dsx > shots/azahar.log 2>&1 &
