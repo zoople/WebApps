@@ -1025,7 +1025,8 @@ static void drawAltar(void) {
 			snprintf(s, sizeof s, "Lose %s", b->name); text(s, r.x + 42, r.y + 3, 0.55f, cBone, C2D_AlignLeft);
 			snprintf(s, sizeof s, "+%d", TIER_GAIN[b->tier]); text(s, r.x + r.w - 22, r.y + 4, 0.45f, cGrace, C2D_AlignRight); icon(SPR_GRACE, r.x + r.w - 12, r.y + 12, 14, 1);
 			text(b->sum, r.x + 42, r.y + 23, 0.42f, cGiltHi, C2D_AlignLeft);
-			snprintf(s, sizeof s, "%s -> %s   drain -%.1f -> -%.1f", b->has, b->loss, drainRate(), rateIf(c.buff, G.defy)); text(s, r.x + 42, r.y + 40, 0.34f, cMuted, C2D_AlignLeft);
+			snprintf(s, sizeof s, "%s -> %s", b->has, b->loss); text(s, r.x + 42, r.y + 40, 0.34f, cMuted, C2D_AlignLeft);
+			snprintf(s, sizeof s, "-%.1f > -%.1f/s", drainRate(), rateIf(c.buff, G.defy)); text(s, r.x + r.w - 6, r.y + 40, 0.34f, cGrace, C2D_AlignRight);
 		}
 	}
 	if (sel >= 0) { button(bConfirm, cards[sel].refuse ? "Refuse the altar (A)" : "Give it up (A)", 1); }
