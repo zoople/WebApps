@@ -289,6 +289,25 @@ h2{margin:0;font-family:var(--display);font-weight:900;font-size:30px;letter-spa
 #dead .lede{font-size:13px;line-height:1.35}
 #dead .btn{flex:none}
 @media (max-height:600px){#dead .lede,#dead .where-died{display:none}}
+.story{z-index:7;background:radial-gradient(ellipse 80% 60% at 50% 45%,color-mix(in srgb,var(--stone) 92%,transparent),color-mix(in srgb,var(--ink) 97%,transparent));cursor:pointer}
+.spanel{width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:0 8px}
+.seye{margin:0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--grace)}
+.stext{margin:0;font-family:var(--body);font-style:italic;font-size:clamp(19px,5.6vw,24px);line-height:1.45;color:var(--bone);text-wrap:balance}
+.stext.final{font-style:normal;font-family:var(--display);font-weight:700;font-size:clamp(22px,6.4vw,28px);color:var(--grace-hi)}
+.sby{margin:0;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--gilt)}
+.sby:empty{display:none}
+.stap{margin:18px 0 0;font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);animation:beat 1.8s ease-in-out infinite}
+.spanel.in > *{animation:sfade .7s ease-out both}
+.spanel.in .sby{animation-delay:.35s}
+@keyframes sfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.sskip{position:absolute;right:16px;bottom:16px;flex:none;width:auto;padding:8px 14px}
+.dq{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-left:2px solid var(--gilt2);background:color-mix(in srgb,var(--ink) 60%,transparent);text-align:left}
+.dq p{margin:0}
+.dq .dm{font-family:var(--body);font-style:italic;font-size:15px;color:var(--bone)}
+.dq .dt{font-family:var(--body);font-size:14px;line-height:1.4;color:var(--gilt-hi)}
+.dq .da{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted)}
+.stopbtn{flex:none;padding:10px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.spanel.in > *{animation:none}}
 @media (prefers-reduced-motion:reduce){.pulse,.card.leg::after,.grace b,.grace,.emblem *{animation:none!important}.card.gone{animation:none;opacity:0}}
 </style>
 
@@ -360,7 +379,9 @@ h2{margin:0;font-family:var(--display);font-weight:900;font-size:30px;letter-spa
             <li>At zero Grace 💀 your health drains fast until you find more.</li>
             <li>Moving stone slabs block every shot, yours and theirs. Use them for cover.</li>
             <li>Sometimes you can Refuse and keep everything, but each refusal doubles your drain for good.</li>
-            <li>The last floor is fought with nothing. Clear it, and the Grace you have left is your score.</li>
+            <li>The last floor is fought with nothing. Clear it, and the Grace you have left is banked.</li>
+            <li>Then you ascend: every blessing comes back, but the enemies are tougher. There are four tiers.</li>
+            <li>Your score is all the Grace you banked across the tiers.</li>
           </ul>
         </details>
         <p id="best" class="best"></p>
@@ -380,19 +401,31 @@ h2{margin:0;font-family:var(--display);font-weight:900;font-size:30px;letter-spa
       </div>
     </div>
 
+    <div id="story" class="ov story" hidden>
+      <div class="spanel">
+        <p class="seye" id="sEye"></p>
+        <p class="stext" id="sText"></p>
+        <p class="sby" id="sBy"></p>
+        <p class="stap" id="sTap">Tap to continue</p>
+      </div>
+      <button id="sSkip" class="chip sskip">Skip</button>
+    </div>
+
     <div id="dead" class="ov" hidden>
       <div class="panel frame">
         <p class="eyebrow" id="deadEye">Run over</p>
         <h2 class="fallen" id="endTitle">Fallen</h2>
         <p class="where-died" id="deadHead">Floor 1</p>
         <div class="stats">
-          <div class="stat"><div class="v" id="sTime" style="color:var(--grace-hi)">0</div><div class="k">Grace ✦</div></div>
+          <div class="stat"><div class="v" id="sTime" style="color:var(--grace-hi)">0</div><div class="k">Score ✦</div></div>
           <div class="stat"><div class="v" id="sFloor">1</div><div class="k">Floor</div></div>
           <div class="stat"><div class="v" id="sKills">0</div><div class="k">Slain</div></div>
         </div>
         <div class="splits" id="splits"></div>
+        <div class="dq" id="deadQuote" hidden><p class="dm" id="dqMusing"></p><p class="dt" id="dqText"></p><p class="da" id="dqBy"></p></div>
         <p class="lede" id="deadLede"></p>
         <button id="againBtn" class="btn">Begin again</button>
+        <button id="stopBtn" class="chip stopbtn" hidden>Stop playing</button>
         <p id="ver2" class="best ver"></p>
       </div>
     </div>
@@ -402,7 +435,7 @@ h2{margin:0;font-family:var(--display);font-weight:900;font-size:30px;letter-spa
 <script>
 (() => {
 'use strict';
-const VERSION='v2 · 13 Oct 2026';
+const VERSION='v3 · 23 Oct 2026';
 const W = 420, H = 720;
 const css = getComputedStyle(document.documentElement);
 const col = n => css.getPropertyValue(n).trim();
@@ -751,20 +784,22 @@ const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--){ co
 let G = null, state = 'title', shake = 0, last = performance.now();
 const has = id => G.buffs.has(id);
 const C = id => G.curses[id] || 0;
-const mulTaken = () => 1 + 0.2 * C('brittle');
+const tierK = () => G ? (G.tier || 1) - 1 : 0;
+const mulTaken = () => (1 + 0.2 * C('brittle')) * (1 + 0.3 * tierK());
 const mulDealt = () => Math.pow(0.88, C('dull'));
-const hpMul = () => 1 + 0.2 * C('bulwark');
-const shotMul = () => (has('slow') ? 0.5 : 1) * (1 + 0.12 * C('fervor'));
-const rateMul = () => 1 + 0.12 * C('frenzy');
+const hpMul = () => (1 + 0.2 * C('bulwark')) * (1 + 0.5 * tierK());
+const shotMul = () => (has('slow') ? 0.5 : 1) * (1 + 0.12 * C('fervor')) * (1 + 0.12 * tierK());
+const rateMul = () => (1 + 0.12 * C('frenzy')) * (1 + 0.18 * tierK());
 const tele = () => has('ward') ? 1.8 : 1;
 const maxHp = () => has('vigor') ? 200 : 100;
 const curseCount = () => G ? Object.values(G.curses).reduce((a, b) => a + b, 0) : 0;
 
-function newRun(demo){
-  G = {demo:!!demo, floor:1, wave:0, phase:'wave', time:0, nextT:0, banner:'', bannerSub:'', bannerT:0, kills:0, hs:0, flash:0, flashC:K.ember,
+function newRun(demo, tier = 1, banked = 0, kills = 0){
+  G = {demo:!!demo, tier, banked, floor:1, wave:0, phase:'wave', time:0, nextT:0, banner:'', bannerSub:'', bannerT:0, kills:0, hs:0, flash:0, flashC:K.ember,
     buffs:new Set(BUFFS.map(b => b.id)), curses:{}, ft:0, fspent:0, splits:[], grace:BAL.start, defy:0, sparks:[], sparkT:1.5, taps:0, glory:0,
     p:{x:W / 2, y:H - 110, r:11, hp:200, vx:0, vy:0, fx:0, fy:-1, cd:0, shield:3, shieldT:9, inv:0, moving:false, trail:[]},
     pb:[], eb:[], en:[], pools:[], shells:[], spikes:[], fx:[], nums:[]};
+  G.kills = kills;
   renderRunes(); lastHud = '';
 }
 function startWave(i){
@@ -1146,7 +1181,7 @@ function update(dt){
       p.hp = Math.min(maxHp(), p.hp + maxHp() * 0.4);
     } else { G.phase = 'between'; G.nextT = 1.1; }
   } else if (G.phase === 'between'){ G.nextT -= dt; if (G.nextT <= 0) startWave(G.wave + 1); }
-  else if (G.phase === 'cleared'){ G.nextT -= dt; if (G.nextT <= 0){ if (G.demo){ G.floor++; startWave(0); } else if (!G.buffs.size){ if (state === 'play') endRun(true); } else openAltar(); } }
+  else if (G.phase === 'cleared'){ G.nextT -= dt; if (G.nextT <= 0){ if (G.demo){ G.floor++; startWave(0); } else if (!G.buffs.size){ if (state === 'play') ascend(); } else openAltar(); } }
   else if (G.phase === 'dead'){
     G.nextT -= dt;
     if (G.nextT <= 0){ if (G.demo){ newRun(true); startWave(0); } else if (state === 'play') endRun(false); }
@@ -1561,7 +1596,7 @@ function hud(){
   const ft = fmt(G.ft), gr = Math.ceil(G.gd);
   const key = G.floor + '|' + G.wave + '|' + ft + '|' + gr + '|' + Math.ceil(p.hp) + '|' + mh + '|' + G.buffs.size + '|' + speed2 + '|' + G.defy + '|' + G.lastRate + '|' + !!G.empty;
   if (key === lastHud) return; lastHud = key;
-  $('where').textContent = !G.buffs.size ? 'Pure Floor' : `Floor ${G.floor}`;
+  $('where').textContent = (!G.buffs.size ? 'Pure Floor' : `Floor ${G.floor}`) + (G.tier > 1 ? ` · ${ROMAN[G.tier]}` : '');
   $('wave').textContent = (w.boss ? 'Warden' : `Wave ${Math.max(0, G.wave) + 1}/3`) + ' · ' + ft;
   $('grace').textContent = gr; $('graceBox').querySelector('.gi').textContent = G.empty ? '💀' : '✦'; $('rate').textContent = (G.grace >= BAL.cap ? 'MAX · ' : '') + fmtRate(drainRate()) + (speed2 ? ' ⏩' : '') + (G.defy ? ` · 🚫${G.defy}` : '');
   $('graceBox').classList.toggle('low', gr <= 40);
@@ -1719,7 +1754,143 @@ $('confirmBtn').addEventListener('click', () => {
     G.bannerSub = `${picked.name} gone · +${T.gain} grace`; G.bannerT = 2.0;
     if (!flightMs) renderRunes();
     burst(G.p.x, G.p.y, K.gilt, 50, 260);
+    const q = nextQuote();
+    state = 'story'; AU.mode = 'altar';
+    playStory([{eye:`${picked.g} ${picked.name} given up`, text:`“${q.t}”`, by:`— ${q.a}`}], () => { state = 'play'; AU.mode = 'play'; });
   }, reduceMotion ? 50 : 1250);
+});
+
+// =====================================================================
+// WORDS: quotes on each sacrifice, the four tiers of musings, death
+// =====================================================================
+const ROMAN = ['', 'I', 'II', 'III', 'IV'];
+const QUOTES = [
+  {t:'It is not the man who has too little, but the man who craves more, that is poor.', a:'Seneca'},
+  {t:'Very little is needed to make a happy life; it is all within yourself, in your way of thinking.', a:'Marcus Aurelius'},
+  {t:'A man is rich in proportion to the number of things which he can afford to let alone.', a:'Henry David Thoreau'},
+  {t:'Our life is frittered away by detail. Simplify, simplify.', a:'Henry David Thoreau'},
+  {t:'In the pursuit of learning, every day something is acquired. In the pursuit of the Tao, every day something is dropped.', a:'Lao Tzu'},
+  {t:'Mastering others is strength. Mastering yourself is true power.', a:'Lao Tzu'},
+  {t:'Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away.', a:'Antoine de Saint-Exupéry'},
+  {t:'One must imagine Sisyphus happy.', a:'Albert Camus'},
+  {t:'He who has a why to live can bear almost any how.', a:'Friedrich Nietzsche'},
+  {t:'If you gaze long into an abyss, the abyss also gazes into you.', a:'Friedrich Nietzsche'},
+  {t:'Man is condemned to be free.', a:'Jean-Paul Sartre'},
+  {t:'Nothing is enough for the man to whom enough is too little.', a:'Epicurus'},
+  {t:'No man is free who is not master of himself.', a:'Epictetus'},
+  {t:'Make the best use of what is in your power, and take the rest as it happens.', a:'Epictetus'},
+  {t:'He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has.', a:'Epictetus'},
+  {t:'Freedom is not procured by a full enjoyment of what is desired, but by controlling the desire.', a:'Epictetus'},
+  {t:'We suffer more often in imagination than in reality.', a:'Seneca'},
+  {t:'Waste no more time arguing about what a good man should be. Be one.', a:'Marcus Aurelius'},
+  {t:'Let go, or be dragged.', a:'Zen proverb'},
+  {t:'Have nothing in your houses that you do not know to be useful, or believe to be beautiful.', a:'William Morris'},
+  {t:'Discipline is the bridge between goals and accomplishment.', a:'Jim Rohn'},
+  {t:'Everything can be taken from a man but one thing: the last of the human freedoms, to choose one’s attitude.', a:'Viktor Frankl'},
+];
+const DEATH_QUOTES = [
+  {t:'Death is nothing to us, since when we are, death has not come, and when death has come, we are not.', a:'Epicurus'},
+  {t:'To philosophize is to learn to die.', a:'Michel de Montaigne'},
+  {t:'Cowards die many times before their deaths; the valiant never taste of death but once.', a:'William Shakespeare'},
+  {t:'All that lives must die, passing through nature to eternity.', a:'William Shakespeare'},
+  {t:'Because I could not stop for Death, he kindly stopped for me.', a:'Emily Dickinson'},
+  {t:'Death, be not proud, though some have called thee mighty and dreadful, for thou art not so.', a:'John Donne'},
+  {t:'No one knows whether death, which men fear as the greatest evil, may not be the greatest good.', a:'Socrates'},
+  {t:'Do every act of your life as though it were the very last act of your life.', a:'Marcus Aurelius'},
+  {t:'While I thought that I was learning how to live, I have been learning how to die.', a:'Leonardo da Vinci'},
+  {t:'Teach me to live, that I may dread the grave as little as my bed.', a:'Thomas Ken'},
+];
+const DEATH_MUSINGS = [
+  'So this is where the floor ends.',
+  'I held on to too much, or too little. Hard to tell from down here.',
+  'The light goes out the same way it came: without asking.',
+  'Even falling, I’m still giving something up.',
+  'Rest, then. The wardens will wait.',
+  'Strange. Dying is the first thing here I didn’t choose.',
+  'The tower doesn’t notice. It never did.',
+];
+const STORY = {
+  1:['They gave me everything before I asked for it.',
+     'Fire that never stops. Aim that never misses. A shield. A promise.',
+     'And a price: each warden takes something back.',
+     'Fine. I’ll give it up one piece at a time, and see what’s left of me.'],
+  2:['I stood on the last floor with nothing, and I won.',
+     'It felt like the truest thing I’ve ever done.',
+     'Then the light came back. All of it. Every blessing, returned.',
+     'The floors are darker now. The wardens remember me.',
+     'I suppose I’ll have to give it all up again.'],
+  3:['Twice now. Everything given, everything returned.',
+     'The enemies are the same. Only harder. Like the same day, repeating louder.',
+     'I told myself the giving up was the point.',
+     'But if it is always given back, what did I ever really give?',
+     'Maybe I’m not climbing. Maybe I’m circling.'],
+  4:['Three times purified. Three times restored.',
+     'My hands move before I decide to move them.',
+     'The wardens don’t hate me. They’re waiting, like I am.',
+     'Every victory is only the door to the next floor.',
+     'There is no top to this tower. There never was.',
+     'One last time, then. Or so I keep saying.'],
+  end:['Pure again. And again the light begins to gather.',
+     'I see it now. The game doesn’t end when you win.',
+     'It ends when you stop.',
+     'Not in defeat. Not in triumph. Just setting it down.'],
+};
+const FINAL_QUOTE = 'One day we say “One more time.” And we are right.';
+const decks = {};
+function pick(arr, key){
+  if (!decks[key] || !decks[key].length) decks[key] = shuffle(arr.map((_, i) => i));
+  return arr[decks[key].pop()];
+}
+const nextQuote = () => pick(QUOTES, 'q');
+const tierPages = n => STORY[n].map((t, i) => ({eye:i ? '' : (n === 1 ? 'Tier I' : `Ascension · Tier ${ROMAN[n]}`), text:t}));
+
+let storyQ = [], storyDone = null;
+function showPage(){
+  const pg = storyQ.shift(), panel = document.querySelector('.spanel');
+  $('sEye').textContent = pg.eye || ''; $('sText').textContent = pg.text; $('sBy').textContent = pg.by || '';
+  $('sText').classList.toggle('final', !!pg.final);
+  $('sTap').textContent = storyQ.length ? 'Tap to continue' : (pg.final ? 'Tap' : 'Tap to begin');
+  $('sSkip').hidden = !storyQ.length;
+  panel.classList.remove('in'); void panel.offsetWidth; panel.classList.add('in');
+}
+function playStory(pages, done){
+  storyQ = pages.slice(); storyDone = done; joy.on = false;
+  $('story').hidden = false; showPage(); sfx('tick');
+}
+function endStory(){
+  $('story').hidden = true; const d = storyDone; storyDone = null; storyQ = [];
+  if (d) d();
+}
+$('story').addEventListener('click', ev => {
+  if (ev.target.id === 'sSkip') return;
+  if (storyQ.length){ showPage(); sfx('tick'); } else endStory();
+});
+$('sSkip').addEventListener('click', ev => { ev.stopPropagation(); endStory(); });
+
+function ascend(){
+  const gained = Math.floor(G.grace + G.glory);
+  G.banked += gained;
+  sfx('felled'); AU.mode = 'altar'; state = 'story';
+  if (G.tier >= 4){
+    const pages = STORY.end.map((t, i) => ({eye:i ? '' : 'The fourth purification', text:t}));
+    pages.push({text:FINAL_QUOTE, final:true});
+    playStory(pages, () => endRun(true, true));
+    return;
+  }
+  const next = G.tier + 1, banked = G.banked, kills = G.kills;
+  const pages = tierPages(next);
+  pages[0] = {...pages[0], by:`+${gained} grace banked · ${banked} total`};
+  playStory(pages, () => {
+    newRun(false, next, banked, kills);
+    state = 'play'; AU.mode = 'play'; startWave(0);
+    G.banner = `Tier ${ROMAN[next]}`; G.bannerSub = 'Every blessing returned · the wardens are stronger'; G.bannerT = 2.6;
+  });
+}
+$('stopBtn').addEventListener('click', () => {
+  $('dead').hidden = true; state = 'story';
+  playStory([{text:'You set it down.', final:true}], () => {
+    state = 'title'; app.classList.add('attract'); $('title').hidden = false; newRun(true); startWave(0);
+  });
 });
 
 const store = {
@@ -1731,25 +1902,26 @@ function die(){
   burst(G.p.x, G.p.y, K.bone, 50, 240); burst(G.p.x, G.p.y, K.ember, 30, 160);
   if (!G.demo){ AU.mode = 'dead'; sfx('death'); G.hs = 0.6; }
 }
-function endRun(won){
+function endRun(won, final){
   state = 'dead'; speed2 = false; $('spdBtn').classList.remove('on');
   if (won){ AU.mode = 'altar'; sfx('felled'); }
-  const score = won ? Math.floor(G.grace + G.glory) : 0, bestRun = store.get('purity-score', null), bestFloor = store.get('purity-best', 0);
+  const score = won ? G.banked : G.banked, bestRun = store.get('purity-score', null), bestFloor = store.get('purity-best', 0);
   let eyebrow;
-  if (won){
+  if (won || score > 0){
     const isBest = !bestRun || score > bestRun.score;
     if (isBest) store.set('purity-score', {score, splits:G.splits.map(x => x.t)});
-    eyebrow = isBest ? (bestRun ? `New best · +${score - bestRun.score} on your record` : 'First clear · new best') : `Best: ${bestRun.score} grace`;
-  } else {
+    eyebrow = isBest ? (bestRun ? `New best · +${score - bestRun.score} on your record` : 'New best') : `Best: ${bestRun.score} grace`;
+  }
+  if (!won){
     if (G.floor > bestFloor) store.set('purity-best', G.floor);
-    eyebrow = bestRun ? `Best clear: ${bestRun.score} grace` : `Deepest floor: ${Math.max(bestFloor, G.floor)}`;
+    if (!(score > 0)) eyebrow = bestRun ? `Best: ${bestRun.score} grace` : `Deepest floor: ${Math.max(bestFloor, G.floor)}`;
   }
   $('dead').classList.toggle('won', won); $('endTitle').classList.toggle('won', won);
-  $('endTitle').textContent = won ? 'Purified' : G.graceOut ? 'Graceless' : 'Fallen';
+  $('endTitle').textContent = won ? 'At Rest' : G.graceOut ? 'Graceless' : 'Fallen';
   $('deadEye').textContent = eyebrow;
-  $('deadHead').textContent = won ? `All ${BUFFS.length} blessings given up`
-    : `${!G.buffs.size ? 'Pure Floor' : 'Floor ' + G.floor}, ${WAVES[Math.max(0, G.wave)].boss ? 'the Warden' : 'wave ' + (Math.max(0, G.wave) + 1)}`;
-  $('sTime').textContent = won ? score : Math.floor(G.grace); $('sFloor').textContent = G.floor; $('sKills').textContent = G.kills;
+  $('deadHead').textContent = won ? 'Four times purified'
+    : `${G.tier > 1 ? 'Tier ' + ROMAN[G.tier] + ' · ' : ''}${!G.buffs.size ? 'Pure Floor' : 'Floor ' + G.floor}, ${WAVES[Math.max(0, G.wave)].boss ? 'the Warden' : 'wave ' + (Math.max(0, G.wave) + 1)}`;
+  $('sTime').textContent = score; $('sFloor').textContent = G.floor; $('sKills').textContent = G.kills;
   const ref = bestRun && bestRun.splits;
   const rows = [`<div class="sp sum"><span class="f">Start</span><span class="e" style="color:var(--grace)">✦</span><span class="t" style="color:var(--grace-hi)">${BAL.start}</span><span class="dl"></span></div>`];
   G.splits.forEach((x, i) => {
@@ -1763,10 +1935,16 @@ function endRun(won){
   rows.push(`<div class="sp sum"><span class="f">${won ? 'Score' : 'Left'}</span><span class="e" style="color:var(--grace)">✦</span><span class="t" style="color:var(--grace-hi)">${won ? score : Math.floor(G.grace)}</span><span class="dl">${won && bestRun ? `<span class="${score < bestRun.score ? 'up' : 'dn'}">${score < bestRun.score ? '−' : '+'}${Math.abs(score - bestRun.score)}</span>` : ''}</span></div>`);
   $('splits').innerHTML = rows.join('');
   const left = G.buffs.size;
-  $('deadLede').textContent = won ? `You walked the last floor with nothing and kept ${score} grace. Keep more next time.`
-    : G.graceOut ? 'Your grace ran dry and your life drained away. Sacrifice sooner, or fight faster.'
-    : left ? `Fell still holding ${left} blessing${left > 1 ? 's' : ''}: ${BUFFS.filter(b => G.buffs.has(b.id)).map(b => b.g).join(' ')}`
-    : 'You held nothing at the end. So close.';
+  $('deadLede').textContent = won ? `${score} grace, banked across four tiers.` : score > 0 ? `${score} grace banked before the fall.` : '';
+  $('deadLede').hidden = !$('deadLede').textContent;
+  if (!won){
+    const q = pick(DEATH_QUOTES, 'dq');
+    $('dqMusing').textContent = pick(DEATH_MUSINGS, 'dm');
+    $('dqText').textContent = `“${q.t}”`; $('dqBy').textContent = `— ${q.a}`;
+  }
+  $('deadQuote').hidden = won;
+  $('againBtn').textContent = won ? 'One more time' : 'Begin again';
+  $('stopBtn').hidden = !won;
   $('dead').hidden = false;
 }
 function begin(){
@@ -1774,9 +1952,12 @@ function begin(){
   if (fsOK && !fsEl()){ try { const r = root.requestFullscreen || root.webkitRequestFullscreen; const p = r && r.call(root, {navigationUI:'hide'}); if (p && p.catch) p.catch(() => {}); } catch(_){} }
   $('title').hidden = true; $('dead').hidden = true; $('altar').hidden = true;
   app.classList.remove('attract');
-  newRun(false); state = 'play'; startWave(0);
-  if (tapsLearned < 2){ G.bannerSub = 'Walk over ✦ and ❤️ to collect them'; G.bannerT = 2.8; }
-  musicStart(); AU.mode = 'play'; sfx('ui');
+  newRun(false); musicStart(); sfx('ui');
+  state = 'story'; AU.mode = 'altar';
+  playStory(tierPages(1), () => {
+    state = 'play'; AU.mode = 'play'; startWave(0);
+    if (tapsLearned < 2){ G.bannerSub = 'Walk over ✦ and ❤️ to collect them'; G.bannerT = 2.8; }
+  });
 }
 $('startBtn').addEventListener('click', begin);
 $('againBtn').addEventListener('click', begin);
