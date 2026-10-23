@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "v4 - 23 Oct 2026"
+#define VERSION "v5 - 23 Oct 2026"
 #ifdef HOSTTEST
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -212,6 +212,7 @@ static struct {
 	Bullet pb[MAXB]; EBullet eb[MAXEB]; Enemy en[MAXE]; Pickup pk[MAXPK]; Shell sh[MAXSH]; Pool pl[MAXPL]; Part fx[MAXP]; Num nums[MAXN];
 	Wall walls[2]; int nwalls; Spike spikes[4]; int nspikes;
 	int empty, graceOut;
+	float featherT, featherCd;   // Featherstep saved you: show it
 	Split splits[16]; int nsplits;
 } G;
 static int state = S_TITLE, prevState = S_PLAY;
@@ -445,6 +446,11 @@ static void newRun(int demo, int tier, int banked, int kills) {
 	G.p.x = TW / 2; G.p.y = TH - 40; G.p.r = 7; G.p.hp = 200; G.p.fy = -1; G.p.shield = 3; G.p.shieldT = 9;
 }
 
+static void featherSave(void) {
+	if (G.featherCd > 0) { if (G.featherT < 0.6f) G.featherT = 0.6f; return; }
+	G.featherT = 1.1f; G.featherCd = 0.9f;
+	burst(G.p.x, G.p.y + 6, cBone, 8, 50); sfx(SND_NAV);
+}
 static void die(void);
 static void hurt(float d) {
 	if (G.p.inv > 0 || G.phase == PH_DEAD) return;
@@ -734,7 +740,7 @@ static void update(float dt) {
 			for (int k = 0; k < MAXPL; k++) if (!G.pl[k].on) { G.pl[k] = (Pool){s->tx, s->ty, s->r, 4, 1}; break; }
 		}
 	}
-	for (int i = 0; i < MAXPL; i++) { Pool *p = &G.pl[i]; if (!p->on) continue; p->life -= dt; if (p->life <= 0) { p->on = 0; continue; } if (!has(B_FLOAT) && dist(G.p.x, G.p.y, p->x, p->y) < p->r - 3) hurt(8); }
+	for (int i = 0; i < MAXPL; i++) { Pool *p = &G.pl[i]; if (!p->on) continue; p->life -= dt; if (p->life <= 0) { p->on = 0; continue; } if (dist(G.p.x, G.p.y, p->x, p->y) < p->r - 3) { if (has(B_FLOAT)) featherSave(); else hurt(8); } }
 	if (!G.demo && G.phase == PH_WAVE) {
 		G.sparkT -= dt;
 		if (G.sparkT <= 0) { G.sparkT = frand(3, 4.5f); for (int q = 0; q < MAXPK; q++) if (!G.pk[q].on) { G.pk[q] = (Pickup){frand(30, TW - 30), frand(30, TH - 30), 4.5f, 4.5f, SPARK_V, 0, 1}; break; } }
@@ -750,7 +756,9 @@ static void update(float dt) {
 			else { addGrace(k->v); num(k->x, k->y - 8, k->v, cGrace); burst(k->x, k->y, cGraceHi, 14, 90); sfx(SND_CHIME); spawnFlies(k->x, k->y, 0); }
 		}
 	}
-	for (int s = 0; s < G.nspikes; s++) if (!has(B_FLOAT) && spikePhase(&G.spikes[s]) == 2 && inSpike(G.p.x, G.p.y, &G.spikes[s], -3)) hurt(14);
+	for (int s = 0; s < G.nspikes; s++) if (spikePhase(&G.spikes[s]) == 2 && inSpike(G.p.x, G.p.y, &G.spikes[s], -3)) { if (has(B_FLOAT)) featherSave(); else hurt(14); }
+	if (G.featherT > 0) G.featherT -= dt;
+	if (G.featherCd > 0) G.featherCd -= dt;
 	for (int i = 0; i < MAXP; i++) { Part *f = &G.fx[i]; if (!f->on) continue; f->x += f->vx * dt; f->y += f->vy * dt; f->vx *= 0.92f; f->vy *= 0.92f; f->life -= dt; if (f->life <= 0) f->on = 0; }
 	for (int i = 0; i < MAXN; i++) { Num *n = &G.nums[i]; if (!n->on) continue; n->y -= 18 * dt; n->life -= dt; if (n->life <= 0) n->on = 0; }
 	if (!G.demo) updateFlies(dt);
@@ -763,7 +771,6 @@ static void update(float dt) {
 			G.ft = 0; G.fspent = 0;
 			G.phase = PH_CLEARED; G.nextT = 1.8f; snprintf(G.banner, sizeof G.banner, "Warden felled");
 			snprintf(G.bannerSub, sizeof G.bannerSub, "%s", heldCount() ? "" : "You are pure"); G.bannerT = 1.8f;
-			G.p.hp = fminf(maxHp(), G.p.hp + maxHp() * 0.4f);
 		} else { G.phase = PH_BETWEEN; G.nextT = 1.1f; }
 	} else if (G.phase == PH_BETWEEN) { G.nextT -= dt; if (G.nextT <= 0) startWave(G.wave + 1); }
 	else if (G.phase == PH_CLEARED) {
@@ -903,6 +910,12 @@ static void drawTop(float eye) {
 	for (int i = 0; i < MAXEB; i++) { EBullet *b = &G.eb[i]; if (!b->on) continue; C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r * 2, alpha(cEmber, 0.25f)); C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r, cEmberHi); C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r * 0.45f, cEmber2); }
 	for (int i = 0; i < MAXB; i++) { Bullet *b = &G.pb[i]; if (!b->on) continue; C2D_DrawLine(b->x + dEnt, b->y, cGiltHi, b->x + dEnt - b->vx * 0.018f, b->y - b->vy * 0.018f, alpha(cGilt, 0.2f), 2.4f, 0); }
 	for (int i = 0; i < MAXP; i++) { Part *f = &G.fx[i]; if (!f->on) continue; C2D_DrawRectSolid(f->x + dEnt - f->s / 2, f->y - f->s / 2, 0, f->s, f->s, alpha(f->c, f->life / f->max * 1.4f)); }
+	if (G.featherT > 0 && G.phase != PH_DEAD && !G.demo) {
+		float k = G.featherT / 1.1f, a = fminf(1, G.featherT * 2.5f), x = G.p.x + dEnt * 1.6f, y = G.p.y - 56 - (1 - k) * 10;
+		C2D_DrawCircleSolid(x, y, 0, 13, alpha(cBone, 0.12f * a));
+		icon(B_FLOAT, x, y + sinf(G.time * 10) * 1.5f, 20, a);
+		text("Featherstep", x, y + 10, 0.34f, alpha(cBone, a), C2D_AlignCenter);
+	}
 	drawFlies(0);
 	char nb[16];
 	for (int i = 0; i < MAXN; i++) { Num *n = &G.nums[i]; if (!n->on) continue; snprintf(nb, sizeof nb, "%d", (int)roundf(n->v)); text(nb, n->x + dEnt, n->y, 0.42f, alpha(n->c, n->life * 3), C2D_AlignCenter); }
