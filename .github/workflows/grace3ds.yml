@@ -53,7 +53,7 @@ jobs:
           curl -sSL "$bt" -o bt.zip && unzip -oq bt.zip -d bt
           sudo install -m755 "$(find mr -type f -name makerom | head -1)" /usr/local/bin/makerom
           sudo install -m755 bt/linux-x86_64/bannertool /usr/local/bin/bannertool
-          makerom 2>&1 | head -2; bannertool 2>&1 | head -2
+          (makerom 2>&1 | head -2; bannertool 2>&1 | head -2) || true
       - name: Package CIA
         run: |
           set -o pipefail
