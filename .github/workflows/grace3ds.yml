@@ -19,23 +19,28 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -o pipefail
-          (apt-get update && apt-get install -y unzip curl jq) > /dev/null 2>&1 || true
+          mkdir -p out; exec > >(tee out/tools.log) 2>&1
+          (apt-get update && apt-get install -y unzip curl jq file) > /dev/null 2>&1 || echo "apt failed"
+          which unzip curl jq || true
           mkdir -p /tmp/t && cd /tmp/t
           api() { curl -sSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$1/releases"; }
+          api 3DSGuy/Project_CTR | jq -r '.[0:3][] | .assets[].name' || true
+          api Epicpkmn11/bannertool | jq -r '.[0:3][] | .assets[].name' || true
           mr=$(api 3DSGuy/Project_CTR | jq -r '[.[] | .assets[] | select(.name|test("makerom.*(ubuntu|linux).*zip";"i"))][0].browser_download_url')
           bt=$(api Epicpkmn11/bannertool | jq -r '[.[] | .assets[] | select(.name|test("bannertool.*zip";"i"))][0].browser_download_url')
           echo "makerom: $mr"; echo "bannertool: $bt"
           curl -sSL "$mr" -o mr.zip && unzip -oq mr.zip -d mr
           curl -sSL "$bt" -o bt.zip && unzip -oq bt.zip -d bt
-          MR=$(find mr -type f -name makerom | head -1); BT=$(find bt -type f -path '*linux*' -name bannertool | head -1)
-          [ -z "$BT" ] && BT=$(find bt -type f -name bannertool | head -1)
+          find mr bt -type f | head -40
+          MR=$(find mr -type f -iname 'makerom*' ! -iname '*.zip' | head -1)
+          BT=$(find bt -type f -ipath '*linux*' -iname 'bannertool*' | head -1); [ -z "$BT" ] && BT=$(find bt -type f -iname 'bannertool*' ! -iname '*.exe' | head -1)
+          echo "MR=$MR BT=$BT"
           chmod +x "$MR" "$BT"; cp "$MR" /usr/local/bin/makerom; cp "$BT" /usr/local/bin/bannertool
-          makerom -h 2>&1 | head -2 || true
+          file /usr/local/bin/makerom /usr/local/bin/bannertool || true
+          makerom 2>&1 | head -3; bannertool 2>&1 | head -3
       - name: Build
         run: |
           set -o pipefail
-          mkdir -p out
           { make all && make cia; } 2>&1 | tee out/build.log
       - name: Publish
         if: always()
@@ -49,3 +54,4 @@ jobs:
             Grace3DS/out/Grace.cia
             Grace3DS/out/grace.3dsx
             Grace3DS/out/build.log
+            Grace3DS/out/tools.log
