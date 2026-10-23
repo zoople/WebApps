@@ -89,7 +89,7 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb xdotool imagemagick libfuse2 mesa-utils libgl1-mesa-dri libegl1 libxkbcommon-x11-0 libxcb-cursor0 > /dev/null 2>&1 || true
           rel=$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/azahar-emu/azahar/releases/latest)
           echo "$rel" | jq -r '.tag_name, (.assets[].name)'
-          url=$(echo "$rel" | jq -r '[.assets[] | select(.name|test("linux";"i")) | select(.name|test("appimage";"i"))][0].browser_download_url')
+          url=$(echo "$rel" | jq -r '[.assets[] | select(.name|test("\\.appimage$";"i"))][0].browser_download_url')
           echo "asset: $url"
           curl -sSL "$url" -o emu.dl
           file emu.dl
