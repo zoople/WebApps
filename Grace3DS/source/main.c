@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "v4 - 23 Oct 2026"
+#define VERSION "v6 - 23 Oct 2026"
 #ifdef HOSTTEST
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -41,9 +41,26 @@ static float dist(float ax, float ay, float bx, float by) { return sqrtf((ax - b
 
 // ------------------------------------------------------------------ text
 static C2D_TextBuf tbuf;
-static void text(const char *s, float x, float y, float sz, u32 col, int align) {
+#define SPR_GRACE 11
+static void icon(int i, float cx, float cy, float size, float a);
+static void text1(const char *s, float x, float y, float sz, u32 col, int align) {
 	C2D_Text t; C2D_TextParse(&t, tbuf, s); C2D_TextOptimize(&t);
 	C2D_DrawText(&t, C2D_WithColor | align, x, y, 0, sz, sz, col);
+}
+static float textW(const char *s, float sz) { if (!*s) return 0; C2D_Text t; float w, h; C2D_TextParse(&t, tbuf, s); C2D_TextGetDimensions(&t, sz, sz, &w, &h); return w; }
+// '@' in a string is drawn as the grace star, so the word itself never appears outside the title and quotes
+static void text(const char *s, float x, float y, float sz, u32 col, int align) {
+	if (!strchr(s, '@')) { text1(s, x, y, sz, col, align); return; }
+	char seg[6][128]; int n = 0; const char *p = s;
+	while (n < 6) { const char *q = strchr(p, '@'); size_t len = q ? (size_t)(q - p) : strlen(p); if (len > 127) len = 127; memcpy(seg[n], p, len); seg[n][len] = 0; n++; if (!q) break; p = q + 1; }
+	float ic = sz * 26, gap = sz * 3, tw = 0;
+	for (int i = 0; i < n; i++) tw += textW(seg[i], sz);
+	tw += (n - 1) * (ic + 2 * gap);
+	float sx = align == C2D_AlignCenter ? x - tw / 2 : align == C2D_AlignRight ? x - tw : x, a = ((col >> 24) & 255) / 255.0f;
+	for (int i = 0; i < n; i++) {
+		text1(seg[i], sx, y, sz, col, C2D_AlignLeft); sx += textW(seg[i], sz);
+		if (i < n - 1) { sx += gap; icon(SPR_GRACE, sx + ic / 2, y + sz * 17, ic, a); sx += ic + gap; }
+	}
 }
 static void textWrap(const char *s, float x, float y, float sz, u32 col, int align, float w) {
 	C2D_Text t; C2D_TextParse(&t, tbuf, s); C2D_TextOptimize(&t);
@@ -51,7 +68,6 @@ static void textWrap(const char *s, float x, float y, float sz, u32 col, int ali
 }
 
 // ------------------------------------------------------------------ sprites (romfs:/gfx/sprites.t3x: 11 blessing icons, then the grace star)
-#define SPR_GRACE 11
 static C2D_SpriteSheet sheet;
 static void icon(int i, float cx, float cy, float size, float a) {
 	if (!sheet) return;
@@ -212,6 +228,7 @@ static struct {
 	Bullet pb[MAXB]; EBullet eb[MAXEB]; Enemy en[MAXE]; Pickup pk[MAXPK]; Shell sh[MAXSH]; Pool pl[MAXPL]; Part fx[MAXP]; Num nums[MAXN];
 	Wall walls[2]; int nwalls; Spike spikes[4]; int nspikes;
 	int empty, graceOut;
+	float featherT, featherCd;   // Featherstep saved you: show it
 	Split splits[16]; int nsplits;
 } G;
 static int state = S_TITLE, prevState = S_PLAY;
@@ -220,7 +237,7 @@ static int state = S_TITLE, prevState = S_PLAY;
 typedef struct { float x0, y0, t, delay; int heart, on; } Fly;
 #define MAXFLY 32
 static Fly flies[MAXFLY];
-static float gracePulse = 0, hpPulse = 0;
+static float gracePulse = 0, hpPulse = 0, hpFullT = 0;
 #define GRACE_TX (40 + 172.0f)
 #define GRACE_TY (240 + 24.0f)
 #define HP_TX (40 + 22.0f)
@@ -238,6 +255,7 @@ static void updateFlies(float dt) {
 	for (int k = 0; k < MAXFLY; k++) { Fly *f = &flies[k]; if (!f->on) continue; if (f->delay > 0) { f->delay -= dt; continue; } f->t += dt / 0.6f;
 		if (f->t >= 1) { f->on = 0; if (f->heart) hpPulse = 0.3f; else gracePulse = 0.3f; } }
 	if (gracePulse > 0) gracePulse -= dt;
+	if (hpFullT > 0) hpFullT -= dt;
 	if (hpPulse > 0) hpPulse -= dt;
 }
 static void heartShape(float x, float y, float r, u32 c);
@@ -262,7 +280,7 @@ static Snd snds[NSND]; static Snd music;
 #define NCH 16
 static int audioOK = 0, sfxCh = 1;
 static ndspWaveBuf wbMusic, wbSfx[NCH];
-static float sfxLast[NSND];
+static u64 sfxLast[NSND];
 
 static float midi(float m) { return 440.0f * powf(2.0f, (m - 69) / 12.0f); }
 static float envAD(float t, float a, float d) { return t < a ? t / a : expf(-(t - a) / d); }
@@ -329,8 +347,8 @@ static void audioInit(void) {
 static void sfx(int id) {
 	int ui = id == SND_NAV || id == SND_PICK || id == SND_TICK;
 	if (!audioOK || (G.demo && !ui) || !snds[id].n) return;
-	float now = osGetTime() / 1000.0f;
-	if (id <= SND_HIT || id == SND_EBOLT || id == SND_TICK) { if (now - sfxLast[id] < 0.06f && now >= sfxLast[id]) return; }
+	u64 now = osGetTime();
+	if (id <= SND_HIT || id == SND_EBOLT || id == SND_TICK) { if (now >= sfxLast[id] && now - sfxLast[id] < 60) return; }
 	sfxLast[id] = now;
 	// find a channel whose last buffer the DSP has finished with
 	int ch = -1;
@@ -445,6 +463,11 @@ static void newRun(int demo, int tier, int banked, int kills) {
 	G.p.x = TW / 2; G.p.y = TH - 40; G.p.r = 7; G.p.hp = 200; G.p.fy = -1; G.p.shield = 3; G.p.shieldT = 9;
 }
 
+static void featherSave(void) {
+	if (G.featherCd > 0) { if (G.featherT < 0.6f) G.featherT = 0.6f; return; }
+	G.featherT = 1.1f; G.featherCd = 0.9f;
+	burst(G.p.x, G.p.y + 6, cBone, 8, 50); sfx(SND_NAV);
+}
 static void die(void);
 static void hurt(float d) {
 	if (G.p.inv > 0 || G.phase == PH_DEAD) return;
@@ -547,7 +570,7 @@ static void ascend(void) {
 		storyAdd(FINAL_QUOTE, NULL, NULL, 1);
 		storyPlay(NEXT_FINAL); return;
 	}
-	char by[96]; snprintf(by, sizeof by, "+%d grace banked - %d total", gained, G.banked);
+	char by[96]; snprintf(by, sizeof by, "+%d @ banked - %d total", gained, G.banked);
 	nextTier = G.tier + 1; nextBanked = G.banked; nextKills = G.kills;
 	storyTier(nextTier, by); storyPlay(NEXT_ASCEND);
 }
@@ -569,7 +592,7 @@ static void sacrifice(int c) {
 		G.defy++; G.splits[G.nsplits - 1].gave = -2;
 		G.floor++; G.phase = PH_BETWEEN; G.wave = -1; G.nextT = 2.0f; G.nspikes = 0; memset(G.pl, 0, sizeof G.pl);
 		G.p.x = TW / 2; G.p.y = TH - 40; G.p.vx = G.p.vy = 0;
-		snprintf(G.banner, sizeof G.banner, "Refused"); snprintf(G.bannerSub, sizeof G.bannerSub, "Grace now drains %.1f/s", drainRate()); G.bannerT = 2.0f;
+		snprintf(G.banner, sizeof G.banner, "Refused"); snprintf(G.bannerSub, sizeof G.bannerSub, "@ now drains %.1f/s", drainRate()); G.bannerT = 2.0f;
 		state = S_PLAY; sfx(SND_DEATH); return;
 	}
 	int b = cd.buff, gain = TIER_GAIN[BUFFS[b].tier];
@@ -579,7 +602,7 @@ static void sacrifice(int c) {
 	G.p.hp = fminf(G.p.hp, maxHp());
 	G.floor++; G.phase = PH_BETWEEN; G.wave = -1; G.nextT = 2.0f; G.nspikes = 0; G.nwalls = 0; memset(G.pl, 0, sizeof G.pl);
 	G.p.x = TW / 2; G.p.y = TH - 40; G.p.vx = G.p.vy = 0;
-	snprintf(G.banner, sizeof G.banner, "Given up"); snprintf(G.bannerSub, sizeof G.bannerSub, "%s gone - +%d grace", BUFFS[b].name, gain); G.bannerT = 2.0f;
+	snprintf(G.banner, sizeof G.banner, "Given up"); snprintf(G.bannerSub, sizeof G.bannerSub, "%s gone - +%d @", BUFFS[b].name, gain); G.bannerT = 2.0f;
 	burst(G.p.x, G.p.y, cGilt, 40, 160); sfx(SND_SHATTER);
 	const Quote *q = &QUOTES[deckDraw(&dQuote, NQ)];
 	char eye[96], line[200], by[96];
@@ -653,7 +676,7 @@ static void update(float dt) {
 		if (G.grace <= 30 && (int)ceilf(G.grace) < before && G.grace > 0) sfx(SND_TICK);
 		if (G.grace <= 0.001f) {
 			G.grace = 0;
-			if (!G.empty) { G.empty = 1; snprintf(G.banner, sizeof G.banner, "Graceless"); snprintf(G.bannerSub, sizeof G.bannerSub, "Your life is draining"); G.bannerT = 2.2f; sfx(SND_DEATH); }
+			if (!G.empty) { G.empty = 1; snprintf(G.banner, sizeof G.banner, "@ 0"); snprintf(G.bannerSub, sizeof G.bannerSub, "Your life is draining"); G.bannerT = 2.2f; sfx(SND_DEATH); }
 			G.p.hp -= G_BLEED * dt;
 			if (G.p.hp <= 0 && G.phase != PH_DEAD) { G.p.hp = 0; G.graceOut = 1; die(); }
 		} else G.empty = 0;
@@ -734,7 +757,7 @@ static void update(float dt) {
 			for (int k = 0; k < MAXPL; k++) if (!G.pl[k].on) { G.pl[k] = (Pool){s->tx, s->ty, s->r, 4, 1}; break; }
 		}
 	}
-	for (int i = 0; i < MAXPL; i++) { Pool *p = &G.pl[i]; if (!p->on) continue; p->life -= dt; if (p->life <= 0) { p->on = 0; continue; } if (!has(B_FLOAT) && dist(G.p.x, G.p.y, p->x, p->y) < p->r - 3) hurt(8); }
+	for (int i = 0; i < MAXPL; i++) { Pool *p = &G.pl[i]; if (!p->on) continue; p->life -= dt; if (p->life <= 0) { p->on = 0; continue; } if (dist(G.p.x, G.p.y, p->x, p->y) < p->r - 3) { if (has(B_FLOAT)) featherSave(); else hurt(8); } }
 	if (!G.demo && G.phase == PH_WAVE) {
 		G.sparkT -= dt;
 		if (G.sparkT <= 0) { G.sparkT = frand(3, 4.5f); for (int q = 0; q < MAXPK; q++) if (!G.pk[q].on) { G.pk[q] = (Pickup){frand(30, TW - 30), frand(30, TH - 30), 4.5f, 4.5f, SPARK_V, 0, 1}; break; } }
@@ -746,11 +769,13 @@ static void update(float dt) {
 		k->life -= dt; if (k->life <= 0) { k->on = 0; continue; }
 		if (!G.demo && G.phase != PH_DEAD && dist(k->x, k->y, G.p.x, G.p.y) < G.p.r + 10) {
 			k->on = 0;
-			if (k->heart) { float b0 = G.p.hp; G.p.hp = fminf(maxHp(), G.p.hp + k->v); num(k->x, k->y - 8, G.p.hp - b0, cEmberHi); burst(k->x, k->y, cEmberHi, 14, 90); sfx(SND_HEAL); spawnFlies(k->x, k->y, 1); }
+			if (k->heart) { float b0 = G.p.hp; G.p.hp = fminf(maxHp(), G.p.hp + k->v); if (G.p.hp - b0 >= 0.5f) num(k->x, k->y - 8, G.p.hp - b0, cEmberHi); else hpFullT = 1.2f; burst(k->x, k->y, cEmberHi, 14, 90); sfx(SND_HEAL); spawnFlies(k->x, k->y, 1); }
 			else { addGrace(k->v); num(k->x, k->y - 8, k->v, cGrace); burst(k->x, k->y, cGraceHi, 14, 90); sfx(SND_CHIME); spawnFlies(k->x, k->y, 0); }
 		}
 	}
-	for (int s = 0; s < G.nspikes; s++) if (!has(B_FLOAT) && spikePhase(&G.spikes[s]) == 2 && inSpike(G.p.x, G.p.y, &G.spikes[s], -3)) hurt(14);
+	for (int s = 0; s < G.nspikes; s++) if (spikePhase(&G.spikes[s]) == 2 && inSpike(G.p.x, G.p.y, &G.spikes[s], -3)) { if (has(B_FLOAT)) featherSave(); else hurt(14); }
+	if (G.featherT > 0) G.featherT -= dt;
+	if (G.featherCd > 0) G.featherCd -= dt;
 	for (int i = 0; i < MAXP; i++) { Part *f = &G.fx[i]; if (!f->on) continue; f->x += f->vx * dt; f->y += f->vy * dt; f->vx *= 0.92f; f->vy *= 0.92f; f->life -= dt; if (f->life <= 0) f->on = 0; }
 	for (int i = 0; i < MAXN; i++) { Num *n = &G.nums[i]; if (!n->on) continue; n->y -= 18 * dt; n->life -= dt; if (n->life <= 0) n->on = 0; }
 	if (!G.demo) updateFlies(dt);
@@ -763,7 +788,6 @@ static void update(float dt) {
 			G.ft = 0; G.fspent = 0;
 			G.phase = PH_CLEARED; G.nextT = 1.8f; snprintf(G.banner, sizeof G.banner, "Warden felled");
 			snprintf(G.bannerSub, sizeof G.bannerSub, "%s", heldCount() ? "" : "You are pure"); G.bannerT = 1.8f;
-			G.p.hp = fminf(maxHp(), G.p.hp + maxHp() * 0.4f);
 		} else { G.phase = PH_BETWEEN; G.nextT = 1.1f; }
 	} else if (G.phase == PH_BETWEEN) { G.nextT -= dt; if (G.nextT <= 0) startWave(G.wave + 1); }
 	else if (G.phase == PH_CLEARED) {
@@ -903,6 +927,11 @@ static void drawTop(float eye) {
 	for (int i = 0; i < MAXEB; i++) { EBullet *b = &G.eb[i]; if (!b->on) continue; C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r * 2, alpha(cEmber, 0.25f)); C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r, cEmberHi); C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r * 0.45f, cEmber2); }
 	for (int i = 0; i < MAXB; i++) { Bullet *b = &G.pb[i]; if (!b->on) continue; C2D_DrawLine(b->x + dEnt, b->y, cGiltHi, b->x + dEnt - b->vx * 0.018f, b->y - b->vy * 0.018f, alpha(cGilt, 0.2f), 2.4f, 0); }
 	for (int i = 0; i < MAXP; i++) { Part *f = &G.fx[i]; if (!f->on) continue; C2D_DrawRectSolid(f->x + dEnt - f->s / 2, f->y - f->s / 2, 0, f->s, f->s, alpha(f->c, f->life / f->max * 1.4f)); }
+	if (G.featherT > 0 && G.phase != PH_DEAD && !G.demo) {
+		float k = G.featherT / 1.1f, a = fminf(1, G.featherT * 2.5f), x = G.p.x + dEnt * 1.6f, y = G.p.y - 56 - (1 - k) * 10;
+		C2D_DrawCircleSolid(x, y, 0, 13, alpha(cBone, 0.12f * a));
+		icon(B_FLOAT, x, y + sinf(G.time * 10) * 1.5f, 20, a);
+	}
 	drawFlies(0);
 	char nb[16];
 	for (int i = 0; i < MAXN; i++) { Num *n = &G.nums[i]; if (!n->on) continue; snprintf(nb, sizeof nb, "%d", (int)roundf(n->v)); text(nb, n->x + dEnt, n->y, 0.42f, alpha(n->c, n->life * 3), C2D_AlignCenter); }
@@ -931,7 +960,7 @@ static void drawTopOverlay(void) {
 		star(TW / 2, 82, 40 + sinf(t * 2), 9, -PI / 2, cGrace); star(TW / 2, 82, 18, 4, -PI / 2, cBone);
 		for (int i = 0; i < 28; i++) { float a = i / 28.0f * 2 * PI + t * 0.15f; if (i % 7 == 6) continue; C2D_DrawCircleSolid(TW / 2 + cosf(a) * 52, 82 + sinf(a) * 52, 0, 1.3f, cGrace); }
 		text("GRACE", TW / 2, 132, 1.3f, cGraceHi, C2D_AlignCenter);
-		text("Give up power. Keep your grace.", TW / 2, 176, 0.5f, cBone, C2D_AlignCenter);
+		text("Give up power. Keep your @.", TW / 2, 176, 0.5f, cBone, C2D_AlignCenter);
 		char v[64]; snprintf(v, sizeof v, "Version %s", VERSION); text(v, TW / 2, 218, 0.38f, cMuted, C2D_AlignCenter);
 	} else if (state == S_STORY) {
 		C2D_DrawRectSolid(0, 0, 0, TW, TH, RGBA(11, 13, 20, 235));
@@ -941,7 +970,7 @@ static void drawTopOverlay(void) {
 		if (storyBy[storyAt][0]) text(storyBy[storyAt], TW / 2, 196, 0.42f, cGilt, C2D_AlignCenter);
 	} else if (state == S_ALTAR) {
 		C2D_DrawRectSolid(0, 0, 0, TW, TH, RGBA(11, 13, 20, 170));
-		char l[96]; snprintf(l, sizeof l, "Floor %d clear  -  %ds  -  %d grace lost", G.splits[G.nsplits - 1].floor, (int)altarTime, (int)roundf(altarCost));
+		char l[96]; snprintf(l, sizeof l, "Floor %d clear  -  %ds  -  %d @ lost", G.splits[G.nsplits - 1].floor, (int)altarTime, (int)roundf(altarCost));
 		text(l, TW / 2, 70, 0.45f, cMuted, C2D_AlignCenter);
 		text("An offering is owed", TW / 2, 100, 0.9f, cGiltHi, C2D_AlignCenter);
 		text("Choose on the touch screen", TW / 2, 150, 0.42f, cMuted, C2D_AlignCenter);
@@ -950,9 +979,9 @@ static void drawTopOverlay(void) {
 		if (endWon) {
 			text("AT REST", TW / 2, 60, 1.2f, cGraceHi, C2D_AlignCenter);
 			text("Four times purified", TW / 2, 112, 0.55f, cBone, C2D_AlignCenter);
-			char l[64]; snprintf(l, sizeof l, "%d grace, banked across four tiers", G.banked); text(l, TW / 2, 150, 0.45f, cGrace, C2D_AlignCenter);
+			char l[64]; snprintf(l, sizeof l, "%d @ banked across four tiers", G.banked); text(l, TW / 2, 150, 0.45f, cGrace, C2D_AlignCenter);
 		} else {
-			text(G.graceOut ? "GRACELESS" : "FALLEN", TW / 2, 22, 1.1f, cEmber, C2D_AlignCenter);
+			text(G.graceOut ? "FALLEN   @ 0" : "FALLEN", TW / 2, 22, 1.1f, cEmber, C2D_AlignCenter);
 			textWrap(DEATH_MUSINGS[endMusing], 30, 74, 0.5f, cBone, C2D_AlignLeft, TW - 60);
 			char q[220]; snprintf(q, sizeof q, "\"%s\"", DEATH_QUOTES[endQuote].t);
 			textWrap(q, 30, 116, 0.47f, cGiltHi, C2D_AlignLeft, TW - 60);
@@ -987,7 +1016,11 @@ static void drawHud(void) {
 	// health and grace
 	panel((Rect){4, 4, BW - 8, 40}, cInk, G.empty ? cEmber : cGrace2);
 	heartShape(22, 24, 8 + hpPulse * 10, cEmber);
-	snprintf(s, sizeof s, "%d", (int)ceilf(fmaxf(0, G.p.hp))); text(s, 36, 12 - hpPulse * 8, 0.75f + hpPulse, hpPulse > 0 ? cBone : cEmberHi, C2D_AlignLeft);
+	{ float mh = maxHp(), k = clampf(G.p.hp / mh, 0, 1);
+	  C2D_DrawRectSolid(36, 33, 0, 112, 6, cInk); C2D_DrawRectSolid(37, 34, 0, 110, 4, cEmber2); C2D_DrawRectSolid(37, 34, 0, 110 * k, 4, k >= 0.999f ? cEmberHi : cEmber);
+	  for (int q = 1; q < (int)(mh / 25); q++) C2D_DrawRectSolid(37 + 110 * q * 25 / mh, 34, 0, 1, 4, cInk);
+	  if (hpFullT > 0) text("FULL", 36, 8, 0.6f, sinf(hpFullT * 18) > 0 ? cBone : cEmberHi, C2D_AlignLeft);
+	  else { snprintf(s, sizeof s, "%d", (int)ceilf(fmaxf(0, G.p.hp))); text(s, 36, 8 - hpPulse * 8, 0.62f + hpPulse, hpPulse > 0 ? cBone : cEmberHi, C2D_AlignLeft); } }
 	if (G.empty) text("x", 172, 12, 0.75f, cEmber, C2D_AlignCenter); else icon(SPR_GRACE, 172, 24, 22 + gracePulse * 24, 1);
 	snprintf(s, sizeof s, "%d", (int)ceilf(G.grace)); text(s, 186, 12 - gracePulse * 8, 0.75f + gracePulse, gracePulse > 0 ? cBone : (G.grace <= 40 && sinf(G.time * 8) > 0 ? cEmberHi : cGraceHi), C2D_AlignLeft);
 	snprintf(s, sizeof s, "-%.1f/s", drainRate()); text(s, BW - 10, 20, 0.4f, cGrace, C2D_AlignRight);
@@ -1015,12 +1048,12 @@ static void drawHud(void) {
 		snprintf(s, sizeof s, "%s  (%s)", b->name, TIER_NAME[b->tier]); text(s, 48, 162, 0.45f, cBone, C2D_AlignLeft);
 		if (G.held[tipBuff]) { snprintf(s, sizeof s, "%s  -  upkeep -%.2g/s", b->has, TIER_UP[b->tier]); text(s, 48, 182, 0.4f, cGiltHi, C2D_AlignLeft); icon(SPR_GRACE, BW - 16, 189, 18, 1); }
 		else { snprintf(s, sizeof s, "Given up: %s", b->loss); text(s, 48, 182, 0.4f, cMuted, C2D_AlignLeft); }
-	} else if (statusT > 0) textWrap(statusMsg, 12, 164, 0.42f, cBone, C2D_AlignLeft, BW - 24);
+	} else if (statusT > 0) text(statusMsg, 12, 164, 0.42f, cBone, C2D_AlignLeft);
 	else {
 		text("Tap a blessing to see what it does", 12, 164, 0.4f, cMuted, C2D_AlignLeft);
 		text("Circle Pad: move   START: pause", 12, 184, 0.4f, cMuted, C2D_AlignLeft);
 	}
-	snprintf(s, sizeof s, "Banked %d  -  Slain %d", G.banked, G.kills); text(s, BW / 2, 218, 0.4f, cMuted, C2D_AlignCenter);
+	snprintf(s, sizeof s, "Banked %d @  -  Slain %d", G.banked, G.kills); text(s, BW / 2, 218, 0.4f, cMuted, C2D_AlignCenter);
 }
 static void drawAltar(void) {
 	text("An offering is owed", BW / 2, 4, 0.55f, cGiltHi, C2D_AlignCenter);
@@ -1032,7 +1065,7 @@ static void drawAltar(void) {
 		if (c.refuse) {
 			text("Refuse", r.x + 8, r.y + 4, 0.55f, cBone, C2D_AlignLeft);
 			text("Keep every blessing, but drain will double", r.x + 8, r.y + 24, 0.4f, cBone, C2D_AlignLeft);
-			snprintf(s, sizeof s, "Grace drain -%.1f/s -> -%.1f/s", drainRate(), rateIf(-1, G.defy + 1)); text(s, r.x + 8, r.y + 40, 0.4f, cEmberHi, C2D_AlignLeft);
+			snprintf(s, sizeof s, "@ drain -%.1f/s -> -%.1f/s", drainRate(), rateIf(-1, G.defy + 1)); text(s, r.x + 8, r.y + 40, 0.4f, cEmberHi, C2D_AlignLeft);
 		} else {
 			const Buff *b = &BUFFS[c.buff];
 			icon(c.buff, r.x + 22, r.y + r.h / 2, 30, 1);
@@ -1052,11 +1085,11 @@ static void drawBottom(void) {
 		text("GRACE", BW / 2, 14, 0.9f, cGraceHi, C2D_AlignCenter);
 		if (!howOpen) {
 			char s[64];
-			if (best > 0) { snprintf(s, sizeof s, "Best score: %d grace", best); text(s, BW / 2, 70, 0.45f, cMuted, C2D_AlignCenter); }
-			text("Give up power. Keep your grace.", BW / 2, 100, 0.45f, cBone, C2D_AlignCenter);
+			if (best > 0) { snprintf(s, sizeof s, "Best score: %d @", best); text(s, BW / 2, 70, 0.45f, cMuted, C2D_AlignCenter); }
+			text("Give up power. Keep your @.", BW / 2, 100, 0.45f, cBone, C2D_AlignCenter);
 			button(bStart, "Start (A)", 1); button(bHow, "How it works", 0);
 		} else {
-			const char *how[] = {"- Circle Pad moves. You fire on your own.", "- Grace drains while you fight. Blessings cost upkeep.", "- After each Warden, give one blessing up for grace.", "- Walk over sparks for grace and hearts for health.", "- At zero grace your health drains fast.", "- Slabs block every shot. Use them as cover.", "- Clear the last floor bare to ascend. Four tiers.", "- 3D slider adds depth. START pauses."};
+			const char *how[] = {"- Circle Pad moves. You fire on your own.", "- @ drains while you fight. Blessings cost upkeep.", "- After each Warden, give one blessing up for @.", "- Walk over @ and hearts to collect them.", "- At zero @ your health drains fast.", "- Slabs block every shot. Use them as cover.", "- Clear the last floor bare to ascend. Four tiers.", "- 3D slider adds depth. START pauses."};
 			for (int i = 0; i < 8; i++) text(how[i], 10, 50 + i * 18, 0.4f, cBone, C2D_AlignLeft);
 			button(bHow, "Close", 0);
 		}
@@ -1067,8 +1100,8 @@ static void drawBottom(void) {
 		if (nStory > 1 && storyAt < nStory - 1) text("B to skip", BW / 2, 130, 0.42f, cMuted, C2D_AlignCenter);
 	} else if (state == S_DEAD) {
 		char s[96];
-		text(endWon ? "At Rest" : (G.graceOut ? "Graceless" : "Fallen"), BW / 2, 10, 0.7f, endWon ? cGraceHi : cEmber, C2D_AlignCenter);
-		snprintf(s, sizeof s, "Score: %d grace", G.banked); text(s, BW / 2, 46, 0.55f, cGraceHi, C2D_AlignCenter);
+		text(endWon ? "At Rest" : "Fallen", BW / 2, 10, 0.7f, endWon ? cGraceHi : cEmber, C2D_AlignCenter);
+		snprintf(s, sizeof s, "Score: %d @", G.banked); text(s, BW / 2, 46, 0.55f, cGraceHi, C2D_AlignCenter);
 		if (G.banked >= best && G.banked > 0) text("New best", BW / 2, 70, 0.42f, cGrace, C2D_AlignCenter);
 		else { snprintf(s, sizeof s, "Best: %d", best); text(s, BW / 2, 70, 0.42f, cMuted, C2D_AlignCenter); }
 		if (G.tier > 1 && !endWon) { snprintf(s, sizeof s, "Tier %s - Floor %d", ROMAN[G.tier], G.floor); } else snprintf(s, sizeof s, "Floor %d", G.floor);
@@ -1087,7 +1120,7 @@ static void drawBottom(void) {
 // ------------------------------------------------------------------ flow
 static void begin(void) {
 	newRun(0, 1, 0, 0); storyReset(); storyTier(1, NULL); storyPlay(NEXT_STARTWAVE);
-	status("Walk over sparks for grace and hearts for health");
+	status("Walk over @ and hearts to collect them");
 }
 static void stopPlaying(void) { storyReset(); storyAdd("You set it down.", NULL, NULL, 1); storyPlay(NEXT_TITLE); }
 
