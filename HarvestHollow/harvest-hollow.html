@@ -342,7 +342,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v28 · 11 Oct 2026';
+const VERSION='v29 · 23 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -422,9 +422,9 @@ const ITEMS={
   wood:{n:'Wood',e:'🪵'},stone:{n:'Stone',e:'🪨'},berries:{n:'Berries',e:'🫐'},wheat:{n:'Wheat',e:'🌾'},
   plank:{n:'Planks',e:'🟫'},brick:{n:'Bricks',e:'🧱'},jam:{n:'Jam',e:'🍯'},bread:{n:'Bread',e:'🍞'}
 };
-const defState=()=>({v:1,coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1,lights:1,match:1,watch:1},boltLvl:0,lightLvl:0,matchLvl:0,st:{},claimed:{},seen:{},story:0,say:1,tools:{axe:1,pick:1,basket:1}});
+const defState=()=>({v:1,rev:2,unlock:{},rep:{},coins:25,energy:MAXE,eT:Date.now(),carry:{},store:{},cap:6,bld:{bolt:1,card:1,lights:1,match:1,watch:1},boltLvl:0,lightLvl:0,matchLvl:0,st:{},claimed:{},seen:{},story:0,say:1,tools:{axe:1,pick:1,basket:1}});
 let S=defState();
-function load(){try{const j=JSON.parse(localStorage.getItem(SAVE_KEY));if(j&&j.v===1){S=Object.assign(defState(),j);S.bld=Object.assign({bolt:1,card:1,lights:1,match:1,watch:1},S.bld);return true}}catch(e){}return false}
+function load(){try{const j=JSON.parse(localStorage.getItem(SAVE_KEY));if(j&&j.v===1){S=Object.assign(defState(),j);S.bld=Object.assign({bolt:1,card:1,lights:1,match:1,watch:1},S.bld);if(!j.rev){S.rev=1;S.unlock={};S.rep={}}return true}}catch(e){}return false}
 let saveT=0;
 function save(force){const n=Date.now();if(!force&&n-saveT<1500)return;saveT=n;try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
 const stat=(k,n=1)=>{S.st[k]=(S.st[k]||0)+n};
@@ -938,6 +938,7 @@ addEventListener('keydown',e=>{if((e.key==='e'||e.key==='E'||e.key==='Enter')&&t
 /* ---- arrival effects ---- */
 function onArrive(){
   const b=doorAt[P.x+','+P.y];if(!b)return;
+  if((b.kind==='barn'||b.kind==='craft')&&!isOpen(b)){P.lastDoor=b.id;held.length=0;P.path=[];openRepair(b);return}
   if(b.kind==='barn'||b.kind==='craft')P.xfer={b,phase:'in',t:.15,n:0,put:0,took:0,full:false,bagFull:false};
 }
 /* ---- unloading / loading happens one item at a time ---- */
@@ -1021,7 +1022,7 @@ function update(dt){
   }
   // gathering
   const nd=nodeAt[P.x+','+P.y];
-  if(!P.moving&&nd&&nd.ch>0){
+  if(!P.moving&&nd&&nd.ch>0&&S.unlock[nd.type]){
     const T=NODE_T[nd.type];
     if(nd.type!=='crystal'&&carryN()>=S.cap){P.gather=0;if(!P.fullToast||performance.now()-P.fullToast>2500){P.fullToast=performance.now();toast('Bag full — drop it at the Barn 📦')}}
     else if(ENERGY_COST[nd.type]&&S.energy<ENERGY_COST[nd.type]){P.gather=0;if(!P.fullToast||performance.now()-P.fullToast>2500){P.fullToast=performance.now();toast('Out of ⚡ energy! Mine 💎 crystals, eat bread/jam, or rest')}}
@@ -1098,6 +1099,8 @@ function buildEnts(){
   ents.sort((a,b)=>a.by-b.by);
 }
 buildEnts();
+const _tint=new Map();
+function gloomed(s,a=.55){let t=_tint.get(s);if(!t){const c=mk(s.c.width,s.c.height),g=c.getContext('2d');g.drawImage(s.c,0,0);g.globalCompositeOperation='source-atop';g.fillStyle=`rgba(58,46,96,${a})`;g.fillRect(0,0,c.width,c.height);t={c,ax:s.ax,ay:s.ay};_tint.set(s,t)}return t}
 function put(g,s,x,y){g.drawImage(s.c,Math.round(x-s.ax),Math.round(y-s.ay))}
 function putSway(g,s,x,y,time,amp,ph){
   const k=Math.sin(time*1.6+ph)*amp+Math.sin(time*.7+ph*2)*amp*.5;
@@ -1106,15 +1109,18 @@ function putSway(g,s,x,y,time,amp,ph){
 function drawEnt(g,e,time){
   if(e.node){
     const n=e.node,x=n.x*TS+TS/2,y=n.y*TS+TS-3,full=n.ch>0;
-    if(full&&n.type!=='wheat'){g.save();g.globalAlpha=.55+.2*Math.sin(time*3+n.x);g.fillStyle='rgba(255,236,150,.28)';g.strokeStyle='rgba(255,226,110,.9)';g.lineWidth=2.5;g.beginPath();g.ellipse(x,y-1,24,10,0,0,7);g.fill();g.stroke();g.restore()}
-    if(n.type==='tree'){if(full)putSway(g,SP.tree[n.v],x,y,time,.012,n.x*.7+n.y);else put(g,SP.stump,x,y)}
-    else if(n.type==='rock')put(g,full?SP.rock[n.v]:SP.rockGone,x,y);
-    else if(n.type==='crystal'){put(g,full?SP.crystal[n.v]:SP.crystalGone[n.v],x,y);if(full){g.save();g.globalAlpha=.5+.3*Math.sin(time*3+n.x);g.font='14px sans-serif';g.textAlign='center';g.fillText('✨',x+10+Math.sin(time*2+n.y)*3,y-34-Math.sin(time*2.4+n.x)*4);g.restore()}}
-    else if(n.type==='bush'){if(full)putSway(g,SP.bush[n.v],x,y,time,.008,n.x+n.y*.3);else put(g,SP.bushGone[n.v],x,y)}
+    const lockd=!S.unlock[n.type];
+    if(full&&n.type!=='wheat'&&!lockd){g.save();g.globalAlpha=.55+.2*Math.sin(time*3+n.x);g.fillStyle='rgba(255,236,150,.28)';g.strokeStyle='rgba(255,226,110,.9)';g.lineWidth=2.5;g.beginPath();g.ellipse(x,y-1,24,10,0,0,7);g.fill();g.stroke();g.restore()}
+    const L=s0=>lockd?gloomed(s0):s0;
+    if(n.type==='tree'){if(full)putSway(g,L(SP.tree[n.v]),x,y,time,lockd?.002:.012,n.x*.7+n.y);else put(g,SP.stump,x,y)}
+    else if(n.type==='rock')put(g,full?L(SP.rock[n.v]):SP.rockGone,x,y);
+    else if(n.type==='crystal'){put(g,full?L(SP.crystal[n.v]):SP.crystalGone[n.v],x,y);if(full&&!lockd){g.save();g.globalAlpha=.5+.3*Math.sin(time*3+n.x);g.font='14px sans-serif';g.textAlign='center';g.fillText('✨',x+10+Math.sin(time*2+n.y)*3,y-34-Math.sin(time*2.4+n.x)*4);g.restore()}}
+    else if(n.type==='bush'){if(full)putSway(g,L(SP.bush[n.v]),x,y,time,lockd?.002:.008,n.x+n.y*.3);else put(g,SP.bushGone[n.v],x,y)}
     else{
-      if(full)putSway(g,SP.wheat[n.v],x,y,time,.05,n.x*.5+n.y*.4);else put(g,SP.wheatGone[n.v],x,y);
+      if(full)putSway(g,L(SP.wheat[n.v]),x,y,time,lockd?.01:.05,n.x*.5+n.y*.4);else put(g,SP.wheatGone[n.v],x,y);
       if(full){const sway=Math.sin(time*2+n.x*.7+n.y)*1.2;g.save();g.globalAlpha=.0;g.restore();void sway}
     }
+    if(lockd&&full){g.save();g.globalAlpha=.8;g.font='18px sans-serif';g.textAlign='center';g.fillText('🕸️',x+8,y-18);g.restore()}
     if(full&&n.ch<NODE_T[n.type].max){ // charge pips
       for(let i=0;i<n.ch;i++){g.fillStyle='rgba(255,255,255,.85)';g.fillRect(n.x*TS+TS/2-(n.ch*5)/2+i*5,n.y*TS+TS-2,3.5,3.5)}
     }
@@ -1123,7 +1129,13 @@ function drawEnt(g,e,time){
     if(d.k==='tree')putSway(g,SP.pine[d.v],d.x*TS+TS/2,d.y*TS+TS-3,time,.006,d.x*.5+d.y);
     else put(g,SP[d.k][d.v],d.x*TS+d.ox,d.y*TS+d.oy);
   }else if(e.bld){
-    const b=e.bld;put(g,b.spr,b.x*TS+72,(b.y+3)*TS-4+2);
+    const b=e.bld;
+    if(isOpen(b))put(g,b.spr,b.x*TS+72,(b.y+3)*TS-4+2);
+    else{
+      put(g,gloomed(b.spr,.6),b.x*TS+72,(b.y+3)*TS-4+2);
+      const cx=b.x*TS+72,cy=(b.y+3)*TS-26;
+      [[-.32],[.32]].forEach(([r])=>{g.save();g.translate(cx,cy);g.rotate(r);g.fillStyle='#8a5a2b';g.fillRect(-34,-5,68,10);g.strokeStyle='#3e2410';g.lineWidth=1.5;g.strokeRect(-34,-5,68,10);g.fillStyle='#4a4a4a';g.fillRect(-28,-1.5,3,3);g.fillRect(24,-1.5,3,3);g.restore()});
+    }
   }else if(e.board){put(g,SP.board,BOARD.x*TS+TS/2,BOARD.y*TS+TS-2)}
   else if(e.npc)drawNPC(g,e.npc,time);
 }
@@ -1161,6 +1173,7 @@ function render(time){
   for(const b of BLD){
     if(b.x<x0-3||b.x>x1+1||b.y<y0-2||b.y>y1)continue;
     const cx=b.x*TS+72;
+    if(!isOpen(b)){bubble(g,cx,b.y*TS-6,'🔒 Closed · repair me 🔨');continue}
     if(b.kind==='craft'){
       const s=stn(b.id),need=Object.values(b.in)[0],item=Object.keys(b.in)[0];
       const ready=s.out>0;
@@ -1537,6 +1550,7 @@ const MAXLV=5;
 const upCost=lv=>({coins:[40,80,140,220][lv-1],plank:[2,4,6,8][lv-1],brick:[1,3,5,7][lv-1]});
 const START={bolt:m=>startBolt(m),card:m=>startCards(m),lights:m=>startLights(m),match:m=>startMatch(m),watch:m=>startWatch(m)};
 function openBuilding(b){
+  if(!isOpen(b)){openRepair(b);return}
   const gm=GAMES[b.game];
   const draw=()=>{
     const lv=S.bld[b.game],max=lv>=MAXLV;
@@ -1637,6 +1651,27 @@ function openMenu(){
   $('#mTitle').onclick=()=>{closeModal();save(true);showTitle()};
   $('#mReset').onclick=()=>{closeModal();askReset()};
 }
+
+/* ---- boarded-up buildings: repair them to bring the Hollow back to life ---- */
+function openRepair(b){
+  const rc=R_COST[b.id];if(!rc)return;
+  const who=CAST[R_WHO[b.id]],ix=repairStep(b.id),ready=ix<0||S.story>=ix;
+  const have=k=>rc.carry?(S.carry[k]||0):(S.store[k]||0);
+  const costs=Object.entries(rc.items).map(([k,v])=>`<span class="cost ${have(k)>=v?'':'no'}">${ITEMS[k].e} ${v} <small>(${have(k)})</small></span>`).join('');
+  const ok=ready&&Object.entries(rc.items).every(([k,v])=>have(k)>=v);
+  openModal(`<div class="bhead"><div class="bicon">🔒</div><div><h2>${b.name}</h2><span class="lvl">Boarded up</span></div></div>
+    <div class="say" style="margin:10px 0"><div class="face" style="width:56px;height:56px;font-size:32px">${who.face}</div><div style="flex:1"><div class="who" style="font-size:15px">${who.name}</div><div class="txt" style="font-size:14px">${bullets(R_SAY[b.id])}</div></div></div>
+    <b>Repair needs</b> <span class="muted">(${rc.carry?'from your 🎒 backpack':'from your Barn storage'}):</span><div style="margin:6px 0">${costs}</div>
+    ${ready?'':'<div class="muted">Not yet. Follow the story and this one is next in line.</div>'}
+    <button class="btn green" data-rep ${ok?'':'disabled'}>🔨 Repair</button>`);
+  const bt=$('#modal [data-rep]');
+  bt.onclick=()=>{
+    if(!ok)return;
+    for(const[k,v]of Object.entries(rc.items)){if(rc.carry)S.carry[k]-=v;else S.store[k]-=v}
+    S.rep[b.id]=1;stat('repair_'+b.id);sfx.win();burst(b.x*TS+72,(b.y+2)*TS,['#ffe27a','#fff6c8','#8ad66a'],26,90,90,.9,3.4);
+    toast(`🔨 ${b.name} is open again!`);closeModal();save(true);hud();checkStory();
+  };
+}
 /* =====================================================================
    STORY + GUIDANCE — three characters walk you through the game
    ===================================================================== */
@@ -1651,34 +1686,132 @@ const CAST={
 const stored=k=>sget('st_'+k)>0||(S.store[k]||0)>0;
 const bothLv=()=>Math.min(S.bld.bolt,S.bld.card,S.bld.lights,S.bld.match);
 const GWHO={bolt:'tess',card:'bram',lights:'lena',match:'mabel',watch:'rowan'},GPLAYS={bolt:'boltWins',card:'cardGames',lights:'lightWins',match:'matchWins',watch:'siegeWins'};
+const UNLOCK_NAME={tree:'🌳 Trees',rock:'⛰️ Rocks',bush:'🫐 Berry bushes',wheat:'🌾 Wheat',crystal:'💎 Energy crystals'};
+const R_COST={
+  barn:{carry:1,items:{wood:4}},sawmill:{items:{wood:4}},kiln:{items:{stone:4,plank:1}},bolt:{items:{plank:2,brick:1}},card:{items:{plank:2,brick:2}},
+  jam:{items:{plank:2,brick:1}},bakery:{items:{plank:2,brick:1}},lights:{items:{plank:3,brick:2}},match:{items:{plank:3,brick:2}},watch:{items:{plank:4,brick:4}}
+};
+const R_WHO={barn:'granny',sawmill:'granny',kiln:'granny',jam:'granny',bakery:'granny',bolt:'tess',card:'bram',lights:'lena',match:'mabel',watch:'rowan'};
+const R_SAY={
+  barn:["The Barn is boarded up. It's the heart of the Hollow.","Patch it with 🪵 wood from your backpack.","Step on the mat and press 🔨 Repair."],
+  sawmill:["The Sawmill's saw is rusted solid.","New beams need 🪵 wood from your Barn.","Fix it and we can make planks."],
+  kiln:["The Kiln's chimney collapsed.","Rebuild it with 🪨 stone and a 🟫 plank.","Then it can fire bricks again."],
+  bolt:["My workshop is boarded up and the machines are jammed.","Bring planks and a brick to fix the door.","Then I'll pay you to sort the nuts!"],
+  card:["The Card Barn's roof fell in last winter.","Planks and bricks will make it snug again.","Then we can play and trade!"],
+  jam:["The Jam Kitchen's stove is cold and cracked.","Planks and a brick will mend it.","Then 🫐 berries become 🍯 jam: ⚡ energy!"],
+  bakery:["The Bakery oven is crumbling.","Planks and a brick will fix it.","Then 🌾 wheat becomes 🍞 bread: ⚡ energy!"],
+  lights:["The Lantern Loft has no glass left.","Planks and bricks will close it up.","My lamps keep the Gloom at bay."],
+  match:["The Match Hall's doors are warped shut.","Planks and bricks will set it right.","Then the Hollow can have fun again."],
+  watch:["The Watch's tower is half fallen.","Rebuild it with planks and bricks.","Then we can hold the Gloom back."]
+};
+const isOpen=b=>b.kind==='board'||!!S.rep[b.id];
+const repairStep=id=>STORY.findIndex(s=>s.repair===id);
+const needStore=(item,n)=>{
+  const node={wood:'tree',stone:'rock'}[item];
+  if((S.carry[item]||0)>0&&carryN()>=S.cap||(S.carry[item]||0)>=n-(S.store[item]||0))return barnT(`Drop your ${ITEMS[item].n.toLowerCase()} at the Barn (step on the red mat)`);
+  if(carryN()>=S.cap)return barnT('Your backpack is full. Drop it at the Barn first');
+  return gatherT(node);
+};
+function repairAct(id){
+  const b=bldBy(id),rc=R_COST[id];
+  if(S.rep[id])return null;
+  if(rc.carry){
+    if((S.carry.wood||0)>=rc.items.wood)return doorT(b,'🔨','Step on the Barn mat and press 🔨 Repair');
+    return carryN()>=S.cap?null:gatherT('tree');
+  }
+  for(const[k,v]of Object.entries(rc.items)){
+    if((S.store[k]||0)<v){
+      if(k==='plank'||k==='brick')return supply(k);
+      return needStore(k,v);
+    }
+  }
+  return doorT(b,'🔨',`Step on the ${b.name} mat and press 🔨 Repair`);
+}
 const STORY=[
-  {who:'granny',goal:'Chop 4 wood: walk onto a tree 🌳 and stand still',prog:()=>[sget('g_wood'),4],done:()=>sget('g_wood')>=4,r:{coins:5},
-   say:["Welcome home! Grandpa Alder left you Harvest Hollow.", "But the <b>Gloom</b> is creeping in from the Wilds, and the old Barn is falling apart.", "We need <b>wood</b> to patch it up.", "Walk onto a 🌳 tree and stand still to chop. Follow the yellow 🧭 arrow."]},
-  {who:'granny',goal:'Drop your wood at the Barn: step on the red mat in front of it 📦',prog:()=>[sget('delivered'),4],done:()=>sget('delivered')>=4,r:{coins:5},
-   say:["The 📦 Barn is the heart of the Hollow.", "Your 🎒 backpack is small. Anything in the Barn is safe and ready to use.", "Step on the red mat in front of it to store everything."]},
-  {who:'granny',goal:'Make 1 plank at the Sawmill, then store it in the Barn 🟫',done:()=>stored('plank'),r:{coins:5},
-   say:["Planks mend roofs and build the defences we'll need soon.", "The Sawmill turns 2 wood into 1 plank.", "Step on its mat to feed it, wait a few seconds, then step on again to collect.", "Store the plank in the Barn."]},
-  {who:'granny',goal:'Make 1 brick at the Brick Kiln (needs 2 stone ⛏️), then store it 🧱',done:()=>stored('brick'),r:{coins:10},
-   say:["Bricks make walls the Gloom can't chew through.", "Mine 2 stone from the grey rocks out east, feed the Brick Kiln, then collect.", "Store it in the Barn.", "The Quest Board by my cottage has bounties too."]},
-  {who:'tess',goal:'Solve a puzzle at the Bolt Works ⚙️ (the blue building)',prog:()=>[sget('boltWins'),1],done:()=>sget('boltWins')>=1,r:{coins:10},
-   say:["I'm Tess! The Gloom jammed my machines.", "The workshops are how the Hollow earns <b>coins</b> — and coins buy what we can't make.", "Step on the red mat under the blue workshop, then press ▶ Play (costs ⚡1).", "Sort the nuts so each rod holds one colour. I pay for every puzzle!"]},
-  {who:'tess',goal:'Upgrade the Bolt Works ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_bolt')>=1,r:{coins:10},
-   say:["A better workshop pays more coins per puzzle.", "An upgrade costs coins + planks + bricks from your Barn.", "You also get more undos, hints and a spare rod.", "Open the Bolt Works and press ⬆ Upgrade."]},
-  {who:'bram',goal:'Finish a Bean Harvest game at the Card Barn 🃏 (purple roof)',prog:()=>[sget('cardGames'),1],done:()=>sget('cardGames')>=1,r:{coins:10},
-   say:["Bram here! The Gloom spoils crops, so we trade beans to stay fed.", "At the Card Barn we play Bean Harvest: plant crops, harvest them for coins.", "Step on the red mat under my barn and press ▶ Play.", "Tap ❓ in the game for the rules."]},
-  {who:'bram',goal:'Upgrade the Card Barn ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_card')>=1,r:{coins:15,energy:2},
-   say:["More levels mean more rounds, more trades and bigger harvests.", "Open the Card Barn and press ⬆ Upgrade when you have the goods."]},
-  {who:'granny',goal:'Raise all four workshops to Level 3 🏗️',prog:()=>[bothLv(),3],done:()=>bothLv()>=3,r:{coins:30},
-   say:["Look at the Hollow now! Grandpa would be proud.", "The 💡 Lantern Loft and 🎴 Match Hall need love too.", "Lena's lamps keep the Gloom back at night. Mabel's hall keeps spirits up.", "Bring all four to Level 3."]},
-  {who:'granny',goal:'Raise all four workshops to Level 5 🏆',prog:()=>[bothLv(),5],done:()=>bothLv()>=5,r:{coins:100,energy:3},
-   say:["Level 3 already!", "One more push makes every workshop the finest in the valley."]},
-  {who:'rowan',goal:'Hold the line at The Watch 🛡️ (east side, red roof). Stock the Barn first!',prog:()=>[sget('siegeWins'),1],done:()=>sget('siegeWins')>=1,r:{coins:40,energy:2},
-   say:["Captain Rowan. The Gloom is on the ridge — they come at dusk.", "<b>Everything in your Barn is your arsenal:</b> 🪵 fences, 🟫 archers, 🧱 walls, 🍯 traps, 🪨 boulders, 🍞 repairs.", "In the fight you can craft fast: wood ➜ planks, stone ➜ bricks and more.", "Step on the red mat under The Watch and press ▶ Play (costs ⚡1)."]},
-  {who:'rowan',goal:'Upgrade The Watch ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_watch')>=1,r:{coins:30,energy:2},
-   say:["A stronger Watch means a tougher Barn and free fences.", "It also pays more coins for every siege you win.", "Open The Watch and press ⬆ Upgrade."]},
-  {who:'rowan',goal:'Defend the Frontier ⚔️ (The Watch ➜ ⚔️ Frontier, costs ⚡3)',prog:()=>[sget('frontWins'),1],done:()=>sget('frontWins')>=1,r:{coins:60,energy:4},
-   say:["This time the Gloom attacks <b>while you work</b>.", "At the Frontier there are no turns: chop 🌳, mine ⛰️, drop it at the 📦 Hall, craft at the 🛠 Workshop.", "Build 🏹 towers and 🪵 fences on the marked spots, and hire help at the 🍺 Tavern.", "Hold every wave until dawn!"]}
+  {k:'hear',heard:1,who:'granny',goal:'Talk to Granny Marigold 👵 (she is just below you)',done:()=>sget('heard')>=1,unlock:['tree'],r:{coins:5},
+   act:()=>({text:'Walk up to Granny Marigold and press 💬 Talk',t:{x:16,y:11,icon:'👵',label:'Granny'}}),
+   say:["Welcome home! Grandpa Alder left you Harvest Hollow.", "But the <b>Gloom</b> crept in from the Wilds and put the whole village to sleep.", "Every house is boarded up, and the trees, rocks and bushes are tangled in gloom.", "Here's Grandpa's old 🪓 axe. The 🌳 trees will answer to it. Let's wake the Hollow up, one thing at a time."]},
+  {k:'chop',who:'granny',goal:'Chop 4 wood: walk onto a tree 🌳 and stand still',prog:()=>[sget('g_wood'),4],done:()=>sget('g_wood')>=4,r:{coins:5},
+   act:()=>carryN()>=S.cap?barnT('Backpack full. Step on the Barn mat'):gatherT('tree'),
+   say:["Chopping costs 1 ⚡ energy each time.","We need wood to patch up the old Barn first.","Walk onto a 🌳 tree and stand still. Follow the yellow 🧭 arrow."]},
+  {k:'rbarn',repair:'barn',who:'granny',goal:'Repair the Barn 📦: step on its red mat and press 🔨 Repair (uses 🪵4 from your backpack)',done:()=>!!S.rep.barn,r:{coins:5},
+   act:()=>repairAct('barn'),
+   say:["The 📦 Barn is the heart of the Hollow. Everything we own is kept there.","It's boarded up. Patch it with 🪵 wood straight from your backpack.","Step on the red mat in front of it and press 🔨 Repair."]},
+  {k:'drop',who:'granny',goal:'Chop and store 4 wood in the Barn 📦',prog:()=>[sget('st_wood'),4],done:()=>sget('st_wood')>=4,r:{coins:5},
+   act:()=>carryN()>0?barnT('Step on the red mat in front of the Barn to store your goods'):gatherT('tree'),
+   say:["The Barn is open again!","Your 🎒 backpack is small. Anything in the Barn is safe and ready to use.","Store 4 wood. We'll fix the Sawmill next."]},
+  {k:'rsaw',repair:'sawmill',who:'granny',goal:'Repair the Sawmill 🪚 (🪵4 from your Barn)',done:()=>!!S.rep.sawmill,r:{coins:5},
+   act:()=>repairAct('sawmill'),
+   say:["The Sawmill's saw is rusted solid.","New beams need 🪵 wood from your Barn.","Step on the Sawmill mat and press 🔨 Repair."]},
+  {k:'plank',who:'granny',goal:'Make 1 plank at the Sawmill, then store it in the Barn 🟫',done:()=>stored('plank'),unlock:['rock','crystal'],r:{coins:5},
+   act:()=>supply('plank'),
+   say:["Planks mend roofs and build the defences we'll need soon.","The Sawmill turns 2 wood into 1 plank.","Step on its mat to feed it, wait a few seconds, then step on again to collect.","Store the plank in the Barn. I'll find you Grandpa's ⛏️ pickaxe for a reward."]},
+  {k:'stone',who:'granny',goal:'Mine 4 stone and store it in the Barn 🪨',prog:()=>[sget('st_stone'),4],done:()=>sget('st_stone')>=4,r:{coins:5},
+   act:()=>carryN()>0&&(S.carry.stone||0)>0?barnT('Drop your stone at the Barn'):gatherT('rock'),
+   say:["The pickaxe unlocked the ⛰️ rocks, and the blue 💎 crystals south of the trail.","Crystals give back ⚡ energy when you mine them.","Mine 4 stone out east and store it. The old Kiln needs it."]},
+  {k:'rkiln',repair:'kiln',who:'granny',goal:'Repair the Brick Kiln 🔥 (🪨4 + 🟫1 from your Barn)',done:()=>!!S.rep.kiln,r:{coins:5},
+   act:()=>repairAct('kiln'),
+   say:["The Kiln's chimney collapsed.","Rebuild it with 🪨 stone and a 🟫 plank.","Step on its mat and press 🔨 Repair."]},
+  {k:'brick',who:'granny',goal:'Make 1 brick at the Brick Kiln (needs 2 stone ⛏️), then store it 🧱',done:()=>stored('brick'),r:{coins:10},
+   act:()=>supply('brick'),
+   say:["Bricks make walls the Gloom can't chew through.","Mine 2 stone, feed the Brick Kiln, then collect.","Store it in the Barn. Planks and bricks pay for repairs and upgrades.","The Quest Board by my cottage has bounties too."]},
+  {k:'rbolt',repair:'bolt',who:'tess',goal:'Repair the Bolt Works ⚙️ (🟫2 + 🧱1 from your Barn)',done:()=>!!S.rep.bolt,r:{coins:10},
+   act:()=>repairAct('bolt'),
+   say:["I'm Tess! The Gloom jammed my machines and boarded my workshop.","The workshops are how the Hollow earns <b>coins</b>.","Bring 🟫 planks and a 🧱 brick to fix the door, then step on the red mat and press 🔨 Repair."]},
+  {k:'bolt1',who:'tess',goal:'Solve a puzzle at the Bolt Works ⚙️ (the blue building)',prog:()=>[sget('boltWins'),1],done:()=>sget('boltWins')>=1,r:{coins:10},
+   act:()=>doorT(bldBy('bolt'),'⚙️','Step on the red mat under the Bolt Works, then press ▶ Play'),
+   say:["You did it! The doors open.","Press ▶ Play (costs ⚡1).","Sort the nuts so each rod holds one colour. I pay for every puzzle!"]},
+  {k:'boltUp',who:'tess',goal:'Upgrade the Bolt Works ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_bolt')>=1,r:{coins:10},
+   act:()=>upgradeAction('bolt'),
+   say:["A better workshop pays more coins per puzzle.","An upgrade costs coins + planks + bricks from your Barn.","You also get more undos, hints and a spare rod.","Open the Bolt Works and press ⬆ Upgrade."]},
+  {k:'rcard',repair:'card',who:'bram',goal:'Repair the Card Barn 🃏 (🟫2 + 🧱2 from your Barn)',done:()=>!!S.rep.card,r:{coins:10},
+   act:()=>repairAct('card'),
+   say:["Bram here! The Card Barn's roof fell in last winter.","Planks and bricks will make it snug again.","Step on the red mat and press 🔨 Repair."]},
+  {k:'card1',who:'bram',goal:'Finish a Bean Harvest game at the Card Barn 🃏 (purple roof)',prog:()=>[sget('cardGames'),1],done:()=>sget('cardGames')>=1,r:{coins:10},
+   act:()=>doorT(bldBy('card'),'🃏','Step on the red mat under the Card Barn, then press ▶ Play'),
+   say:["The Gloom spoils crops, so we trade beans to stay fed.","At the Card Barn we play Bean Harvest: plant crops, harvest them for coins.","Press ▶ Play. Tap ❓ in the game for the rules."]},
+  {k:'cardUp',who:'bram',goal:'Upgrade the Card Barn ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_card')>=1,unlock:['bush','wheat'],r:{coins:15,energy:2},
+   act:()=>upgradeAction('card'),
+   say:["More levels mean more rounds, more trades and bigger harvests.","Open the Card Barn and press ⬆ Upgrade when you have the goods.","I'll dig out the old 🧺 foraging basket for you as a thank-you."]},
+  {k:'rjam',repair:'jam',who:'granny',goal:'Repair the Jam Kitchen 🍓 (🟫2 + 🧱1 from your Barn)',done:()=>!!S.rep.jam,r:{coins:10},
+   act:()=>repairAct('jam'),
+   say:["The basket frees 🫐 berry bushes and 🌾 wheat.","Berries become 🍯 jam: a big ⚡ energy boost!","Fix the Jam Kitchen first."]},
+  {k:'rbakery',repair:'bakery',who:'granny',goal:'Repair the Bakery 🥖 (🟫2 + 🧱1 from your Barn)',done:()=>!!S.rep.bakery,r:{coins:10},
+   act:()=>repairAct('bakery'),
+   say:["Wheat becomes 🍞 bread, also good for ⚡ energy.","The Bakery oven is crumbling. Planks and a brick will fix it."]},
+  {k:'rlights',repair:'lights',who:'lena',goal:'Repair the Lantern Loft 💡 (🟫3 + 🧱2 from your Barn)',done:()=>!!S.rep.lights,r:{coins:15},
+   act:()=>repairAct('lights'),
+   say:["Lamplighter Lena here. My lamps keep the Gloom back at night.","The Lantern Loft has no glass left. Planks and bricks will close it up.","Then switch the lamps off for coins!"]},
+  {k:'rmatch',repair:'match',who:'mabel',goal:'Repair the Match Hall 🎴 (🟫3 + 🧱2 from your Barn)',done:()=>!!S.rep.match,r:{coins:15},
+   act:()=>repairAct('match'),
+   say:["Matchmaker Mabel! The Match Hall's doors are warped shut.","Planks and bricks will set it right.","A merry hall keeps spirits up while the Gloom looms."]},
+  {k:'lv3',who:'granny',goal:'Raise all four workshops to Level 3 🏗️',prog:()=>[bothLv(),3],done:()=>bothLv()>=3,r:{coins:30},
+   act:()=>upgradeAction(['bolt','card','lights','match'].sort((a,b)=>S.bld[a]-S.bld[b])[0]),
+   say:["Look at the Hollow now! Grandpa would be proud.","Every workshop can reach Level 5.","Bring all four to Level 3."]},
+  {k:'lv5',who:'granny',goal:'Raise all four workshops to Level 5 🏆',prog:()=>[bothLv(),5],done:()=>bothLv()>=5,r:{coins:100,energy:3},
+   act:()=>upgradeAction(['bolt','card','lights','match'].sort((a,b)=>S.bld[a]-S.bld[b])[0]),
+   say:["Level 3 already!","One more push makes every workshop the finest in the valley."]},
+  {k:'rwatch',repair:'watch',who:'rowan',goal:'Repair The Watch 🛡️ (🟫4 + 🧱4 from your Barn)',done:()=>!!S.rep.watch,r:{coins:20},
+   act:()=>repairAct('watch'),
+   say:["Captain Rowan. The Gloom is on the ridge. It comes at dusk.","The old Watch tower is half fallen.","Rebuild it with planks and bricks. Then we can hold the line."]},
+  {k:'siege',who:'rowan',goal:'Hold the line at The Watch 🛡️ (east side, red roof). Stock the Barn first!',prog:()=>[sget('siegeWins'),1],done:()=>sget('siegeWins')>=1,r:{coins:40,energy:2},
+   act:()=>doorT(bldBy('watch'),'🛡️','Stock your Barn, then step on the red mat under The Watch and press ▶ Play'),
+   say:["<b>Everything in your Barn is your arsenal:</b> 🪵 fences, 🟫 archers, 🧱 walls, 🍯 traps, 🪨 boulders, 🍞 repairs.","In the fight you can craft fast: wood ➜ planks, stone ➜ bricks and more.","Step on the red mat under The Watch and press ▶ Play (costs ⚡1)."]},
+  {k:'watchUp',who:'rowan',goal:'Upgrade The Watch ⬆ (needs 🪙40 + 2🟫 + 1🧱 in the Barn)',done:()=>sget('up_watch')>=1,r:{coins:30,energy:2},
+   act:()=>upgradeAction('watch'),
+   say:["A stronger Watch means a tougher Barn and free fences.","It also pays more coins for every siege you win.","Open The Watch and press ⬆ Upgrade."]},
+  {k:'front',who:'rowan',goal:'Defend the Frontier ⚔️ (The Watch ➜ ⚔️ Frontier, costs ⚡3)',prog:()=>[sget('frontWins'),1],done:()=>sget('frontWins')>=1,r:{coins:60,energy:4},
+   act:()=>doorT(bldBy('watch'),'⚔️','Open The Watch and press ⚔️ Frontier (costs ⚡3)'),
+   say:["This time the Gloom attacks <b>while you work</b>.","At the Frontier there are no turns: chop 🌳, mine ⛰️, drop it at the 📦 Hall, craft at the 🛠 Workshop.","Build 🏹 towers and 🪵 fences on the marked spots, and hire help at the 🍺 Tavern.","Hold every wave until dawn!"]}
 ];
+function migrateSave(){
+  if(S.rev>=2)return;
+  ['tree','rock','bush','wheat','crystal'].forEach(k=>S.unlock[k]=1);
+  BLD.forEach(b=>S.rep[b.id]=1);
+  const OLD=['chop','drop','plank','brick','bolt1','boltUp','card1','cardUp','lv3','lv5','siege','watchUp','front'];
+  const k=OLD[S.story];S.story=k?Math.max(0,STORY.findIndex(s=>s.k===k)):STORY.length;
+  S.rev=2;save(true);
+}
 const END_SAY=["Harvest Hollow is thriving, thanks to you!","The workshops are humming and the Barn is full.","Free Play and the Quest Board are always open.","Thank you, dear!"];
 
 function curStep(){return STORY[S.story]||null}
@@ -1687,6 +1820,7 @@ function checkStory(silent){
   while(curStep()&&!transferBusy()&&curStep().done()){
     const st=curStep();
     if(!silent){reward(st.r);toast(`⭐ Step complete! ${rewardHTML(st.r)}`);sfx.win()}
+    if(st.unlock&&!silent){st.unlock.forEach(k=>{S.unlock[k]=1});toast(`🔓 Unlocked: ${st.unlock.map(k=>UNLOCK_NAME[k]).join(', ')}`)}else if(st.unlock)st.unlock.forEach(k=>{S.unlock[k]=1});
     S.story++;S.say=1;moved=true;
   }
   if(moved)save(true);
@@ -1708,7 +1842,7 @@ function showSay(who,text,opts={}){
     <div class="txt">${bullets(text)}</div></div></div>
     ${st&&!opts.noGoal?`<div class="goalbox">📍 Your goal: ${st.goal}</div>`:''}
     <div style="text-align:right;margin-top:12px"><button class="btn green" id="sayOk">Got it!</button></div>`);
-  $('#sayOk').onclick=closeModal;
+  $('#sayOk').onclick=()=>{closeModal();const s2=curStep();if(s2&&s2.heard&&s2.who===who)stat('heard')};
 }
 function storyPrompt(){
   // auto-show the current step's speech once, when nothing else is open
@@ -1850,20 +1984,7 @@ function upgradeAction(game){
 }
 function nextAction(){
   const st=curStep();if(!st)return null;
-  switch(S.story){
-    case 0:return carryN()>=S.cap?barnT('Backpack full. Drop it at the Barn'):gatherT('tree');
-    case 1:return carryN()>0?barnT('Step on the red mat in front of the Barn to store your goods'):gatherT('tree');
-    case 2:return supply('plank');
-    case 3:return supply('brick');
-    case 4:return doorT(bldBy('bolt'),'⚙️','Step on the red mat under the Bolt Works, then press ▶ Play');
-    case 5:return upgradeAction('bolt');
-    case 6:return doorT(bldBy('card'),'🃏','Step on the red mat under the Card Barn, then press ▶ Play');
-    case 7:return upgradeAction('card');
-    case 10:return doorT(bldBy('watch'),'🛡️','Stock your Barn, then step on the red mat under The Watch and press ▶ Play');
-    case 11:return upgradeAction('watch');
-    case 12:return doorT(bldBy('watch'),'⚔️','Open The Watch and press ⚔️ Frontier (costs ⚡3)');
-    default:return upgradeAction(['bolt','card','lights','match'].sort((a,b)=>S.bld[a]-S.bld[b])[0]);
-  }
+  return st.act?st.act():null;
 }
 let GUIDE=null,guideT=0;
 function refreshGuide(){
@@ -3632,6 +3753,7 @@ function showUpdateBanner(){
 checkUpdate();setInterval(checkUpdate,5*60*1000);
 addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
 load();
+migrateSave();
 checkStory(true);
 setInterval(()=>save(true),8000);
 addEventListener('visibilitychange',()=>{if(document.hidden){flushFlyers();save(true);try{if(AC&&AC.state==='running')AC.suspend()}catch(e){}}else{try{if(AC&&AC.state==='suspended')AC.resume()}catch(e){}}});
