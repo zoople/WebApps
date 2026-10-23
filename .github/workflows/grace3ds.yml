@@ -107,7 +107,7 @@ jobs:
           xdotool keydown Up; sleep 2; xdotool keyup Up; sleep 6; import -window root shots/04-play.png
           sleep 14; import -window root shots/05-play.png
           sleep 16; import -window root shots/06-later.png
-          sleep 16; import -window root shots/07-later.png
+          for i in 1 2 3 4 5 6; do sleep 6; import -window root shots/07-wait.png; key a; sleep 0.6; key a; sleep 1.5; import -window root shots/08-quote-$i.png; done
           xdotool search --name . getwindowname %@ 2>/dev/null | head; tail -40 shots/azahar.log; exit 0
       - name: Publish shots
         if: always()

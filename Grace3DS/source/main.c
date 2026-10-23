@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "v2 - 23 Oct 2026"
+#define VERSION "v3 - 23 Oct 2026"
 #ifdef HOSTTEST
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -43,11 +43,11 @@ static float dist(float ax, float ay, float bx, float by) { return sqrtf((ax - b
 static C2D_TextBuf tbuf;
 static void text(const char *s, float x, float y, float sz, u32 col, int align) {
 	C2D_Text t; C2D_TextParse(&t, tbuf, s); C2D_TextOptimize(&t);
-	C2D_DrawText(&t, C2D_WithColor | align, x, y, 0.5f, sz, sz, col);
+	C2D_DrawText(&t, C2D_WithColor | align, x, y, 0, sz, sz, col);
 }
 static void textWrap(const char *s, float x, float y, float sz, u32 col, int align, float w) {
 	C2D_Text t; C2D_TextParse(&t, tbuf, s); C2D_TextOptimize(&t);
-	C2D_DrawText(&t, C2D_WithColor | C2D_WordWrap | align, x, y, 0.5f, sz, sz, col, w);
+	C2D_DrawText(&t, C2D_WithColor | C2D_WordWrap | align, x, y, 0, sz, sz, col, w);
 }
 
 // ------------------------------------------------------------------ sprites (romfs:/gfx/sprites.t3x: 11 blessing icons, then the grace star)
@@ -57,8 +57,8 @@ static void icon(int i, float cx, float cy, float size, float a) {
 	if (!sheet) return;
 	C2D_Image img = C2D_SpriteSheetGetImage(sheet, i);
 	float sc = size / 32.0f;
-	if (a >= 0.999f) C2D_DrawImageAt(img, cx - size / 2, cy - size / 2, 0.5f, NULL, sc, sc);
-	else { C2D_ImageTint t; C2D_AlphaImageTint(&t, a); C2D_DrawImageAt(img, cx - size / 2, cy - size / 2, 0.5f, &t, sc, sc); }
+	if (a >= 0.999f) C2D_DrawImageAt(img, cx - size / 2, cy - size / 2, 0, NULL, sc, sc);
+	else { C2D_ImageTint t; C2D_AlphaImageTint(&t, a); C2D_DrawImageAt(img, cx - size / 2, cy - size / 2, 0, &t, sc, sc); }
 }
 
 // ------------------------------------------------------------------ data: blessings
@@ -240,12 +240,14 @@ static void updateFlies(float dt) {
 	if (gracePulse > 0) gracePulse -= dt;
 	if (hpPulse > 0) hpPulse -= dt;
 }
+static void heartShape(float x, float y, float r, u32 c);
 static void drawFlies(int bottom) {
 	for (int k = 0; k < MAXFLY; k++) {
 		Fly *f = &flies[k]; if (!f->on || f->delay > 0) continue;
 		float x, y; flyPos(f, &x, &y);
-		if (!bottom && y < 240) { if (f->heart) C2D_DrawCircleSolid(x, y, 0, 3.5f, RGBA(255, 154, 122, 255)); else icon(SPR_GRACE, x, y, 14, 1); }
-		if (bottom && y >= 240 - 8) { if (f->heart) C2D_DrawCircleSolid(x - 40, y - 240, 0, 3.5f, RGBA(255, 154, 122, 255)); else icon(SPR_GRACE, x - 40, y - 240, 14, 1); }
+		float sz = 1 + 0.4f * sinf(clampf(f->t, 0, 1) * PI);
+		if (!bottom && y < 240) { if (f->heart) { C2D_DrawCircleSolid(x, y, 0, 8 * sz, RGBA(229, 83, 63, 70)); heartShape(x, y, 6 * sz, RGBA(255, 120, 100, 255)); } else icon(SPR_GRACE, x, y, 16 * sz, 1); }
+		if (bottom && y >= 240 - 8) { if (f->heart) { C2D_DrawCircleSolid(x - 40, y - 240, 0, 8 * sz, RGBA(229, 83, 63, 70)); heartShape(x - 40, y - 240, 6 * sz, RGBA(255, 120, 100, 255)); } else icon(SPR_GRACE, x - 40, y - 240, 16 * sz, 1); }
 	}
 }
 static int best = 0;
@@ -254,7 +256,7 @@ static char statusMsg[160]; static float statusT = 0;
 // ------------------------------------------------------------------ audio (pre-rendered, played as buffers)
 #define SR 22050
 typedef struct { s16 *data; u32 n; } Snd;
-enum { SND_SHOOT, SND_HIT, SND_KILL, SND_HURT, SND_SHIELD, SND_CHIME, SND_HEAL, SND_GONG, SND_SHATTER, SND_TICK, SND_DEATH, SND_ASCEND, SND_EBOLT, NSND };
+enum { SND_SHOOT, SND_HIT, SND_KILL, SND_HURT, SND_SHIELD, SND_CHIME, SND_HEAL, SND_GONG, SND_SHATTER, SND_TICK, SND_DEATH, SND_ASCEND, SND_EBOLT, SND_NAV, SND_PICK, NSND };
 static Snd snds[NSND]; static Snd music;
 static int audioOK = 0, sfxCh = 1;
 static ndspWaveBuf wbMusic, wbSfx[8];
@@ -287,6 +289,8 @@ static float f_shatter(float t, int i) { (void)i; lp1 += (noiz() - lp1) * 0.7f; 
 static float f_tick(float t, int i) { (void)i; return envAD(t, 0.008f, 0.02f) * 0.12f * sinf(2 * PI * 1800 * t); }
 static float f_death(float t, int i) { (void)i; float f = 300 * expf(-t * 1.8f); lp1 += (noiz() - lp1) * 0.08f; return envAD(t, 0.01f, 0.7f) * (0.2f * sinf(2 * PI * f * t) + 0.2f * lp1); }
 static float f_ascend(float t, int i) { (void)i; float v = 0; float ms[5] = {62, 65, 69, 74, 77}; for (int k = 0; k < 5; k++) { float tt = t - k * 0.09f; if (tt > 0) v += envAD(tt, 0.02f, 0.8f) * 0.07f * sinf(2 * PI * midi(ms[k]) * tt); } return v + envAD(t, 0.01f, 0.6f) * 0.2f * sinf(2 * PI * 52 * t); }
+static float f_nav(float t, int i) { (void)i; float f = 880 + 220 * t * 10; return 0.13f * envAD(t, 0.008f, 0.035f) * (sinf(2 * PI * f * t) + 0.3f * sinf(4 * PI * f * t)); }
+static float f_pick(float t, int i) { (void)i; float a = envAD(t, 0.008f, 0.08f) * 0.12f * sinf(2 * PI * midi(83) * t); float b = t > 0.05f ? envAD(t - 0.05f, 0.008f, 0.12f) * 0.11f * sinf(2 * PI * midi(90) * t) : 0; return a + b; }
 static float f_ebolt(float t, int i) { (void)i; float f = 720 - 3000 * t; return 0.06f * envAD(t, 0.008f, 0.03f) * sinf(2 * PI * f * t); }
 // soft D-minor pad with a slow bell line, 16 s loop
 static const float PROG[4][3] = {{50, 53, 57}, {46, 50, 53}, {43, 46, 50}, {45, 49, 52}};
@@ -312,7 +316,7 @@ static void audioInit(void) {
 	render(&snds[SND_HURT], 0.4f, f_hurt); render(&snds[SND_SHIELD], 0.6f, f_shield); render(&snds[SND_CHIME], 0.6f, f_chime);
 	render(&snds[SND_HEAL], 0.5f, f_heal); render(&snds[SND_GONG], 2.4f, f_gong); render(&snds[SND_SHATTER], 1.0f, f_shatter);
 	render(&snds[SND_TICK], 0.06f, f_tick); render(&snds[SND_DEATH], 1.6f, f_death); render(&snds[SND_ASCEND], 2.2f, f_ascend);
-	render(&snds[SND_EBOLT], 0.08f, f_ebolt);
+	render(&snds[SND_EBOLT], 0.08f, f_ebolt); render(&snds[SND_NAV], 0.09f, f_nav); render(&snds[SND_PICK], 0.3f, f_pick);
 	render(&music, 16.0f, f_music);
 	if (music.n) {
 		memset(&wbMusic, 0, sizeof(wbMusic)); wbMusic.data_vaddr = music.data; wbMusic.nsamples = music.n; wbMusic.looping = true;
@@ -320,8 +324,9 @@ static void audioInit(void) {
 	}
 }
 static void sfx(int id) {
-	if (!audioOK || G.demo || !snds[id].n) return;
-	float now = G.time;
+	int ui = id == SND_NAV || id == SND_PICK || id == SND_TICK;
+	if (!audioOK || (G.demo && !ui) || !snds[id].n) return;
+	float now = osGetTime() / 1000.0f;
 	if (id <= SND_HIT || id == SND_EBOLT || id == SND_TICK) { if (now - sfxLast[id] < 0.06f && now >= sfxLast[id]) return; }
 	sfxLast[id] = now;
 	int ch = sfxCh; sfxCh = sfxCh % 7 + 1;
@@ -881,8 +886,8 @@ static void drawTop(float eye) {
 		}
 		if (!G.demo) {
 			float mh = maxHp(), k = clampf(G.p.hp / mh, 0, 1);
-			bar(x - 13, y - 19, 26, 3, k, cEmber2, (G.empty && sinf(t * 12) > 0) ? cEmberHi : cEmber);
-			bar(x - 13, y - 14, 26, 2, G.grace / 100.0f, cGrace2, cGrace);
+			bar(x - 13, y - 31, 26, 3, k, cEmber2, (G.empty && sinf(t * 12) > 0) ? cEmberHi : cEmber);
+			bar(x - 13, y - 26, 26, 2, G.grace / 100.0f, cGrace2, cGrace);
 		}
 	}
 	// bullets
@@ -901,7 +906,7 @@ static void drawTop(float eye) {
 	// boss bar
 	for (int i = 0; i < MAXE; i++) if (G.en[i].on && G.en[i].type == E_BOSS && G.en[i].spawn <= 0 && !G.demo) { bar(60, 10, TW - 120, 4, G.en[i].hp / G.en[i].max, cInk, cEmber); text("THE WARDEN", TW / 2, 16, 0.42f, cGilt, C2D_AlignCenter); }
 	// banner
-	if (G.bannerT > 0 && !G.demo && G.banner[0]) {
+	if (G.bannerT > 0 && !G.demo && G.banner[0] && state == S_PLAY) {
 		float a = fminf(1, fminf(G.bannerT * 2.5f, (2.2f - G.bannerT) * 4)); if (a < 0) a = 0;
 		C2D_DrawRectSolid(0, TH * 0.4f - 22, 0, TW, 48, alpha(cInk, 0.7f * a));
 		C2D_DrawRectSolid(0, TH * 0.4f - 22, 0, TW, 1, alpha(cGilt, a)); C2D_DrawRectSolid(0, TH * 0.4f + 26, 0, TW, 1, alpha(cGilt, a));
@@ -999,7 +1004,7 @@ static void drawHud(void) {
 		const Buff *b = &BUFFS[tipBuff];
 		icon(tipBuff, 26, 184, 30, G.held[tipBuff] ? 1 : 0.4f);
 		snprintf(s, sizeof s, "%s  (%s)", b->name, TIER_NAME[b->tier]); text(s, 48, 162, 0.45f, cBone, C2D_AlignLeft);
-		if (G.held[tipBuff]) { snprintf(s, sizeof s, "%s  -  upkeep -%.2g/s", b->has, TIER_UP[b->tier]); text(s, 48, 182, 0.4f, cGiltHi, C2D_AlignLeft); icon(SPR_GRACE, BW - 16, 189, 12, 1); }
+		if (G.held[tipBuff]) { snprintf(s, sizeof s, "%s  -  upkeep -%.2g/s", b->has, TIER_UP[b->tier]); text(s, 48, 182, 0.4f, cGiltHi, C2D_AlignLeft); icon(SPR_GRACE, BW - 16, 189, 18, 1); }
 		else { snprintf(s, sizeof s, "Given up: %s", b->loss); text(s, 48, 182, 0.4f, cMuted, C2D_AlignLeft); }
 	} else if (statusT > 0) textWrap(statusMsg, 12, 164, 0.42f, cBone, C2D_AlignLeft, BW - 24);
 	else {
@@ -1023,7 +1028,7 @@ static void drawAltar(void) {
 			const Buff *b = &BUFFS[c.buff];
 			icon(c.buff, r.x + 22, r.y + r.h / 2, 30, 1);
 			snprintf(s, sizeof s, "Lose %s", b->name); text(s, r.x + 42, r.y + 3, 0.55f, cBone, C2D_AlignLeft);
-			snprintf(s, sizeof s, "+%d", TIER_GAIN[b->tier]); text(s, r.x + r.w - 22, r.y + 4, 0.45f, cGrace, C2D_AlignRight); icon(SPR_GRACE, r.x + r.w - 12, r.y + 12, 14, 1);
+			snprintf(s, sizeof s, "+%d", TIER_GAIN[b->tier]); text(s, r.x + r.w - 24, r.y + 4, 0.45f, cGrace, C2D_AlignRight); icon(SPR_GRACE, r.x + r.w - 12, r.y + 11, 20, 1);
 			text(b->sum, r.x + 42, r.y + 23, 0.42f, cGiltHi, C2D_AlignLeft);
 			snprintf(s, sizeof s, "%s -> %s", b->has, b->loss); text(s, r.x + 42, r.y + 40, 0.34f, cMuted, C2D_AlignLeft);
 			snprintf(s, sizeof s, "-%.1f > -%.1f/s", drainRate(), rateIf(c.buff, G.defy)); text(s, r.x + r.w - 6, r.y + 40, 0.34f, cGrace, C2D_AlignRight);
@@ -1081,6 +1086,7 @@ int main(int argc, char **argv) {
 	(void)argc; (void)argv;
 	gfxInitDefault(); gfxSet3D(true);
 	C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C2D_Init(C2D_DEFAULT_MAX_OBJECTS * 4); C2D_Prepare();
+	C3D_DepthTest(false, GPU_ALWAYS, GPU_WRITE_COLOR);   // pure painter's order
 	C3D_RenderTarget *topL = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT), *topR = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT), *bot = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 	tbuf = C2D_TextBufNew(8192);
 	romfsInit(); sheet = C2D_SpriteSheetLoad("romfs:/gfx/sprites.t3x");
@@ -1097,27 +1103,28 @@ int main(int argc, char **argv) {
 		case S_TITLE:
 			update(DT);
 			if (kDown & KEY_START) { quit = 1; break; }
-			if (tap && inRect(bHow, tp.px, tp.py)) howOpen = !howOpen;
-			else if (kDown & KEY_Y) howOpen = !howOpen;
-			else if ((kDown & KEY_A) || (tap && !howOpen && inRect(bStart, tp.px, tp.py))) { howOpen = 0; begin(); }
+			if (tap && inRect(bHow, tp.px, tp.py)) { howOpen = !howOpen; sfx(SND_NAV); }
+			else if (kDown & KEY_Y) { howOpen = !howOpen; sfx(SND_NAV); }
+			else if ((kDown & KEY_A) || (tap && !howOpen && inRect(bStart, tp.px, tp.py))) { howOpen = 0; sfx(SND_PICK); begin(); }
 			break;
 		case S_PLAY:
 			update(DT);
-			if (kDown & KEY_START) { state = S_PAUSE; break; }
-			if (tap) for (int i = 0; i < NB; i++) if (inRect(tileRect(i), tp.px, tp.py)) { tipBuff = i; tipT = 3.0f; sfx(SND_TICK); }
+			if (kDown & KEY_START) { state = S_PAUSE; sfx(SND_NAV); break; }
+			if (tap) for (int i = 0; i < NB; i++) if (inRect(tileRect(i), tp.px, tp.py)) { tipBuff = i; tipT = 3.0f; sfx(SND_NAV); }
 			break;
 		case S_PAUSE:
-			if ((kDown & KEY_START) || (tap && inRect(bResume, tp.px, tp.py))) state = S_PLAY;
+			if ((kDown & KEY_START) || (tap && inRect(bResume, tp.px, tp.py))) { state = S_PLAY; sfx(SND_PICK); }
 			else if ((kDown & KEY_SELECT) || (tap && inRect(bQuit, tp.px, tp.py))) { state = S_TITLE; newRun(1, 1, 0, 0); startWave(0); }
 			break;
 		case S_ALTAR:
-			if (kDown & KEY_DUP) { sel = sel <= 0 ? ncards - 1 : sel - 1; sfx(SND_TICK); }
-			if (kDown & KEY_DDOWN) { sel = sel < 0 || sel >= ncards - 1 ? 0 : sel + 1; sfx(SND_TICK); }
+			if (kDown & KEY_DUP) { sel = sel <= 0 ? ncards - 1 : sel - 1; sfx(SND_NAV); }
+			if (kDown & KEY_DDOWN) { sel = sel < 0 || sel >= ncards - 1 ? 0 : sel + 1; sfx(SND_NAV); }
 			if (tap) {
-				for (int i = 0; i < ncards; i++) if (inRect(cardRect(i), tp.px, tp.py)) { if (sel == i) { sacrifice(i); goto altarDone; } sel = i; sfx(SND_TICK); }
+				for (int i = 0; i < ncards; i++) if (inRect(cardRect(i), tp.px, tp.py)) { if (sel == i) { sacrifice(i); goto altarDone; } sel = i; sfx(SND_NAV); }
 				if (sel >= 0 && inRect(bConfirm, tp.px, tp.py)) { sacrifice(sel); goto altarDone; }
 			}
 			if ((kDown & KEY_A) && sel >= 0) sacrifice(sel);
+			else if ((kDown & KEY_A) && sel < 0) { sel = 0; sfx(SND_NAV); }
 		altarDone:
 			break;
 		case S_STORY:
@@ -1125,7 +1132,7 @@ int main(int argc, char **argv) {
 			else if (kDown & KEY_B) storyAdvance(1);
 			break;
 		case S_DEAD:
-			if ((kDown & KEY_A) || (tap && inRect(bAgain, tp.px, tp.py))) begin();
+			if ((kDown & KEY_A) || (tap && inRect(bAgain, tp.px, tp.py))) { sfx(SND_PICK); begin(); }
 			else if (endWon && ((kDown & KEY_B) || (tap && inRect(bStop, tp.px, tp.py)))) stopPlaying();
 			else if (!endWon && (kDown & KEY_B)) { state = S_TITLE; newRun(1, 1, 0, 0); startWave(0); }
 			break;
