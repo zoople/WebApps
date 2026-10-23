@@ -26,7 +26,8 @@ out/grace.smdh: assets/icon.png
 out/grace.3dsx: out/grace.elf out/grace.smdh
 	$(TOOLS)/3dsxtool $< $@ --smdh=out/grace.smdh
 
-cia: out/grace.elf
+cia:
+	test -f out/grace.elf
 	$(BANNERTOOL) makebanner -i assets/banner.png -a assets/banner.wav -o out/banner.bnr
 	$(BANNERTOOL) makesmdh -s "$(TITLE)" -l "$(DESC)" -p "$(AUTHOR)" -i assets/icon.png -o out/icon.smdh
 	$(MAKEROM) -f cia -o out/Grace.cia -elf out/grace.elf -rsf grace.rsf -icon out/icon.smdh -banner out/banner.bnr -exefslogo -target t

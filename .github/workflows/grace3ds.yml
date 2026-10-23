@@ -15,33 +15,50 @@ jobs:
         working-directory: Grace3DS
     steps:
       - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          set -o pipefail
+          mkdir -p out
+          make all 2>&1 | tee out/build.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: elf
+          path: Grace3DS/out/
+  cia:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: Grace3DS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: elf
+          path: Grace3DS/out/
       - name: CIA tools
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p out; exec > >(tee out/tools.log) 2>&1
-          (apt-get update && apt-get install -y unzip curl jq file) > /dev/null 2>&1 || echo "apt failed"
-          which unzip curl jq || true
+          exec > >(tee -a out/tools.log) 2>&1
           mkdir -p /tmp/t && cd /tmp/t
           api() { curl -sSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$1/releases"; }
-          api 3DSGuy/Project_CTR | jq -r '.[0:3][] | .assets[].name' || true
-          api Epicpkmn11/bannertool | jq -r '.[0:3][] | .assets[].name' || true
-          mr=$(api 3DSGuy/Project_CTR | jq -r '[.[] | .assets[] | select(.name|test("makerom.*(ubuntu|linux).*zip";"i"))][0].browser_download_url')
+          mr=$(api 3DSGuy/Project_CTR | jq -r '[.[] | .assets[] | select(.name|test("makerom.*ubuntu.*x86_64.*zip";"i"))][0].browser_download_url')
           bt=$(api Epicpkmn11/bannertool | jq -r '[.[] | .assets[] | select(.name|test("bannertool.*zip";"i"))][0].browser_download_url')
           echo "makerom: $mr"; echo "bannertool: $bt"
           curl -sSL "$mr" -o mr.zip && unzip -oq mr.zip -d mr
           curl -sSL "$bt" -o bt.zip && unzip -oq bt.zip -d bt
-          find mr bt -type f | head -40
-          MR=$(find mr -type f -iname 'makerom*' ! -iname '*.zip' | head -1)
-          BT=$(find bt -type f -ipath '*linux*' -iname 'bannertool*' | head -1); [ -z "$BT" ] && BT=$(find bt -type f -iname 'bannertool*' ! -iname '*.exe' | head -1)
-          echo "MR=$MR BT=$BT"
-          chmod +x "$MR" "$BT"; cp "$MR" /usr/local/bin/makerom; cp "$BT" /usr/local/bin/bannertool
-          file /usr/local/bin/makerom /usr/local/bin/bannertool || true
-          makerom 2>&1 | head -3; bannertool 2>&1 | head -3
-      - name: Build
+          sudo install -m755 "$(find mr -type f -name makerom | head -1)" /usr/local/bin/makerom
+          sudo install -m755 bt/linux-x86_64/bannertool /usr/local/bin/bannertool
+          makerom 2>&1 | head -2; bannertool 2>&1 | head -2
+      - name: Package CIA
         run: |
           set -o pipefail
-          { make all && make cia; } 2>&1 | tee out/build.log
+          make cia 2>&1 | tee -a out/build.log
+          ls -la out
       - name: Publish
         if: always()
         uses: softprops/action-gh-release@v2

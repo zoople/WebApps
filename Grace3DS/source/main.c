@@ -412,7 +412,11 @@ static void autopilot(float *ox, float *oy) {
 	if (n) { float dx = n->x - G.p.x, dy = n->y - G.p.y, d = sqrtf(dx * dx + dy * dy) + 0.001f, want = n->type == E_BOSS ? 150 : 110, k = clampf((d - want) / 70, -1.5f, 0.8f); ax += dx / d * k; ay += dy / d * k; }
 	for (int i = 0; i < MAXE; i++) { Enemy *e = &G.en[i]; if (!e->on || e->spawn > 0) continue; float dx = G.p.x - e->x, dy = G.p.y - e->y, d = sqrtf(dx * dx + dy * dy) + 0.001f, R = e->r + 55; if (d < R) { float f = (R - d) / R * 2.4f; ax += dx / d * f; ay += dy / d * f; } }
 	for (int i = 0; i < MAXEB; i++) { EBullet *b = &G.eb[i]; if (!b->on) continue; float dx = G.p.x - b->x, dy = G.p.y - b->y, d = sqrtf(dx * dx + dy * dy); if (d > 70) continue; float sp = sqrtf(b->vx * b->vx + b->vy * b->vy) + 0.001f, vx = b->vx / sp, vy = b->vy / sp; if (dx * vx + dy * vy <= 0) continue; float s = (dx * vy - dy * vx) >= 0 ? 1 : -1, f = (70 - d) / 70 * 3; ax += vy * s * f; ay += -vx * s * f; }
-	float m = 36; if (G.p.x < m) ax += (m - G.p.x) / m * 2; if (G.p.x > TW - m) ax -= (G.p.x - TW + m) / m * 2; if (G.p.y < m) ay += (m - G.p.y) / m * 2; if (G.p.y > TH - m) ay -= (G.p.y - TH + m) / m * 2;
+	float m = 36;
+	if (G.p.x < m) ax += (m - G.p.x) / m * 2;
+	if (G.p.x > TW - m) ax -= (G.p.x - TW + m) / m * 2;
+	if (G.p.y < m) ay += (m - G.p.y) / m * 2;
+	if (G.p.y > TH - m) ay -= (G.p.y - TH + m) / m * 2;
 	float l = sqrtf(ax * ax + ay * ay); if (l > 1) { ax /= l; ay /= l; } else if (l < 0.08f) ax = ay = 0;
 	*ox = ax; *oy = ay;
 }
@@ -568,7 +572,10 @@ static void updEnemy(Enemy *e, float dt) {
 static circlePosition cpad; static u32 kHeld;
 static void readInput(float *mx, float *my) {
 	float x = cpad.dx / 150.0f, y = -cpad.dy / 150.0f;
-	if (kHeld & KEY_DLEFT) x = -1; if (kHeld & KEY_DRIGHT) x = 1; if (kHeld & KEY_DUP) y = -1; if (kHeld & KEY_DDOWN) y = 1;
+	if (kHeld & KEY_DLEFT) x = -1;
+	if (kHeld & KEY_DRIGHT) x = 1;
+	if (kHeld & KEY_DUP) y = -1;
+	if (kHeld & KEY_DDOWN) y = 1;
 	float l = sqrtf(x * x + y * y);
 	if (l < 0.15f) { *mx = *my = 0; return; }
 	if (l > 1) { x /= l; y /= l; }
@@ -1031,7 +1038,8 @@ int main(int argc, char **argv) {
 	while (aptMainLoop() && !quit) {
 		hidScanInput(); u32 kDown = hidKeysDown(); kHeld = hidKeysHeld(); hidCircleRead(&cpad);
 		touchPosition tp; hidTouchRead(&tp); int tap = (kDown & KEY_TOUCH) != 0;
-		if (statusT > 0) statusT -= DT; if (tipT > 0) tipT -= DT;
+		if (statusT > 0) statusT -= DT;
+		if (tipT > 0) tipT -= DT;
 
 		switch (state) {
 		case S_TITLE:
