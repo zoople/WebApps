@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "v1 - 23 Oct 2026"
+#define VERSION "v2 - 23 Oct 2026"
 #ifdef HOSTTEST
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -48,6 +48,17 @@ static void text(const char *s, float x, float y, float sz, u32 col, int align) 
 static void textWrap(const char *s, float x, float y, float sz, u32 col, int align, float w) {
 	C2D_Text t; C2D_TextParse(&t, tbuf, s); C2D_TextOptimize(&t);
 	C2D_DrawText(&t, C2D_WithColor | C2D_WordWrap | align, x, y, 0.5f, sz, sz, col, w);
+}
+
+// ------------------------------------------------------------------ sprites (romfs:/gfx/sprites.t3x: 11 blessing icons, then the grace star)
+#define SPR_GRACE 11
+static C2D_SpriteSheet sheet;
+static void icon(int i, float cx, float cy, float size, float a) {
+	if (!sheet) return;
+	C2D_Image img = C2D_SpriteSheetGetImage(sheet, i);
+	float sc = size / 32.0f;
+	if (a >= 0.999f) C2D_DrawImageAt(img, cx - size / 2, cy - size / 2, 0.5f, NULL, sc, sc);
+	else { C2D_ImageTint t; C2D_AlphaImageTint(&t, a); C2D_DrawImageAt(img, cx - size / 2, cy - size / 2, 0.5f, &t, sc, sc); }
 }
 
 // ------------------------------------------------------------------ data: blessings
@@ -204,6 +215,39 @@ static struct {
 	Split splits[16]; int nsplits;
 } G;
 static int state = S_TITLE, prevState = S_PLAY;
+// pickups fly from the arena down to their counter on the touch screen.
+// One combined coordinate space: the touch screen sits below the top screen, 40 px in from its left edge.
+typedef struct { float x0, y0, t, delay; int heart, on; } Fly;
+#define MAXFLY 32
+static Fly flies[MAXFLY];
+static float gracePulse = 0, hpPulse = 0;
+#define GRACE_TX (40 + 172.0f)
+#define GRACE_TY (240 + 24.0f)
+#define HP_TX (40 + 22.0f)
+#define HP_TY (240 + 24.0f)
+static void spawnFlies(float x, float y, int heart) {
+	for (int k = 0, n = 0; k < MAXFLY && n < 5; k++) if (!flies[k].on) { flies[k] = (Fly){x + frand(-6, 6), y + frand(-6, 6), 0, n * 0.05f, heart, 1}; n++; }
+}
+static void flyPos(Fly *f, float *x, float *y) {
+	float t = clampf(f->t, 0, 1), e = t * t * (3 - 2 * t);
+	float tx = f->heart ? HP_TX : GRACE_TX, ty = f->heart ? HP_TY : GRACE_TY;
+	float mx = (f->x0 + tx) / 2 + (f->heart ? -40 : 40), my = f->y0 - 30;
+	float u = 1 - e; *x = u * u * f->x0 + 2 * u * e * mx + e * e * tx; *y = u * u * f->y0 + 2 * u * e * my + e * e * ty;
+}
+static void updateFlies(float dt) {
+	for (int k = 0; k < MAXFLY; k++) { Fly *f = &flies[k]; if (!f->on) continue; if (f->delay > 0) { f->delay -= dt; continue; } f->t += dt / 0.6f;
+		if (f->t >= 1) { f->on = 0; if (f->heart) hpPulse = 0.3f; else gracePulse = 0.3f; } }
+	if (gracePulse > 0) gracePulse -= dt;
+	if (hpPulse > 0) hpPulse -= dt;
+}
+static void drawFlies(int bottom) {
+	for (int k = 0; k < MAXFLY; k++) {
+		Fly *f = &flies[k]; if (!f->on || f->delay > 0) continue;
+		float x, y; flyPos(f, &x, &y);
+		if (!bottom && y < 240) { if (f->heart) C2D_DrawCircleSolid(x, y, 0, 3.5f, RGBA(255, 154, 122, 255)); else icon(SPR_GRACE, x, y, 14, 1); }
+		if (bottom && y >= 240 - 8) { if (f->heart) C2D_DrawCircleSolid(x - 40, y - 240, 0, 3.5f, RGBA(255, 154, 122, 255)); else icon(SPR_GRACE, x - 40, y - 240, 14, 1); }
+	}
+}
 static int best = 0;
 static char statusMsg[160]; static float statusT = 0;
 
@@ -381,7 +425,7 @@ static void startWave(int i) {
 	sfx(w->boss ? SND_GONG : SND_TICK);
 }
 static void newRun(int demo, int tier, int banked, int kills) {
-	memset(&G, 0, sizeof G);
+	memset(&G, 0, sizeof G); memset(flies, 0, sizeof flies);
 	G.demo = demo; G.tier = tier; G.banked = banked; G.kills = kills; G.floor = 1; G.grace = G_START; G.sparkT = 1.5f; G.heartT = 14;
 	for (int i = 0; i < NB; i++) G.held[i] = 1;
 	G.p.x = TW / 2; G.p.y = TH - 40; G.p.r = 7; G.p.hp = 200; G.p.fy = -1; G.p.shield = 3; G.p.shieldT = 9;
@@ -444,10 +488,10 @@ static void openAltar(void) {
 
 // ------------------------------------------------------------------ story
 static const char *storyLines[12]; static char storyEye[12][96], storyBy[12][96]; static int storyFinal[12];
-static int nStory = 0, storyAt = 0, storyNext = 0;
+static int nStory = 0, storyAt = 0, storyNext = 0, storyIcon = -1;
 static char quoteBuf[12][200];
 enum { NEXT_PLAY, NEXT_STARTWAVE, NEXT_ASCEND, NEXT_FINAL, NEXT_TITLE };
-static void storyReset(void) { nStory = 0; storyAt = 0; }
+static void storyReset(void) { nStory = 0; storyAt = 0; storyIcon = -1; }
 static void storyAdd(const char *line, const char *eye, const char *by, int fin) {
 	if (nStory >= 12) return;
 	snprintf(quoteBuf[nStory], 200, "%s", line); storyLines[nStory] = quoteBuf[nStory];
@@ -526,7 +570,7 @@ static void sacrifice(int c) {
 	const Quote *q = &QUOTES[deckDraw(&dQuote, NQ)];
 	char eye[96], line[200], by[96];
 	snprintf(eye, sizeof eye, "%s given up", BUFFS[b].name); snprintf(line, sizeof line, "\"%s\"", q->t); snprintf(by, sizeof by, "- %s", q->a);
-	storyReset(); storyAdd(line, eye, by, 0); storyPlay(NEXT_PLAY);
+	storyReset(); storyAdd(line, eye, by, 0); storyIcon = b; storyPlay(NEXT_PLAY);
 }
 
 // ------------------------------------------------------------------ simulation
@@ -688,13 +732,14 @@ static void update(float dt) {
 		k->life -= dt; if (k->life <= 0) { k->on = 0; continue; }
 		if (!G.demo && G.phase != PH_DEAD && dist(k->x, k->y, G.p.x, G.p.y) < G.p.r + 10) {
 			k->on = 0;
-			if (k->heart) { float b0 = G.p.hp; G.p.hp = fminf(maxHp(), G.p.hp + k->v); num(k->x, k->y - 8, G.p.hp - b0, cEmberHi); burst(k->x, k->y, cEmberHi, 14, 90); sfx(SND_HEAL); }
-			else { addGrace(k->v); num(k->x, k->y - 8, k->v, cGrace); burst(k->x, k->y, cGraceHi, 14, 90); sfx(SND_CHIME); }
+			if (k->heart) { float b0 = G.p.hp; G.p.hp = fminf(maxHp(), G.p.hp + k->v); num(k->x, k->y - 8, G.p.hp - b0, cEmberHi); burst(k->x, k->y, cEmberHi, 14, 90); sfx(SND_HEAL); spawnFlies(k->x, k->y, 1); }
+			else { addGrace(k->v); num(k->x, k->y - 8, k->v, cGrace); burst(k->x, k->y, cGraceHi, 14, 90); sfx(SND_CHIME); spawnFlies(k->x, k->y, 0); }
 		}
 	}
 	for (int s = 0; s < G.nspikes; s++) if (!has(B_FLOAT) && spikePhase(&G.spikes[s]) == 2 && inSpike(G.p.x, G.p.y, &G.spikes[s], -3)) hurt(14);
 	for (int i = 0; i < MAXP; i++) { Part *f = &G.fx[i]; if (!f->on) continue; f->x += f->vx * dt; f->y += f->vy * dt; f->vx *= 0.92f; f->vy *= 0.92f; f->life -= dt; if (f->life <= 0) f->on = 0; }
 	for (int i = 0; i < MAXN; i++) { Num *n = &G.nums[i]; if (!n->on) continue; n->y -= 18 * dt; n->life -= dt; if (n->life <= 0) n->on = 0; }
+	if (!G.demo) updateFlies(dt);
 
 	int anyEnemy = 0; for (int i = 0; i < MAXE; i++) if (G.en[i].on) anyEnemy = 1;
 	if (G.phase == PH_WAVE && !anyEnemy) {
@@ -786,7 +831,7 @@ static void drawTop(float eye) {
 		Pickup *k = &G.pk[q]; if (!k->on) continue;
 		float blink = k->life < 1.5f ? (sinf(t * 22) > 0 ? 1 : 0.35f) : 1, x = k->x + dEnt;
 		C2D_DrawCircleSolid(x, k->y, 0, 13, alpha(k->heart ? cEmber : cGrace, 0.18f * blink));
-		if (k->heart) heartShape(x, k->y, 6, alpha(cEmber, blink)); else star(x, k->y, 7.5f, 3, t * 1.5f, alpha(cGraceHi, blink));
+		if (k->heart) heartShape(x, k->y, 6, alpha(cEmber, blink)); else icon(SPR_GRACE, x, k->y + sinf(t * 4 + k->x) * 1.5f, 18, blink);
 	}
 	// charger telegraphs
 	for (int i = 0; i < MAXE; i++) { Enemy *e = &G.en[i]; if (!e->on || e->type != E_CHARGER || e->state != 1) continue; float k = 1 - e->st / (0.75f * tele()); C2D_DrawLine(e->x + dEnt, e->y, alpha(cEmber, 0.15f + 0.35f * k), e->x + dEnt + e->dx * 120, e->y + e->dy * 120, alpha(cEmber, 0.05f), e->r * 2, 0); }
@@ -824,7 +869,7 @@ static void drawTop(float eye) {
 		C2D_DrawEllipseSolid(G.p.x + dFloor - 7, G.p.y + 4, 0, 14, 5, RGBA(0, 0, 0, 110));
 		int nh = heldCount();
 		C2D_DrawCircleSolid(x, y, 0, 28, alpha(nh ? cGilt : cBone, 0.08f + 0.012f * nh));
-		for (int i = 0, k = 0; i < NB; i++) if (G.held[i]) { float a = t * 1.6f + k / (float)nh * 2 * PI; C2D_DrawCircleSolid(x + cosf(a) * 15, y + sinf(a) * 12, 0, 1.4f, cGiltHi); k++; }
+		for (int i = 0, k = 0; i < NB; i++) if (G.held[i]) { float a = t * 1.1f + k / (float)nh * 2 * PI; icon(i, x + cosf(a) * 19, y + sinf(a) * 15, 8, 0.9f); k++; }
 		if (has(B_AEGIS)) for (int i = 0; i < 3; i++) if (i < (int)G.p.shield) { for (int j = 0; j < 6; j++) { float a = -PI / 2 + i * 2.094f + 0.15f + t * 0.5f + j * 0.3f; C2D_DrawCircleSolid(x + cosf(a) * 11, y + sinf(a) * 11, 0, 1.1f, cGilt); } }
 		if (!has(B_AIM)) for (int j = 1; j < 6; j++) C2D_DrawCircleSolid(x + G.p.fx * (12 + j * 9), y + G.p.fy * (12 + j * 9), 0, 0.9f, alpha(cBone, 0.35f));
 		if (!(G.p.inv > 0 && ((int)(G.p.inv * 20)) % 2)) {
@@ -844,6 +889,7 @@ static void drawTop(float eye) {
 	for (int i = 0; i < MAXEB; i++) { EBullet *b = &G.eb[i]; if (!b->on) continue; C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r * 2, alpha(cEmber, 0.25f)); C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r, cEmberHi); C2D_DrawCircleSolid(b->x + dEnt, b->y, 0, b->r * 0.45f, cEmber2); }
 	for (int i = 0; i < MAXB; i++) { Bullet *b = &G.pb[i]; if (!b->on) continue; C2D_DrawLine(b->x + dEnt, b->y, cGiltHi, b->x + dEnt - b->vx * 0.018f, b->y - b->vy * 0.018f, alpha(cGilt, 0.2f), 2.4f, 0); }
 	for (int i = 0; i < MAXP; i++) { Part *f = &G.fx[i]; if (!f->on) continue; C2D_DrawRectSolid(f->x + dEnt - f->s / 2, f->y - f->s / 2, 0, f->s, f->s, alpha(f->c, f->life / f->max * 1.4f)); }
+	drawFlies(0);
 	char nb[16];
 	for (int i = 0; i < MAXN; i++) { Num *n = &G.nums[i]; if (!n->on) continue; snprintf(nb, sizeof nb, "%d", (int)roundf(n->v)); text(nb, n->x + dEnt, n->y, 0.42f, alpha(n->c, n->life * 3), C2D_AlignCenter); }
 	C2D_ViewReset();
@@ -875,7 +921,8 @@ static void drawTopOverlay(void) {
 		char v[64]; snprintf(v, sizeof v, "Version %s", VERSION); text(v, TW / 2, 218, 0.38f, cMuted, C2D_AlignCenter);
 	} else if (state == S_STORY) {
 		C2D_DrawRectSolid(0, 0, 0, TW, TH, RGBA(11, 13, 20, 235));
-		if (storyEye[storyAt][0]) text(storyEye[storyAt], TW / 2, 40, 0.42f, cGrace, C2D_AlignCenter);
+		if (storyIcon >= 0) icon(storyIcon, TW / 2, 24, 26, 0.85f);
+		if (storyEye[storyAt][0]) text(storyEye[storyAt], TW / 2, 44, 0.42f, cGrace, C2D_AlignCenter);
 		textWrap(storyLines[storyAt], 30, 78, storyFinal[storyAt] ? 0.72f : 0.62f, storyFinal[storyAt] ? cGraceHi : cBone, C2D_AlignLeft, TW - 60);
 		if (storyBy[storyAt][0]) text(storyBy[storyAt], TW / 2, 196, 0.42f, cGilt, C2D_AlignCenter);
 	} else if (state == S_ALTAR) {
@@ -925,10 +972,10 @@ static void drawHud(void) {
 	char s[96];
 	// health and grace
 	panel((Rect){4, 4, BW - 8, 40}, cInk, G.empty ? cEmber : cGrace2);
-	heartShape(22, 24, 8, cEmber);
-	snprintf(s, sizeof s, "%d", (int)ceilf(fmaxf(0, G.p.hp))); text(s, 36, 12, 0.75f, cEmberHi, C2D_AlignLeft);
-	if (G.empty) text("x", 172, 12, 0.75f, cEmber, C2D_AlignCenter); else star(172, 24, 9, 3, -PI / 2, cGrace);
-	snprintf(s, sizeof s, "%d", (int)ceilf(G.grace)); text(s, 186, 12, 0.75f, G.grace <= 40 && sinf(G.time * 8) > 0 ? cEmberHi : cGraceHi, C2D_AlignLeft);
+	heartShape(22, 24, 8 + hpPulse * 10, cEmber);
+	snprintf(s, sizeof s, "%d", (int)ceilf(fmaxf(0, G.p.hp))); text(s, 36, 12 - hpPulse * 8, 0.75f + hpPulse, hpPulse > 0 ? cBone : cEmberHi, C2D_AlignLeft);
+	if (G.empty) text("x", 172, 12, 0.75f, cEmber, C2D_AlignCenter); else icon(SPR_GRACE, 172, 24, 22 + gracePulse * 24, 1);
+	snprintf(s, sizeof s, "%d", (int)ceilf(G.grace)); text(s, 186, 12 - gracePulse * 8, 0.75f + gracePulse, gracePulse > 0 ? cBone : (G.grace <= 40 && sinf(G.time * 8) > 0 ? cEmberHi : cGraceHi), C2D_AlignLeft);
 	snprintf(s, sizeof s, "-%.1f/s", drainRate()); text(s, BW - 10, 20, 0.4f, cGrace, C2D_AlignRight);
 	// where
 	const WaveDef *w = &WAVES[G.wave < 0 ? 0 : G.wave];
@@ -942,16 +989,18 @@ static void drawHud(void) {
 	for (int i = 0; i < NB; i++) {
 		Rect r = tileRect(i); int h = G.held[i];
 		panel(r, h ? cStone2 : cInk, h ? tierCol(BUFFS[i].tier) : cLine);
-		text(BUFFS[i].shortName, r.x + r.w / 2, r.y + 9, 0.4f, h ? cBone : alpha(cMuted, 0.5f), C2D_AlignCenter);
-		if (!h) C2D_DrawLine(r.x + 4, r.y + r.h / 2, alpha(cMuted, 0.5f), r.x + r.w - 4, r.y + r.h / 2, alpha(cMuted, 0.5f), 1, 0);
+		icon(i, r.x + r.w / 2, r.y + 12, 20, h ? 1 : 0.25f);
+		text(BUFFS[i].shortName, r.x + r.w / 2, r.y + 22, 0.32f, h ? cBone : alpha(cMuted, 0.5f), C2D_AlignCenter);
+		if (!h) C2D_DrawLine(r.x + 6, r.y + r.h - 6, alpha(cMuted, 0.6f), r.x + r.w - 6, r.y + 5, alpha(cMuted, 0.6f), 1, 0);
 	}
 	// tip or status
 	Rect tr = {4, 158, BW - 8, 52}; panel(tr, cInk, cLine);
 	if (tipBuff >= 0 && tipT > 0) {
 		const Buff *b = &BUFFS[tipBuff];
-		snprintf(s, sizeof s, "%s  (%s)", b->name, TIER_NAME[b->tier]); text(s, 12, 162, 0.45f, cBone, C2D_AlignLeft);
-		if (G.held[tipBuff]) { snprintf(s, sizeof s, "%s  -  upkeep -%.2g/s grace", b->has, TIER_UP[b->tier]); text(s, 12, 182, 0.4f, cGiltHi, C2D_AlignLeft); }
-		else { snprintf(s, sizeof s, "Given up: %s", b->loss); text(s, 12, 182, 0.4f, cMuted, C2D_AlignLeft); }
+		icon(tipBuff, 26, 184, 30, G.held[tipBuff] ? 1 : 0.4f);
+		snprintf(s, sizeof s, "%s  (%s)", b->name, TIER_NAME[b->tier]); text(s, 48, 162, 0.45f, cBone, C2D_AlignLeft);
+		if (G.held[tipBuff]) { snprintf(s, sizeof s, "%s  -  upkeep -%.2g/s", b->has, TIER_UP[b->tier]); text(s, 48, 182, 0.4f, cGiltHi, C2D_AlignLeft); icon(SPR_GRACE, BW - 16, 189, 12, 1); }
+		else { snprintf(s, sizeof s, "Given up: %s", b->loss); text(s, 48, 182, 0.4f, cMuted, C2D_AlignLeft); }
 	} else if (statusT > 0) textWrap(statusMsg, 12, 164, 0.42f, cBone, C2D_AlignLeft, BW - 24);
 	else {
 		text("Tap a blessing to see what it does", 12, 164, 0.4f, cMuted, C2D_AlignLeft);
@@ -972,10 +1021,12 @@ static void drawAltar(void) {
 			snprintf(s, sizeof s, "Grace drain -%.1f/s -> -%.1f/s", drainRate(), rateIf(-1, G.defy + 1)); text(s, r.x + 8, r.y + 40, 0.4f, cEmberHi, C2D_AlignLeft);
 		} else {
 			const Buff *b = &BUFFS[c.buff];
-			snprintf(s, sizeof s, "Lose %s", b->name); text(s, r.x + 8, r.y + 3, 0.55f, cBone, C2D_AlignLeft);
-			snprintf(s, sizeof s, "+%d", TIER_GAIN[b->tier]); text(s, r.x + r.w - 20, r.y + 4, 0.45f, cGrace, C2D_AlignRight); star(r.x + r.w - 11, r.y + 12, 5, 2, -PI / 2, cGrace);
-			text(b->sum, r.x + 8, r.y + 23, 0.42f, cGiltHi, C2D_AlignLeft);
-			snprintf(s, sizeof s, "%s -> %s   drain -%.1f -> -%.1f", b->has, b->loss, drainRate(), rateIf(c.buff, G.defy)); text(s, r.x + 8, r.y + 40, 0.36f, cMuted, C2D_AlignLeft);
+			icon(c.buff, r.x + 22, r.y + r.h / 2, 30, 1);
+			snprintf(s, sizeof s, "Lose %s", b->name); text(s, r.x + 42, r.y + 3, 0.55f, cBone, C2D_AlignLeft);
+			snprintf(s, sizeof s, "+%d", TIER_GAIN[b->tier]); text(s, r.x + r.w - 22, r.y + 4, 0.45f, cGrace, C2D_AlignRight); icon(SPR_GRACE, r.x + r.w - 12, r.y + 12, 14, 1);
+			text(b->sum, r.x + 42, r.y + 23, 0.42f, cGiltHi, C2D_AlignLeft);
+			snprintf(s, sizeof s, "%s -> %s", b->has, b->loss); text(s, r.x + 42, r.y + 40, 0.34f, cMuted, C2D_AlignLeft);
+			snprintf(s, sizeof s, "-%.1f > -%.1f/s", drainRate(), rateIf(c.buff, G.defy)); text(s, r.x + r.w - 6, r.y + 40, 0.34f, cGrace, C2D_AlignRight);
 		}
 	}
 	if (sel >= 0) { button(bConfirm, cards[sel].refuse ? "Refuse the altar (A)" : "Give it up (A)", 1); }
@@ -995,7 +1046,7 @@ static void drawBottom(void) {
 			for (int i = 0; i < 8; i++) text(how[i], 10, 50 + i * 18, 0.4f, cBone, C2D_AlignLeft);
 			button(bHow, "Close", 0);
 		}
-	} else if (state == S_PLAY) drawHud();
+	} else if (state == S_PLAY) { drawHud(); drawFlies(1); }
 	else if (state == S_ALTAR) drawAltar();
 	else if (state == S_STORY) {
 		text(storyAt < nStory - 1 ? "Tap or A to continue" : "Tap or A to go on", BW / 2, 100, 0.5f, cBone, C2D_AlignCenter);
@@ -1032,6 +1083,7 @@ int main(int argc, char **argv) {
 	C3D_Init(C3D_DEFAULT_CMDBUF_SIZE); C2D_Init(C2D_DEFAULT_MAX_OBJECTS * 4); C2D_Prepare();
 	C3D_RenderTarget *topL = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT), *topR = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT), *bot = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
 	tbuf = C2D_TextBufNew(8192);
+	romfsInit(); sheet = C2D_SpriteSheetLoad("romfs:/gfx/sprites.t3x");
 	initColours(); srand((unsigned)osGetTime()); loadBest(); audioInit();
 	newRun(1, 1, 0, 0); startWave(0);
 	int quit = 0;
@@ -1090,6 +1142,8 @@ int main(int argc, char **argv) {
 	}
 	audioExit();
 	C2D_TextBufDelete(tbuf);
+	if (sheet) C2D_SpriteSheetFree(sheet);
+	romfsExit();
 	C2D_Fini(); C3D_Fini(); gfxExit();
 	return 0;
 }
