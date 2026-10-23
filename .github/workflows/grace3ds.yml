@@ -9,6 +9,43 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: devkitpro/devkitarm:latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: Grace3DS
     steps:
       - uses: actions/checkout@v4
-      - run: echo probe && ls $DEVKITPRO
+      - name: CIA tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          (apt-get update && apt-get install -y unzip curl jq) > /dev/null 2>&1 || true
+          mkdir -p /tmp/t && cd /tmp/t
+          api() { curl -sSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$1/releases"; }
+          mr=$(api 3DSGuy/Project_CTR | jq -r '[.[] | .assets[] | select(.name|test("makerom.*(ubuntu|linux).*zip";"i"))][0].browser_download_url')
+          bt=$(api Epicpkmn11/bannertool | jq -r '[.[] | .assets[] | select(.name|test("bannertool.*zip";"i"))][0].browser_download_url')
+          echo "makerom: $mr"; echo "bannertool: $bt"
+          curl -sSL "$mr" -o mr.zip && unzip -oq mr.zip -d mr
+          curl -sSL "$bt" -o bt.zip && unzip -oq bt.zip -d bt
+          MR=$(find mr -type f -name makerom | head -1); BT=$(find bt -type f -path '*linux*' -name bannertool | head -1)
+          [ -z "$BT" ] && BT=$(find bt -type f -name bannertool | head -1)
+          chmod +x "$MR" "$BT"; cp "$MR" /usr/local/bin/makerom; cp "$BT" /usr/local/bin/bannertool
+          makerom -h 2>&1 | head -2 || true
+      - name: Build
+        run: |
+          set -o pipefail
+          mkdir -p out
+          { make all && make cia; } 2>&1 | tee out/build.log
+      - name: Publish
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: grace3ds-ci-${{ github.run_number }}
+          name: Grace 3DS build ${{ github.run_number }}
+          prerelease: true
+          fail_on_unmatched_files: false
+          files: |
+            Grace3DS/out/Grace.cia
+            Grace3DS/out/grace.3dsx
+            Grace3DS/out/build.log
