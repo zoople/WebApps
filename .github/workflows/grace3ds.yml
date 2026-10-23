@@ -72,3 +72,46 @@ jobs:
             Grace3DS/out/grace.3dsx
             Grace3DS/out/build.log
             Grace3DS/out/tools.log
+  emu:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: elf
+          path: out/
+      - name: Emulator screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p shots; exec > >(tee shots/emu.log) 2>&1
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb xdotool imagemagick libfuse2 mesa-utils libgl1-mesa-dri libegl1 libxkbcommon-x11-0 libxcb-cursor0 > /dev/null 2>&1 || true
+          rel=$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/azahar-emu/azahar/releases/latest)
+          echo "$rel" | jq -r '.tag_name, (.assets[].name)'
+          url=$(echo "$rel" | jq -r '[.assets[] | select(.name|test("linux";"i")) | select(.name|test("appimage";"i"))][0].browser_download_url')
+          echo "asset: $url"
+          curl -sSL "$url" -o emu.dl
+          file emu.dl
+          case "$url" in *.tar.gz|*.tgz) mkdir -p ex && tar -xzf emu.dl -C ex && APP=$(find ex -iname '*.AppImage' | head -1);; *.zip) mkdir -p ex && unzip -q emu.dl -d ex && APP=$(find ex -iname '*.AppImage' | head -1);; *) APP=emu.dl;; esac
+          chmod +x "$APP"; "$APP" --appimage-extract > /dev/null; ls squashfs-root | head
+          BIN=$(find squashfs-root -maxdepth 3 -type f -name 'azahar*' -perm -u+x | grep -v room | head -1); echo "BIN=$BIN"
+          export LIBGL_ALWAYS_SOFTWARE=1 QT_QPA_PLATFORM=xcb
+          Xvfb :99 -screen 0 1280x1024x24 & sleep 2; export DISPLAY=:99
+          "$BIN" out/grace.3dsx > shots/azahar.log 2>&1 &
+          sleep 30; import -window root shots/01-title.png
+          key() { xdotool search --onlyvisible --name . windowactivate --sync 2>/dev/null; xdotool keydown "$1"; sleep 0.25; xdotool keyup "$1"; }
+          key a; sleep 3; import -window root shots/02-story.png
+          for i in 1 2 3 4; do key a; sleep 1; done; sleep 4; import -window root shots/03-play.png
+          xdotool keydown Up; sleep 2; xdotool keyup Up; sleep 6; import -window root shots/04-play.png
+          key m; sleep 2; import -window root shots/05-pause.png
+          tail -40 shots/azahar.log || true
+      - name: Publish shots
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: grace3ds-ci-${{ github.run_number }}
+          name: Grace 3DS build ${{ github.run_number }}
+          prerelease: true
+          fail_on_unmatched_files: false
+          files: shots/*
