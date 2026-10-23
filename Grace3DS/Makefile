@@ -16,6 +16,10 @@ BANNERTOOL ?= bannertool
 
 all: out/grace.3dsx
 
+out/romfs/gfx/sprites.t3x: gfx/sprites.t3s $(wildcard gfx/*.png)
+	mkdir -p out/romfs/gfx
+	cd gfx && $(TOOLS)/tex3ds -i sprites.t3s -o ../out/romfs/gfx/sprites.t3x
+
 out/grace.elf: source/main.c
 	mkdir -p out
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) $(LIBS)
@@ -23,11 +27,11 @@ out/grace.elf: source/main.c
 out/grace.smdh: assets/icon.png
 	$(TOOLS)/smdhtool --create "$(TITLE)" "$(DESC)" "$(AUTHOR)" $< $@
 
-out/grace.3dsx: out/grace.elf out/grace.smdh
-	$(TOOLS)/3dsxtool $< $@ --smdh=out/grace.smdh
+out/grace.3dsx: out/grace.elf out/grace.smdh out/romfs/gfx/sprites.t3x
+	$(TOOLS)/3dsxtool $< $@ --smdh=out/grace.smdh --romfs=out/romfs
 
 cia:
-	test -f out/grace.elf
+	test -f out/grace.elf && test -f out/romfs/gfx/sprites.t3x
 	$(BANNERTOOL) makebanner -i assets/banner.png -a assets/banner.wav -o out/banner.bnr
 	$(BANNERTOOL) makesmdh -s "$(TITLE)" -l "$(DESC)" -p "$(AUTHOR)" -i assets/icon.png -o out/icon.smdh
 	$(MAKEROM) -f cia -o out/Grace.cia -elf out/grace.elf -rsf grace.rsf -icon out/icon.smdh -banner out/banner.bnr -exefslogo -target t
