@@ -57,6 +57,11 @@ button{font:inherit;cursor:pointer}
 .say .face{flex:none;width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;background:radial-gradient(#fff6d8,#e5c682);border:3px solid #7a5530;box-shadow:inset 0 -5px 8px rgba(120,70,10,.3),0 3px 6px rgba(0,0,0,.3)}
 .say .who{font-weight:800;font-family:Georgia,serif;font-size:19px}
 .say .txt{background:rgba(255,255,255,.6);border:2px solid #7a5530;border-radius:14px;padding:10px 12px;line-height:1.45}
+.bubble{position:relative;margin-top:10px;background:#fffaf0;border:3px solid #7a5530;border-radius:18px;padding:14px 16px 22px;min-height:96px;font-size:18px;line-height:1.45;cursor:pointer;animation:bpop .22s ease-out}
+.bubble::before{content:"";position:absolute;left:30px;top:-12px;width:20px;height:20px;background:#fffaf0;border-left:3px solid #7a5530;border-top:3px solid #7a5530;transform:rotate(45deg)}
+.bubble .dots{position:absolute;left:0;right:0;bottom:6px;display:flex;gap:5px;justify-content:center}
+.bubble .dots i{width:7px;height:7px;border-radius:50%;background:rgba(122,85,48,.3)}.bubble .dots i.on{background:#b8851a;transform:scale(1.25)}
+@keyframes bpop{from{transform:scale(.96);opacity:.4}}
 .goalbox{margin-top:12px;padding:9px 11px;border-radius:10px;background:rgba(232,178,48,.3);border:1px solid rgba(184,133,26,.6);font-weight:700}
 #bag span.it{display:inline-flex;gap:3px;align-items:center}
 .badge{display:inline-block;min-width:18px;height:18px;border-radius:9px;background:#e0412f;color:#fff;font-size:11px;line-height:18px;text-align:center;padding:0 4px}
@@ -342,7 +347,7 @@ ul.perks{margin:6px 0;padding-left:20px;font-size:14px}ul.perks li{margin:2px 0}
    HARVEST HOLLOW — a walkable village meta-game wrapping two mini-games
    (Nuts & Bolts sorting + Bean Harvest cards). Single file, no assets.
    ===================================================================== */
-const VERSION='v29 · 23 Oct 2026';
+const VERSION='v30 · 23 Oct 2026';
 const $=(s,r=document)=>r.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -929,7 +934,9 @@ function restStick(){const z=$('#stickzone'),b=$('#stick');if(z&&b&&z.clientHeig
 const talkBtn=$('#talkBtn');
 function updateTalk(){
   const n=!paused()&&NPCS.find(n=>Math.abs(n.x-P.x)<=1&&Math.abs(n.y-P.y)<=1);
+  const cb=!paused()&&!n&&BLD.find(b=>!isOpen(b)&&Math.abs(b.door[0]-P.x)+Math.abs(b.door[1]-P.y)<=1);
   if(n){talkBtn.style.display='block';if(talkBtn._id!==n.id){talkBtn._id=n.id;talkBtn.textContent=`💬 Talk to ${CAST[n.id].short}`}}
+  else if(cb){talkBtn.style.display='block';const id='door:'+cb.id;if(talkBtn._id!==id){talkBtn._id=id;talkBtn.textContent='🔍 Inspect the door'}}
   else talkBtn.style.display='none';
 }
 talkBtn.onclick=()=>talkTo(talkBtn._id);
@@ -938,7 +945,7 @@ addEventListener('keydown',e=>{if((e.key==='e'||e.key==='E'||e.key==='Enter')&&t
 /* ---- arrival effects ---- */
 function onArrive(){
   const b=doorAt[P.x+','+P.y];if(!b)return;
-  if((b.kind==='barn'||b.kind==='craft')&&!isOpen(b)){P.lastDoor=b.id;held.length=0;P.path=[];openRepair(b);return}
+  if(!isOpen(b))return;
   if(b.kind==='barn'||b.kind==='craft')P.xfer={b,phase:'in',t:.15,n:0,put:0,took:0,full:false,bagFull:false};
 }
 /* ---- unloading / loading happens one item at a time ---- */
@@ -988,7 +995,7 @@ function finishXfer(){
 // game halls and the quest board open once you come to rest on their mat
 function idleDoor(){
   const b=doorAt[P.x+','+P.y];
-  if(!b||!(b.kind==='game'||b.kind==='board')||P.lastDoor===b.id)return;
+  if(!b||!isOpen(b)||!(b.kind==='game'||b.kind==='board')||P.lastDoor===b.id)return;
   P.lastDoor=b.id;held.length=0;P.path=[];b.kind==='board'?openQuests():openBuilding(b);
 }
 /* ---- update ---- */
@@ -1075,7 +1082,7 @@ function buildGround(){
       [[0,-1,x*TS,y*TS,TS,6],[0,1,x*TS,y*TS+TS-6,TS,6],[-1,0,x*TS,y*TS,6,TS],[1,0,x*TS+TS-6,y*TS,6,TS]].forEach(([dx,dy,rx,ry,rw,rh])=>{
         if(ng(dx,dy)!==2){g.fillStyle='rgba(235,250,255,.55)';g.fillRect(rx,ry,rw,rh);g.fillStyle='rgba(235,250,255,.25)';g.fillRect(dx?rx+(dx>0?-3:3):rx,dy?ry+(dy>0?-3:3):ry,dx?3:rw,dy?3:rh)}});
     }
-    if(t===3){g.drawImage(SP.mat,x*TS,y*TS)}
+    if(t===3&&isOpen(doorAt[x+','+y])){g.drawImage(SP.mat,x*TS,y*TS)}
   }
   // soft cast shadows (sun from the upper left)
   BLD.forEach(b=>{
@@ -1085,7 +1092,6 @@ function buildGround(){
   });
   groundC=c;
 }
-buildGround();
 
 /* ---- entities ---- */
 const ents=[];
@@ -1157,7 +1163,7 @@ function render(time){
     const t=grid[y][x];
     if(t===2){for(let k=0;k<2;k++){const ph=time*.9+hash(x,y,k)*6.28+k*2;const yy=y*TS+10+k*22+Math.sin(ph)*3,xx=x*TS+8+((Math.sin(ph*.7)+1)*10);
       g.strokeStyle=`rgba(255,255,255,${.18+.12*Math.sin(ph)})`;g.lineWidth=2;g.beginPath();g.moveTo(xx,yy);g.quadraticCurveTo(xx+8,yy-3,xx+16,yy);g.stroke()}}
-    else if(t===3){const p=(Math.sin(time*3)+1)/2;g.strokeStyle=`rgba(255,235,150,${.35+.5*p})`;g.lineWidth=2.5;g.beginPath();g.roundRect(x*TS+3,y*TS+3,TS-6,TS-6,9);g.stroke()}
+    else if(t===3&&isOpen(doorAt[x+','+y])){const p=(Math.sin(time*3)+1)/2;g.strokeStyle=`rgba(255,235,150,${.35+.5*p})`;g.lineWidth=2.5;g.beginPath();g.roundRect(x*TS+3,y*TS+3,TS-6,TS-6,9);g.stroke()}
   }
   // entities + player depth-sorted
   let drewP=false;const pby=P.py+TS/2+2;
@@ -1173,7 +1179,7 @@ function render(time){
   for(const b of BLD){
     if(b.x<x0-3||b.x>x1+1||b.y<y0-2||b.y>y1)continue;
     const cx=b.x*TS+72;
-    if(!isOpen(b)){bubble(g,cx,b.y*TS-6,'🔒 Closed · repair me 🔨');continue}
+    if(!isOpen(b)){bubble(g,cx,b.y*TS-6,'🔒 Closed · inspect the door');continue}
     if(b.kind==='craft'){
       const s=stn(b.id),need=Object.values(b.in)[0],item=Object.keys(b.in)[0];
       const ready=s.out>0;
@@ -1653,24 +1659,24 @@ function openMenu(){
 }
 
 /* ---- boarded-up buildings: repair them to bring the Hollow back to life ---- */
-function openRepair(b){
+function openRepair(b){inspectDoor(b)}
+function inspectDoor(b){
   const rc=R_COST[b.id];if(!rc)return;
-  const who=CAST[R_WHO[b.id]],ix=repairStep(b.id),ready=ix<0||S.story>=ix;
+  held.length=0;P.path=[];
+  const ix=repairStep(b.id),ready=ix<0||S.story>=ix;
   const have=k=>rc.carry?(S.carry[k]||0):(S.store[k]||0);
-  const costs=Object.entries(rc.items).map(([k,v])=>`<span class="cost ${have(k)>=v?'':'no'}">${ITEMS[k].e} ${v} <small>(${have(k)})</small></span>`).join('');
   const ok=ready&&Object.entries(rc.items).every(([k,v])=>have(k)>=v);
-  openModal(`<div class="bhead"><div class="bicon">🔒</div><div><h2>${b.name}</h2><span class="lvl">Boarded up</span></div></div>
-    <div class="say" style="margin:10px 0"><div class="face" style="width:56px;height:56px;font-size:32px">${who.face}</div><div style="flex:1"><div class="who" style="font-size:15px">${who.name}</div><div class="txt" style="font-size:14px">${bullets(R_SAY[b.id])}</div></div></div>
-    <b>Repair needs</b> <span class="muted">(${rc.carry?'from your 🎒 backpack':'from your Barn storage'}):</span><div style="margin:6px 0">${costs}</div>
-    ${ready?'':'<div class="muted">Not yet. Follow the story and this one is next in line.</div>'}
-    <button class="btn green" data-rep ${ok?'':'disabled'}>🔨 Repair</button>`);
-  const bt=$('#modal [data-rep]');
-  bt.onclick=()=>{
-    if(!ok)return;
-    for(const[k,v]of Object.entries(rc.items)){if(rc.carry)S.carry[k]-=v;else S.store[k]-=v}
-    S.rep[b.id]=1;stat('repair_'+b.id);sfx.win();burst(b.x*TS+72,(b.y+2)*TS,['#ffe27a','#fff6c8','#8ad66a'],26,90,90,.9,3.4);
-    toast(`🔨 ${b.name} is open again!`);closeModal();save(true);hud();checkStory();
-  };
+  const costs=Object.entries(rc.items).map(([k,v])=>`<span class="cost ${have(k)>=v?'':'no'}">${ITEMS[k].e} ${v} <small>(${have(k)})</small></span>`).join('');
+  showDialog(R_WHO[b.id],R_SAY[b.id],{
+    extra:ready?`<div style="margin-top:10px"><b>🔨 Repair</b> <span class="muted">(${rc.carry?'from your 🎒':'from your Barn'}):</span> ${costs}</div>`:`<div class="muted" style="margin-top:10px">Not yet. Follow the story and this one is next in line.</div>`,
+    buttons:ready?`<button class="btn green" id="dlgRep" ${ok?'':'disabled'}>🔨 Repair</button>`:'',okText:ready?'Not now':'Got it!',
+    wire:box=>{const bt=box.querySelector('#dlgRep');if(bt)bt.onclick=()=>{
+      if(!ok)return;
+      for(const[k,v]of Object.entries(rc.items)){if(rc.carry)S.carry[k]-=v;else S.store[k]-=v}
+      S.rep[b.id]=1;stat('repair_'+b.id);sfx.win();burst(b.x*TS+72,(b.y+2)*TS,['#ffe27a','#fff6c8','#8ad66a'],26,90,90,.9,3.4);
+      toast(`🔨 ${b.name} is open again!`);closeModal();buildGround();save(true);hud();checkStory();
+    }}
+  });
 }
 /* =====================================================================
    STORY + GUIDANCE — three characters walk you through the game
@@ -1693,7 +1699,7 @@ const R_COST={
 };
 const R_WHO={barn:'granny',sawmill:'granny',kiln:'granny',jam:'granny',bakery:'granny',bolt:'tess',card:'bram',lights:'lena',match:'mabel',watch:'rowan'};
 const R_SAY={
-  barn:["The Barn is boarded up. It's the heart of the Hollow.","Patch it with 🪵 wood from your backpack.","Step on the mat and press 🔨 Repair."],
+  barn:["The Barn is boarded up. It's the heart of the Hollow.","Patch it with 🪵 wood from your backpack."],
   sawmill:["The Sawmill's saw is rusted solid.","New beams need 🪵 wood from your Barn.","Fix it and we can make planks."],
   kiln:["The Kiln's chimney collapsed.","Rebuild it with 🪨 stone and a 🟫 plank.","Then it can fire bricks again."],
   bolt:["My workshop is boarded up and the machines are jammed.","Bring planks and a brick to fix the door.","Then I'll pay you to sort the nuts!"],
@@ -1716,7 +1722,7 @@ function repairAct(id){
   const b=bldBy(id),rc=R_COST[id];
   if(S.rep[id])return null;
   if(rc.carry){
-    if((S.carry.wood||0)>=rc.items.wood)return doorT(b,'🔨','Step on the Barn mat and press 🔨 Repair');
+    if((S.carry.wood||0)>=rc.items.wood)return doorT(b,'🔨','Inspect the Barn door 🔍 and press 🔨 Repair');
     return carryN()>=S.cap?null:gatherT('tree');
   }
   for(const[k,v]of Object.entries(rc.items)){
@@ -1725,24 +1731,24 @@ function repairAct(id){
       return needStore(k,v);
     }
   }
-  return doorT(b,'🔨',`Step on the ${b.name} mat and press 🔨 Repair`);
+  return doorT(b,'🔨',`Inspect the ${b.name} door 🔍 and press 🔨 Repair`);
 }
 const STORY=[
   {k:'hear',heard:1,who:'granny',goal:'Talk to Granny Marigold 👵 (she is just below you)',done:()=>sget('heard')>=1,unlock:['tree'],r:{coins:5},
    act:()=>({text:'Walk up to Granny Marigold and press 💬 Talk',t:{x:16,y:11,icon:'👵',label:'Granny'}}),
    say:["Welcome home! Grandpa Alder left you Harvest Hollow.", "But the <b>Gloom</b> crept in from the Wilds and put the whole village to sleep.", "Every house is boarded up, and the trees, rocks and bushes are tangled in gloom.", "Here's Grandpa's old 🪓 axe. The 🌳 trees will answer to it. Let's wake the Hollow up, one thing at a time."]},
   {k:'chop',who:'granny',goal:'Chop 4 wood: walk onto a tree 🌳 and stand still',prog:()=>[sget('g_wood'),4],done:()=>sget('g_wood')>=4,r:{coins:5},
-   act:()=>carryN()>=S.cap?barnT('Backpack full. Step on the Barn mat'):gatherT('tree'),
+   act:()=>carryN()>=S.cap?barnT('Backpack full. Inspect the Barn door 🔍'):gatherT('tree'),
    say:["Chopping costs 1 ⚡ energy each time.","We need wood to patch up the old Barn first.","Walk onto a 🌳 tree and stand still. Follow the yellow 🧭 arrow."]},
-  {k:'rbarn',repair:'barn',who:'granny',goal:'Repair the Barn 📦: step on its red mat and press 🔨 Repair (uses 🪵4 from your backpack)',done:()=>!!S.rep.barn,r:{coins:5},
+  {k:'rbarn',repair:'barn',who:'granny',goal:'Repair the Barn 📦: inspect its door 🔍 and press 🔨 Repair (uses 🪵4 from your backpack)',done:()=>!!S.rep.barn,r:{coins:5},
    act:()=>repairAct('barn'),
-   say:["The 📦 Barn is the heart of the Hollow. Everything we own is kept there.","It's boarded up. Patch it with 🪵 wood straight from your backpack.","Step on the red mat in front of it and press 🔨 Repair."]},
+   say:["The 📦 Barn is the heart of the Hollow. Everything we own is kept there.","It's boarded up. Patch it with 🪵 wood straight from your backpack.","Walk up to the door and 🔍 inspect it when you're ready."]},
   {k:'drop',who:'granny',goal:'Chop and store 4 wood in the Barn 📦',prog:()=>[sget('st_wood'),4],done:()=>sget('st_wood')>=4,r:{coins:5},
    act:()=>carryN()>0?barnT('Step on the red mat in front of the Barn to store your goods'):gatherT('tree'),
    say:["The Barn is open again!","Your 🎒 backpack is small. Anything in the Barn is safe and ready to use.","Store 4 wood. We'll fix the Sawmill next."]},
   {k:'rsaw',repair:'sawmill',who:'granny',goal:'Repair the Sawmill 🪚 (🪵4 from your Barn)',done:()=>!!S.rep.sawmill,r:{coins:5},
    act:()=>repairAct('sawmill'),
-   say:["The Sawmill's saw is rusted solid.","New beams need 🪵 wood from your Barn.","Step on the Sawmill mat and press 🔨 Repair."]},
+   say:["The Sawmill's saw is rusted solid.","New beams need 🪵 wood from your Barn.","Walk up to the door and 🔍 inspect it when you're ready."]},
   {k:'plank',who:'granny',goal:'Make 1 plank at the Sawmill, then store it in the Barn 🟫',done:()=>stored('plank'),unlock:['rock','crystal'],r:{coins:5},
    act:()=>supply('plank'),
    say:["Planks mend roofs and build the defences we'll need soon.","The Sawmill turns 2 wood into 1 plank.","Step on its mat to feed it, wait a few seconds, then step on again to collect.","Store the plank in the Barn. I'll find you Grandpa's ⛏️ pickaxe for a reward."]},
@@ -1751,13 +1757,13 @@ const STORY=[
    say:["The pickaxe unlocked the ⛰️ rocks, and the blue 💎 crystals south of the trail.","Crystals give back ⚡ energy when you mine them.","Mine 4 stone out east and store it. The old Kiln needs it."]},
   {k:'rkiln',repair:'kiln',who:'granny',goal:'Repair the Brick Kiln 🔥 (🪨4 + 🟫1 from your Barn)',done:()=>!!S.rep.kiln,r:{coins:5},
    act:()=>repairAct('kiln'),
-   say:["The Kiln's chimney collapsed.","Rebuild it with 🪨 stone and a 🟫 plank.","Step on its mat and press 🔨 Repair."]},
+   say:["The Kiln's chimney collapsed.","Rebuild it with 🪨 stone and a 🟫 plank.","Walk up to the door and 🔍 inspect it when you're ready."]},
   {k:'brick',who:'granny',goal:'Make 1 brick at the Brick Kiln (needs 2 stone ⛏️), then store it 🧱',done:()=>stored('brick'),r:{coins:10},
    act:()=>supply('brick'),
    say:["Bricks make walls the Gloom can't chew through.","Mine 2 stone, feed the Brick Kiln, then collect.","Store it in the Barn. Planks and bricks pay for repairs and upgrades.","The Quest Board by my cottage has bounties too."]},
   {k:'rbolt',repair:'bolt',who:'tess',goal:'Repair the Bolt Works ⚙️ (🟫2 + 🧱1 from your Barn)',done:()=>!!S.rep.bolt,r:{coins:10},
    act:()=>repairAct('bolt'),
-   say:["I'm Tess! The Gloom jammed my machines and boarded my workshop.","The workshops are how the Hollow earns <b>coins</b>.","Bring 🟫 planks and a 🧱 brick to fix the door, then step on the red mat and press 🔨 Repair."]},
+   say:["I'm Tess! The Gloom jammed my machines and boarded my workshop.","The workshops are how the Hollow earns <b>coins</b>.","Bring 🟫 planks and a 🧱 brick to fix the door, then 🔍 inspect my door."]},
   {k:'bolt1',who:'tess',goal:'Solve a puzzle at the Bolt Works ⚙️ (the blue building)',prog:()=>[sget('boltWins'),1],done:()=>sget('boltWins')>=1,r:{coins:10},
    act:()=>doorT(bldBy('bolt'),'⚙️','Step on the red mat under the Bolt Works, then press ▶ Play'),
    say:["You did it! The doors open.","Press ▶ Play (costs ⚡1).","Sort the nuts so each rod holds one colour. I pay for every puzzle!"]},
@@ -1766,7 +1772,7 @@ const STORY=[
    say:["A better workshop pays more coins per puzzle.","An upgrade costs coins + planks + bricks from your Barn.","You also get more undos, hints and a spare rod.","Open the Bolt Works and press ⬆ Upgrade."]},
   {k:'rcard',repair:'card',who:'bram',goal:'Repair the Card Barn 🃏 (🟫2 + 🧱2 from your Barn)',done:()=>!!S.rep.card,r:{coins:10},
    act:()=>repairAct('card'),
-   say:["Bram here! The Card Barn's roof fell in last winter.","Planks and bricks will make it snug again.","Step on the red mat and press 🔨 Repair."]},
+   say:["Bram here! The Card Barn's roof fell in last winter.","Planks and bricks will make it snug again.","Walk up to the door and 🔍 inspect it when you're ready."]},
   {k:'card1',who:'bram',goal:'Finish a Bean Harvest game at the Card Barn 🃏 (purple roof)',prog:()=>[sget('cardGames'),1],done:()=>sget('cardGames')>=1,r:{coins:10},
    act:()=>doorT(bldBy('card'),'🃏','Step on the red mat under the Card Barn, then press ▶ Play'),
    say:["The Gloom spoils crops, so we trade beans to stay fed.","At the Card Barn we play Bean Harvest: plant crops, harvest them for coins.","Press ▶ Play. Tap ❓ in the game for the rules."]},
@@ -1837,12 +1843,28 @@ function updateGoal(){
 }
 const bullets=t=>Array.isArray(t)?`<ul class="blt">${t.map(x=>`<li>${x}</li>`).join('')}</ul>`:t;
 function showSay(who,text,opts={}){
-  const c=CAST[who],st=curStep();
-  openModal(`<div class="say"><div class="face">${c.face}</div><div style="flex:1"><div class="who">${c.name}</div><div class="muted" style="margin-bottom:6px">${c.role}</div>
-    <div class="txt">${bullets(text)}</div></div></div>
-    ${st&&!opts.noGoal?`<div class="goalbox">📍 Your goal: ${st.goal}</div>`:''}
-    <div style="text-align:right;margin-top:12px"><button class="btn green" id="sayOk">Got it!</button></div>`);
-  $('#sayOk').onclick=()=>{closeModal();const s2=curStep();if(s2&&s2.heard&&s2.who===who)stat('heard')};
+  const st=curStep();
+  showDialog(who,Array.isArray(text)?text:[text],{
+    goal:st&&!opts.noGoal?st.goal:null,
+    done:()=>{const s2=curStep();if(s2&&s2.heard&&s2.who===who)stat('heard')}
+  });
+}
+// one speech bubble at a time: tap to go on; the last page can carry buttons
+function showDialog(who,lines,opts={}){
+  const c=CAST[who],pages=lines.slice();let i=0;
+  openModal(`<div id="dlg"></div>`);
+  const draw=()=>{
+    const last=i===pages.length-1,box=$('#dlg');if(!box)return;
+    box.innerHTML=`<div class="say"><div class="face">${c.face}</div><div style="flex:1;min-width:0"><div class="who">${c.name}</div><div class="muted">${c.role}</div></div></div>
+      <div class="bubble" id="dlgB"><div class="btxt">${pages[i]}</div><div class="dots">${pages.map((_,k)=>`<i class="${k===i?'on':''}"></i>`).join('')}</div></div>
+      ${last&&opts.goal?`<div class="goalbox">📍 Your goal: ${opts.goal}</div>`:''}
+      ${last&&opts.extra?opts.extra:''}
+      <div style="text-align:right;margin-top:12px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">${last&&opts.buttons?opts.buttons:''}<button class="btn green" id="dlgNext">${last?(opts.okText||'Got it!'):'Next ▸'}</button></div>`;
+    const next=()=>{if(!last){i++;sfx.click();draw()}else{closeModal();if(opts.done)opts.done()}};
+    $('#dlgNext').onclick=next;$('#dlgB').onclick=()=>{if(!last)next()};
+    if(last&&opts.wire)opts.wire(box);
+  };
+  draw();
 }
 function storyPrompt(){
   // auto-show the current step's speech once, when nothing else is open
@@ -1852,6 +1874,7 @@ function storyPrompt(){
 }
 function talkTo(id){
   held.length=0;P.path=[];
+  if(String(id).startsWith('door:')){inspectDoor(bldBy(id.slice(5)));return}
   const st=curStep(),c=CAST[id];
   if(st&&st.who===id){showSay(id,st.say);return}
   const chat={
@@ -2054,7 +2077,7 @@ function askReset(){
 }
 function resetGame(){
   try{localStorage.removeItem(SAVE_KEY)}catch(e){}
-  S=defState();
+  S=defState();buildGround();
   nodes.forEach(n=>{n.ch=NODE_T[n.type].max;n.t=0});
   P.x=P.tx=17;P.y=P.ty=8;P.moving=false;P.path=[];P.lastDoor=null;held.length=0;
   closeModal();save(true);toast('🌱 Fresh start!');
@@ -3755,6 +3778,7 @@ addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
 load();
 migrateSave();
 checkStory(true);
+buildGround();
 setInterval(()=>save(true),8000);
 addEventListener('visibilitychange',()=>{if(document.hidden){flushFlyers();save(true);try{if(AC&&AC.state==='running')AC.suspend()}catch(e){}}else{try{if(AC&&AC.state==='suspended')AC.resume()}catch(e){}}});
 addEventListener('beforeunload',()=>{flushFlyers();save(true)});
