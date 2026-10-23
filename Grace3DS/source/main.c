@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "v3 - 23 Oct 2026"
+#define VERSION "v4 - 23 Oct 2026"
 #ifdef HOSTTEST
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -258,8 +258,10 @@ static char statusMsg[160]; static float statusT = 0;
 typedef struct { s16 *data; u32 n; } Snd;
 enum { SND_SHOOT, SND_HIT, SND_KILL, SND_HURT, SND_SHIELD, SND_CHIME, SND_HEAL, SND_GONG, SND_SHATTER, SND_TICK, SND_DEATH, SND_ASCEND, SND_EBOLT, SND_NAV, SND_PICK, NSND };
 static Snd snds[NSND]; static Snd music;
+// channel 0 is music; 1..NCH-1 play effects. A buffer is only ever re-queued once the DSP has finished with it.
+#define NCH 16
 static int audioOK = 0, sfxCh = 1;
-static ndspWaveBuf wbMusic, wbSfx[8];
+static ndspWaveBuf wbMusic, wbSfx[NCH];
 static float sfxLast[NSND];
 
 static float midi(float m) { return 440.0f * powf(2.0f, (m - 69) / 12.0f); }
@@ -304,14 +306,15 @@ static float f_music(float t, int i) {
 	v += 0.05f * envAD(ts, 0.01f, 0.9f) * sinf(2 * PI * midi(MEL[step]) * t);
 	return v;
 }
+static void chnSetup(int ch) {
+	ndspChnReset(ch); ndspChnSetInterp(ch, NDSP_INTERP_LINEAR); ndspChnSetRate(ch, SR); ndspChnSetFormat(ch, NDSP_FORMAT_MONO_PCM16);
+	float mix[12] = {0}; mix[0] = mix[1] = ch == 0 ? 0.55f : 0.8f; ndspChnSetMix(ch, mix);
+}
 static void audioInit(void) {
 	if (R_FAILED(ndspInit())) return;
 	audioOK = 1;
 	ndspSetOutputMode(NDSP_OUTPUT_STEREO);
-	for (int ch = 0; ch < 8; ch++) {
-		ndspChnReset(ch); ndspChnSetInterp(ch, NDSP_INTERP_LINEAR); ndspChnSetRate(ch, SR); ndspChnSetFormat(ch, NDSP_FORMAT_MONO_PCM16);
-		float mix[12] = {0}; mix[0] = mix[1] = ch == 0 ? 0.55f : 0.8f; ndspChnSetMix(ch, mix);
-	}
+	for (int ch = 0; ch < NCH; ch++) chnSetup(ch);
 	render(&snds[SND_SHOOT], 0.07f, f_shoot); render(&snds[SND_HIT], 0.06f, f_hit); render(&snds[SND_KILL], 0.25f, f_kill);
 	render(&snds[SND_HURT], 0.4f, f_hurt); render(&snds[SND_SHIELD], 0.6f, f_shield); render(&snds[SND_CHIME], 0.6f, f_chime);
 	render(&snds[SND_HEAL], 0.5f, f_heal); render(&snds[SND_GONG], 2.4f, f_gong); render(&snds[SND_SHATTER], 1.0f, f_shatter);
@@ -329,8 +332,14 @@ static void sfx(int id) {
 	float now = osGetTime() / 1000.0f;
 	if (id <= SND_HIT || id == SND_EBOLT || id == SND_TICK) { if (now - sfxLast[id] < 0.06f && now >= sfxLast[id]) return; }
 	sfxLast[id] = now;
-	int ch = sfxCh; sfxCh = sfxCh % 7 + 1;
-	ndspChnWaveBufClear(ch);
+	// find a channel whose last buffer the DSP has finished with
+	int ch = -1;
+	for (int k = 0; k < NCH - 1; k++) {
+		int c = 1 + (sfxCh - 1 + k) % (NCH - 1);
+		if (wbSfx[c].status == NDSP_WBUF_FREE || wbSfx[c].status == NDSP_WBUF_DONE) { ch = c; break; }
+	}
+	if (ch < 0) return;   // all 15 busy (never seen past 6): skip rather than clear a channel mid-play, which can jam it
+	sfxCh = ch % (NCH - 1) + 1;
 	memset(&wbSfx[ch], 0, sizeof(ndspWaveBuf)); wbSfx[ch].data_vaddr = snds[id].data; wbSfx[ch].nsamples = snds[id].n;
 	ndspChnWaveBufAdd(ch, &wbSfx[ch]);
 }
