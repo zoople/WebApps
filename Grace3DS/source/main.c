@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "v6 - 23 Oct 2026"
+#define VERSION "v7 - 26 Oct 2026"
 #ifdef HOSTTEST
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -23,13 +23,14 @@
 
 // ------------------------------------------------------------------ colours
 #define RGBA(r, g, b, a) C2D_Color32(r, g, b, a)
-static u32 cInk, cStone, cStone2, cLine, cBone, cMuted, cGilt, cGiltHi, cGilt2, cGilt3, cEmber, cEmberHi, cEmber2, cAcid, cGrace, cGraceHi, cGrace2;
+static u32 cAegis, cAegisHi, cAegis2, cInk, cStone, cStone2, cLine, cBone, cMuted, cGilt, cGiltHi, cGilt2, cGilt3, cEmber, cEmberHi, cEmber2, cAcid, cGrace, cGraceHi, cGrace2;
 static void initColours(void) {
 	cInk = RGBA(11, 13, 20, 255);    cStone = RGBA(23, 26, 38, 255);  cStone2 = RGBA(34, 39, 56, 255);
 	cLine = RGBA(52, 58, 82, 255);   cBone = RGBA(243, 236, 217, 255); cMuted = RGBA(154, 157, 178, 255);
 	cGilt = RGBA(227, 178, 87, 255); cGiltHi = RGBA(255, 240, 194, 255); cGilt2 = RGBA(168, 121, 44, 255); cGilt3 = RGBA(94, 63, 18, 255);
 	cEmber = RGBA(229, 83, 63, 255); cEmberHi = RGBA(255, 154, 122, 255); cEmber2 = RGBA(125, 34, 25, 255);
 	cAcid = RGBA(162, 124, 240, 255);
+	cAegis = RGBA(80, 165, 255, 255); cAegisHi = RGBA(170, 215, 255, 255); cAegis2 = RGBA(22, 52, 102, 255);
 	cGrace = RGBA(246, 196, 69, 255); cGraceHi = RGBA(255, 240, 166, 255); cGrace2 = RGBA(122, 88, 16, 255);
 }
 static u32 alpha(u32 c, float a) { u32 al = (u32)(fmaxf(0, fminf(1, a)) * 255); return (c & 0x00FFFFFF) | (al << 24); }
@@ -86,10 +87,10 @@ static const Buff BUFFS[NB] = {
 	{"aim", "True Aim", "Aim", "Aim where you face", "Auto-aims", "Aims where you face", T_L},
 	{"float", "Featherstep", "Feather", "Hazards will hurt you", "Hazards ignore you", "Hazards hurt", T_L},
 	{"homing", "Seeker Shots", "Seeker", "Your shots will fly straight", "Shots curve in", "Shots fly straight", T_R},
-	{"aegis", "Aegis", "Aegis", "Every hit will land on you", "3-hit shield", "No shield", T_R},
+	{"aegis", "Aegis", "Aegis", "Every hit will land on you", "Shield as big as your health", "No shield", T_R},
 	{"slow", "Stillwater", "Still", "Enemy shots will fly twice as fast", "Slow enemy shots", "Full-speed shots", T_R},
 	{"ward", "Premonition", "Omen", "Attacks will come with less warning", "Long warnings", "Short warnings", T_R},
-	{"twin", "Trident", "Trident", "Fire one shot at a time", "3 shots", "1 shot", T_C},
+	{"twin", "Trident", "Trident", "One shot at a time, hitting twice as hard", "3 shots", "1 shot, 2x damage", T_C},
 	{"might", "Might", "Might", "Your damage will be halved", "2x damage", "1x damage", T_C},
 	{"haste", "Quickdraw", "Quick", "Fire more slowly", "Fast fire", "Normal fire", T_C},
 	{"vigor", "Vigor", "Vigor", "Your max health will be halved", "200 HP + regen", "100 HP, no regen", T_C},
@@ -210,7 +211,7 @@ typedef struct { int floor; float t, spent; int gave, gain; } Split;
 #define MAXB 96
 #define MAXEB 220
 #define MAXE 40
-#define MAXP 400
+#define MAXP 700
 #define MAXPK 12
 #define MAXSH 16
 #define MAXPL 16
@@ -228,22 +229,24 @@ static struct {
 	Bullet pb[MAXB]; EBullet eb[MAXEB]; Enemy en[MAXE]; Pickup pk[MAXPK]; Shell sh[MAXSH]; Pool pl[MAXPL]; Part fx[MAXP]; Num nums[MAXN];
 	Wall walls[2]; int nwalls; Spike spikes[4]; int nspikes;
 	int empty, graceOut;
+	float boomT, boomX, boomY, boomNext;   // Warden death celebration
 	float featherT, featherCd;   // Featherstep saved you: show it
 	Split splits[16]; int nsplits;
 } G;
 static int state = S_TITLE, prevState = S_PLAY;
 // pickups fly from the arena down to their counter on the touch screen.
 // One combined coordinate space: the touch screen sits below the top screen, 40 px in from its left edge.
-typedef struct { float x0, y0, t, delay; int heart, on; } Fly;
+typedef struct { float x0, y0, t, delay; int heart, on, blue; } Fly;
 #define MAXFLY 32
 static Fly flies[MAXFLY];
-static float gracePulse = 0, hpPulse = 0, hpFullT = 0;
+static float gracePulse = 0, hpPulse = 0, hpFullT = 0, shFullT = 0, shPulse = 0;
 #define GRACE_TX (40 + 172.0f)
 #define GRACE_TY (240 + 24.0f)
 #define HP_TX (40 + 22.0f)
 #define HP_TY (240 + 24.0f)
+static int aegisHeld(void);
 static void spawnFlies(float x, float y, int heart) {
-	for (int k = 0, n = 0; k < MAXFLY && n < 5; k++) if (!flies[k].on) { flies[k] = (Fly){x + frand(-6, 6), y + frand(-6, 6), 0, n * 0.05f, heart, 1}; n++; }
+	for (int k = 0, n = 0; k < MAXFLY && n < 5; k++) if (!flies[k].on) { flies[k] = (Fly){x + frand(-6, 6), y + frand(-6, 6), 0, n * 0.05f, heart, 1, heart && aegisHeld()}; n++; }
 }
 static void flyPos(Fly *f, float *x, float *y) {
 	float t = clampf(f->t, 0, 1), e = t * t * (3 - 2 * t);
@@ -253,9 +256,11 @@ static void flyPos(Fly *f, float *x, float *y) {
 }
 static void updateFlies(float dt) {
 	for (int k = 0; k < MAXFLY; k++) { Fly *f = &flies[k]; if (!f->on) continue; if (f->delay > 0) { f->delay -= dt; continue; } f->t += dt / 0.6f;
-		if (f->t >= 1) { f->on = 0; if (f->heart) hpPulse = 0.3f; else gracePulse = 0.3f; } }
+		if (f->t >= 1) { f->on = 0; if (f->blue) shPulse = 0.3f; else if (f->heart) hpPulse = 0.3f; else gracePulse = 0.3f; } }
 	if (gracePulse > 0) gracePulse -= dt;
 	if (hpFullT > 0) hpFullT -= dt;
+	if (shFullT > 0) shFullT -= dt;
+	if (shPulse > 0) shPulse -= dt;
 	if (hpPulse > 0) hpPulse -= dt;
 }
 static void heartShape(float x, float y, float r, u32 c);
@@ -264,8 +269,8 @@ static void drawFlies(int bottom) {
 		Fly *f = &flies[k]; if (!f->on || f->delay > 0) continue;
 		float x, y; flyPos(f, &x, &y);
 		float sz = 1 + 0.4f * sinf(clampf(f->t, 0, 1) * PI);
-		if (!bottom && y < 240) { if (f->heart) { C2D_DrawCircleSolid(x, y, 0, 8 * sz, RGBA(229, 83, 63, 70)); heartShape(x, y, 6 * sz, RGBA(255, 120, 100, 255)); } else icon(SPR_GRACE, x, y, 16 * sz, 1); }
-		if (bottom && y >= 240 - 8) { if (f->heart) { C2D_DrawCircleSolid(x - 40, y - 240, 0, 8 * sz, RGBA(229, 83, 63, 70)); heartShape(x - 40, y - 240, 6 * sz, RGBA(255, 120, 100, 255)); } else icon(SPR_GRACE, x - 40, y - 240, 16 * sz, 1); }
+		if (!bottom && y < 240) { if (f->heart) { C2D_DrawCircleSolid(x, y, 0, 8 * sz, RGBA(229, 83, 63, 70)); heartShape(x, y, 6 * sz, f->blue ? RGBA(120, 190, 255, 255) : RGBA(255, 120, 100, 255)); } else icon(SPR_GRACE, x, y, 16 * sz, 1); }
+		if (bottom && y >= 240 - 8) { if (f->heart) { C2D_DrawCircleSolid(x - 40, y - 240, 0, 8 * sz, RGBA(229, 83, 63, 70)); heartShape(x - 40, y - 240, 6 * sz, f->blue ? RGBA(120, 190, 255, 255) : RGBA(255, 120, 100, 255)); } else icon(SPR_GRACE, x - 40, y - 240, 16 * sz, 1); }
 	}
 }
 static int best = 0;
@@ -383,6 +388,7 @@ static float shotMul(void) { return (has(B_SLOW) ? 0.5f : 1) * (1 + 0.12f * tier
 static float rateMul(void) { return 1 + 0.18f * tierK(); }
 static float tele(void) { return has(B_WARD) ? 1.8f : 1; }
 static float maxHp(void) { return has(B_VIGOR) ? 200 : 100; }
+static float maxShield(void) { return has(B_AEGIS) ? maxHp() : 0; }
 static float rateIf(int removed, int defy) {
 	float up = 0; for (int i = 0; i < NB; i++) if (G.held[i] && i != removed) up += TIER_UP[BUFFS[i].tier];
 	return (G_BASE + up) * powf(2, defy);
@@ -417,9 +423,14 @@ static void pushOut(float *x, float *y, float r) {
 		} else { *x = cx + dx / d * r; *y = cy + dy / d * r; }
 	}
 }
+static int touchingWall(float x, float y, float r) {
+	for (int i = 0; i < G.nwalls; i++) { Wall *w = &G.walls[i]; if (w->ax == 0 && w->ay == 0) continue; float cx = clampf(x, w->x, w->x + w->w), cy = clampf(y, w->y, w->y + w->h); if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r) return 1; }
+	return 0;
+}
 static int spikePhase(Spike *s) { float ph = fmodf(G.time + s->off, 3.2f); return ph >= 2.0f ? 2 : ph >= 1.4f ? 1 : 0; }
 static int inSpike(float x, float y, Spike *s, float pad) { return x > s->x - pad && x < s->x + SPIKE + pad && y > s->y - pad && y < s->y + SPIKE + pad; }
 
+static int aegisHeld(void) { return G.held[B_AEGIS]; }
 static Enemy *nearest(float x, float y, float maxD) {
 	Enemy *b = NULL; float bd = maxD;
 	for (int i = 0; i < MAXE; i++) { Enemy *e = &G.en[i]; if (!e->on || e->spawn > 0) continue; float d = dist(e->x, e->y, x, y); if (d < bd) { bd = d; b = e; } }
@@ -460,7 +471,7 @@ static void newRun(int demo, int tier, int banked, int kills) {
 	memset(&G, 0, sizeof G); memset(flies, 0, sizeof flies);
 	G.demo = demo; G.tier = tier; G.banked = banked; G.kills = kills; G.floor = 1; G.grace = G_START; G.sparkT = 1.5f; G.heartT = 14;
 	for (int i = 0; i < NB; i++) G.held[i] = 1;
-	G.p.x = TW / 2; G.p.y = TH - 40; G.p.r = 7; G.p.hp = 200; G.p.fy = -1; G.p.shield = 3; G.p.shieldT = 9;
+	G.p.x = TW / 2; G.p.y = TH - 40; G.p.r = 7; G.p.hp = 200; G.p.fy = -1; G.p.shield = 200; G.p.shieldT = 9;
 }
 
 static void featherSave(void) {
@@ -471,9 +482,13 @@ static void featherSave(void) {
 static void die(void);
 static void hurt(float d) {
 	if (G.p.inv > 0 || G.phase == PH_DEAD) return;
-	if (has(B_AEGIS) && G.p.shield >= 1) { G.p.shield -= 1; G.p.shieldT = 0; G.p.inv = 0.35f; burst(G.p.x, G.p.y, cGilt, 12, 110); sfx(SND_SHIELD); return; }
 	float dmg = d * mulTaken();
-	G.p.hp -= dmg; G.p.inv = 0.7f; G.p.shieldT = 0; num(G.p.x, G.p.y - 12, dmg, cEmber);
+	if (has(B_AEGIS) && G.p.shield > 0) {   // the shield soaks damage first; what's left goes to health
+		float take = fminf(G.p.shield, dmg); G.p.shield -= take; dmg -= take;
+		num(G.p.x, G.p.y - 12, take, cAegisHi); burst(G.p.x, G.p.y, cAegis, 12, 110); sfx(SND_SHIELD);
+		if (dmg <= 0.001f) { G.p.inv = 0.5f; G.shake = 2; return; }
+	}
+	G.p.hp -= dmg; G.p.inv = 0.7f; num(G.p.x, G.p.y - 12, dmg, cEmber);
 	G.shake = 5; G.flash = 0.35f; G.flashC = cEmber; G.hs = 0.06f;
 	burst(G.p.x, G.p.y, cEmber, 12, 90); sfx(SND_HURT);
 	if (G.p.hp <= 0) { G.p.hp = 0; die(); }
@@ -570,9 +585,8 @@ static void ascend(void) {
 		storyAdd(FINAL_QUOTE, NULL, NULL, 1);
 		storyPlay(NEXT_FINAL); return;
 	}
-	char by[96]; snprintf(by, sizeof by, "+%d @ banked - %d total", gained, G.banked);
 	nextTier = G.tier + 1; nextBanked = G.banked; nextKills = G.kills;
-	storyTier(nextTier, by); storyPlay(NEXT_ASCEND);
+	storyTier(nextTier, NULL); storyPlay(NEXT_ASCEND);
 }
 static void endRun(int won, int fin) {
 	LOG("END won %d final %d tier %d floor %d banked %d\n", won, fin, G.tier, G.floor, G.banked);
@@ -599,7 +613,7 @@ static void sacrifice(int c) {
 	G.held[b] = 0; addGrace(gain);
 	G.splits[G.nsplits - 1].gave = b; G.splits[G.nsplits - 1].gain = gain;
 	if (b == B_AEGIS) G.p.shield = 0;
-	G.p.hp = fminf(G.p.hp, maxHp());
+	G.p.hp = fminf(G.p.hp, maxHp()); G.p.shield = fminf(G.p.shield, maxShield());
 	G.floor++; G.phase = PH_BETWEEN; G.wave = -1; G.nextT = 2.0f; G.nspikes = 0; G.nwalls = 0; memset(G.pl, 0, sizeof G.pl);
 	G.p.x = TW / 2; G.p.y = TH - 40; G.p.vx = G.p.vy = 0;
 	snprintf(G.banner, sizeof G.banner, "Given up"); snprintf(G.bannerSub, sizeof G.bannerSub, "%s gone - +%d @", BUFFS[b].name, gain); G.bannerT = 2.0f;
@@ -691,12 +705,12 @@ static void update(float dt) {
 		G.p.vx += (mx * 115 - G.p.vx) * fminf(1, dt * 14); G.p.vy += (my * 115 - G.p.vy) * fminf(1, dt * 14);
 		G.p.x = clampf(G.p.x + G.p.vx * dt, G.p.r + WALLT, TW - G.p.r - WALLT); G.p.y = clampf(G.p.y + G.p.vy * dt, G.p.r + WALLT, TH - G.p.r - WALLT);
 		pushOut(&G.p.x, &G.p.y, G.p.r);
+		if (touchingWall(G.p.x, G.p.y, G.p.r + 1.5f)) { if (has(B_FLOAT)) featherSave(); else hurt(10); }
 		G.p.x = clampf(G.p.x, G.p.r + WALLT, TW - G.p.r - WALLT); G.p.y = clampf(G.p.y, G.p.r + WALLT, TH - G.p.r - WALLT);
 		G.p.moving = sqrtf(mx * mx + my * my) > 0.15f;
 		if (G.p.moving) { float l = sqrtf(mx * mx + my * my); G.p.fx = mx / l; G.p.fy = my / l; }
 		if (G.p.inv > 0) G.p.inv -= dt;
 		G.p.shieldT += dt;
-		if (has(B_AEGIS) && G.p.shieldT > 2.5f && G.p.shield < 3) { int b0 = (int)G.p.shield; G.p.shield = fminf(3, G.p.shield + dt / 3); if ((int)G.p.shield > b0) sfx(SND_TICK); }
 		if (has(B_VIGOR) && !G.empty) G.p.hp = fminf(maxHp(), G.p.hp + 2 * dt);
 		G.p.cd -= dt;
 		int live = 0; for (int i = 0; i < MAXE; i++) if (G.en[i].on && G.en[i].spawn <= 0) live = 1;
@@ -704,7 +718,7 @@ static void update(float dt) {
 			float ax = G.p.fx, ay = G.p.fy;
 			if (has(B_AIM)) { Enemy *t = nearest(G.p.x, G.p.y, 1e9f); if (t) { float l = dist(t->x, t->y, G.p.x, G.p.y) + 0.001f; ax = (t->x - G.p.x) / l; ay = (t->y - G.p.y) / l; } }
 			G.p.cd = 0.36f / (has(B_HASTE) ? 1.6f : 1);
-			float dmg = 10 * (has(B_MIGHT) ? 2 : 1), a0 = atan2f(ay, ax), angs[3] = {a0, a0 - 0.24f, a0 + 0.24f};
+			float dmg = 10 * (has(B_MIGHT) ? 2 : 1) * (has(B_TWIN) ? 1 : 2), a0 = atan2f(ay, ax), angs[3] = {a0, a0 - 0.24f, a0 + 0.24f};
 			int n = has(B_TWIN) ? 3 : 1;
 			for (int k = 0; k < n; k++) for (int i = 0; i < MAXB; i++) if (!G.pb[i].on) { G.pb[i] = (Bullet){G.p.x + cosf(angs[k]) * 8, G.p.y + sinf(angs[k]) * 8, cosf(angs[k]) * 310, sinf(angs[k]) * 310, dmg, 1.4f, 1}; break; }
 			sfx(SND_SHOOT);
@@ -725,7 +739,7 @@ static void update(float dt) {
 				num(e->x, e->y - e->r - 3, b->dmg, cBone); burst(b->x, b->y, cGiltHi, 3, 55); sfx(SND_HIT);
 				if (e->hp <= 0) {
 					G.kills++; e->on = 0;
-					if (e->type == E_BOSS) { burst(e->x, e->y, cGilt, 80, 200); burst(e->x, e->y, cEmber, 40, 120); G.hs = 0.5f; G.shake = 9; G.flash = 0.6f; G.flashC = cGiltHi; sfx(SND_GONG); }
+					if (e->type == E_BOSS) { burst(e->x, e->y, cGilt, 120, 260); burst(e->x, e->y, cEmber, 60, 160); burst(e->x, e->y, cBone, 40, 320); G.hs = 0.6f; G.shake = 12; G.flash = 0.9f; G.flashC = cGiltHi; sfx(SND_GONG); sfx(SND_KILL); G.boomT = 1.6f; G.boomX = e->x; G.boomY = e->y; G.boomNext = 0.05f; }
 					else {
 						burst(e->x, e->y, cEmber, 14, 100); burst(e->x, e->y, cEmber2, 6, 50); sfx(SND_KILL);
 						if (!G.demo && frand(0, 1) < 0.03f) for (int q = 0; q < MAXPK; q++) if (!G.pk[q].on) { G.pk[q] = (Pickup){clampf(e->x, 20, TW - 20), clampf(e->y, 20, TH - 20), 5.5f, 5.5f, 8, 1, 1}; break; }
@@ -769,7 +783,8 @@ static void update(float dt) {
 		k->life -= dt; if (k->life <= 0) { k->on = 0; continue; }
 		if (!G.demo && G.phase != PH_DEAD && dist(k->x, k->y, G.p.x, G.p.y) < G.p.r + 10) {
 			k->on = 0;
-			if (k->heart) { float b0 = G.p.hp; G.p.hp = fminf(maxHp(), G.p.hp + k->v); if (G.p.hp - b0 >= 0.5f) num(k->x, k->y - 8, G.p.hp - b0, cEmberHi); else hpFullT = 1.2f; burst(k->x, k->y, cEmberHi, 14, 90); sfx(SND_HEAL); spawnFlies(k->x, k->y, 1); }
+			if (k->heart && has(B_AEGIS)) { float b0 = G.p.shield; G.p.shield = fminf(maxShield(), G.p.shield + k->v); if (G.p.shield - b0 >= 0.5f) num(k->x, k->y - 8, G.p.shield - b0, cAegisHi); else shFullT = 1.2f; burst(k->x, k->y, cAegisHi, 14, 90); sfx(SND_SHIELD); spawnFlies(k->x, k->y, 1); }
+			else if (k->heart) { float b0 = G.p.hp; G.p.hp = fminf(maxHp(), G.p.hp + k->v); if (G.p.hp - b0 >= 0.5f) num(k->x, k->y - 8, G.p.hp - b0, cEmberHi); else hpFullT = 1.2f; burst(k->x, k->y, cEmberHi, 14, 90); sfx(SND_HEAL); spawnFlies(k->x, k->y, 1); }
 			else { addGrace(k->v); num(k->x, k->y - 8, k->v, cGrace); burst(k->x, k->y, cGraceHi, 14, 90); sfx(SND_CHIME); spawnFlies(k->x, k->y, 0); }
 		}
 	}
@@ -779,6 +794,16 @@ static void update(float dt) {
 	for (int i = 0; i < MAXP; i++) { Part *f = &G.fx[i]; if (!f->on) continue; f->x += f->vx * dt; f->y += f->vy * dt; f->vx *= 0.92f; f->vy *= 0.92f; f->life -= dt; if (f->life <= 0) f->on = 0; }
 	for (int i = 0; i < MAXN; i++) { Num *n = &G.nums[i]; if (!n->on) continue; n->y -= 18 * dt; n->life -= dt; if (n->life <= 0) n->on = 0; }
 	if (!G.demo) updateFlies(dt);
+	if (G.boomT > 0) {   // chain of explosions spreading from where the Warden fell
+		G.boomT -= dt; G.boomNext -= dt;
+		if (G.boomNext <= 0) {
+			G.boomNext = 0.09f; float a = frand(0, 2 * PI), r = frand(10, 70) * (1.7f - G.boomT);
+			float bx = clampf(G.boomX + cosf(a) * r, 20, TW - 20), by = clampf(G.boomY + sinf(a) * r * 0.7f, 20, TH - 20);
+			u32 cs[3] = {cGilt, cEmber, cGiltHi}; burst(bx, by, cs[rand() % 3], 26, 150); burst(bx, by, cBone, 8, 220);
+			G.shake = fmaxf(G.shake, 5); sfx(SND_KILL);
+		}
+		if (G.boomT <= 0.2f && G.boomT + dt > 0.2f) { burst(G.boomX, G.boomY, cGraceHi, 90, 300); G.flash = 0.7f; G.flashC = cGraceHi; sfx(SND_ASCEND); }
+	}
 
 	int anyEnemy = 0; for (int i = 0; i < MAXE; i++) if (G.en[i].on) anyEnemy = 1;
 	if (G.phase == PH_WAVE && !anyEnemy) {
@@ -786,8 +811,8 @@ static void update(float dt) {
 		if (WAVES[G.wave].boss) {
 			if (!G.demo && G.nsplits < 16) G.splits[G.nsplits++] = (Split){G.floor, G.ft, G.fspent, -1, 0};
 			G.ft = 0; G.fspent = 0;
-			G.phase = PH_CLEARED; G.nextT = 1.8f; snprintf(G.banner, sizeof G.banner, "Warden felled");
-			snprintf(G.bannerSub, sizeof G.bannerSub, "%s", heldCount() ? "" : "You are pure"); G.bannerT = 1.8f;
+			G.phase = PH_CLEARED; G.nextT = 2.8f; snprintf(G.banner, sizeof G.banner, "Complete");
+			if (heldCount()) snprintf(G.bannerSub, sizeof G.bannerSub, "Floor %d", G.floor); else snprintf(G.bannerSub, sizeof G.bannerSub, "You are pure"); G.bannerT = 2.6f;
 		} else { G.phase = PH_BETWEEN; G.nextT = 1.1f; }
 	} else if (G.phase == PH_BETWEEN) { G.nextT -= dt; if (G.nextT <= 0) startWave(G.wave + 1); }
 	else if (G.phase == PH_CLEARED) {
@@ -868,8 +893,9 @@ static void drawTop(float eye) {
 	for (int q = 0; q < MAXPK; q++) {
 		Pickup *k = &G.pk[q]; if (!k->on) continue;
 		float blink = k->life < 1.5f ? (sinf(t * 22) > 0 ? 1 : 0.35f) : 1, x = k->x + dEnt;
-		C2D_DrawCircleSolid(x, k->y, 0, 13, alpha(k->heart ? cEmber : cGrace, 0.18f * blink));
-		if (k->heart) heartShape(x, k->y, 6, alpha(cEmber, blink)); else icon(SPR_GRACE, x, k->y + sinf(t * 4 + k->x) * 1.5f, 18, blink);
+		u32 hc = has(B_AEGIS) ? cAegis : cEmber;
+		C2D_DrawCircleSolid(x, k->y, 0, 13, alpha(k->heart ? hc : cGrace, 0.18f * blink));
+		if (k->heart) heartShape(x, k->y, 6, alpha(hc, blink)); else icon(SPR_GRACE, x, k->y + sinf(t * 4 + k->x) * 1.5f, 18, blink);
 	}
 	// charger telegraphs
 	for (int i = 0; i < MAXE; i++) { Enemy *e = &G.en[i]; if (!e->on || e->type != E_CHARGER || e->state != 1) continue; float k = 1 - e->st / (0.75f * tele()); C2D_DrawLine(e->x + dEnt, e->y, alpha(cEmber, 0.15f + 0.35f * k), e->x + dEnt + e->dx * 120, e->y + e->dy * 120, alpha(cEmber, 0.05f), e->r * 2, 0); }
@@ -908,7 +934,7 @@ static void drawTop(float eye) {
 		int nh = heldCount();
 		C2D_DrawCircleSolid(x, y, 0, 28, alpha(nh ? cGilt : cBone, 0.08f + 0.012f * nh));
 		for (int i = 0, k = 0; i < NB; i++) if (G.held[i]) { float a = t * 1.1f + k / (float)nh * 2 * PI; icon(i, x + cosf(a) * 19, y + sinf(a) * 15, 8, 0.9f); k++; }
-		if (has(B_AEGIS)) for (int i = 0; i < 3; i++) if (i < (int)G.p.shield) { for (int j = 0; j < 6; j++) { float a = -PI / 2 + i * 2.094f + 0.15f + t * 0.5f + j * 0.3f; C2D_DrawCircleSolid(x + cosf(a) * 11, y + sinf(a) * 11, 0, 1.1f, cGilt); } }
+		if (has(B_AEGIS) && G.p.shield > 0) { int nd = (int)ceilf(24 * G.p.shield / maxShield()); for (int j = 0; j < nd; j++) { float a = -PI / 2 + j / 24.0f * 2 * PI + t * 0.5f; C2D_DrawCircleSolid(x + cosf(a) * 11, y + sinf(a) * 11, 0, 1.2f, cAegis); } }
 		if (!has(B_AIM)) for (int j = 1; j < 6; j++) C2D_DrawCircleSolid(x + G.p.fx * (12 + j * 9), y + G.p.fy * (12 + j * 9), 0, 0.9f, alpha(cBone, 0.35f));
 		if (!(G.p.inv > 0 && ((int)(G.p.inv * 20)) % 2)) {
 			float a = atan2f(G.p.fy, G.p.fx), c = cosf(a), s = sinf(a), r = G.p.r;
@@ -921,6 +947,7 @@ static void drawTop(float eye) {
 			float mh = maxHp(), k = clampf(G.p.hp / mh, 0, 1);
 			bar(x - 13, y - 31, 26, 3, k, cEmber2, (G.empty && sinf(t * 12) > 0) ? cEmberHi : cEmber);
 			bar(x - 13, y - 26, 26, 2, G.grace / 100.0f, cGrace2, cGrace);
+			if (has(B_AEGIS)) bar(x - 13, y - 36, 26, 2, G.p.shield / maxShield(), cAegis2, cAegis);
 		}
 	}
 	// bullets
@@ -931,6 +958,11 @@ static void drawTop(float eye) {
 		float k = G.featherT / 1.1f, a = fminf(1, G.featherT * 2.5f), x = G.p.x + dEnt * 1.6f, y = G.p.y - 56 - (1 - k) * 10;
 		C2D_DrawCircleSolid(x, y, 0, 13, alpha(cBone, 0.12f * a));
 		icon(B_FLOAT, x, y + sinf(G.time * 10) * 1.5f, 20, a);
+	}
+	if (G.boomT > 0 && !G.demo) {   // shockwave rings
+		float k = 1.6f - G.boomT;
+		for (int ring = 0; ring < 2; ring++) { float rr = (k - ring * 0.25f) * 260; if (rr <= 0) continue; float a = clampf(1 - k / 1.6f, 0, 1);
+			for (int j = 0; j < 48; j++) { float aa = j / 48.0f * 2 * PI; C2D_DrawCircleSolid(G.boomX + dEnt + cosf(aa) * rr, G.boomY + sinf(aa) * rr * 0.75f, 0, 2.2f, alpha(ring ? cBone : cGiltHi, a)); } }
 	}
 	drawFlies(0);
 	char nb[16];
@@ -979,7 +1011,6 @@ static void drawTopOverlay(void) {
 		if (endWon) {
 			text("AT REST", TW / 2, 60, 1.2f, cGraceHi, C2D_AlignCenter);
 			text("Four times purified", TW / 2, 112, 0.55f, cBone, C2D_AlignCenter);
-			char l[64]; snprintf(l, sizeof l, "%d @ banked across four tiers", G.banked); text(l, TW / 2, 150, 0.45f, cGrace, C2D_AlignCenter);
 		} else {
 			text(G.graceOut ? "FALLEN   @ 0" : "FALLEN", TW / 2, 22, 1.1f, cEmber, C2D_AlignCenter);
 			textWrap(DEATH_MUSINGS[endMusing], 30, 74, 0.5f, cBone, C2D_AlignLeft, TW - 60);
@@ -1017,8 +1048,11 @@ static void drawHud(void) {
 	panel((Rect){4, 4, BW - 8, 40}, cInk, G.empty ? cEmber : cGrace2);
 	heartShape(22, 24, 8 + hpPulse * 10, cEmber);
 	{ float mh = maxHp(), k = clampf(G.p.hp / mh, 0, 1);
-	  C2D_DrawRectSolid(36, 33, 0, 112, 6, cInk); C2D_DrawRectSolid(37, 34, 0, 110, 4, cEmber2); C2D_DrawRectSolid(37, 34, 0, 110 * k, 4, k >= 0.999f ? cEmberHi : cEmber);
-	  for (int q = 1; q < (int)(mh / 25); q++) C2D_DrawRectSolid(37 + 110 * q * 25 / mh, 34, 0, 1, 4, cInk);
+	  float by = has(B_AEGIS) ? 29 : 33;
+	  C2D_DrawRectSolid(36, by, 0, 112, 6, cInk); C2D_DrawRectSolid(37, by + 1, 0, 110, 4, cEmber2); C2D_DrawRectSolid(37, by + 1, 0, 110 * k, 4, k >= 0.999f ? cEmberHi : cEmber);
+	  for (int q = 1; q < (int)(mh / 25); q++) C2D_DrawRectSolid(37 + 110 * q * 25 / mh, by + 1, 0, 1, 4, cInk);
+	  if (has(B_AEGIS)) { float sk = clampf(G.p.shield / maxShield(), 0, 1); C2D_DrawRectSolid(36, 36, 0, 112, 6, cInk); C2D_DrawRectSolid(37, 37, 0, 110, 4, cAegis2); C2D_DrawRectSolid(37, 37, 0, 110 * sk, 4, shPulse > 0 || sk >= 0.999f ? cAegisHi : cAegis);
+	    if (shFullT > 0) text("FULL", 150, 30, 0.34f, sinf(shFullT * 18) > 0 ? cBone : cAegisHi, C2D_AlignLeft); }
 	  if (hpFullT > 0) text("FULL", 36, 8, 0.6f, sinf(hpFullT * 18) > 0 ? cBone : cEmberHi, C2D_AlignLeft);
 	  else { snprintf(s, sizeof s, "%d", (int)ceilf(fmaxf(0, G.p.hp))); text(s, 36, 8 - hpPulse * 8, 0.62f + hpPulse, hpPulse > 0 ? cBone : cEmberHi, C2D_AlignLeft); } }
 	if (G.empty) text("x", 172, 12, 0.75f, cEmber, C2D_AlignCenter); else icon(SPR_GRACE, 172, 24, 22 + gracePulse * 24, 1);
@@ -1053,7 +1087,7 @@ static void drawHud(void) {
 		text("Tap a blessing to see what it does", 12, 164, 0.4f, cMuted, C2D_AlignLeft);
 		text("Circle Pad: move   START: pause", 12, 184, 0.4f, cMuted, C2D_AlignLeft);
 	}
-	snprintf(s, sizeof s, "Banked %d @  -  Slain %d", G.banked, G.kills); text(s, BW / 2, 218, 0.4f, cMuted, C2D_AlignCenter);
+	snprintf(s, sizeof s, "Slain %d", G.kills); text(s, BW / 2, 218, 0.4f, cMuted, C2D_AlignCenter);
 }
 static void drawAltar(void) {
 	text("An offering is owed", BW / 2, 4, 0.55f, cGiltHi, C2D_AlignCenter);
@@ -1071,8 +1105,9 @@ static void drawAltar(void) {
 			icon(c.buff, r.x + 22, r.y + r.h / 2, 30, 1);
 			snprintf(s, sizeof s, "Lose %s", b->name); text(s, r.x + 42, r.y + 3, 0.55f, cBone, C2D_AlignLeft);
 			snprintf(s, sizeof s, "+%d", TIER_GAIN[b->tier]); text(s, r.x + r.w - 24, r.y + 4, 0.45f, cGrace, C2D_AlignRight); icon(SPR_GRACE, r.x + r.w - 12, r.y + 11, 20, 1);
-			text(b->sum, r.x + 42, r.y + 23, 0.42f, cGiltHi, C2D_AlignLeft);
-			snprintf(s, sizeof s, "%s -> %s", b->has, b->loss); text(s, r.x + 42, r.y + 40, 0.34f, cMuted, C2D_AlignLeft);
+			int vs = c.buff == B_VIGOR && has(B_AEGIS);
+			text(vs ? "Max health and shield will be halved" : b->sum, r.x + 42, r.y + 23, 0.42f, cGiltHi, C2D_AlignLeft);
+			if (vs) snprintf(s, sizeof s, "200 HP & shield, regen -> 100 HP & shield"); else snprintf(s, sizeof s, "%s -> %s", b->has, b->loss); text(s, r.x + 42, r.y + 40, 0.34f, cMuted, C2D_AlignLeft);
 			snprintf(s, sizeof s, "-%.1f > -%.1f/s", drainRate(), rateIf(c.buff, G.defy)); text(s, r.x + r.w - 6, r.y + 40, 0.34f, cGrace, C2D_AlignRight);
 		}
 	}
@@ -1084,8 +1119,6 @@ static void drawBottom(void) {
 	if (state == S_TITLE) {
 		text("GRACE", BW / 2, 14, 0.9f, cGraceHi, C2D_AlignCenter);
 		if (!howOpen) {
-			char s[64];
-			if (best > 0) { snprintf(s, sizeof s, "Best score: %d @", best); text(s, BW / 2, 70, 0.45f, cMuted, C2D_AlignCenter); }
 			text("Give up power. Keep your @.", BW / 2, 100, 0.45f, cBone, C2D_AlignCenter);
 			button(bStart, "Start (A)", 1); button(bHow, "How it works", 0);
 		} else {
@@ -1101,12 +1134,9 @@ static void drawBottom(void) {
 	} else if (state == S_DEAD) {
 		char s[96];
 		text(endWon ? "At Rest" : "Fallen", BW / 2, 10, 0.7f, endWon ? cGraceHi : cEmber, C2D_AlignCenter);
-		snprintf(s, sizeof s, "Score: %d @", G.banked); text(s, BW / 2, 46, 0.55f, cGraceHi, C2D_AlignCenter);
-		if (G.banked >= best && G.banked > 0) text("New best", BW / 2, 70, 0.42f, cGrace, C2D_AlignCenter);
-		else { snprintf(s, sizeof s, "Best: %d", best); text(s, BW / 2, 70, 0.42f, cMuted, C2D_AlignCenter); }
-		if (G.tier > 1 && !endWon) { snprintf(s, sizeof s, "Tier %s - Floor %d", ROMAN[G.tier], G.floor); } else snprintf(s, sizeof s, "Floor %d", G.floor);
-		text(s, BW / 2, 96, 0.45f, cBone, C2D_AlignCenter);
-		snprintf(s, sizeof s, "Slain %d", G.kills); text(s, BW / 2, 118, 0.42f, cMuted, C2D_AlignCenter);
+		if (endWon) snprintf(s, sizeof s, "Four tiers"); else if (G.tier > 1) snprintf(s, sizeof s, "Tier %s - Floor %d", ROMAN[G.tier], G.floor); else snprintf(s, sizeof s, "Floor %d", G.floor);
+		text(s, BW / 2, 60, 0.6f, cBone, C2D_AlignCenter);
+		snprintf(s, sizeof s, "Slain %d", G.kills); text(s, BW / 2, 96, 0.45f, cMuted, C2D_AlignCenter);
 		button(bAgain, endWon ? "One more time (A)" : "Begin again (A)", 1);
 		if (endWon) button(bStop, "Stop playing (B)", 0);
 		else text("B: title", BW / 2, 214, 0.4f, cMuted, C2D_AlignCenter);
