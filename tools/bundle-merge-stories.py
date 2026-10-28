@@ -12,6 +12,14 @@ for f in sorted(glob.glob(os.path.join(D, 'events', '*', 'event.js'))):
     files[os.path.relpath(f, D).replace(os.sep, '/')] = open(f, encoding='utf-8').read()
 for f in sorted(glob.glob(os.path.join(D, 'events', '*', 'icon.svg'))):
     files[os.path.relpath(f, D).replace(os.sep, '/')] = 'data:image/svg+xml;base64,' + base64.b64encode(open(f, 'rb').read()).decode()
+# every item in a story must look different: refuse to build if two items share an emoji
+for name, src in files.items():
+    if not name.endswith('event.js'): continue
+    i = src.index('const CHAINS'); j = src.index('\n};', i)
+    seen = {}
+    for e, n in re.findall(r"\{e:'([^']+)',n:'([^']+)'", src[i:j]): seen.setdefault(e, []).append(n)
+    dup = {e: v for e, v in seen.items() if len(v) > 1}
+    if dup: raise SystemExit(f'{name}: two items share an emoji: {dup}')
 safe = lambda js: js.replace('</', '<\\/')          # never close the <script> early
 bundle = '<script>window.BUNDLE=' + safe(json.dumps(files, ensure_ascii=False)) + ';</script>\n'
 catalog = '<script>' + safe(open(os.path.join(D, 'catalog.js'), encoding='utf-8').read()) + '</script>'

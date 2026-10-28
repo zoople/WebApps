@@ -533,9 +533,10 @@ function freshState(){
   const cells=[];
   const map={o:'open',w:'web',b:'box'};
   LAYOUT.forEach((row,r)=>row.trim().split(/\s+/).forEach(tok=>{
-    const st=map[tok[0]], rest=tok.slice(1);
+    const rest=tok.slice(1);
     let it=null;
     if(rest!=='.'){ const m=rest.match(/^([a-zA-Z]+?)(\d)$/); it=mkItem(m[1],+m[2]); }
+    const st = map[tok[0]]==='web' && !webbable(it) ? 'open' : map[tok[0]];
     const z=zoneOfRow(r);
     cells.push({s: z>0?'sheet':st, ps:st, it, z});
   }));
@@ -549,7 +550,7 @@ function load(){
       if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; if(s.sideOn==null) s.sideOn=(s.ch>0||(s.sideDone||0)>0||(s.side||[]).length)?1:0; if(WHEEL_KEY && (s.ch>0||(s.done||{})[3]) && !s.cells.some(c=>c.it&&c.it.k===WHEEL_KEY) && !(s.gifts||[]).some(g=>g[0]===WHEEL_KEY)) (s.gifts=s.gifts||[]).push([WHEEL_KEY,1]); delete s.wheelUnread; s.wheelLast=null;
       if(!s.unrev) s.unrev={...s.disc}; // saves from before the collection: everything found so far waits to be revealed
       if(!s.stats){ const story=Object.keys(s.done||{}).length; s.stats={side:s.sideDone||0, story, disc:Object.keys(s.disc||{}).length}; }
-      s.qt=s.qt||{}; s.salesBase=s.salesBase||{}; delete s.energy; delete s.eT; delete s.buys;
+      s.qt=s.qt||{}; s.cells.forEach(c=>{ if(c.s==='web' && !webbable(c.it)) c.s='open'; }); s.salesBase=s.salesBase||{}; delete s.energy; delete s.eT; delete s.buys;
       if(!s.seenOrd){ s.seenOrd={}; TASKS.filter(t=>t.ch===s.ch&&!(s.done||{})[t.id]).slice(0,3).forEach(t=>s.seenOrd[t.id]=1); }
       return s; } } }catch(e){}
   return freshState();
@@ -580,10 +581,13 @@ function neighbours(i){
   if(r>0) out.push(i-7); if(r<8) out.push(i+7); if(c>0) out.push(i-1); if(c<6) out.push(i+1);
   return out;
 }
+/* cobwebs only ever hold something you can free by merging a matching one onto it.
+   Generators, single-level items (egg timers, dusters) and tops of chains come out of boxes clean. */
+const webbable = it => !!it && !isGen(it) && it.l < maxL(it.k) && !CHAINS[it.k].dust;
 function revealCell(i){
   const c=S.cells[i];
   if(c.s!=='box') return false;
-  c.s = (c.it && !isGen(c.it)) ? 'web' : 'open';
+  c.s = webbable(c.it) ? 'web' : 'open';
   if(c.s==='open' && c.it) discover(c.it, true);
   fx[i]='reveal';
   SND.play('reveal');
@@ -797,9 +801,11 @@ function sideConflict(t){
   }
   return null;
 }
+/* after:true holds an order back until the order listed just before it is done (so a story beat can't arrive early) */
+const prevTask = t => TASKS[TASKS.indexOf(t)-1];
 function activeTasks(){
   if(S.complete) return [];
-  return TASKS.filter(t=>t.ch===S.ch && !S.done[t.id]).slice(0,3);
+  return TASKS.filter(t=>t.ch===S.ch && !S.done[t.id] && !(t.after && prevTask(t) && !S.done[prevTask(t).id])).slice(0,3);
 }
 function openCount(k,l){ return S.cells.reduce((n,c)=>n+(c.s==='open'&&c.it&&c.it.k===k&&c.it.l===l?1:0),0); }
 /* sales:n orders count stall sales made since the order first appeared */
