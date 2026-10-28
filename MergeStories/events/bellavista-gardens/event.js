@@ -5,7 +5,7 @@
    stars fill the Star Board, which pays out the statue fragments; the statue becomes a stonemason's yard that
    carves the final piece. Everything here is configuration; the engine does the rest. */
 const EVENT = {
-  id: 'bellavista-gardens', title: 'Bellavista Gardens', tagline: 'The Girl with the Oranges', version: 'v2',
+  id: 'bellavista-gardens', title: 'Bellavista Gardens', tagline: 'The Girl with the Oranges', version: 'v3',
   themeColor: '#18241a',
   cover: { art: `<svg class="cover" viewBox="0 0 360 230" role="img" aria-label="An overgrown walled garden with an empty statue plinth, an orange tree and a tortoise"><defs><linearGradient id="bgSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d4a3a"/><stop offset="1" stop-color="#18241a"/></linearGradient><radialGradient id="bgSun" cx=".72" cy=".28" r=".5"><stop offset="0" stop-color="#f6c66b" stop-opacity=".55"/><stop offset="1" stop-color="#f6c66b" stop-opacity="0"/></radialGradient></defs><rect width="360" height="230" fill="url(#bgSky)"/><rect width="360" height="230" fill="url(#bgSun)"/><path d="M0 120 H360 V230 H0Z" fill="#203222"/><g fill="#8a4f35"><rect x="0" y="104" width="360" height="18"/><path d="M0 104 h360" stroke="#a8644a" stroke-width="3"/></g><g stroke="#6e3f2b" stroke-width="1"><path d="M30 104v18M70 104v18M110 104v18M250 104v18M290 104v18M330 104v18"/></g><g transform="translate(150 54)"><rect x="0" y="0" width="12" height="76" fill="#cfc7b4"/><rect x="48" y="0" width="12" height="76" fill="#cfc7b4"/><path d="M0 0 Q30 -26 60 0" stroke="#3a3a36" stroke-width="4" fill="none"/><path d="M8 8 L52 8 M8 30 L52 30 M18 8 V76 M30 8 V76 M42 8 V76" stroke="#2b2b28" stroke-width="2.5"/></g><g transform="translate(70 112)"><rect x="-14" y="18" width="28" height="30" fill="#bdb5a2"/><rect x="-18" y="14" width="36" height="6" fill="#d9d1bd"/><rect x="-18" y="46" width="36" height="6" fill="#d9d1bd"/><text x="0" y="40" font-size="10" text-anchor="middle" fill="#6b6455">?</text></g><g transform="translate(280 70)"><rect x="-3" y="34" width="6" height="40" fill="#5b3a26"/><circle cx="0" cy="22" r="30" fill="#2f6b3a"/><circle cx="-14" cy="14" r="5" fill="#f0a63a"/><circle cx="10" cy="8" r="5" fill="#f0a63a"/><circle cx="14" cy="30" r="5" fill="#f0a63a"/><circle cx="-6" cy="34" r="5" fill="#f0a63a"/><path d="M-18 74 h36 l-6 22 h-24z" fill="#b5653f"/></g><g fill="#1e3a24"><path d="M0 150 q20 -30 40 0 q20 -26 40 0 q14 -20 30 0 V230 H0Z"/><path d="M360 160 q-20 -30 -40 0 q-18 -24 -36 0 V230 H360Z"/></g><g transform="translate(196 186)"><ellipse cx="0" cy="0" rx="20" ry="11" fill="#6b5a35"/><path d="M-14 -4 q14 -16 28 0" fill="#857043"/><circle cx="22" cy="-2" r="5" fill="#7c6a40"/><circle cx="24" cy="-3" r="1" fill="#111"/></g><circle cx="196" cy="160" r="5" fill="#f0a63a"/><path d="M196 155 l2 -4" stroke="#2f6b3a" stroke-width="2"/></svg>`,
     sub: 'The Girl with the Oranges',
@@ -93,14 +93,14 @@ const CHAINS = {
   M:{name:'The Bellavista Story', story:true, items:[
     {e:'🧳',n:'Steamer Trunk', lore:'A new life lies ahead for young Emilio and his family. “E. Bellavista, Genoa” is painted on the lid in a child’s careful capitals.'},
     {e:'🎫',n:'Steerage Ticket', lore:'They crossed the ocean to New York, 1893. A red-haired girl on deck shared her oranges with him every single day.'},
-    {e:'🫙',n:'Mama’s Preserves', lore:'Mama’s jars kept the family fed on the crossing. Half of them leaked. Emilio, aged nine, was furious about it.'},
+    {e:'🥫',n:'Mama’s Preserves', lore:'Mama’s jars kept the family fed on the crossing. Half of them leaked. Emilio, aged nine, was furious about it.'},
     {e:'🚂',n:'Railway Ticket', lore:'At the docks the girl was gone. The Bellavistas took the train west and settled by a cold lake in Wisconsin.'},
     {e:'🪧',n:'Papa’s Shop Sign', lore:'Papa’s got a brand new hardware store. Nails, string, lamp oil, and a lemon tree by the till that never once fruited.'},
     {e:'🎒',n:'School Satchel', lore:'By fifteen Emilio had left school for good. His teacher wrote “restless” on every report.'},
     {e:'🧹',n:'Shop Broom', lore:'He took a job in his father’s store and swept its floor every morning, thinking about lids.'},
     {e:'🔩',n:'The Twist Lid', lore:'Sweeping up a smashed jar of marmalade, Emilio had his idea: a lid that screws on and never leaks.'},
     {e:'🏭',n:'Factory Deed', lore:'He took the idea to the bank, and the Bellavista Jar Works was born.'},
-    {e:'💰',n:'The Fortune', lore:'By 1910 every kitchen in America had a Bellavista jar. Emilio was a very rich man, and still restless.'},
+    {e:'💸',n:'The Fortune', lore:'By 1910 every kitchen in America had a Bellavista jar. Emilio was a very rich man, and still restless.'},
     {e:'🏡',n:'House Plans', lore:'With his fortune he built a house with a great walled garden, and an orangery for forty trees, because oranges smelled like the one good thing about the crossing.'},
     {e:'🌍',n:'Postcards from Everywhere', lore:'Passion for travel, the papers said. It wasn’t. He sailed the world for twenty years looking for the girl with the oranges.'}]},
   /* the statue: the Star Board pays out its fragments; whole again, it becomes the stonemason's yard */
@@ -113,7 +113,7 @@ const CHAINS = {
     {e:'🧱',n:'Carving Block'},{e:'✋',n:'Stone Hand'},{e:'🤚',n:'Polished Hand'},{e:'🍊',n:'The Stone Orange'}]},
   /* resources: tap twice to claim */
   C:{name:'Coins', type:'res', claim:'coins', items:[
-    {e:'🪙',n:'Penny',v:1},{e:'💵',n:'Dollar Bill',v:5},{e:'👛',n:'Coin Purse',v:12},{e:'💰',n:'Money Bag',v:30},{e:'💎',n:'Jar King’s Fortune',v:75}]},
+    {e:'🪙',n:'Penny',v:1},{e:'💶',n:'Banknote',v:5},{e:'👛',n:'Coin Purse',v:12},{e:'💰',n:'Money Bag',v:30},{e:'💎',n:'Jar King’s Fortune',v:75}]},
   X:{name:'Applause', type:'res', claim:'xp', items:[
     {e:'👏',n:'Clap',v:1},{e:'🙌',n:'Cheer',v:3},{e:'🎉',n:'Hooray',v:8},{e:'🎊',n:'Celebration',v:20},{e:'🏆',n:'Garden Prize',v:50}]},
   N:{name:'Stars', type:'res', claim:'points', items:[
@@ -138,7 +138,7 @@ const CHAINS = {
     {e:'📠',n:'Switchboard', charges:24, rechargeMs:60000, drop:[['D',2,28],['D',3,28],['D',4,20],['D',5,16],['D',6,6],['C',1,2]]}]},
   gC:{name:'Grandfather Clock', gen:true, main:'V', items:[
     {e:'🕰️',n:'Grandfather Clock', charges:8, rechargeMs:240000, drop:[['V',1,85],['V',2,15]]},
-    {e:'⏰',n:'Chiming Clock', charges:10, rechargeMs:200000, drop:[['V',1,60],['V',2,30],['V',3,10]]}]},
+    {e:'🔔',n:'Chiming Clock', charges:10, rechargeMs:200000, drop:[['V',1,60],['V',2,30],['V',3,10]]}]},
   /* the mulcher: drop in the number it shows, six seedlings come out */
   WC:{name:'Mulcher', gen:true, main:'GB', items:[{e:'⚙️',n:'The Mulcher', want:true, wants:[['D',1],['D',2],['D',3],['D',4]], gives:'GB', count:6, giveL:1}]},
 };
@@ -290,17 +290,17 @@ const TASKS = [
   {ch:3, who:'P', need:[['D',8],['GB',4]], coins:22, say:'A “7” for the postcard boxes and a topiary for the shed. I’m sorting all of them, every single one.', beat:['P','Four hundred and twelve postcards. Not one name. Just “the girl with the oranges”.']},
   {ch:3, who:'W', need:[['M',6]], coins:24, say:'His school satchel is in that fountain somewhere. Fifteen, he was, when he left school.', beat:['W','Left school, swept his father’s floor and never complained once. Well. Once. Loudly.']},
   // ch5: the empty plinth
-  {ch:4, who:'P', need:[['SJ',1]], coins:26, say:'Put the statue back together and the stonemason’s yard comes back to life. Bring me the first thing it carves.', beat:['N','A woman in a gardener’s apron, one hand held out. The hand is gone.'], more:[['P','Wilf. Who is she?'],['W','Finish her and I’ll tell you.']]},
-  {ch:4, who:'W', need:[['M',7]], coins:26, say:'There’s a shop broom in the story pile. He swept that floor every morning before school, then instead of school.', beat:['W','He was sweeping up a smashed jar when it came to him. A lid that screws on and never leaks.']},
-  {ch:4, who:'M', need:[['D',8],['GB',5]], coins:26, say:'(Garibaldi has pushed a “7” and a bench up against the plinth. He wants a seat with a view.)', beat:['M','<em>(He watches the gate all afternoon, as if somebody is due.)</em>']},
-  {ch:4, who:'P', need:[['SJ',3]], coins:28, say:'The stonemason’s yard is working! Bring me a terracotta pot. Practice, before we carve the hand.', beat:['P','Wonky. Characterful. Wilf says that’s what the stonemason used to say.']},
-  {ch:4, who:'W', need:[['M',8]], coins:30, say:'Bring me the twist lid. The very first one. It’s in the story pile somewhere, I’d stake my hosepipe on it.', beat:['W','The Bellavista lid. Every kitchen in the country had one by 1910.'], more:[['P','So he was rich. Why not hire somebody to find her?'],['W','He did. Eleven detectives. Then he went himself.']]},
+  {id:20, ch:4, who:'P', need:[['SJ',1]], coins:26, say:'Put the statue back together and the stonemason’s yard comes back to life. Bring me the first thing it carves.', beat:['N','A woman in a gardener’s apron, one hand held out. The hand is gone.'], more:[['P','Wilf. Who is she?'],['W','Finish her and I’ll tell you.']]},
+  {id:23, ch:4, who:'P', after:true, need:[['SJ',3]], coins:28, say:'Now the yard’s carving again, bring me a terracotta pot. Practice, before we carve the hand.', beat:['P','Wonky. Characterful. Wilf says that’s what the stonemason used to say.']},
+  {id:21, ch:4, who:'W', need:[['M',7]], coins:26, say:'There’s a shop broom in the story pile. He swept that floor every morning before school, then instead of school.', beat:['W','He was sweeping up a smashed jar when it came to him. A lid that screws on and never leaks.']},
+  {id:22, ch:4, who:'M', need:[['D',8],['GB',5]], coins:26, say:'(Garibaldi has pushed a “7” and a bench up against the plinth. He wants a seat with a view.)', beat:['M','<em>(He watches the gate all afternoon, as if somebody is due.)</em>']},
+  {id:24, ch:4, who:'W', need:[['M',8]], coins:30, say:'Bring me the twist lid. The very first one. It’s in the story pile somewhere, I’d stake my hosepipe on it.', beat:['W','The Bellavista lid. Every kitchen in the country had one by 1910.'], more:[['P','So he was rich. Why not hire somebody to find her?'],['W','He did. Eleven detectives. Then he went himself.']]},
   // ch6: the stone orange
-  {ch:5, who:'P', need:[['SJ',5],['GB',4]], coins:32, say:'A carving block from the yard and a topiary for the gate post. We’re nearly there.', beat:['P','The gate post says 1921. Wilf says that’s the year he came home.']},
-  {ch:5, who:'W', need:[['M',9]], coins:34, say:'The factory deed. Bring it. I want it framed in the hall, where she wanted it.', beat:['W','She said a man should be proud of a good lid. She was the only one who never laughed at it.'], more:[['P','She. You keep saying she.'],['W','Do I.']]},
-  {ch:5, who:'M', need:[['SJ',6],['GB',5]], coins:34, say:'(Garibaldi has his nose against the stone hand. He wants it finished, and a bench to watch from.)', beat:['M','<em>(He has decided the stone face is somebody he knows.)</em>']},
-  {ch:5, who:'P', need:[['D',8]], coins:36, say:'One more number. A “7”. The gate code is 1-9-2-1 and the lock wants a 7 to reset, don’t ask me why.', beat:['P','The gate swings open on its own, which is either the wind or a sign. I choose sign.']},
-  {ch:5, who:'O', need:[['SJ',8],['M',8]], coins:50, say:'“For the gate. Finish her hand, and bring the story home.”'},
+  {id:25, ch:5, who:'P', need:[['SJ',5],['GB',4]], coins:32, say:'A carving block from the yard and a topiary for the gate post. We’re nearly there.', beat:['P','The gate post says 1921. Wilf says that’s the year he came home.']},
+  {id:26, ch:5, who:'W', need:[['M',9]], coins:34, say:'The factory deed. Bring it. I want it framed in the hall, where she wanted it.', beat:['W','She said a man should be proud of a good lid. She was the only one who never laughed at it.'], more:[['P','She. You keep saying she.'],['W','Do I.']]},
+  {id:27, ch:5, who:'M', need:[['SJ',6],['GB',5]], coins:34, say:'(Garibaldi has his nose against the stone hand. He wants it finished, and a bench to watch from.)', beat:['M','<em>(He has decided the stone face is somebody he knows.)</em>']},
+  {id:28, ch:5, who:'P', need:[['D',8]], coins:36, say:'One more number. A “7”. The gate code is 1-9-2-1 and the lock wants a 7 to reset, don’t ask me why.', beat:['P','The gate swings open on its own, which is either the wind or a sign. I choose sign.']},
+  {id:29, ch:5, who:'O', need:[['SJ',8],['M',8]], coins:50, say:'“For the gate. Finish her hand, and bring the story home.”'},
 ];
 
 /* the Star Board: six event levels, as in the original. The statue comes from here. */
@@ -318,9 +318,9 @@ const FELIX=[
 ];
 const MOON_NOTES=[
   [['N','Folded inside the sparkle: a page from Wilf’s garden diary.'],['W','“Day one. Planted nothing. Watched the tortoise. He watched me back. I think I have the job.”']],
-  [['W','“The oranges must be at fifty-five degrees. Gran’s rule. Gran had a lot of rules.”']],
+  [['W','“The oranges must be at fifty-five degrees. Somebody taught me that a long time ago. I still check it twice a day.”']],
   [['W','“Somebody asked me today why I never left. I said the trees need me. That’s mostly true.”']],
-  [['W','“Gran used to say the best things grow where you can see them from the gate. I didn’t understand her until I was fifty.”']],
+  [['W','“Somebody once told me the best things grow where you can see them from the gate. I didn’t understand until I was fifty.”']],
 ];
 const P2={ shopName:'Mrs Lindqvist’s Garden Shop', shopBlurb:'Mrs Lindqvist sells whatever turns up in the old shed' };
 /* the event shop, as in the original: rising prices on numbers and shards, flat prices on the rest */
@@ -357,11 +357,11 @@ const GEN_STORY={
   gP1:[['P','A rotary phone. And a little brass number fell out of the dial.'],['W','Those numbers are what the mulcher runs on. It has a combination lock. I fitted it after the incident.'],['P','What incident?'],['W','We don’t talk about the incident.']],
   gP2:[['P','A candlestick telephone. It rings by itself sometimes.'],['W','So did the old one. Garibaldi sits on the line.']],
   gP3:[['W','The old switchboard. Emilio had one put in so he could ring every shipping office in New York at once.'],['P','That is either romantic or terrifying.']],
-  gC1:[['P','A grandfather clock. It’s stopped at ten past four.'],['W','Gran stopped it the day he died. Wind it if you like. It makes good time charger shards.']],
+  gC1:[['P','A grandfather clock. It’s stopped at ten past four.'],['W','Stopped the day he died, 1932. Nobody’s had the heart to wind it. You can, if you like. It makes good time charger shards.']],
   WC1:[['W','The mulcher. She eats what you give her and gives you seedlings. Show her the right brass number or she sulks.'],['M','<em>(Garibaldi retreats a respectful distance.)</em>']],
   GB6:[['P','A fountain! And something’s caught in the basin. A ticket?'],['W','Things turn up in that fountain. Bits of him. Always have.']],
-  GB7:[['W','The gazebo. He proposed in there, you know. Eventually.'],['P','Eventually?'],['W','Took him eleven years to get round to it. He was very busy looking.']],
-  GB8:[['P','A garden folly. A tiny castle for no reason at all.'],['W','He built it for her birthday. She said it was ridiculous. She sat in it every evening.']],
+  GB7:[['W','The gazebo. He used to sit in there in the evenings, at the end.'],['P','On his own?'],['W','Ask me another time.']],
+  GB8:[['P','A garden folly. A tiny castle for no reason at all.'],['W','There was a reason. Somebody’s birthday. He never said whose.']],
   ST3:[['W','The stonemason’s yard. The old man’s chisels, cleaned and oiled.'],['P','Let’s finish her.']],
 };
 

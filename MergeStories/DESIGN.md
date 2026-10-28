@@ -55,3 +55,12 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
 - **Merge bonuses (stars from merging numbers) make lots of points.** Size the pass tiers from a bot run, not by guessing.
 - **A feeder that pays 6 at once needs room.** The starting board needs about 8 free tiles.
 - **Avoid keycap emoji (0️⃣ 1️⃣…) and other combined sequences.** On some phones the digit comes from the game font and the keycap box shows as a broken square. Use `tile:true` with plain characters instead.
+
+## Bellavista Gardens, first play (28 Oct 2026)
+- **Cobwebs must always be clearable.** A box could open into a cobweb holding an egg timer or duster (one-level items), which can never be merged free.
+  - The engine now only webs items that can be merged (not generators, not one-level or top-of-chain items). Old saves heal on load.
+- **Two items must never share an emoji** (Mama's Preserves and the Jam Jar were both 🫙). The bundler now refuses to build if they do.
+- **Check story order against when things can appear.** Generator stories play whenever that generator first shows up, so they can't reveal later plot (the gazebo line gave away the marriage before you'd met Clara).
+  - Keep generator, diary and early order lines to hints.
+  - An order that depends on another can wait with `after:true`, which holds it back until the order listed just before it is done.
+- **Reordering orders changes their save ids.** Pin `id`s on anything you move (ids 0–99 are the auto ones).
