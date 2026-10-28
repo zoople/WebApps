@@ -885,7 +885,7 @@ function hintTask(t){
   }
   const ks=new Set(t.need.map(n=>n[0]));
   S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
-  const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=genFor(k); return `${d.e} ${d.n}${g?` <small>(${CHAINS[k].rare?'rare from ':''}${genLabel(g)})</small>`:''}`; });
+  const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=srcLabel(k); return `${d.e} ${d.n}${g?` <small>(${CHAINS[k].rare?'rare from ':''}${g})</small>`:''}`; });
   if(t.wheel && wheelDone()<t.wheel) parts.push(`💡 ${t.wheel} wheel lights <small>(${wheelDone()} so far)</small>`);
   toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs: ${parts.join(' + ')}`, 4200);
   render();
@@ -902,6 +902,21 @@ function deliver(t){
   armSide=null; closeOrder(); completeTask(t);
 }
 /* name the generator you'd actually use: your highest level one on the board (level 1 if you have none) */
+/* the best thing you have that makes chain k: your highest-level generator for it (a generator whose main chain it is
+   beats one that only sometimes drops it), whether it's a generator chain, a generator grown inside a chain (a fountain,
+   a folly) or a feeder. With none on the board yet, name the first one you could get. */
+/* how close you are: the highest item of that chain on the board below the one asked for */
+function bestHave(k,l){ let top=0; S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&!c.it.wrap&&c.it.k===k&&c.it.l<l&&c.it.l>top) top=c.it.l; });
+  return top ? `<br>Best you have: ${CHAINS[k].items[top-1].e} Lv ${top}` : ''; }
+function srcLabel(k){
+  let best=null, bs=-1;
+  S.cells.forEach(c=>{ if(c.s!=='open'||!c.it||c.it.wrap||!isGen(c.it)) return; const d=def(c.it), ch=CHAINS[c.it.k];
+    const lead = ch.main===k || ch.rare===k || (d.want && feedSpec(d).gives===k);
+    const w = (d.drop||[]).filter(x=>x[0]===k).reduce((a,x)=>a+x[2],0);
+    if(!lead && !w) return; const sc=(lead?1000:0)+w+c.it.l*10; if(sc>bs){ bs=sc; best=c.it; } });
+  if(best){ const d=def(best); return `${d.e} ${d.n}`; }
+  const g=genFor(k); return g?genLabel(g):'';
+}
 function genLabel(g){ const gk=Object.keys(CHAINS).find(x=>CHAINS[x]===g); let l=0;
   if(!g.gen){ const d=g.items.find(d=>d.gen||d.want); return `${d.e} ${d.n}`; }
   S.cells.forEach(c=>{ if(c.s==='open'&&c.it&&c.it.k===gk&&c.it.l>l) l=c.it.l; });
@@ -915,7 +930,7 @@ function showOrder(t){
   if(t.wheel && wd<t.wheel) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
   if(t.sales && !st.sok) document.querySelectorAll('.order.side').forEach(o=>o.classList.add('hint'));
   const rows=t.need.map(([k,l],j)=>{ const d=CHAINS[k].items[l-1], g=genFor(k);
-      return `<div class="op-need${st.have[j]?' have':''}${CHAINS[k].tile?' tile':''}"><span class="e">${d.e}</span><span class="n">${d.n}${g?`<small>${CHAINS[k].rare?'Rare find from':'From'} ${genLabel(g)}</small>`:''}</span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
+      return `<div class="op-need${st.have[j]?' have':''}${CHAINS[k].tile?' tile':''}"><span class="e">${d.e}</span><span class="n">${d.n}<small>Lv ${l} of ${maxL(k)}${CHAINS[k].name!==d.n?' · '+CHAINS[k].name:''}${g?` · ${CHAINS[k].rare?'rare from':'from'} ${srcLabel(k)}`:''}${st.have[j]?'':bestHave(k,l)}</small></span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
     + (t.wheel?`<div class="op-need${st.wok?' have':''}"><span class="e">💡</span><span class="n">${t.wheel} wheel lights on<small>${wd} lit so far</small></span><b>${st.wok?'✓':''}</b></div>`:'')
     + (t.sales?`<div class="op-need${st.sok?' have':''}"><span class="e">${CAST.S.av}</span><span class="n">${t.sales} ${CAST.S.name} sales<small>${Math.min(salesFor(t),t.sales)} done since this order came in</small></span><b>${st.sok?'✓':''}</b></div>`:'');
   const rw=(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ');
@@ -1103,7 +1118,7 @@ function renderInfo(){
   } else if(it.k==='ET'){
     ds=`Drag onto a generator to refill it straight away.`;
   } else {
-    ds = (fuelValue(it)?`Burns in the stove for ${fuelValue(it)} fuel. `:'') + (ch.rare?`Rare find from the ${genLabel(genFor(it.k))}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
+    ds = (fuelValue(it)?`Burns in the stove for ${fuelValue(it)} fuel. `:'') + (ch.rare?`Rare find from the ${srcLabel(it.k)}. `:'') + (it.l<maxL(it.k) ? `Merge two to make: ${ch.items[it.l].e} ${S.disc[key(it.k,it.l+1)]?ch.items[it.l].n:'???'}` : 'The top of this chain.');
   }
   const sv=sellValue(it);
   box.innerHTML=`<div class="big">${d.e}</div>
@@ -1274,7 +1289,7 @@ function showChain(k,cur){
   const ch=CHAINS[k];
   let extra='';
   if(ch.gen){ const d=ch.items[0]; extra=`<p class="ds">Makes: ${[...new Set(d.drop.map(x=>x[0]))].map(x=>CHAINS[x].name).join(', ')}.</p>${chainHtml(d.drop[0][0])}`; }
-  else { const g=genFor(k); if(g) extra=`<p style="color:var(--muted);font-size:13px">Comes from the ${genLabel(g)}.</p>`; }
+  else { const g=srcLabel(k); if(g) extra=`<p style="color:var(--muted);font-size:13px">Comes from the ${g}.</p>`; }
   openModal(`<h2>${ch.name}</h2>${chainHtml(k,cur)}${extra}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
 }
 function showLore(it){
