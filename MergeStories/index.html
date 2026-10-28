@@ -430,13 +430,14 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <script>
 /* Merge Stories: the console. With no story chosen it shows the shelf; once you pick one, that story's
    cartridge (events/<id>/event.js) and the shared engine load, and the story owns the front screen from then on. */
-const VERSION='v4 · 19 Oct 2026';
+const VERSION='v5 · 28 Oct 2026';
 const CURRENT_KEY='merge-stories:current';
 function ejectStory(){ try{ localStorage.removeItem(CURRENT_KEY); }catch(e){} location.href=location.pathname; }
 (function(){
   const $=id=>document.getElementById(id), tag=VERSION.split(' ')[0];
   let cur=null; try{ cur=localStorage.getItem(CURRENT_KEY); }catch(e){}
-  const load=(src,cb)=>{ const s=document.createElement('script'); s.src=src+'?v='+encodeURIComponent(tag); s.onload=cb;
+  /* the one-file copy (merge-stories.html) carries every script inside it, so it works opened from a phone's files too */
+  const load=(src,cb)=>{ if(window.BUNDLE&&BUNDLE[src]!=null){ const s=document.createElement('script'); s.textContent=BUNDLE[src]; document.body.appendChild(s); cb&&cb(); return; } const s=document.createElement('script'); s.src=src+'?v='+encodeURIComponent(tag); s.onload=cb;
     s.onerror=()=>{ document.body.insertAdjacentHTML('beforeend','<p style="position:fixed;bottom:10px;left:0;right:0;text-align:center;color:#fff">Couldn’t load '+src+'</p>'); };
     document.body.appendChild(s); };
   const boot=id=>{ $('console').hidden=true; load('events/'+id+'/event.js',()=>load('engine.js')); };
@@ -444,7 +445,7 @@ function ejectStory(){ try{ localStorage.removeItem(CURRENT_KEY); }catch(e){} lo
       return s.complete?['','Complete ✓']:['','Chapter '+(Math.min(s.ch,c.chapters-1)+1)+' of '+c.chapters]; }catch(e){ return ['new','New']; } };
   if(cur && CATALOG.some(c=>c.id===cur)){ boot(cur); return; }
   $('shelf').innerHTML=CATALOG.map(c=>{ const [cls,p]=progress(c);
-    return `<button class="cart" data-id="${c.id}"><img src="events/${c.id}/icon.svg" alt=""><div><b>${c.title}</b><small>${c.sub} · ${c.mood}</small><span>${c.blurb}</span><i class="${cls}">${p}</i></div></button>`; }).join('');
+    return `<button class="cart" data-id="${c.id}"><img src="${(window.BUNDLE&&BUNDLE['events/'+c.id+'/icon.svg'])||'events/'+c.id+'/icon.svg'}" alt=""><div><b>${c.title}</b><small>${c.sub} · ${c.mood}</small><span>${c.blurb}</span><i class="${cls}">${p}</i></div></button>`; }).join('');
   $('shelf').querySelectorAll('.cart').forEach(b=>b.onclick=()=>{ try{ localStorage.setItem(CURRENT_KEY,b.dataset.id); }catch(e){} boot(b.dataset.id); });
   $('cver').textContent='Version '+VERSION;
   $('console').hidden=false;

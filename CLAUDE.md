@@ -57,6 +57,8 @@ Static browser apps, published with GitHub Pages from `main`
 - **Engine vs story.** UI, behaviour, item types, mechanics and reward *logic* go in the engine (`engine.js`,
   `index.html`). A story (`events/<id>/event.js`) is configuration only: words, cast, chapters, orders, chains,
   layout, reward numbers, art and music. A new kind of item goes into the engine first. See `MergeStories/README.md`.
+- **Rebuild the one-file copy on every release:** `python3 tools/bundle-merge-stories.py` writes `MergeStories/merge-stories.html`
+  (everything inlined), which is the version that works when opened locally from a phone's files.
 - Before balancing a new story, read `MergeStories/DESIGN.md` (lessons from finished events) and add new lessons there.
 
 - **Never reward two of the same item in one go** (orders, quests, passes, gifts, drops). Give one item of a

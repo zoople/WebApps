@@ -18,6 +18,7 @@ Before balancing a new story, read the lessons in `DESIGN.md`.
 - `events/<id>/event.js`: one story. See "What a story sets" below.
 - `events/<id>/icon.svg`: the story's card art.
 - `sw.js`: the offline cache. List new files in `SHELL` and bump `CACHE`.
+- `merge-stories.html`: **generated** one-file copy (engine, shelf, every story and icons inside it), for opening straight from a phone's files. Rebuild it after every change: `python3 tools/bundle-merge-stories.py`.
 
 ## Item types (reserved chain keys)
 
@@ -85,5 +86,6 @@ A story names these chains and sets their numbers. The engine decides how they b
 2. Add the story to `catalog.js`.
 3. List its files in `sw.js` (`SHELL`) and bump `CACHE`.
 4. Bump `VERSION` in `index.html`.
+5. Run `python3 tools/bundle-merge-stories.py` to rebuild `merge-stories.html`.
 
 Each story saves under `merge-stories:<id>`. The chosen story is stored in `merge-stories:current`.
