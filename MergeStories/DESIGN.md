@@ -64,3 +64,10 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
   - Keep generator, diary and early order lines to hints.
   - An order that depends on another can wait with `after:true`, which holds it back until the order listed just before it is done.
 - **Reordering orders changes their save ids.** Pin `id`s on anything you move (ids 0–99 are the auto ones).
+
+## Bellavista Gardens, finished (28 Oct 2026): story great, balance off
+- **The headline mechanic must be needed all the way up.** Nothing asked for the top numbers ("8", "9"), so the number chain was never finished. If a chain is the point of the story, late orders should need its top levels.
+- **Points need a job after the big reward.** Once the statue (Star Board level 3) was built, stars were useless. Keep the pass going past the key unlock: more levels, each with a postcard or letter, up to a final reveal.
+- **Every story needs a side stall** (Jumble Sale / White Elephant): somewhere to spend spare items, with a character and `sales:n` story orders.
+- **Coins must be needed.** If generators alone can finish the story, the shop is decoration. Give coins a real sink tied to progress.
+- **A bot that finishes isn't proof.** It also has to show that coins get spent, the pass gets used, the side stall gets used and the headline chain gets topped. Check those numbers before shipping.
