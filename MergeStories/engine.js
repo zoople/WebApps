@@ -9,6 +9,7 @@
      G/Y/O orchard: seedlings → tree (a generator that withers into a log) → fruit · Z compost bin · U stove
      WH (any chain with wheel:true) prize wheel · the chain with story:true holds the lore items
      DR dust remover: drop on a cobweb tile to clear it
+     a chain with deck:true is a card table (EVENT.deck): pay coins to draw cards without replacement; orders can need cards:n
    Chain options: mergeBonus {from, give} (merging to level `from`+ also drops `give`); an item with want:true is a
    feeder (wants/gives/count/giveL on the item, or CONFIG.bin). SHOP_ITEMS are data: see shopPrice/shopGive.
    See README.md for the full list. */
@@ -257,6 +258,49 @@ function ticketShop(){
   if(!miniShop({id:'TK', title:`🎟️ ${S.chips||0} of ${WHEEL_COST} tickets`, sub:'Buy a spin’s worth now', label:`${WHEEL_COST} raffle tickets`,
     use:()=>{ S.chips=(S.chips||0)+10; flo('+10 🎟️'); if(!$('modal').hidden && $('wheelGo')) openWheel(wheelCell); }})) showTicketHelp();
   else $('mini').insertAdjacentHTML('beforeend',`<details class="howto"><summary>Other ways to get tickets</summary><p>• Story orders<br>• 📦 Donation boxes<br>${CAST.S?`• ${CAST.S.name} sales<br>`:''}• 📖 Quests<br>• A lit wheel segment gives some back</p></details>`);
+}
+/* ---------- the card deck (EVENT.deck) ----------
+   A reading costs coins, and the price creeps up with every card. Cards are drawn without replacement, so every
+   reading is a new card (no repeats, no luck wall). Each card is a short scene and a small blessing (effect).
+   Story orders can need a number of cards read (cards:n). */
+const DK = EVENT.deck || {cards:[]}, DECK_N = DK.cards.length, DECK_KEY = Object.keys(CHAINS).find(k=>CHAINS[k].deck);
+const deckDone = () => (S.deck||[]).length;
+const deckPrice = () => { const p=DK.price||{base:5,step:1}; return Math.min(p.max||1e9, p.base + p.step*deckDone()); };
+const effLabel = f => !f ? '' : f.refill ? 'Every generator refilled' : f.focus ? `Every generator: ${f.focus} taps of better rare finds`
+  : f.unweb ? `Clears ${f.unweb} cobwebbed tiles` : f.gift ? `${CHAINS[f.gift[0]].items[f.gift[1]-1].e} ${CHAINS[f.gift[0]].items[f.gift[1]-1].n} → 🎁` : '';
+function deckEffect(f){
+  if(!f) return;
+  if(f.refill) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&isGen(c.it)&&def(c.it).charges&&!def(c.it).free){ c.it.ch=def(c.it).charges; c.it.t=now(); fx[i]='pop'; } });
+  if(f.focus) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&canFocus(c.it)){ c.it.focus=(c.it.focus||0)+f.focus; fx[i]='pop'; } });
+  if(f.unweb){ const webs=S.cells.map((c,i)=>[c,i]).filter(([c])=>c.s==='web'); for(let n=0;n<f.unweb&&webs.length;n++){ const [c,i]=webs.splice(Math.floor(Math.random()*webs.length),1)[0]; c.s='open'; fx[i]='reveal'; if(c.it) discover(c.it,true); revealAround(i); } }
+  if(f.gift) S.gifts.push(f.gift);
+}
+let deckCell=-1, deckBusy=false;
+function openDeck(i){
+  if(i!=null) deckCell=i;
+  const done=deckDone(), p=deckPrice(), ok=S.coins>=p, all=done>=DECK_N, last=S.deckLast!=null?DK.cards[S.deckLast]:null;
+  const grid=DK.cards.map((c,j)=>{ const got=(S.deck||[]).includes(j);
+    return `<div class="tcard${got?' up':''}${S.deckLast===j?' new':''}">${got?`<span>${c.e}</span><small>${c.num}</small>`:'<span class="back">✦</span>'}</div>`; }).join('');
+  openModal(`<h2>${DK.title||'The Cards'}</h2>
+    <div class="tgrid">${grid}</div>
+    <p style="text-align:center;margin:6px 0;font-variant-numeric:tabular-nums">🃏 <b>${done}/${DECK_N}</b> cards read · 🪙 ${S.coins}</p>
+    ${last?`<div class="wbanner new"><div class="wb1">${last.e} ${last.num} · ${last.n}</div><div class="wb2">${effLabel(last.effect)}</div></div>`:''}
+    <div class="row-btns" style="justify-content:center;margin-top:4px">${all?'':`<button class="bigbtn${ok?' gold':''}" id="deckGo" ${ok&&!deckBusy?'':'disabled style="opacity:.5"'}>Draw a card · 🪙 ${p}</button>`}<button class="bigbtn" id="deckClose">Close</button></div>
+    ${ok||all?'':`<p style="text-align:center;color:var(--muted);font-size:13px;margin:4px 0">${earnLine()}</p>`}
+    ${done?`<details class="howto"><summary>Your cards</summary>${(S.deck||[]).map(j=>{ const c=DK.cards[j]; return `<div class="lore"><span>${c.e}</span><div><b>${c.num} · ${c.n}</b><br>${c.story[0][1]}</div></div>`; }).join('')}</details>`:''}
+    <details class="howto"><summary>How it works</summary><p>• ${DECK_N} cards, each drawn once: every reading is a new card<br>• Each reading costs a little more than the last<br>• Every card gives a small blessing<br>• Story orders need cards read</p></details>`);
+  $('deckClose').onclick=()=>{ if(!deckBusy){ S.deckLast=null; closeModal(); } };
+  if($('deckGo')) $('deckGo').onclick=drawCard;
+  if(!S.deckIntro && DK.intro){ S.deckIntro=1; save(); playScene({clear:true, title:DK.title||'The Cards', sub:DK.sub||'', lines:DK.intro}); }
+}
+function drawCard(){
+  const p=deckPrice(); if(deckBusy||S.coins<p||deckDone()>=DECK_N) return;
+  const left=DK.cards.map((_,j)=>j).filter(j=>!(S.deck||[]).includes(j)), j=left[Math.floor(Math.random()*left.length)], c=DK.cards[j];
+  S.coins-=p; (S.deck=S.deck||[]).push(j); S.deckLast=j; deckEffect(c.effect); stat('deck'); stat('shop');
+  deckBusy=true; SND.play('page'); save(); render();
+  const el=$('modalBody').querySelectorAll('.tcard')[j]; if(el){ el.classList.add('flip'); }
+  setTimeout(()=>{ deckBusy=false; SND.play('magic'); closeModal();
+    playScene({title:`Card ${deckDone()} of ${DECK_N} · ${c.num}`, sub:`${c.e} ${c.n}`, lines:c.story.concat([['N',`<em>(${c.e} ${effLabel(c.effect)})</em>`]], deckDone()===DECK_N&&DK.last?DK.last:[])}, ()=>openDeck()); },650);
 }
 function showTicketHelp(){
   openModal(`<h2>🎟️ Out of tickets</h2><p>Each spin costs ${WHEEL_COST} tickets.</p><h3>Where tickets come from</h3>
@@ -542,7 +586,7 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, sideOn:CONFIG.sideOpen?1:0, salesBase:{}, genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:0, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, sideOn:CONFIG.sideOpen?1:0, salesBase:{}, deck:[], genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:0, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey) || (CONFIG.legacySaveKey && localStorage.getItem(CONFIG.legacySaveKey)); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(CHAINS.gK && s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
@@ -550,7 +594,7 @@ function load(){
       if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; if(s.sideOn==null) s.sideOn=(s.ch>0||(s.sideDone||0)>0||(s.side||[]).length)?1:0; if(WHEEL_KEY && (s.ch>0||(s.done||{})[3]) && !s.cells.some(c=>c.it&&c.it.k===WHEEL_KEY) && !(s.gifts||[]).some(g=>g[0]===WHEEL_KEY)) (s.gifts=s.gifts||[]).push([WHEEL_KEY,1]); delete s.wheelUnread; s.wheelLast=null;
       if(!s.unrev) s.unrev={...s.disc}; // saves from before the collection: everything found so far waits to be revealed
       if(!s.stats){ const story=Object.keys(s.done||{}).length; s.stats={side:s.sideDone||0, story, disc:Object.keys(s.disc||{}).length}; }
-      s.qt=s.qt||{}; s.cells.forEach(c=>{ if(c.s==='web' && !webbable(c.it)) c.s='open'; }); s.salesBase=s.salesBase||{}; delete s.energy; delete s.eT; delete s.buys;
+      s.qt=s.qt||{}; s.deck=s.deck||[]; s.deckLast=null; s.cells.forEach(c=>{ if(c.s==='web' && !webbable(c.it)) c.s='open'; }); s.salesBase=s.salesBase||{}; delete s.energy; delete s.eT; delete s.buys;
       if(!s.seenOrd){ s.seenOrd={}; TASKS.filter(t=>t.ch===s.ch&&!(s.done||{})[t.id]).slice(0,3).forEach(t=>s.seenOrd[t.id]=1); }
       return s; } } }catch(e){}
   return freshState();
@@ -637,6 +681,7 @@ function discover(it, quiet){
 function produce(i){
   const it=S.cells[i].it, d=def(it);
   if(CHAINS[it.k].wheel){ openWheel(i); return; }
+  if(CHAINS[it.k].deck){ openDeck(i); return; }
   if(d.want){ const w=CHAINS[it.want[0]].items[it.want[1]-1], F=feedSpec(d); SND.play('nope'); flo(`${d.e} Wants ${w.e}. Drop one on it for ${F.count>1?F.count+'× ':''}${CHAINS[F.gives].items[0].e}`, i); return; }
   if(d.fuelled){ if(!(it.fuel>0)){ SND.play('nope'); toast(`${d.e} The stove is cold. Drag a 🪵 log or some ${CHAINS.P.name.toLowerCase()} onto it.`); return; } }
   else {
@@ -780,7 +825,7 @@ function doMerge(a,b){
 
 /* a spare generator (another of its kind is on the board) can be sold, so extras never clog the board;
    your last one can't, so you can never sell yourself into a corner */
-const spareGen = it => isGen(it) && !CHAINS[it.k].wheel && S.cells.some(c=>c.s==='open'&&c.it&&c.it!==it&&c.it.k===it.k);
+const spareGen = it => isGen(it) && !CHAINS[it.k].wheel && !CHAINS[it.k].deck && S.cells.some(c=>c.s==='open'&&c.it&&c.it!==it&&c.it.k===it.k);
 function sellValue(it){ if(isCharger(it)) return it.on?Math.max(1,(it.l-4)*2):0; if(spareGen(it)) return it.l*2; return isGen(it)||isRes(it)||isBoost(it)||it.k==='ET'||CHAINS[it.k].dust?0 : CHAINS[it.k].story ? it.l*4 : CHAINS[it.k].rare ? it.l*3 : it.l*2; }
 function sell(i){
   const it=S.cells[i].it, v=sellValue(it);
@@ -813,8 +858,8 @@ function salesFor(t){ if(!t.sales) return 0; const b=S.salesBase||(S.salesBase={
 function taskStatus(t){
   const need={}; t.need.forEach(([k,l])=>need[key(k,l)]=(need[key(k,l)]||0)+1);
   const have=t.need.map(([k,l])=>openCount(k,l)>=need[key(k,l)]);
-  const wok=!t.wheel || wheelDone()>=t.wheel, sok=!t.sales || salesFor(t)>=t.sales;
-  return {have, wok, sok, ready:have.every(Boolean)&&wok&&sok};
+  const wok=!t.wheel || wheelDone()>=t.wheel, sok=!t.sales || salesFor(t)>=t.sales, cok=!t.cards || deckDone()>=t.cards;
+  return {have, wok, sok, cok, ready:have.every(Boolean)&&wok&&sok&&cok};
 }
 function completeTask(t){
   // remove items, preferring ones not currently selected
@@ -832,7 +877,7 @@ function completeTask(t){
   }
   S.done[t.id]=1; stat('story');
   if(t.side0) S.sideOn=1;
-  (t.gifts||[]).forEach(g=>{ if(CHAINS[g[0]].wheel && (S.cells.some(c=>c.it&&c.it.k===g[0])||S.gifts.some(x=>x[0]===g[0]))) return; give(g[0],g[1]); });
+  (t.gifts||[]).forEach(g=>{ if((CHAINS[g[0]].wheel||CHAINS[g[0]].deck) && (S.cells.some(c=>c.it&&c.it.k===g[0])||S.gifts.some(x=>x[0]===g[0]))) return; give(g[0],g[1]); });
   dropItems(taskRewards(t));
   const chTasks=TASKS.filter(x=>x.ch===S.ch);
   if(chTasks.every(x=>S.done[x.id])) finishChapter(t.beat, t.more);
@@ -887,6 +932,7 @@ function hintTask(t){
   S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
   const parts=t.need.map(([k,l])=>{ const d=CHAINS[k].items[l-1]; const g=srcLabel(k); return `${d.e} ${d.n}${g?` <small>(${CHAINS[k].rare?'rare from ':''}${g})</small>`:''}`; });
   if(t.wheel && wheelDone()<t.wheel) parts.push(`💡 ${t.wheel} wheel lights <small>(${wheelDone()} so far)</small>`);
+  if(t.cards && deckDone()<t.cards){ parts.push(`🃏 ${t.cards} cards read <small>(${deckDone()} so far)</small>`); S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].deck) fx[i]='hint'; }); }
   toast(`${CAST[t.who].av} <i>${t.say}</i><br>Needs: ${parts.join(' + ')}`, 4200);
   render();
 }
@@ -928,10 +974,12 @@ function showOrder(t){
   const ks=new Set(t.need.map(n=>n[0]));
   S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&(ks.has(c.it.k)||(isGen(c.it)&&(ks.has(CHAINS[c.it.k].main)||ks.has(CHAINS[c.it.k].rare))))) fx[i]='hint'; });
   if(t.wheel && wd<t.wheel) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].wheel) fx[i]='hint'; });
+  if(t.cards && !st.cok) S.cells.forEach((c,i)=>{ if(c.s==='open'&&c.it&&CHAINS[c.it.k].deck) fx[i]='hint'; });
   if(t.sales && !st.sok) document.querySelectorAll('.order.side').forEach(o=>o.classList.add('hint'));
   const rows=t.need.map(([k,l],j)=>{ const d=CHAINS[k].items[l-1], g=genFor(k);
       return `<div class="op-need${st.have[j]?' have':''}${CHAINS[k].tile?' tile':''}"><span class="e">${d.e}</span><span class="n">${d.n}<small>Lv ${l} of ${maxL(k)}${CHAINS[k].name!==d.n?' · '+CHAINS[k].name:''}${g?` · ${CHAINS[k].rare?'rare from':'from'} ${srcLabel(k)}`:''}${st.have[j]?'':bestHave(k,l)}</small></span><b>${st.have[j]?'✓':''}</b></div>`; }).join('')
     + (t.wheel?`<div class="op-need${st.wok?' have':''}"><span class="e">💡</span><span class="n">${t.wheel} wheel lights on<small>${wd} lit so far</small></span><b>${st.wok?'✓':''}</b></div>`:'')
+    + (t.cards?`<div class="op-need${st.cok?' have':''}"><span class="e">🃏</span><span class="n">${t.cards} cards read<small>${deckDone()} read so far · next reading 🪙 ${deckPrice()}</small></span><b>${st.cok?'✓':''}</b></div>`:'')
     + (t.sales?`<div class="op-need${st.sok?' have':''}"><span class="e">${CAST.S.av}</span><span class="n">${t.sales} ${CAST.S.name} sales<small>${Math.min(salesFor(t),t.sales)} done since this order came in</small></span><b>${st.sok?'✓':''}</b></div>`:'');
   const rw=(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ');
   const p=document.createElement('div'); p.id='orderPop';
@@ -978,7 +1026,8 @@ function render(){
       else if(c.s==='open'){
         if(isGen(c.it)){
           cls+=' isgen';
-          if(CHAINS[c.it.k].wheel){ html+=`<i class="gen">${wheelDone()}/20</i>`; if(S.chips>0) html+=`<i class="slotchips">🎟️${S.chips}</i>`; }
+          if(CHAINS[c.it.k].deck){ html+=`<i class="gen">${deckDone()}/${DECK_N}</i>`; if(S.coins>=deckPrice()&&deckDone()<DECK_N) cls+=' maxed'; }
+          else if(CHAINS[c.it.k].wheel){ html+=`<i class="gen">${wheelDone()}/20</i>`; if(S.chips>0) html+=`<i class="slotchips">🎟️${S.chips}</i>`; }
           else if(d.want){ if(!obtainable(c.it.want[0])){ c.it.want=pickWant(d); save(); } const w=CHAINS[c.it.want[0]].items[c.it.want[1]-1]; html+=`<i class="bubble">${w.e}<b class="arr">↓</b></i>`; cls+=' hungry'; }
           else if(d.fuelled){ if(c.it.fuel) html+=`<i class="gen">🔥${c.it.fuel}</i>`; else { html+=`<i class="bubble">🪵<b class="arr">↓</b></i>`; cls+=' cool hungry'; } }
           else if(d.uses) html+=`<i class="gen">${c.it.left}</i>`;
@@ -1066,7 +1115,7 @@ function renderOrders(tasks){
     el.dataset.id=t.id;
     if(!t.side && (!(S.seenOrd||{})[t.id] || flying===String(t.id))) el.classList.add('incoming');
     el.innerHTML=`${!t.side&&!(S.readOrd||{})[t.id]?'<i class="opip" title="New story"></i>':''}<div class="who"><span class="av">${CAST[t.who].av}</span><span>${t.lucky?'🍀 Lucky':CAST[t.who].name}</span></div>
-      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}${CHAINS[k].tile?' tile':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">💡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}${t.sales?`<span class="need wh${st.sok?' have':''}">${CAST.S.av}<small>${Math.min(salesFor(t),t.sales)}/${t.sales}</small>${st.sok?'<i>✓</i>':''}</span>`:''}</div>
+      <div class="needs">${t.need.map(([k,l],j)=>`<span class="need${st.have[j]?' have':''}${CHAINS[k].tile?' tile':''}">${CHAINS[k].items[l-1].e}${st.have[j]?'<i>✓</i>':''}</span>`).join('')}${t.wheel?`<span class="need wh${st.wok?' have':''}">💡<small>${Math.min(wheelDone(),t.wheel)}/${t.wheel}</small>${st.wok?'<i>✓</i>':''}</span>`:''}${t.cards?`<span class="need wh${st.cok?' have':''}">🃏<small>${Math.min(deckDone(),t.cards)}/${t.cards}</small>${st.cok?'<i>✓</i>':''}</span>`:''}${t.sales?`<span class="need wh${st.sok?' have':''}">${CAST.S.av}<small>${Math.min(salesFor(t),t.sales)}/${t.sales}</small>${st.sok?'<i>✓</i>':''}</span>`:''}</div>
       <div class="act${st.ready&&!t.side?' rd':''}">${st.ready?(t.side?'Hand over':'✓ Ready'):(t.side?t.rw:taskRewards(t)).map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</div>`;
     // tap the card for details; only the green "Hand over" strip delivers
     // story orders only hand over from their details popup; side orders can still go from the strip
@@ -1088,6 +1137,10 @@ function renderInfo(){
   const it=c.it, d=def(it), ch=CHAINS[it.k];
   if(it.wrap){ box.innerHTML=`<div class="big">🎁</div><div class="txt"><div class="nm">A present</div><div class="ds">${T.presentDesc} Tap to open it.</div></div>`; return; }
   let ds='';
+  if(ch.deck){
+    box.innerHTML=`<div class="big">${d.e}</div><div class="txt"><div class="nm">${d.n}<small>🃏 ${deckDone()}/${DECK_N} read</small></div><div class="ds">Tap to open. Next reading 🪙 ${deckPrice()}. Story orders need cards read.</div></div><div class="btns"><button class="sbtn" id="dOpen">Read</button></div>`;
+    $('dOpen').onclick=()=>openDeck(sel); return;
+  }
   if(ch.wheel){
     box.innerHTML=`<div class="big">🎡</div><div class="txt"><div class="nm">Prize Wheel<small>💡 ${wheelDone()}/20 lit</small></div><div class="ds">Tap to open. ${WHEEL_COST} 🎟️ per spin. New segments move the story on.</div></div><div class="btns"><button class="sbtn" id="wOpen">Spin</button><button class="sbtn" id="tkBtn">Get 🎟️</button></div>`;
     $('wOpen').onclick=()=>openWheel(sel); $('tkBtn').onclick=ticketShop; return;
@@ -1180,6 +1233,7 @@ function tap(i){
   if(c.it.wrap){ unwrap(i); return; }
   if(c.it.st){ sel=i; claim(i); return; } // story rosette: one tap reads it
   if(CHAINS[c.it.k].wheel){ sel=i; render(); openWheel(i); return; } // the wheel opens on one tap
+  if(CHAINS[c.it.k].deck){ sel=i; render(); openDeck(i); return; }
   if(sel===i){
     if(isCharger(c.it) && !c.it.on){ activateCharger(i); return; }
     if(isGen(c.it)){ produce(i); return; }
@@ -1275,7 +1329,7 @@ function playScene(sc,done){
 }
 function openModal(html,story){ $('modalBody').innerHTML=html; $('modal').hidden=false; $('modal').dataset.story=story?'1':''; if(story) hideToasts(); }
 function closeModal(){ const was=$('modal').dataset.story==='1'; $('modal').hidden=true; $('modal').dataset.story=''; if(was && !storyOpen()) flushToasts(); setTimeout(nextToast,200); setTimeout(runArrivals,250); }
-$('modal').addEventListener('click',e=>{ if(e.target.id==='modal' && !wheelBusy) closeModal(); });
+$('modal').addEventListener('click',e=>{ if(e.target.id==='modal' && !wheelBusy && !deckBusy){ S.deckLast=null; closeModal(); } });
 
 function chainHtml(k,cur){
   const ch=CHAINS[k];
@@ -1308,6 +1362,10 @@ function journalHtml(){
   html+=`<h3>${T.loreHeading}</h3>`;
   const lore=CHAINS.M.items.map((d,j)=>S.disc[key('M',j+1)]?`<div class="lore"><span>${d.e}</span><div><b>${d.n}</b>${d.lore}</div></div>`:'').join('');
   html+= lore || `<p style="color:var(--muted)">${T.loreEmpty}</p>`;
+  if(deckDone()>0){
+    html+=`<h3>🃏 ${DK.title||'The Cards'} <span style="color:var(--muted);font-weight:400;font-size:13px">${deckDone()}/${DECK_N}</span></h3>`;
+    html+=(S.deck||[]).map(j=>{ const c=DK.cards[j]; return `<div class="lore"><span>${c.e}</span><div><b>${c.num} · ${c.n}</b><br>${c.story.map(l=>l[1]).join(' ')}</div></div>`; }).join('');
+  }
   if(wheelDone()>0){
     html+=`<h3>💡 Under the wheel lights <span style="color:var(--muted);font-weight:400;font-size:13px">${wheelDone()}/${WHEEL_N}</span></h3>`;
     html+=wheelListHtml(true);

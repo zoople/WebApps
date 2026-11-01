@@ -71,3 +71,11 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
 - **Every story needs a side stall** (Jumble Sale / White Elephant): somewhere to spend spare items, with a character and `sales:n` story orders.
 - **Coins must be needed.** If generators alone can finish the story, the shop is decoration. Give coins a real sink tied to progress.
 - **A bot that finishes isn't proof.** It also has to show that coins get spent, the pass gets used, the side stall gets used and the headline chain gets topped. Check those numbers before shipping.
+
+## The Left Luggage Office (1 Nov 2026): built from the lessons above
+- **Start from a balance that played well.** Generators, order sizes and the side stall are copied from Pennywhistle Fete's numbers, then a new mechanic goes on top.
+- **Chance systems without the luck wall:** Vesna's deck draws without replacement, so every reading is new. No coupon-collector grind like the Fete wheel.
+- **One currency, one real sink:** readings cost coins and creep up (6 + 1 per card, 363 coins for all 22). The bot earned about 405 and ended with about 40, so coins matter all the way.
+- **The headline mechanic is needed to the end:** the finale needs all 22 cards.
+- **Points have a job to the end:** Insight tiers run to the last chapter, with Mr Pell's postcards every third tier. Tiers sized so a bot that never merges moons gets 12–14 of 15.
+- **Bot report to check before shipping:** cards read, coins in/spent/left, stall sales, pass tiers, top level reached per chain.
