@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "v7 - 26 Oct 2026"
+#define VERSION "v8 - 1 Nov 2026"
 #ifdef HOSTTEST
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
@@ -110,7 +110,6 @@ static const float TIER_UP[3] = {1.0f, 0.35f, 0.12f};
 // ------------------------------------------------------------------ data: words
 typedef struct { const char *t, *a; } Quote;
 static const Quote QUOTES[] = {
-	{"It is not the man who has too little, but the man who craves more, that is poor.", "Seneca"},
 	{"Very little is needed to make a happy life; it is all within yourself, in your way of thinking.", "Marcus Aurelius"},
 	{"A man is rich in proportion to the number of things which he can afford to let alone.", "Henry David Thoreau"},
 	{"Our life is frittered away by detail. Simplify, simplify.", "Henry David Thoreau"},
@@ -121,7 +120,6 @@ static const Quote QUOTES[] = {
 	{"He who has a why to live can bear almost any how.", "Friedrich Nietzsche"},
 	{"If you gaze long into an abyss, the abyss also gazes into you.", "Friedrich Nietzsche"},
 	{"Man is condemned to be free.", "Jean-Paul Sartre"},
-	{"Nothing is enough for the man to whom enough is too little.", "Epicurus"},
 	{"No man is free who is not master of himself.", "Epictetus"},
 	{"Make the best use of what is in your power, and take the rest as it happens.", "Epictetus"},
 	{"He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has.", "Epictetus"},
@@ -132,8 +130,29 @@ static const Quote QUOTES[] = {
 	{"Have nothing in your houses that you do not know to be useful, or believe to be beautiful.", "William Morris"},
 	{"Discipline is the bridge between goals and accomplishment.", "Jim Rohn"},
 	{"Everything can be taken from a man but one thing: the last of the human freedoms, to choose one's attitude.", "Viktor Frankl"},
+	{"The things you own end up owning you.", "Marie Kondo"},
+	{"Keep only those things that spark joy.", "Marie Kondo"},
+	{"You have power over your mind, not outside events.", "Marcus Aurelius"},
+	{"It is not things that disturb us, but our judgments about things.", "Epictetus"},
+	{"I went to the woods because I wished to live deliberately.", "Henry David Thoreau"},
 };
 #define NQ (int)(sizeof(QUOTES) / sizeof(QUOTES[0]))
+// first four offerings of tiers 2 to 4: greed, privilege and what they cost
+static const Quote GREED[] = {
+	{"It is not the man who has too little, but the man who craves more, that is poor.", "Seneca"},
+	{"Nothing is enough for the man to whom enough is too little.", "Epicurus"},
+	{"He who knows he has enough is rich.", "Lao Tzu"},
+	{"For the love of money is the root of all evil.", "1 Timothy 6:10"},
+	{"Take heed, and beware of covetousness.", "Luke 12:15"},
+	{"It is easier for a camel to go through the eye of a needle, than for a rich man to enter into the kingdom of God.", "Matthew 19:24"},
+	{"For unto whomsoever much is given, of him shall be much required.", "Luke 12:48"},
+	{"He that loveth silver shall not be satisfied with silver.", "Ecclesiastes 5:10"},
+	{"The abundance of the rich will not suffer him to sleep.", "Ecclesiastes 5:12"},
+	{"There is no wealth but life.", "John Ruskin"},
+	{"A cynic is a man who knows the price of everything and the value of nothing.", "Oscar Wilde"},
+	{"Power tends to corrupt, and absolute power corrupts absolutely.", "Lord Acton"},
+};
+#define NGQ (int)(sizeof(GREED) / sizeof(GREED[0]))
 static const Quote DEATH_QUOTES[] = {
 	{"Death is nothing to us, since when we are, death has not come, and when death has come, we are not.", "Epicurus"},
 	{"To philosophize is to learn to die.", "Michel de Montaigne"},
@@ -167,7 +186,7 @@ static const char *FINAL_QUOTE = "One day we say \"One more time.\" And we are r
 static const char *ROMAN[5] = {"", "I", "II", "III", "IV"};
 
 // shuffled decks so quotes don't repeat until all are seen
-typedef struct { int idx[32], n, size; } Deck;
+typedef struct { int idx[64], n, size; } Deck;
 static int deckDraw(Deck *d, int size) {
 	if (d->n <= 0 || d->size != size) {
 		d->size = size; d->n = size;
@@ -176,7 +195,7 @@ static int deckDraw(Deck *d, int size) {
 	}
 	return d->idx[--d->n];
 }
-static Deck dQuote, dDeath, dMusing;
+static Deck dQuote, dGreed, dDeath, dMusing;
 
 // ------------------------------------------------------------------ data: waves (landscape layouts)
 enum { E_GRUNT, E_ARCHER, E_MORTAR, E_CHARGER, E_BOSS };
@@ -221,7 +240,7 @@ enum { S_TITLE, S_PLAY, S_ALTAR, S_STORY, S_DEAD, S_PAUSE };
 enum { PH_WAVE, PH_BETWEEN, PH_CLEARED, PH_DEAD };
 
 static struct {
-	int demo, tier, banked, floor, wave, phase, kills, defy;
+	int demo, tier, banked, floor, wave, phase, kills, defy, offers;
 	float time, nextT, grace, glory, ft, fspent, sparkT, heartT, hs, flash, shake, bannerT;
 	u32 flashC; char banner[64], bannerSub[96];
 	int held[NB];
@@ -555,7 +574,7 @@ static void storyTier(int n, const char *by) {
 	for (int i = 0; STORIES[n][i]; i++) storyAdd(STORIES[n][i], i ? NULL : eye, i ? NULL : by, 0);
 }
 static void storyPlay(int next) { prevState = state; state = S_STORY; storyAt = 0; storyNext = next; sfx(SND_TICK); }
-static int nextTier = 0, nextBanked = 0, nextKills = 0;
+static int nextTier = 0, nextBanked = 0, nextKills = 0, nextDefy = 0;
 static int endWon = 0, endFinal = 0; static int endMusing = 0, endQuote = 0;
 static void endRun(int won, int fin);
 static void storyEnd(void) {
@@ -563,7 +582,7 @@ static void storyEnd(void) {
 	case NEXT_PLAY: state = S_PLAY; break;
 	case NEXT_STARTWAVE: state = S_PLAY; startWave(0); break;
 	case NEXT_ASCEND:
-		newRun(0, nextTier, nextBanked, nextKills); state = S_PLAY; startWave(0);
+		newRun(0, nextTier, nextBanked, nextKills); G.defy = nextDefy; state = S_PLAY; startWave(0);
 		snprintf(G.banner, sizeof G.banner, "Tier %s", ROMAN[nextTier]); snprintf(G.bannerSub, sizeof G.bannerSub, "Every blessing returned - the wardens are stronger"); G.bannerT = 2.6f;
 		break;
 	case NEXT_FINAL: endRun(1, 1); break;
@@ -585,7 +604,7 @@ static void ascend(void) {
 		storyAdd(FINAL_QUOTE, NULL, NULL, 1);
 		storyPlay(NEXT_FINAL); return;
 	}
-	nextTier = G.tier + 1; nextBanked = G.banked; nextKills = G.kills;
+	nextTier = G.tier + 1; nextBanked = G.banked; nextKills = G.kills; nextDefy = G.defy;
 	storyTier(nextTier, NULL); storyPlay(NEXT_ASCEND);
 }
 static void endRun(int won, int fin) {
@@ -618,7 +637,8 @@ static void sacrifice(int c) {
 	G.p.x = TW / 2; G.p.y = TH - 40; G.p.vx = G.p.vy = 0;
 	snprintf(G.banner, sizeof G.banner, "Given up"); snprintf(G.bannerSub, sizeof G.bannerSub, "%s gone - +%d @", BUFFS[b].name, gain); G.bannerT = 2.0f;
 	burst(G.p.x, G.p.y, cGilt, 40, 160); sfx(SND_SHATTER);
-	const Quote *q = &QUOTES[deckDraw(&dQuote, NQ)];
+	int greedy = G.tier >= 2 && G.offers < 4; G.offers++;   // tiers 2+: the first four offerings are about greed
+	const Quote *q = greedy ? &GREED[deckDraw(&dGreed, NGQ)] : &QUOTES[deckDraw(&dQuote, NQ)];
 	char eye[96], line[200], by[96];
 	snprintf(eye, sizeof eye, "%s given up", BUFFS[b].name); snprintf(line, sizeof line, "\"%s\"", q->t); snprintf(by, sizeof by, "- %s", q->a);
 	storyReset(); storyAdd(line, eye, by, 0); storyIcon = b; storyPlay(NEXT_PLAY);
@@ -705,7 +725,7 @@ static void update(float dt) {
 		G.p.vx += (mx * 115 - G.p.vx) * fminf(1, dt * 14); G.p.vy += (my * 115 - G.p.vy) * fminf(1, dt * 14);
 		G.p.x = clampf(G.p.x + G.p.vx * dt, G.p.r + WALLT, TW - G.p.r - WALLT); G.p.y = clampf(G.p.y + G.p.vy * dt, G.p.r + WALLT, TH - G.p.r - WALLT);
 		pushOut(&G.p.x, &G.p.y, G.p.r);
-		if (touchingWall(G.p.x, G.p.y, G.p.r + 1.5f)) { if (has(B_FLOAT)) featherSave(); else hurt(10); }
+		if (touchingWall(G.p.x, G.p.y, G.p.r + 1.5f)) { LOG("SLAB contact floor %d feather %d\n", G.floor, has(B_FLOAT)); if (has(B_FLOAT)) featherSave(); else hurt(10); }
 		G.p.x = clampf(G.p.x, G.p.r + WALLT, TW - G.p.r - WALLT); G.p.y = clampf(G.p.y, G.p.r + WALLT, TH - G.p.r - WALLT);
 		G.p.moving = sqrtf(mx * mx + my * my) > 0.15f;
 		if (G.p.moving) { float l = sqrtf(mx * mx + my * my); G.p.fx = mx / l; G.p.fy = my / l; }
@@ -1095,7 +1115,10 @@ static void drawAltar(void) {
 	for (int i = 0; i < ncards; i++) {
 		Rect r = cardRect(i); Card c = cards[i];
 		u32 edge = c.refuse ? cEmber2 : tierCol(BUFFS[c.buff].tier);
-		panel(r, sel == i ? RGBA(48, 44, 40, 255) : cStone2, sel == i ? cGiltHi : edge);
+		if (sel == i) {   // selected: bright fill, thick gold frame and a gold bar on the left
+			panel(r, RGBA(70, 58, 34, 255), cGiltHi); C2D_DrawRectSolid(r.x + 1, r.y + 1, 0, r.w - 2, 3, cGiltHi); C2D_DrawRectSolid(r.x + 1, r.y + r.h - 4, 0, r.w - 2, 3, cGiltHi);
+			C2D_DrawRectSolid(r.x, r.y, 0, 6, r.h, cGiltHi);
+		} else panel(r, cStone2, edge);
 		if (c.refuse) {
 			text("Refuse", r.x + 8, r.y + 4, 0.55f, cBone, C2D_AlignLeft);
 			text("Keep every blessing, but drain will double", r.x + 8, r.y + 24, 0.4f, cBone, C2D_AlignLeft);
@@ -1111,7 +1134,10 @@ static void drawAltar(void) {
 			snprintf(s, sizeof s, "-%.1f > -%.1f/s", drainRate(), rateIf(c.buff, G.defy)); text(s, r.x + r.w - 6, r.y + 40, 0.34f, cGrace, C2D_AlignRight);
 		}
 	}
-	if (sel >= 0) { button(bConfirm, cards[sel].refuse ? "Refuse the altar (A)" : "Give it up (A)", 1); }
+	if (sel >= 0) {
+		if (cards[sel].refuse) button(bConfirm, "Refuse the altar (A)", 1);
+		else { snprintf(s, sizeof s, "Give up %s (A)", BUFFS[cards[sel].buff].name); button(bConfirm, s, 1); }
+	}
 	else text("Tap a card, or use the D-Pad", BW / 2, 220, 0.4f, cMuted, C2D_AlignCenter);
 }
 static void drawBottom(void) {
