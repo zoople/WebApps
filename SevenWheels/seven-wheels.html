@@ -28,7 +28,7 @@ body.touch.playing #tc{display:block}
 <div id="top"><button id="mn" title="Menu">&#9776;</button><button id="mu" title="Sound">&#9835;</button><button id="fs" title="Full screen">&#9974;</button></div>
 <div id="tc"><div id="stick"><div id="knob"></div></div><button class="b" id="bc">C</button><button class="b" id="bb">B</button><button class="b" id="ba">A</button></div>
 <button id="upd">Update now</button><div id="ios">iPhone: Share → Add to Home Screen for full screen</div>
-<script>const VERSION="v1",VDATE="3 Nov 2026";</script>
+<script>const VERSION="v2",VDATE="4 Nov 2026";</script>
 <script>
 'use strict';
 /* ===== basics ===== */
@@ -447,19 +447,27 @@ function teleLane(x,y,dx,dy,len,w,p,lock){cx.save();cx.translate(x,y);cx.rotate(
 function hpbar(e,dy,w){if(e.mhp===undefined||e.hp>=e.mhp||e.hp<=0)return;w=w||18;const x=e.x-w/2,y=e.y-e.r-(dy||8);R(x-1,y-1,w+2,4,'#000');R(x,y,w,2,'#3a1a1a');R(x,y,w*e.hp/e.mhp,2,'#ff6a5a');}
 
 /* pillars: single teaching pillars set along the journey (optional, or required before the way on) */
-function pilSet(l){G.pend=G.pend||[];G.pil=(l||[]).map(q=>({x:q.x,y:q.y,id:q.id,req:!!q.req,t:0,done:false}));}
-function pilUpd(dt){const sw=P.atk>0,nw=sw&&!G.pa;G.pa=sw;
+const PKNOW={sound:'SOUND',colour:'COLOUR',element:'THE ELEMENT',beast:'THE BEASTS'};
+function pilSet(l){G.pend=G.pend||[];G.pil=(l||[]).map(q=>({x:q.x,y:q.y,id:q.id,req:!!q.req,hint:q.hint||'',t:0,done:false,on:false,w:0,lt:-9,from:null}));}
+function pilWake(q){q.on=true;q.w=0;q.from={x:P.x,y:P.y};AU.sfx('chime',660);AU.sfx('plate');shake=3;flashA=.2;flashC=W.col;burst(q.x,q.y-6,18,W.col,80,.8,2);pop(q.x,q.y-34,'THE PILLAR WAKES','#ffe9a8');}
+function pilUpd(dt){const sw=P.atk>0,nw=sw&&!G.pa;G.pa=sw;const s=W.stages[G.si];
  for(const q of G.pil||[]){if(q.done)continue;
-  if(nw&&dst(P,{x:q.x,y:q.y-6})<40){q.done=true;AU.sfx('plate');AU.sfx('hit');shake=3;flashA=.25;flashC=W.col;burst(q.x,q.y-10,20,W.col,90,.8,2);G.pend.push(W.lore[q.id]);
+  if(!q.on){if(G.sT>.6&&s.done()&&!G.dlg)pilWake(q);}
+  else if(q.w<1)q.w=Math.min(1,q.w+dt/1.4);
+  if(nw&&dst(P,{x:q.x,y:q.y-6})<40){
+   if(!q.on||q.w<1){if(!q.on&&!G.dlg&&G.t-q.lt>2){q.lt=G.t;AU.sfx('thud');shake=1.5;burst(q.x,q.y-12,6,'#8a7a76',40,.4,2);
+     say([{who:'THE PILLAR',p:'pillar',t:'This pillar holds the knowledge of '+(PKNOW[q.id]||'this place')+'. It is sealed.'},{t:q.hint||'Finish what this place asks of you, and it will wake.'}]);}continue;}
+   q.done=true;AU.sfx('plate');AU.sfx('hit');shake=3;flashA=.25;flashC=W.col;burst(q.x,q.y-10,20,W.col,90,.8,2);G.pend.push(W.lore[q.id]);
    if(q.req){SAVE.pr=SAVE.pr||{};SAVE.pr[W.id]=1;save();}}}}
 function pilReq(){return !(G.pil||[]).some(q=>q.req&&!q.done);}
 function gcallDr(){const c=G.gcall;if(!c)return;const k=(G.t*1.4)%1;AL(.35*(1-k));cx.strokeStyle='#ffe9a8';cx.lineWidth=1.5;cx.beginPath();cx.ellipse(c.x,c.y+6,10+k*22,4+k*9,0,0,TAU);cx.stroke();AL(1);if(W.gcDr)W.gcDr(c.x,c.y);
  const b=Math.sin(G.t*4)*2;TRI(c.x-4,c.y-34+b,c.x+4,c.y-34+b,c.x,c.y-28+b,'#ffe9a8');}
-function pilDr(){gcallDr();for(const q of G.pil||[]){if(!q.done){const t=G.t,py=.5+.5*Math.sin(t*2.6+q.x);
-  if(/^#[0-9a-f]{6}$/i.test(W.col)){const g=cx.createLinearGradient(0,q.y-96,0,q.y-14);g.addColorStop(0,W.col+'00');g.addColorStop(.5,W.col+'88');g.addColorStop(1,W.col+'ee');AL(.7+.3*py);cx.fillStyle=g;cx.fillRect(q.x-11,q.y-96,22,82);AL(.2+.2*py);cx.fillStyle='#fff';cx.fillRect(q.x-2,q.y-90,4,76);}
-  AL(.5);cx.strokeStyle=W.col;cx.lineWidth=1.5;cx.beginPath();cx.ellipse(q.x,q.y+7,16+py*5,6+py*2,0,0,TAU);cx.stroke();AL(1);
-  for(let i=0;i<4;i++){const yy=q.y-16-((t*28+i*19)%72),xx=q.x+Math.sin(t*2+i*2)*6;R(xx,yy,1.6,1.6,'#fff');}
-  const by=q.y-100+Math.sin(t*3)*2;POLY([q.x,by-5,q.x+4,by,q.x,by+5,q.x-4,by],'#fff');POLY([q.x,by-3,q.x+2,by,q.x,by+3,q.x-2,by],W.col);}
+function pilDr(){gcallDr();for(const q of G.pil||[]){if(!q.done&&q.on){const t=G.t,py=.5+.5*Math.sin(t*2.6+q.x),w=q.w,h=82*w;
+  if(/^#[0-9a-f]{6}$/i.test(W.col)&&h>2){const g=cx.createLinearGradient(0,q.y-14-h,0,q.y-14);g.addColorStop(0,W.col+'00');g.addColorStop(.5,W.col+'88');g.addColorStop(1,W.col+'ee');AL((.7+.3*py)*w);cx.fillStyle=g;cx.fillRect(q.x-11,q.y-14-h,22,h);AL((.2+.2*py)*w);cx.fillStyle='#fff';cx.fillRect(q.x-2,q.y-8-h,4,h-2);}
+  AL(.5*(.3+.7*w));cx.strokeStyle=W.col;cx.lineWidth=1.5;cx.beginPath();cx.ellipse(q.x,q.y+7,16+py*5,6+py*2,0,0,TAU);cx.stroke();AL(1);
+  if(w<1&&q.from){for(let i=0;i<7;i++){const k=((t*1.3+i/7)%1),sx=q.from.x+(q.x-q.from.x)*k,sy=q.from.y+(q.y-q.from.y)*k-Math.sin(k*Math.PI)*26;AL(.9*(1-w*.6));C(sx,sy,2.2-k,W.col);R(sx-.7,sy-.7,1.4,1.4,'#fff');}AL(1);}
+  if(w>=.6){for(let i=0;i<4;i++){const yy=q.y-16-((t*28+i*19)%72),xx=q.x+Math.sin(t*2+i*2)*6;R(xx,yy,1.6,1.6,'#fff');}
+   const by=q.y-100+Math.sin(t*3)*2;AL(clamp((w-.6)/.4,0,1));POLY([q.x,by-5,q.x+4,by,q.x,by+5,q.x-4,by],'#fff');POLY([q.x,by-3,q.x+2,by,q.x,by+3,q.x-2,by],W.col);AL(1);}}
  W.pilDr(q);}}
 
 /* stages */
@@ -469,7 +477,7 @@ function qStart(i){const s=W.stages[i];G.si=i;G.sT=0;G.sdone=false;G.ask=null;G.
  P.hp=P.mhp;P.inv=1;P.vx=P.vy=0;P.dash=0;P.atk=0;if(W.stageReset)W.stageReset();
  const p=s.pos||[W.sx,W.sy];P.x=p[0];P.y=p[1];s.setup();pilSet(s.pil);
  G.ban={t:3,a:W.name.toUpperCase(),b:s.name};
- if(s.intro){const il=s.intro.slice();if(i>0&&(s.pil||[]).length)il.push('A pillar glows nearby. Strike it to hear what it remembers.');say(il);}}
+ if(s.intro){const il=s.intro.slice();if(i>0&&(s.pil||[]).length)il.push('A dark pillar stands nearby. It wakes when you finish what is asked here. Then strike it.');say(il);}}
 function qFinish(s){const next=()=>{if(G.si>=W.stages.length-1)G.win=1;else qStart(G.si+1);};const ot=typeof s.outro==='function'?s.outro():s.outro;if(ot)say(ot,next);else next();}
 function qUpd(dt){const s=W.stages[G.si];if(G.pend&&G.pend.length&&!G.dlg)say(G.pend.shift());if(G.ban&&G.ban.t>0)G.ban.t-=dt;G.sT+=dt;if(s.upd)s.upd(dt);pilUpd(dt);
  if(!G.sdone&&G.sT>.5&&!pilReq()&&!G.pask&&s.done()&&!G.dlg){G.pask=1;ask('Strike the glowing pillar');}
@@ -669,7 +677,7 @@ function quakeUpd(dt){const q=G.qk;if(!q)return;q.r+=300*dt;
   else if(e.k==='wisp'){e.calm=Math.max(e.calm,4.2);pop(e.x,e.y-10,'settled','#ecd4b0');}
   else if(e.k==='fright'){const dm=e.stagger>0?1+q.s:q.s;if(dm>0){dmgE(e,dm,nx,ny,0);AU.sfx('hit');pop(e.x,e.y-40,'-'+dm,'#ffe08a');}else{pop(e.x,e.y-40,'no force','#ccc');if(!G.tNf){G.tNf=1;tip('A Quake with no stored force does nothing. Absorb first, then release.',6);}}}}
  for(const b of G.bo){if(b.lock||q.hit.has(b))continue;const dd=dst(b,q);if(dd-b.r>q.r)continue;q.hit.add(b);b.x=clamp(b.x+(b.x-q.x)/(dd||1)*16,AX0+b.r,AX1-b.r);b.y=clamp(b.y+(b.y-q.y)/(dd||1)*16,AY0+b.r,AY1-b.r);}
- for(let i=obs.length-1;i>=0;i--){const o=obs[i];if(!o.crack||q.hit.has(o))continue;if(dst(o,q)-o.r<=q.r){q.hit.add(o);obs.splice(i,1);burst(o.x,o.y,16,'#9a7864',90,.7,2);AU.sfx('rumble');pop(o.x,o.y-14,'SHATTERED','#ffd0a0');G.shat=(G.shat||0)+1;}}
+ for(let i=obs.length-1;i>=0;i--){const o=obs[i];if(!o.crack||q.hit.has(o))continue;if(dst(o,q)-o.r<=Math.min(q.r,66)){q.hit.add(o);obs.splice(i,1);burst(o.x,o.y,16,'#9a7864',90,.7,2);AU.sfx('rumble');pop(o.x,o.y-14,'SHATTERED','#ffd0a0');G.shat=(G.shat||0)+1;}}
  if(q.r>=q.R)G.qk=null;}
 function guard(n,sx,sy,why){if(!G.pln||G.ft<=0)return false;
  if(G.gcd<=0){G.gcd=.3;G.absN++;G.sto=Math.min(3,G.sto+1);G.ft=Math.max(0,G.ft-.1);pop(P.x,P.y-26,'ABSORBED  +force','#ffd45a');AU.sfx('clink');AU.sfx('thud');burst(P.x,P.y,10,'#ffd45a',60,.5,2);shake=3;
@@ -696,9 +704,14 @@ function pitDr(q){const x=q.x,y=q.y;EL(x,y+2,15,9,'#120806');EL(x,y,14,8,'#1c0e0
 function crackedDr(o){rock(o);cx.strokeStyle='#ffb45a';cx.lineWidth=1.2;AL(.7+.3*Math.sin(G.t*4+o.x));cx.beginPath();cx.moveTo(o.x-2,o.y-o.r*.8);cx.lineTo(o.x+1,o.y-o.r*.2);cx.lineTo(o.x-3,o.y+o.r*.2);cx.lineTo(o.x+2,o.y+o.r*.7);cx.stroke();AL(1);}
 function tremorDr(t){const x=t.x,y=t.y,gl=t.t<1.1?1-t.t/1.1:0;EL(x,y+8,13,4,'rgba(0,0,0,.4)');R(x-8,y-14,16,22,'#4a302a');R(x-8,y-14,16,3,'#9a7864');R(x-10,y+4,20,5,'#3a2420');
  AL(.4+.6*gl);R(x-3,y-8,6,6,gl>0?'#ffb45a':'#7a5a4c');AL(1);if(gl>0){AL(.3*gl);RG(x,y,14+gl*18,'#ff6a3a',1.5);AL(1);T('!',x,y-28,9,'#ff5a4a','center',1);}}
-function runeDr(r){const x=r.x,y=r.y,p=clamp(r.t/2.8,0,1);AL(.25+.1*Math.sin(G.t*3));EL(x,y,26,15,'#ffb45a');AL(1);cx.strokeStyle='#ffd45a';cx.lineWidth=1.5;cx.beginPath();cx.ellipse(x,y,22,12,0,0,TAU);cx.stroke();
+function runeDr(r){const x=r.x,y=r.y,p=clamp(r.t/2.8,0,1);if(r.t>=2.8)r.fin=1;const fin=!!r.fin,idle=!fin&&p<=0;
+ AL(fin?.12:.25+.1*Math.sin(G.t*3)+(idle?.15*(.5+.5*Math.sin(G.t*5)):0));EL(x,y,26,15,fin?'#8a6a50':'#ffb45a');AL(1);
+ if(idle){for(let k=0;k<2;k++){const ph=(G.t*.8+k*.5)%1;AL(.6*(1-ph));cx.strokeStyle='#ffe9a8';cx.lineWidth=1.6;cx.beginPath();cx.ellipse(x,y,22+ph*18,12+ph*10,0,0,TAU);cx.stroke();}AL(1);
+  const b=Math.sin(G.t*4)*2.5;TRI(x-5,y-32+b,x+5,y-32+b,x,y-24+b,'#ffe9a8');R(x-1.5,y-40+b,3,8,'#ffe9a8');}
+ cx.strokeStyle=fin?'#8a6a50':'#ffd45a';cx.lineWidth=1.5;cx.beginPath();cx.ellipse(x,y,22,12,0,0,TAU);cx.stroke();
  cx.strokeRect(x-9,y-6,18,12);cx.beginPath();cx.moveTo(x,y-8);cx.lineTo(x+10,y);cx.lineTo(x,y+8);cx.lineTo(x-10,y);cx.closePath();cx.stroke();
- if(p>0){cx.strokeStyle='#fff2a8';cx.lineWidth=3;cx.beginPath();cx.ellipse(x,y,26,15,0,-Math.PI/2,-Math.PI/2+p*TAU);cx.stroke();}}
+ if(p>0&&!fin){cx.strokeStyle='#fff2a8';cx.lineWidth=3;cx.beginPath();cx.ellipse(x,y,26,15,0,-Math.PI/2,-Math.PI/2+p*TAU);cx.stroke();}
+ if(fin){AL(.5);cx.strokeStyle='#ffd45a';cx.lineWidth=1.2;cx.beginPath();cx.moveTo(x-5,y);cx.lineTo(x-1,y+4);cx.lineTo(x+6,y-4);cx.stroke();AL(1);}}
 function fstoneDr(s){if(!s||s.got)return;const b=Math.sin(G.t*4)*2;AL(.4+.2*Math.sin(G.t*5));C(s.x,s.y+b,12,'#ff6a7a');AL(1);crys(s.x,s.y+b+2,.9,'#8a1c2c','#e0485c','#ffb0bc');}
 
 
@@ -713,8 +726,8 @@ const LORE={
   {who:'THE PILLAR',p:'pillar',t:'Chanting is just a way of tuning yourself to one steady pitch. Try it aloud if you like. Nobody here will mind.'}],
  beast:[{who:'THE PILLAR',p:'pillar',t:'I remember the creatures of this place. The elephant carries heavy loads and never panics. The ox plods, pulls the plough and outlasts everything. Both are patient, strong and unbothered.'},
   {who:'THE PILLAR',p:'pillar',t:'Be a little elephant: heavy, unhurried and with nothing to prove.'}]};
-function stoneDr(q){const x=q.x,y=q.y,g=q.done?1:clamp(q.t/1.3,0,1);EL(x,y+9,12,4,'rgba(0,0,0,.4)');R(x-8,y-20,16,28,'#3e2a26');R(x-7,y-21,14,27,q.done?'#7a4a3a':'#5a3a30');R(x-7,y-21,14,2,'#9a7864');R(x-9,y+4,18,5,'#2e1a16');
- cx.strokeStyle=q.done?'#ffd45a':'#ff9a6a';cx.lineWidth=1.3;const m=y-9;
+function stoneDr(q){const x=q.x,y=q.y,g=q.done?1:clamp(q.t/1.3,0,1);EL(x,y+9,12,4,'rgba(0,0,0,.4)');R(x-8,y-20,16,28,'#3e2a26');R(x-7,y-21,14,27,q.done?'#7a4a3a':q.on?'#5a3a30':'#34262a');R(x-7,y-21,14,2,'#9a7864');R(x-9,y+4,18,5,'#2e1a16');
+ cx.strokeStyle=q.done?'#ffd45a':q.on?'#ff9a6a':'#52403e';cx.lineWidth=1.3;const m=y-9;
  if(q.id==='colour'){cx.beginPath();cx.arc(x,m,4,0,TAU);cx.stroke();}
  else if(q.id==='element'){cx.strokeRect(x-4,m-4,8,8);}
  else if(q.id==='sound'){cx.beginPath();cx.moveTo(x-5,m);for(let i=0;i<=10;i++)cx.lineTo(x-5+i,m+Math.sin(i*.9)*3);cx.stroke();}
@@ -778,31 +791,31 @@ function gar(x,y,s){crys(x,y,s,'#8a1c2c','#e0485c','#ffb0bc');}
 /* ---------- stages ---------- */
 const GUIDE={n:'THE ELDER',dr:function(x,y){ele(x-3,y+5,1,1.4,'#a08070','#cdb0a0',0);}};
 const STAGES=[
-{name:'Stand your ground',goal(){return G.rd?'Strike the glowing pillar':'Stand on the rune and hold PLANT (C / L) for 3 seconds';},pos:[200,200],
- pil:[{x:322,y:112,id:'sound',req:true}],
+{name:'Stand your ground',goal(){return G.rd?'Strike the glowing pillar':'Stand on the glowing rune and hold PLANT (C / L) for 3 seconds';},pos:[200,200],
+ pil:[{x:322,y:112,id:'sound',req:true,hint:'Stand on the glowing rune and hold PLANT (C / L) until it settles.'}],
  intro:['Welcome, little one. This is the ROOT wheel, at the base of the spine. It is the ground you stand on.',
   'Root is about SURVIVAL and SAFETY: having a place, having enough, knowing you can hold. Everything above it is built on it.',
   'What blocks it is FEAR. Fear has two faces. It can make you clutch and harden, or make you scatter and run. Neither is strength.',
-  'Strength is staying. Try it: stand on the glowing rune and HOLD the Plant button (C or L).','And that glowing pillar to the east remembers what this place is. Strike it, and listen.'],
+  'Strength is staying. Try it: stand on the glowing rune and HOLD the Plant button (C or L).','The dark pillar to the east is sealed. Finish this, and it will wake. Then strike it, and listen.'],
  setup(){G.rd=0;G.rune={x:200,y:140,t:0};ask('Hold PLANT (C / L) while standing on the rune');},
- upd(dt){const on=G.pln&&dst(P,G.rune)<24;if(on)G.ft=Math.min(1,G.ft+dt*.3);G.rune.t=on?G.rune.t+dt:Math.max(0,G.rune.t-dt*.6);if(G.rune.t>=2.8&&!G.rd){G.rd=1;AU.sfx('chime',660);}},
+ upd(dt){const on=G.pln&&dst(P,G.rune)<24;if(on)G.ft=Math.min(1,G.ft+dt*.3);G.rune.t=on?G.rune.t+dt:Math.max(0,G.rune.t-dt*.6);if(G.rune.t>=2.8&&!G.rd){G.rd=1;G.rune.fin=1;AU.sfx('chime',660);burst(G.rune.x,G.rune.y,16,'#ffd45a',80,.7,2);}},
  done(){return G.rd;},
  draw(){runeDr(G.rune);},
  outro:['Feel that? Nothing pushes you around. See the ring around you: that is the calm you give off when you are grounded.',
   'But watch your FOOTING bar. Nobody can plant forever. Strength is not rigidity: you plant, you hold, then you let go.']},
-{name:'Return the force',goal:'Absorb a tremor while PLANTED, then release to Quake the 3 cracked rocks',pos:[200,205],
- pil:[{x:36,y:206,id:'colour',req:true}],
+{name:'Return the force',goal(){const n=obs.filter(o=>o.crack).length;return 'Absorb a tremor while PLANTED near a cracked rock, then release ('+(3-n)+'/3 shattered)';},pos:[200,205],
+ pil:[{x:36,y:206,id:'colour',req:true,hint:'Use your force: PLANT to absorb a tremor, then let go to Quake the cracked rocks, one Quake each.'}],
  intro:['The stone ahead hums and sends tremors. Standing still, you can take a tremor into the earth, and the force is not lost: it is stored.',
   'Let go of PLANT and the earth answers with a QUAKE. The more force you stored, the wider it rolls.',
-  'Plant as the ring reaches you. Watch FORCE fill. Then release and shatter the cracked rocks.'],
- setup(){G.tm={x:200,y:96,t:1.6};obs.push({k:'c',x:130,y:150,r:11,crack:true},{k:'c',x:270,y:150,r:11,crack:true},{k:'c',x:200,y:120,r:11,crack:true});G.shat=0;ask('Plant as the tremor reaches you, then let go');},
+  'The cracked rocks stand far apart, and one Quake only reaches one of them. Plant beside a rock as the ring reaches you, then release.'],
+ setup(){G.tm={x:200,y:96,t:1.6};obs.push({k:'c',x:46,y:108,r:11,crack:true},{k:'c',x:354,y:108,r:11,crack:true},{k:'c',x:200,y:170,r:11,crack:true});G.shat=0;ask('Plant as the tremor reaches you, then let go');},
  upd(dt){const t=G.tm;t.t-=dt;if(t.t<=0){t.t=3.4;ring(t.x,t.y+10,70,300,WHY_RING);AU.sfx('quake');}if(G.sto>0&&G.shat===0)ask('Force stored! Release PLANT to Quake the rocks');},
  done(){return !obs.some(o=>o.crack);},
  draw(){tremorDr(G.tm);},
  outro:['Held force, returned. That is the secret of Root: the harder the world pushes, the more you have to give back.',
   'You did not swing harder. You were steady first.']},
 {name:'Lean in',goal:'Push both boulders into the sinkholes',pos:[200,205],
- pil:[{x:330,y:52,id:'element',req:true}],
+ pil:[{x:330,y:52,id:'element',req:true,hint:'Push both boulders into the sinkholes.'}],
  intro:['Heavy things are not afraid of being heavy. Those boulders will move for anyone who keeps leaning on them.','Walk into one and keep walking. If one gets stuck in a corner, it rolls back to where it started.'],
  setup(){G.bo=[{x:70,y:100,r:10,dr:bouldDr},{x:70,y:176,r:10,dr:bouldDr}];G.so=[{x:330,y:100,f:0},{x:330,y:176,f:0}];obs.push({k:'c',x:190,y:176,r:12},{k:'c',x:230,y:110,r:11});},
  upd(dt){if(G.push&&!G.tPush){G.tPush=1;tip('Slow and steady. Keep leaning.',4);}
@@ -838,7 +851,7 @@ const STAGES=[
   {who:'BRANNOC',p:'bran',t:'Take these. No: take them because I want you to, not because I am afraid you will take them.'},
   {t:'Excess Root is clutching to feel safe. Enough is not a number. It is a feeling you can stand on.'}];}},
 {name:'Dust that never settles',goal:'Settle and clear 5 dust wisps. PLANT calms them',pos:[200,200],
- pil:[{x:60,y:58,id:'beast',req:true}],
+ pil:[{x:60,y:58,id:'beast',req:true,hint:'Settle and clear the dust wisps. PLANT calms them.'}],
  intro:['The other face of fear does not harden. It scatters: dust that cannot settle, darting at anything that moves.',
   'Chase it and it only gets worse. Notice the glint and the red line: that is where it will dart.',
   'Give it somewhere steady to land. PLANT: the ring around you settles any wisp inside it. Then strike the sleepy dust.'],
@@ -1104,8 +1117,8 @@ const LORE={
   {who:'THE PILLAR',p:'pillar',t:'Its seed sound is VAM. Say it like a wave rolling in, with your lips closing at the end: VAAAM. Feel the hum in your belly and hips.',chant:'vam'}],
  beast:[{who:'THE PILLAR',p:'pillar',t:'I remember the creatures of this place. The koi swims upstream against the current, and an old tale says the ones that climb the falls become dragons: persistence, then transformation.'},
   {who:'THE PILLAR',p:'pillar',t:'The pufferfish swells when it is frightened or swallows too much. Both are lessons: make things, let them flow, and do not gorge on what you fear losing.'}]};
-function pillarDr(q){const x=q.x,y=q.y,g=q.done?1:clamp(q.t/1.3,0,1);EL(x,y+9,12,4,'rgba(60,20,10,.35)');R(x-8,y-20,16,28,'#7a3a22');R(x-7,y-21,14,27,q.done?'#ffb070':'#d8784a');R(x-7,y-21,14,2,'#ffd8a8');R(x-9,y+4,18,5,'#5a2a18');
- cx.strokeStyle=q.done?'#fff6d8':'#7a2a14';cx.lineWidth=1.3;const m=y-9;
+function pillarDr(q){const x=q.x,y=q.y,g=q.done?1:clamp(q.t/1.3,0,1);EL(x,y+9,12,4,'rgba(60,20,10,.35)');R(x-8,y-20,16,28,'#7a3a22');R(x-7,y-21,14,27,q.done?'#ffb070':q.on?'#d8784a':'#6a4a42');R(x-7,y-21,14,2,'#ffd8a8');R(x-9,y+4,18,5,'#5a2a18');
+ cx.strokeStyle=q.done?'#fff6d8':q.on?'#7a2a14':'#4a3430';cx.lineWidth=1.3;const m=y-9;
  if(q.id==='colour'){cx.beginPath();cx.arc(x,m,4,0,TAU);cx.stroke();}
  else if(q.id==='element'){cx.beginPath();cx.moveTo(x-5,m);for(let i=0;i<=10;i++)cx.lineTo(x-5+i,m+Math.sin(i*1.1)*2.5);cx.stroke();}
  else if(q.id==='sound'){cx.beginPath();cx.moveTo(x-5,m);for(let i=0;i<=10;i++)cx.lineTo(x-5+i,m+Math.sin(i*.9)*3);cx.stroke();}
@@ -1163,19 +1176,19 @@ function wordsDr(){for(const w of G.words||[]){AL(clamp(w.l,0,1));T(w.s,w.x,w.y,
 function bank(){G.deep=[];G.land=[];G.pe=[];G.lot=[];G.moon=null;}
 const STAGES=[
 {name:'The first stroke',goal(){return G.pe[0]&&G.pe[0].got?'Strike the glowing pillar':'Paint a stream across the water, ride it, and take the pearl';},pos:[70,170],
- pil:[{x:360,y:58,id:'sound',req:true}],
+ pil:[{x:360,y:58,id:'sound',req:true,hint:'Paint a stream across the water, ride it, and take the pearl.'}],
  gp:[330,196],
  intro:['Welcome to the lagoon. This is the SACRAL wheel: water, feeling, pleasure, making things.',
   'Svadhisthana means \'one\'s own place\'. It is where you let yourself enjoy and create, with no reason beyond wanting to.',
   'What blocks it is GUILT: the voice that says you should not, it is wasteful, who do you think you are. Guilt does not stop the water. It dams it, and dammed water either floods or freezes.',
-  'Water takes the shape you give it. Hold PAINT (C or L), steer the brush, and let go. Then step into your stream and be carried.','A glowing pillar stands on the far shore. It knows the sound of this wheel. Carry a stream across, then strike it and listen.'],
+  'Water takes the shape you give it. Hold PAINT (C or L), steer the brush, and let go. Then step into your stream and be carried.','A dark pillar stands on the far shore. It knows the sound of this wheel. Carry a stream across and take the pearl, and it will wake. Then strike it.'],
  setup(){bank();G.deep=[{x:140,y:30,w:110,h:200}];G.pe=[{x:330,y:130,got:false,eaten:null}];G.lot=[{x:310,y:90,b:false,g:0},{x:340,y:180,b:false,g:0}];G.tSw=0;ask('Hold PAINT (C / L), steer the brush across the water, release');},
  upd(dt){},
  done(){return G.pe[0].got;},
  outro:['You did not find a path. You made one, then let it carry you.','That is the first thing Sacral teaches: creating comes before arriving.']},
 {name:'Make something beautiful',goal:'Bloom all 5 lotus buds by painting a stream through them',pos:[70,200],
  gp:[230,215],
- pil:[{x:40,y:206,id:'colour',req:true}],
+ pil:[{x:40,y:206,id:'colour',req:true,hint:'Paint a stream through every lotus bud to bloom it.'}],
  intro:['Now make something for no reason at all. Paint through the lotus buds and watch them open.',
   'Streams cost ink, and ink returns while you rest. Each bloom gives a little back.','You do not need a goal. That is the point.'],
  setup(){bank();G.deep=[{x:128,y:30,w:70,h:200},{x:262,y:30,w:70,h:200}];G.lot=[[70,90],[230,80],[230,180],[360,100],[350,180]].map(q=>({x:q[0],y:q[1],b:false,g:0}));ask('Paint a stream through each bud to bloom it');},
@@ -1189,7 +1202,7 @@ const STAGES=[
  done(){return !en.some(e=>e.k==='crab');},
  outro:()=>['Thawed feelings come out prickly first. That is normal. They were holding a lot.','Numbness is not calm. It is a freeze. Warmth and movement bring it back.']},
 {name:'Isla, who stopped making',goal(){return G.is.ph===0?'Thaw Isla: paint a stream through her':G.is.ph===1?'Light her 3 lantern lotuses with flowing water':'';},pos:[200,208],
- pil:[{x:360,y:206,id:'element',req:true}],
+ pil:[{x:360,y:206,id:'element',req:true,hint:'Warm Isla with flowing water, then light her lantern lotuses.'}],
  intro:[{t:'A carver sits by the water. She has not moved in a long time. Do not strike her. Warm her.'}],
  setup(){bank();G.is={x:200,y:122,th:0,ph:0,met:0};obs.push({k:'c',x:110,y:170,r:9},{k:'c',x:290,y:170,r:9});ask('Paint a stream THROUGH Isla to thaw her');},
  upd(dt){const i=G.is;
@@ -1211,7 +1224,7 @@ const STAGES=[
  done(){return G.pe.every(q=>q.got)&&!en.some(e=>e.k==='glut');},
  outro:()=>[G.flowed>0?'It let go the moment the water ran through it. Nothing was taken from it; it simply stopped clutching.':'You got there by fighting, and it multiplied. Next time, try letting the water run through it.','Pleasure allowed to pass through you finishes. Pleasure forbidden turns into hunger.']},
 {name:'Bram, who clutches',goal(){return G.bm.ph===0?'Paint a stream through Bram\'s pearl cage (and let the Glutton go)':G.pe.every(q=>q.got)?'Let the Glutton go':'Collect the 4 freed pearls and let the Glutton go';},pos:[200,208],
- pil:[{x:360,y:58,id:'beast',req:true}],
+ pil:[{x:360,y:58,id:'beast',req:true,hint:'Free the pearls and let the Glutton go.'}],
  intro:[{t:'A fisherman guards a cage of pearls. His hunger has a pet that grows with every pearl he refuses to enjoy.'}],
  setup(){bank();G.bm={x:200,y:66,met:0,ph:0,open:0};en.push(mkGlut(110,130,12));obs.push({k:'c',x:120,y:190,r:9},{k:'c',x:290,y:170,r:9});ask('Paint a stream through the pearl cage');},
  upd(dt){const b=G.bm;
