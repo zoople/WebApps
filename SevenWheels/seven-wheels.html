@@ -28,7 +28,7 @@ body.touch.playing #tc{display:block}
 <div id="top"><button id="mn" title="Menu">&#9776;</button><button id="mu" title="Sound">&#9835;</button><button id="fs" title="Full screen">&#9974;</button></div>
 <div id="tc"><div id="stick"><div id="knob"></div></div><button class="b" id="bc">C</button><button class="b" id="bb">B</button><button class="b" id="ba">A</button></div>
 <button id="upd">Update now</button><div id="ios">iPhone: Share → Add to Home Screen for full screen</div>
-<script>const VERSION="v2",VDATE="4 Nov 2026";</script>
+<script>const VERSION="v2.5",VDATE="4 Nov 2026";</script>
 <script>
 'use strict';
 /* ===== basics ===== */
@@ -316,18 +316,25 @@ function startWorld(at){en.length=ep.length=pr.length=parts.length=pops.length=o
 function finishWorld(){SAVE.done[W.id]=1;if(SAVE.cp)SAVE.cp[W.id]=0;save();nextWorld();AU.sfx('chakra',W.hz);go('lesson');}
 
 /* title */
+let eraseAsk=0,eraseMsg=0;
+function verTag(){T('Version '+VERSION+' · '+VDATE,200,229,6,'#a89ec8','center',1);}
+function eraseBtn(){const x=300,y=214,w=94,h=18,ask=time<eraseAsk;
+ if(time<eraseMsg){T('Save erased',347,y-9,6,'#9dffb0','center',1);}
+ AL(.85);R(x,y,w,h,ask?'#8a1c2c':'#2a1a30');AL(1);R(x,y,w,1,ask?'#ff8a8a':'#6a5f90');T(ask?'Tap again to ERASE':'Erase save',x+w/2,y+5,6,ask?'#fff':'#c9bfe6','center',1);
+ if(inR(tap,x,y,w,h)){tap=null;if(ask){eraseAsk=0;eraseMsg=time+2.5;SAVE={done:{},cp:{},pr:{},v:5};save();hsel=0;AU.sfx('thud');}else{eraseAsk=time+4;AU.sfx('ui');}return true;}
+ return false;}
 function drawTitle(){R(0,0,VW,VH,'#0a0712');starfield();
  mandala(200,96,66,'#c9a2f0',12,time,.55);
  for(let i=0;i<7;i++){const a=time*.45+i/7*TAU,x=200+Math.cos(a)*84,y=96+Math.sin(a)*84*.55,w=WORLDS[i];C(x,y,7,w.col+'55');C(x,y,4.5,w.col);T(w.note,x,y+9,6,'#d8d0ee','center');}
- T('SEVEN WHEELS',200,158,18,'#fff','center',1);T('a chakra journey — prototype',200,180,8,'#b8a8d8','center');T('Version '+VERSION+' · '+VDATE,200,229,6,'#8a80a8','center');
+ T('SEVEN WHEELS',200,158,18,'#fff','center',1);T('a chakra journey — prototype',200,180,8,'#b8a8d8','center');
  if(((time*1.6)|0)%2===0)T('tap / press A to begin',200,200,8,'#ffe9a8','center');
  const u=howStrip(['Move: WASD / arrows / left stick / touch stick','A: attack (J, Space)   B: dash (K, Shift)   C: hold for your world\'s power (L)','F: full screen   M: mute   Esc: back to the map','Each wheel is a world. Enemies are that chakra in EXCESS or LACKING, and each needs a different answer.','Beat a world by restoring balance, not just by hitting things.'],'#c9a2f0');
- if(!u&&!howOpen&&(IN.ap||tap)){AU.init();AU.sfx('ui');if(!(document.fullscreenElement||document.webkitFullscreenElement))toggleFS();go('hub');tap=null;}}
+ if(!howOpen)eraseBtn();if(!u&&!howOpen&&(IN.ap||tap)){AU.init();AU.sfx('ui');if(!(document.fullscreenElement||document.webkitFullscreenElement))toggleFS();go('hub');tap=null;}}
 
 /* hub */
 function attr(l,v,x,y,c){T(l,x,y,6.5,c,null,1);T(v,x+36,y,7,'#e6e0f4');}
 let hubAll=false;
-function drawHub(){R(0,0,VW,VH,'#0a0712');starfield();T('Version '+VERSION+' · '+VDATE,394,4,5,'#6a6088','right');const sx=58;
+function drawHub(){R(0,0,VW,VH,'#0a0712');starfield();if(!howOpen)eraseBtn();const sx=58;
  if(IN.ny){hsel=clamp(hsel-IN.ny,0,6);AU.sfx('chakra',WORLDS[hsel].hz);}
  if(IN.menu)go('title');
  R(sx-1,30,2,188,'#2b2440');C(sx,16,9,'#1b1530');RG(sx,16,9,'#2b2440',1);
@@ -397,9 +404,9 @@ function drawHUD(){AL(.45);R(0,0,VW,22,'#000');AL(1);for(let i=0;i<P.mhp;i++)hea
 
 /* frame */
 function render(){cx.setTransform(K,0,0,K,0,0);cx.imageSmoothingEnabled=false;cx.globalAlpha=1;cx.fillStyle='#000';cx.fillRect(0,0,VW,VH);
- if(S==='title')drawTitle();else if(S==='hub')drawHub();else if(S==='intro')drawIntro();
+ if(S==='title'){drawTitle();verTag();}else if(S==='hub'){drawHub();verTag();}else if(S==='intro'){drawIntro();verTag();}
  else if(S==='play'||S==='dead'||S==='lesson'){
-  if(S==='lesson'){drawLesson();}
+  if(S==='lesson'){drawLesson();verTag();}
   else{cx.save();if(shake>0)cx.translate(rnd(-shake,shake)*.5,rnd(-shake,shake)*.5);cx.imageSmoothingEnabled=false;cx.drawImage(bg,0,0,VW,VH);ambDraw();W.draw();drawFx();vignette();cx.restore();
    if(flashA>0){AL(flashA);R(0,0,VW,VH,flashC);AL(1);}drawHUD();dlgDraw();if(S==='dead')drawDead();}}
 }
@@ -411,7 +418,6 @@ function step(dt){time+=dt;stT+=dt;poll();AU.tick();
    else if(G.dlg){dlgUpd(dt);ambUpd(dt);updFx(dt);}
    else{W.update(dt);ambUpd(dt);updFx(dt);if(G.win){G.won=1;G.winT=1.6;flashA=.9;flashC='#fff';AU.sfx('win');burst(P.x,P.y,30,W.col,120,1.2,2);}}}}
  else if(S==='dead'){if(!stT||stT<.02)AU.play(null);updFx(dt);}
- if(S==='play'||S==='dead'||S==='lesson'||S==='hub'||S==='intro'){}
 }
 
 /* ===== quest framework: stages, guide dialogue, prompts, objective bar, telegraphs ===== */
