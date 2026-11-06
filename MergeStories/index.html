@@ -173,6 +173,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .passbar{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;margin:8px 0 4px}
 .passbar i{display:block;height:100%;background:linear-gradient(90deg,#5b6bd6,#dfe4ff)}
 .xprow .xpl{white-space:nowrap;font-weight:600}.xprow .xpl b{color:var(--ink)}
+.passrow{position:relative;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;background:none;border:0}
+.passrow .xpl{white-space:nowrap;font-weight:600}.passrow .xpl b{color:var(--ink)}
+.passrow .xb{flex:1;height:7px}.passrow .xb i{background:linear-gradient(90deg,#6f7fd8,#dfe4ff);border-radius:4px}
+.passrow .dot{position:static;flex:none;margin-left:-4px;width:9px;height:9px;border-radius:50%;background:var(--velvet);box-shadow:0 0 0 2px var(--bg)}
+.xprow .xpl,.passrow .xpl{min-width:9.4em;text-align:left}
+#passBtn.bump .xb i{animation:barGlow .3s ease-out}#passBtn.bump{animation:none}
 .xprow .xb{flex:1;height:4px}.xprow .xb i{background:linear-gradient(90deg,#c9a24a,#fff0b0)}
 .cell.res .em{filter:drop-shadow(0 0 4px #e4b84c99) drop-shadow(0 2px 1px #0006)}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--velvet),var(--gold));width:0;transition:width .5s}
@@ -474,9 +480,9 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
     <button class="iconbtn" id="menuBtn" aria-label="Menu">⋯</button>
   </header>
   <section class="chapter">
-    <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Bunting Up</h1><span class="ch-count" id="chCount">0/5</span></div>
-    <div class="bar"><i id="chBar"></i></div>
-    <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button><button class="passbtn" id="passBtn" aria-label="Rosette Board"><span id="passIc">🎗️</span> <b id="pts">0</b><i class="dot" id="passDot" hidden></i></button></div>
+    <div class="ch-row"><span class="ch-num" id="chNum">Chapter 1</span><h1 class="ch-name" id="chName">Bunting Up</h1></div>
+    <button class="xpbtn passrow" id="passBtn" aria-label="Event points"><span class="xpl"><span id="passIc">🎗️</span> <span id="passNm"></span> <b id="passLv">0</b></span><span class="bar xb pb"><i id="passBar"></i></span><span class="xpt" id="pts">0</span><i class="dot" id="passDot" hidden></i></button>
+    <div class="xprow"><button class="xpbtn" id="xpRow" aria-label="Stage level"><span class="xpl">⭐ Stage <b id="xpLv">1</b></span><span class="bar xb"><i id="xpBar"></i></span><span class="xpt" id="xpTxt">0/6</span></button></div>
   </section>
   <section class="orders" id="orders"></section>
   <main class="boardwrap" id="wrap"><div id="board"></div></main>
@@ -492,7 +498,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <script>
 /* Merge Stories: the console. With no story chosen it shows the shelf; once you pick one, that story's
    cartridge (events/<id>/event.js) and the shared engine load, and the story owns the front screen from then on. */
-const VERSION='v17 · 7 Nov 2026';
+const VERSION='v18 · 7 Nov 2026';
 const CURRENT_KEY='merge-stories:current';
 function ejectStory(){ try{ localStorage.removeItem(CURRENT_KEY); }catch(e){} location.href=location.pathname; }
 (function(){
