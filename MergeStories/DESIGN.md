@@ -111,3 +111,5 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
   - `CONFIG.sosTimer:false` removes the free timer from "I'm stuck".
   - Bots still all finish. Buyers can now afford about 2 timers instead of 3–4.
 - **Open questions:** finished top-of-chain items pile up because you're afraid an order will want them. The hourglass chain (time skips) isn't exciting.
+- **A new storage space is a moment, not a toast.** A big card pops up (the space, pips for open and locked spaces, when the next one comes), then the spaces open with the new one glowing.
+- **Tea (rare boost) was too generous in Left Luggage:** the board kept giving tea and each one lasted 2/5/12/30/75 taps, so it never ran out and stopped mattering. Left Luggage now uses `focusTaps:[1,3,6,12,25]`, and its "every generator" cards give 3–5 taps instead of 12–20. Bots still finish (about 630–810 taps, a little slower). Start new stories from these numbers.
