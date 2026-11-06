@@ -153,7 +153,7 @@ function shopGive(it){ (S.shopN=S.shopN||{})[it.id]=((S.shopN||{})[it.id]||0)+1;
 /* a gentle warning when a purchase would leave you short of the reading the story needs next (never a block) */
 function readingShort(p){ if(typeof DECK_N==='undefined'||!DECK_N||S.coins<p) return '';
   const need=activeTasks().some(t=>t.cards&&deckDone()<t.cards); const left=S.coins-p;
-  return need && left<deckPrice() ? `Leaves 🪙 ${left}. A story order needs a reading (🪙 ${deckPrice()})` : ''; }
+  return need && left<deckPrice() ? `⚠️ You’d have 🪙 ${left} left, but a story order needs Vesna’s next reading (🪙 ${deckPrice()})` : ''; }
 const earnLine = () => `Earn coins from orders${CAST.S&&S.sideOn?` and the ${CAST.S.name} stall`:''}`;
 /* the mini shop: one item, offered right where you need it (a resting generator, the wheel when you're short).
    Saves a trip to the menu. `use` runs after paying (e.g. refill this generator now). */
