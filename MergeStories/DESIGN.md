@@ -86,3 +86,8 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
 - **Introduce a thing when it arrives.** If a chapter gift brings a generator, that chapter's scene names it. A later chapter can't introduce it again.
 - **A deck the finale needs in full has already shown every card**, so the ending lays a card down rather than "drawing the last card".
 - **Keep numbers consistent** (years, ages, ticket numbers). Read the whole script once, end to end, before shipping.
+
+## Coins: count every source (6 Nov 2026)
+- **The bot must collect everything a player does:** orders, stall, pass, card blessings, *and* quest rewards and collection reveals. Leaving out quests and reveals made Left Luggage look balanced at about 410 coins when players really got about 830, most of it early. So readings felt free.
+- **Front-loaded income breaks anything priced per use.** Early quest steps and per-level reveal coins pile up in chapters 1–2. In Left Luggage, early quest steps now pay tea, timers and nods, and reveals pay coins only for a chain's top item.
+- **Price a coin sink from the income curve:** measure coins at each chapter's end, then fit a price table so the cards each chapter needs cost about 85–95% of what's been earned. Test with a greedy bot that spends every coin; it should get at most 1–2 cards ahead of the story.

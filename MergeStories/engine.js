@@ -265,7 +265,8 @@ function ticketShop(){
    Story orders can need a number of cards read (cards:n). */
 const DK = EVENT.deck || {cards:[]}, DECK_N = DK.cards.length, DECK_KEY = Object.keys(CHAINS).find(k=>CHAINS[k].deck);
 const deckDone = () => (S.deck||[]).length;
-const deckPrice = () => { const p=DK.price||{base:5,step:1}; return Math.min(p.max||1e9, p.base + p.step*deckDone()); };
+/* price: a table (one price per card, matched to the story's coin income) or base + step per card */
+const deckPrice = () => { const p=DK.price||{base:5,step:1}; if(p.table) return p.table[Math.min(deckDone(),p.table.length-1)]; return Math.min(p.max||1e9, p.base + p.step*deckDone()); };
 const effLabel = f => !f ? '' : f.refill ? 'Every generator refilled' : f.focus ? `Every generator: ${f.focus} taps of better rare finds`
   : f.unweb ? `Clears ${f.unweb} cobwebbed tiles` : f.gift ? `${CHAINS[f.gift[0]].items[f.gift[1]-1].e} ${CHAINS[f.gift[0]].items[f.gift[1]-1].n} → 🎁` : '';
 function deckEffect(f){
@@ -285,7 +286,8 @@ function openDeck(i){
     <div class="tgrid">${grid}</div>
     <p style="text-align:center;margin:6px 0;font-variant-numeric:tabular-nums">🃏 <b>${done}/${DECK_N}</b> cards read · 🪙 ${S.coins}</p>
     ${last?`<div class="wbanner new"><div class="wb1">${last.e} ${last.num} · ${last.n}</div><div class="wb2">${effLabel(last.effect)}</div></div>`:''}
-    <div class="row-btns" style="justify-content:center;margin-top:4px">${all?'':`<button class="bigbtn${ok?' gold':''}" id="deckGo" ${ok&&!deckBusy?'':'disabled style="opacity:.5"'}>Draw a card · 🪙 ${p}</button>`}<button class="bigbtn" id="deckClose">Close</button></div>
+    ${all?'':`<p class="tsay">${DK.ask||'Shall we?'}</p>`}
+    <div class="row-btns" style="justify-content:center;margin-top:4px">${all?'':`<button class="bigbtn${ok?' gold':''}" id="deckGo" ${ok&&!deckBusy?'':'disabled style="opacity:.5"'}>${DK.button||'Draw a card'} · 🪙 ${p}</button>`}<button class="bigbtn" id="deckClose">Close</button></div>
     ${ok||all?'':`<p style="text-align:center;color:var(--muted);font-size:13px;margin:4px 0">${earnLine()}</p>`}
     ${done?`<details class="howto"><summary>Your cards</summary>${(S.deck||[]).map(j=>{ const c=DK.cards[j]; return `<div class="lore"><span>${c.e}</span><div><b>${c.num} · ${c.n}</b><br>${c.story[0][1]}</div></div>`; }).join('')}</details>`:''}
     <details class="howto"><summary>How it works</summary><p>• ${DECK_N} cards, each drawn once: every reading is a new card<br>• Each reading costs a little more than the last<br>• Every card gives a small blessing<br>• Story orders need cards read</p></details>`);
@@ -296,11 +298,25 @@ function openDeck(i){
 function drawCard(){
   const p=deckPrice(); if(deckBusy||S.coins<p||deckDone()>=DECK_N) return;
   const left=DK.cards.map((_,j)=>j).filter(j=>!(S.deck||[]).includes(j)), j=left[Math.floor(Math.random()*left.length)], c=DK.cards[j];
+  // paid and committed straight away, so closing the app can't re-roll the card
   S.coins-=p; (S.deck=S.deck||[]).push(j); S.deckLast=j; deckEffect(c.effect); stat('deck'); stat('shop');
-  deckBusy=true; SND.play('page'); save(); render();
-  const el=$('modalBody').querySelectorAll('.tcard')[j]; if(el){ el.classList.add('flip'); }
-  setTimeout(()=>{ deckBusy=false; SND.play('magic'); closeModal();
-    playScene({title:`Card ${deckDone()} of ${DECK_N} · ${c.num}`, sub:`${c.e} ${c.n}`, lines:c.story.concat([['N',`<em>(${c.e} ${effLabel(c.effect)})</em>`]], deckDone()===DECK_N&&DK.last?DK.last:[])}, ()=>openDeck()); },650);
+  deckBusy=true; save(); render();
+  const tease=(DK.teasers||['Hm.'])[Math.floor(Math.random()*(DK.teasers||['Hm.']).length)];
+  $('modalBody').innerHTML=`<h2>${DK.title||'The Cards'}</h2>
+    <div class="tstage"><div class="tshuf"><i></i><i></i><i></i></div>
+      <div class="tbig" id="tbig"><div class="tface tback">✦</div><div class="tface tfront"><span class="te">${c.e}</span><b>${c.num}</b><small>${c.n}</small></div></div></div>
+    <p class="tsay" id="tsay">${tease}</p>
+    <div class="row-btns" style="justify-content:center"><button class="bigbtn gold" id="tTurn" disabled style="opacity:.5">Turn it over</button></div>`;
+  SND.play('page');
+  setTimeout(()=>{ const b=$('tTurn'); if(!b) return; b.disabled=false; b.style.opacity=1; $('tbig').classList.add('ready'); $('tbig').onclick=b.onclick=turn; },1300);
+  function turn(){
+    const b=$('tTurn'); if(!b||b.dataset.done) return; b.dataset.done=1; b.remove();
+    const tb=$('tbig'); tb.classList.remove('ready'); tb.classList.add('half');
+    setTimeout(()=>{ tb.classList.add('shown'); tb.classList.remove('half'); SND.play('magic'); },290);
+    setTimeout(()=>{ $('tsay').innerHTML=`${c.num} · ${c.n}<br><small>${effLabel(c.effect)}</small>`; },450);
+    setTimeout(()=>{ deckBusy=false; closeModal();
+      playScene({title:`Card ${deckDone()} of ${DECK_N} · ${c.num}`, sub:`${c.e} ${c.n}`, lines:c.story.concat([['N',`<em>(${c.e} ${effLabel(c.effect)})</em>`]], deckDone()===DECK_N&&DK.last?DK.last:[])}, ()=>openDeck()); },1900);
+  }
 }
 function showTicketHelp(){
   openModal(`<h2>🎟️ Out of tickets</h2><p>Each spin costs ${WHEEL_COST} tickets.</p><h3>Where tickets come from</h3>
