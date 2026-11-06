@@ -3,7 +3,7 @@
    and somehow you have the job. Balance is built on Pennywhistle Fete's (generator numbers, order sizes, side stall
    with sales orders), plus Vesna's tarot deck: coins buy readings, every card is new, and story orders need cards. */
 const EVENT = {
-  id: 'left-luggage', title: 'The Left Luggage Office', tagline: 'What You Came to Leave', version: 'v2',
+  id: 'left-luggage', title: 'The Left Luggage Office', tagline: 'What You Came to Leave', version: 'v3',
   themeColor: '#16131f',
   cover: { art: `<svg class="cover" viewBox="0 0 360 230" role="img" aria-label="A night station: a big clock, a lit office window, a suitcase, an owl and a tarot card"><defs><linearGradient id="llSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2140"/><stop offset="1" stop-color="#16131f"/></linearGradient><radialGradient id="llLamp" cx=".5" cy=".55" r=".5"><stop offset="0" stop-color="#ffd77a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd77a" stop-opacity="0"/></radialGradient></defs><rect width="360" height="230" fill="url(#llSky)"/><g stroke="#3d3358" stroke-width="6" fill="none"><path d="M0 40 Q180 -20 360 40"/><path d="M40 30 V230 M320 30 V230 M110 14 V230 M250 14 V230"/></g><g transform="translate(180 62)"><circle r="30" fill="#efe3c4" stroke="#d9b45a" stroke-width="5"/><path d="M0 0 V-20 M0 0 L13 6" stroke="#2a2140" stroke-width="3" stroke-linecap="round"/><circle r="2.5" fill="#2a2140"/></g><rect x="118" y="112" width="124" height="70" rx="4" fill="#2a2140" stroke="#d9b45a" stroke-width="3"/><rect x="126" y="120" width="108" height="44" fill="#ffd77a" opacity=".85"/><rect x="100" y="96" width="160" height="110" fill="url(#llLamp)"/><text x="180" y="176" font-size="9" text-anchor="middle" fill="#d9b45a" font-family="serif" letter-spacing="1.5">LEFT LUGGAGE</text><path d="M0 200 H360 V230 H0Z" fill="#1f1a2e"/><path d="M0 200 H360" stroke="#d9b45a" stroke-width="2" opacity=".6"/><g transform="translate(58 166)"><rect width="52" height="36" rx="5" fill="#8c3b5a"/><rect x="18" y="-8" width="16" height="10" rx="3" fill="none" stroke="#d9b45a" stroke-width="3"/><path d="M0 14 H52" stroke="#d9b45a" stroke-width="2"/><rect x="40" y="18" width="10" height="7" fill="#efe3c4"/></g><g transform="translate(280 150)"><rect x="-4" y="40" width="40" height="8" fill="#3d3358"/><ellipse cx="16" cy="22" rx="15" ry="19" fill="#8a7458"/><ellipse cx="16" cy="28" rx="9" ry="11" fill="#cbb38d"/><circle cx="10" cy="14" r="6" fill="#f6ecd2"/><circle cx="22" cy="14" r="6" fill="#f6ecd2"/><circle cx="10" cy="14" r="3" fill="#16131f"/><circle cx="22" cy="14" r="3" fill="#16131f"/><path d="M14 19 l2 3 l2 -3z" fill="#d9b45a"/><path d="M3 4 l5 6 M29 4 l-5 6" stroke="#8a7458" stroke-width="4" stroke-linecap="round"/></g><g transform="translate(216 186) rotate(-12)"><rect width="26" height="40" rx="3" fill="#f6ecd2" stroke="#d9b45a" stroke-width="2"/><circle cx="13" cy="17" r="6" fill="none" stroke="#8c3b5a" stroke-width="2"/><path d="M13 8 v2 M13 24 v2 M4 17 h2 M20 17 h2" stroke="#8c3b5a" stroke-width="2"/></g><g fill="#efe3c4" opacity=".7"><circle cx="70" cy="70" r="1.2"/><circle cx="296" cy="84" r="1.4"/><circle cx="240" cy="40" r="1"/><circle cx="96" cy="110" r="1"/></g></svg>`,
     sub: 'What You Came to Leave',
@@ -28,8 +28,9 @@ const EVENT = {
     order: { coins:[[30,3],[14,2],[0,1]], xp:[[4,3],[2,2],[0,1]], points:[[3,2],[0,1]] },
     finale: [['C',4],['X',4],['N',3]],
     side: { coins:[[24,3],[8,2],[0,1]], bigPoints:24, timerAt:12, timerChance:.3, lucky:[['C',1],['N',1]] },
-    discovery: { coinsPerLevel:1, xpFrom:5 },
-    quests: [[['C',1],['E',1]],[['C',2],['E',2]],[['E',3],['H',1]],[['C',3],['H',2],['N',1]],[['E',4],['H',2],['N',2]],[['C',3],['H',3],['N',3]]],
+    discovery: { coinsPerLevel:0, topCoins:8, xpFrom:3 },   // coins only for a chain's top item, so early reveals don't flood the purse
+    /* early quest steps pay tea, timers and nods, not coins, so coins follow the story instead of arriving all at once */
+    quests: [[['X',1],['E',1]],[['E',2],['ET',1]],[['E',3],['H',1]],[['C',3],['H',2],['N',1]],[['E',4],['H',2],['N',2]],[['C',4],['H',3],['N',3]]],
   },
   css: ":root{--bg:#16131f;--panel:#211c30;--panel2:#2b2440;--wood:#3a3350;--wood2:#332d47;--ink:#f3ead6;--muted:#b3a8c4;--gold:#d9b45a;--velvet:#8c3b5a}\n"
      + "body{background-image:radial-gradient(120% 60% at 50% -10%, #2f2448 0%, transparent 60%)}\n"
@@ -41,13 +42,19 @@ const EVENT = {
   wheel: null,
   /* Vesna's tarot: 22 major arcana, drawn without replacement. Each card is a reading and a small blessing. */
   deck: { title: '🔮 Vesna’s Table', sub: 'Twenty-two cards',
-    price: { base: 6, step: 1, max: 30 },
+    /* one price per card, fitted to the coins a player has by the time the story needs that many cards.
+       Income counts every source (orders, kiosk, quests, collection, pass, card blessings); bot: about 11 coins
+       by the end of chapter 1, then 65 / 130 / 225 / 490 / 610. Cards needed: 1 / 3 / 6 / 10 / 15 / 22. */
+    price: { table: [9, 18,20, 21,22,23, 23,24,24,24, 26,27,28,29,30, 30,31,32,33,34,35,36] },
+    ask: 'Cross my palm with silver. Or gold. Any works.',
+    button: 'Cross her palm',
+    teasers: ['Hm. This one’s heavy.', 'Ah. I know this one by the weight of it.', 'Don’t look at me. Look at the card.', 'It wants to be turned over. Go on.', 'Oh, you’re going to enjoy this one. Or not.', 'Mr Thursday has stopped blinking. That’s usually a sign.', 'Breathe. It’s only cardboard. Mostly.', 'I’ve seen this card come up for kings. And for a man who sold eels.'],
     intro: [
       ['V','Sit. No, the other chair. That one belongs to the owl.'],
-      ['V','Twenty-two cards. Each one turns over once, and only for you. I charge by the card, and the price goes up as you get braver.'],
+      ['V','Twenty-two cards. Each one turns over once, and only for you. Cross my palm with silver. Or gold. Any works. The price goes up as you get braver.'],
       ['N','You ask what happens if you don’t like a card.'],
       ['V','Then you’ve learned something. That’s extra. I don’t charge for it.'],
-      ['N','<em>• Pay coins to draw a card: every card is new<br>• Each one gives a small blessing<br>• Story orders need cards read</em>'],
+      ['N','<em>• Pay coins for a reading: every card is new<br>• Readings get dearer as you go, so earn as you read<br>• Each card gives a small blessing<br>• Story orders need cards read</em>'],
     ],
     last: [
       ['V','All twenty-two. The whole road, start to end.'],

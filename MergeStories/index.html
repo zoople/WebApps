@@ -58,6 +58,24 @@
 .tcard.new{box-shadow:inset 0 0 0 2px #d9b45a,0 0 0 2px #ffd77a,0 0 14px #ffd77a99}
 .tcard.flip{animation:tflip .6s ease-in-out}
 @keyframes tflip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg) scale(1.15)}100%{transform:rotateY(0)}}
+.tsay{text-align:center;font-style:italic;color:var(--muted);margin:8px 6px 2px;min-height:1.4em}
+.tstage{position:relative;height:250px;display:grid;place-items:center;perspective:900px}
+.tshuf{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.tshuf i{position:absolute;width:96px;height:144px;border-radius:10px;background:linear-gradient(160deg,#3b2a55,#22183a);box-shadow:inset 0 0 0 2px #d9b45a88,0 4px 10px #0008;opacity:0;animation:tshuf 1.2s ease-in-out}
+.tshuf i:nth-child(1){--dx:-70px;--r:-14deg}.tshuf i:nth-child(2){--dx:70px;--r:14deg;animation-delay:.12s}.tshuf i:nth-child(3){--dx:0px;--r:4deg;animation-delay:.24s}
+@keyframes tshuf{0%{opacity:0;transform:translate(0,30px)}30%{opacity:1;transform:translate(var(--dx),0) rotate(var(--r))}70%{opacity:1;transform:translate(calc(var(--dx)*-.6),-6px) rotate(calc(var(--r)*-1))}100%{opacity:0;transform:translate(0,0)}}
+.tbig{position:relative;width:140px;height:210px;transition:transform .28s ease-in;opacity:0;animation:tcardIn .4s ease-out 1.1s forwards}
+/* the slide-in uses translate/scale, so the flip (transform) isn't held by the animation */
+@keyframes tcardIn{from{opacity:0;translate:0 20px;scale:.9}to{opacity:1;translate:0 0;scale:1}}
+.tbig.ready{cursor:pointer}.tbig.ready .tback{animation:tglow 1.4s ease-in-out infinite}
+@keyframes tglow{50%{box-shadow:inset 0 0 0 3px #ffd77a,0 0 28px #ffd77acc}}
+/* the turn: squeeze edge-on, swap to the face, open out again (no 3D needed, works on every phone) */
+.tbig.half{transform:scaleX(0)}.tbig.shown{transition:transform .35s cubic-bezier(.3,1.5,.5,1)}
+.tbig .tfront{display:none}.tbig.shown .tfront{display:grid}.tbig.shown .tback{display:none}
+.tface{position:absolute;inset:0;border-radius:12px;display:grid;place-items:center;align-content:center;gap:4px}
+.tback{background:repeating-linear-gradient(45deg,#2c1f45 0 8px,#22183a 8px 16px);box-shadow:inset 0 0 0 3px #d9b45a,0 8px 20px #000a;color:#d9b45a;font-size:42px}
+.tfront{background:linear-gradient(160deg,#f6ecd2,#e4d3a8);box-shadow:inset 0 0 0 3px #d9b45a,0 0 30px #ffd77a99;color:#3a2a14}
+.tfront .te{font-size:58px;line-height:1}.tfront b{font-size:20px;letter-spacing:.08em}.tfront small{font-size:14px;font-weight:800}
 .wbanner{margin:6px auto;max-width:300px;text-align:center;border-radius:12px;padding:8px 10px;background:#ffffff10}
 .wbanner.new{background:#ffc94a22;box-shadow:0 0 0 2px #ffc94a}
 .wbanner .wb1{font-weight:800;font-size:17px}.wbanner .wb2{font-size:14px;color:var(--muted);margin-top:2px}
@@ -439,7 +457,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <script>
 /* Merge Stories: the console. With no story chosen it shows the shelf; once you pick one, that story's
    cartridge (events/<id>/event.js) and the shared engine load, and the story owns the front screen from then on. */
-const VERSION='v9 · 6 Nov 2026';
+const VERSION='v10 · 6 Nov 2026';
 const CURRENT_KEY='merge-stories:current';
 function ejectStory(){ try{ localStorage.removeItem(CURRENT_KEY); }catch(e){} location.href=location.pathname; }
 (function(){
