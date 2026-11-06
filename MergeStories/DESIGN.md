@@ -116,3 +116,9 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
 - **Juice on rewards (v17).** Claimed coins, points and stars fly from the tile into their meter, and the number counts up as each one lands. The stage bar climbs smoothly; on a level-up it fills to the end, flashes, empties and carries on, and the level-up message waits for it. Before this the bar snapped, and a level-up looked like it had gone down.
 - **HUD (v18): no chapter progress bar.** The order count and bar gave the chapter away. Event points get their own row instead (level = tiers reached, bar = progress to the next tier), so they no longer read as tied to the stage bar.
 - **The pass never ends.** After the last tier, every `passMore.every` points pays `passMore.rw` (default: a level-3 coin every 20), so points stay worth collecting after the story.
+
+## Left Luggage, finished (7 Nov 2026): balance better, story weaker. For the next story
+- **Cap escalating timer prices at about 150.** At 250 the player couldn't afford them by the end, and income couldn't keep up.
+- **Top-tier items should sell for real money, rare chains most of all.** The player ended with a pigeonhole full of top-tier items worth about 20 each while a timer cost 200. If the stall doesn't want them, selling should be a real way to earn.
+- **Leave one chain unasked on purpose, and say so.** Not every chain needs an order. Pick one the story never asks for, then invite the player at the ending to finish it ("Have you found out who left the last thing?"), with a small reveal in its top item.
+- **The story needs a through-line.** Left Luggage's theme (waiting, knowing what you want, moving on) was fine but loose, and the outcome was unclear. Ask one question early, move it forward every chapter, and answer it at the end.
