@@ -762,16 +762,65 @@ function feed(a,b){
 function claim(i){
   const it=S.cells[i].it, d=def(it), kind=CHAINS[it.k].claim; delete it.st; stat('claim');
   S.cells[i].it=null; sel=-1; fx[i]='pulse';
-  if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); flo(`+🪙${d.v}`, i); }
+  if(kind==='coins'){ S.coins+=d.v; SND.play('coins'); flo(`+🪙${d.v}`, i); flyTo(i,'coins','🪙',d.v); }
   else if(kind==='points'){
-    S.pts+=d.v; SND.play('magic'); flo(`${d.e} +${d.v}`, i); if(passReady()) flo(`${T.passName}: a reward is ready`);
+    S.pts+=d.v; SND.play('magic'); flo(`${d.e} +${d.v}`, i); flyTo(i,'pts',d.e,d.v); if(passReady()) flo(`${T.passName}: a reward is ready`);
     S.moonSeen=S.moonSeen||{};
     if(!S.moonSeen[it.l]){ S.moonSeen[it.l]=1; save(); setTimeout(()=>playScene({title:T.notesTitle, sub:d.n, lines:MOON_NOTES[it.l-1]}),250); }
   }
   else if(kind==='chips'){ S.chips=(S.chips||0)+d.v; SND.play('coin'); flo(`+${d.v} 🎟️`, i); }
   else if(kind==='skip'){ timeSkip(d.v); SND.play('unweb'); flo(`${d.e} ${d.v} min skipped`, i); }
-  else { SND.play('unweb'); flo(`+${d.v} ⭐`, i); addXP(d.v); }
+  else { SND.play('unweb'); flo(`+${d.v} ⭐`, i); flyTo(i,'xp','⭐',d.v); addXP(d.v); }
   save(); render();
+}
+/* ============================================================ juice: rewards fly from the tile into their meter.
+   HOLD is what's still in the air: the HUD shows the total minus HOLD, and counts up as each one lands. */
+const HOLD={coins:0, pts:0, xp:0};
+const FLY_TARGET={coins:'coinPill', pts:'passBtn', xp:'xpRow'};
+function flyTo(i, k, e, v){
+  const from=board.children[i], to=$(FLY_TARGET[k]); if(!from||!to||document.hidden||!v){ return; }
+  HOLD[k]+=v; renderHud();
+  const a=from.getBoundingClientRect(), b=(k==='xp'?$('xpBar').parentNode:to).getBoundingClientRect();
+  const n=Math.max(3,Math.min(8,Math.round(2+Math.sqrt(v)*1.5)));
+  let landed=0, left=v;
+  const land=()=>{ if(left<=0) return; landed++; const s=landed===n?left:Math.min(left,Math.round(v*landed/n)-Math.round(v*(landed-1)/n)); left-=s; HOLD[k]=Math.max(0,HOLD[k]-s);
+    to.classList.remove('bump'); void to.offsetWidth; to.classList.add('bump'); if(k!=='xp') SND.play('tap'); renderHud(); };
+  setTimeout(()=>{ if(left>0){ HOLD[k]=Math.max(0,HOLD[k]-left); left=0; renderHud(); } },2200);   // never leave a number stuck
+  for(let j=0;j<n;j++){
+    const p=document.createElement('div'); p.className='fly'; p.textContent=e; document.body.appendChild(p);
+    const x0=a.left+a.width/2, y0=a.top+a.height/2, x1=(k==='xp'?b.left+Math.min(b.width,b.width*xpFrac()):b.left+b.width/2), y1=b.top+b.height/2;
+    const sx=x0+(Math.random()-.5)*90, sy=y0-30-Math.random()*60;      // burst out, then curve in
+    const mx=(sx+x1)/2+(Math.random()-.5)*80, my=Math.min(sy,y1)-40-Math.random()*40;
+    const an=p.animate([{transform:`translate(${x0}px,${y0}px) scale(.6)`,opacity:0},{transform:`translate(${sx}px,${sy}px) scale(1.15)`,opacity:1,offset:.25},
+      {transform:`translate(${mx}px,${my}px) scale(1)`,opacity:1,offset:.6},{transform:`translate(${x1}px,${y1}px) scale(.55)`,opacity:.9}],
+      {duration:650+j*55, delay:j*45, easing:'cubic-bezier(.45,0,.55,1)', fill:'both'});
+    an.onfinish=()=>{ p.remove(); land(); };
+  }
+}
+/* the stage bar: it climbs to its new value, and on a level-up it fills, flashes, empties and carries on */
+let xpShown=null, xpRaf=0, xpPause=0;
+function xpFrac(){ const v=xpShown==null?S.xp:xpShown, l=stageOf(v), lo=l>1?stageNeed(l-1):0; return (v-lo)/(stageNeed(l)-lo); }
+function xpDraw(){
+  const v=xpShown, l=stageOf(v), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
+  $('xpLv').textContent=l; $('xpTxt').textContent=`${Math.floor(v-lo)}/${hi-lo}`; $('xpBar').style.width=((v-lo)/(hi-lo)*100)+'%';
+}
+function xpAnim(){
+  const target=S.xp-HOLD.xp;
+  if(xpShown==null||target<xpShown){ xpShown=target; xpDraw(); return; }   // new game or a load: no animation
+  if(xpRaf||xpShown===target){ if(!xpRaf) xpDraw(); return; }
+  const step=()=>{
+    const tgt=S.xp-HOLD.xp; if(xpPause>performance.now()){ xpRaf=requestAnimationFrame(step); return; }
+    const l=stageOf(xpShown), edge=stageNeed(l), stop=Math.min(tgt,edge);
+    xpShown=Math.min(stop, xpShown+Math.max(.12,(stop-xpShown)*.09));
+    if(xpShown>=edge-1e-6 && tgt>=edge){                       // full: show it full, flash, then start the next level
+      xpShown=edge-1e-9; const lo=l>1?stageNeed(l-1):0; $('xpBar').style.width='100%'; $('xpTxt').textContent=`${edge-lo}/${edge-lo}`;
+      const row=$('xpRow'); row.classList.remove('lvlup'); void row.offsetWidth; row.classList.add('lvlup');
+      xpShown=edge; xpPause=performance.now()+650; setTimeout(()=>xpDraw(),650); xpRaf=requestAnimationFrame(step); return; }
+    xpDraw();
+    if(xpShown>=tgt-1e-6){ xpShown=tgt; xpDraw(); xpRaf=0; return; }
+    xpRaf=requestAnimationFrame(step);
+  };
+  xpRaf=requestAnimationFrame(step);
 }
 /* time skip: fast-forwards every generator's recharge */
 function timeSkip(min){
@@ -783,9 +832,9 @@ function addXP(v){
   for(let l=before+1;l<=after;l++){
     stageReward(l).forEach(r=>S.gifts.push(r));
     const more=STORE && storeSlots(l)>storeSlots(l-1);
-    if(more && l===STORE.from && !S.storeSeen){ S.storeSeen=1; setTimeout(()=>playScene({title:STORE.name, lines:STORE.intro}, ()=>showNewSpace(storeSlots(l))),700); }
-    else if(more) setTimeout(()=>showNewSpace(storeSlots(l)),700);
-    setTimeout(()=>{ SND.play('gift'); toast(`⭐ Stage level ${l}! A gift is waiting 🎁${more?`<br>${STORE.e} And a new ${STORE.one}: ${storeSlots(l)} of ${STORE.max}`:''}`,3000); },300);
+    if(more && l===STORE.from && !S.storeSeen){ S.storeSeen=1; setTimeout(()=>playScene({title:STORE.name, lines:STORE.intro}, ()=>showNewSpace(storeSlots(l))),1600); }
+    else if(more) setTimeout(()=>showNewSpace(storeSlots(l)),1600);
+    setTimeout(()=>{ SND.play('gift'); toast(`⭐ Stage level ${l}! A gift is waiting 🎁${more?`<br>${STORE.e} And a new ${STORE.one}: ${storeSlots(l)} of ${STORE.max}`:''}`,3000); },1500);
   }
 }
 /* ============================================================ storage: spaces off the board.
@@ -1159,10 +1208,9 @@ function render(){
   if(S.genQ&&S.genQ.length&&!genBusy){ genBusy=true; setTimeout(playGenStory,450); }
 }
 function renderHud(){
-  $('coins').textContent=S.coins; $('chips').textContent=S.chips||0;
-  $('passIc').textContent=CHAINS.N.items[0].e; $('pts').textContent=S.pts||0; $('passDot').hidden=!passReady();
-  { const l=stageOf(S.xp), lo=l>1?stageNeed(l-1):0, hi=stageNeed(l);
-    $('xpLv').textContent=l; $('xpTxt').textContent=`${S.xp-lo}/${hi-lo}`; $('xpBar').style.width=((S.xp-lo)/(hi-lo)*100)+'%'; }
+  $('coins').textContent=S.coins-HOLD.coins; $('chips').textContent=S.chips||0;
+  $('passIc').textContent=CHAINS.N.items[0].e; $('pts').textContent=(S.pts||0)-HOLD.pts; $('passDot').hidden=!passReady();
+  xpAnim();
   $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length; renderPip();
   const ci=Math.min(S.ch,CHAPTERS.length-1);
   const chT=TASKS.filter(t=>t.ch===ci), dn=chT.filter(t=>S.done[t.id]).length;
