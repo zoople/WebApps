@@ -79,3 +79,10 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
 - **The headline mechanic is needed to the end:** the finale needs all 22 cards.
 - **Points have a job to the end:** Insight tiers run to the last chapter, with Mr Pell's postcards every third tier. Tiers sized so a bot that never merges moons gets 12–14 of 15.
 - **Bot report to check before shipping:** cards read, coins in/spent/left, stall sales, pass tiers, top level reached per chain.
+
+## Writing check (6 Nov 2026)
+- **Objects must be able to do what the text says.** A page can't be "folded inside" a moon or a sparkle. Pin it to a rosette, read it from a notebook, or have a character react to the object.
+- **Text that appears whenever something happens can't assume how far the player has got.** Postcards (pass tiers), generator stories and token notes arrive at unpredictable times, so they mustn't reference later chapters or each other.
+- **Introduce a thing when it arrives.** If a chapter gift brings a generator, that chapter's scene names it. A later chapter can't introduce it again.
+- **A deck the finale needs in full has already shown every card**, so the ending lays a card down rather than "drawing the last card".
+- **Keep numbers consistent** (years, ages, ticket numbers). Read the whole script once, end to end, before shipping.
