@@ -336,7 +336,18 @@ function showReflections(){ playScene({title:'Reflections', sub:'Now that you kn
 const tierOpen = t => !t.ch || S.ch>=t.ch || S.complete;
 function storyCap(){ if(!STORY_KEY) return 99; if(S.complete) return maxL(STORY_KEY);
   let m=2; TASKS.forEach(t=>{ if(t.ch<=S.ch) t.need.forEach(([k,l])=>{ if(k===STORY_KEY && l>m) m=l; }); }); return Math.min(m,maxL(STORY_KEY)); }
-function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i] && tierOpen(t)).length; }
+function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i] && tierOpen(t)).length + passMoreReady(); }
+/* after the last tier the pass never ends: every `every` points pays a bonus (coins by default), so moons stay useful */
+const PASS_MORE=Object.assign({every:20, rw:[['C',3]]}, EVENT.passMore||{});
+const passLast=()=>PASS[PASS.length-1];
+function passMoreEarned(p){ const L=passLast(); if(p==null) p=S.pts; return tierOpen(L)&&p>=L.pts ? Math.floor((p-L.pts)/PASS_MORE.every) : 0; }
+function passMoreReady(){ return Math.max(0, passMoreEarned()-(S.passMore||0)); }
+/* where the points bar is: level = tiers reached (then bonus rounds), and progress to the next one */
+function passProg(p){
+  const n=PASS.filter(t=>p>=t.pts).length;
+  if(n<PASS.length){ const lo=n?PASS[n-1].pts:0, hi=PASS[n].pts; return {lv:n, a:p-lo, b:hi-lo, f:(p-lo)/(hi-lo)}; }
+  const L=passLast().pts, e=PASS_MORE.every, k=Math.floor((p-L)/e), a=p-L-k*e; return {lv:n+k, a, b:e, f:a/e};
+}
 
 /* stage level: claimed applause (XP) fills it; each level-up drops a gift */
 const STAGE_XP=[0,6,15,28,45,66,92,124,162,206,256,316,386,466];
@@ -777,10 +788,11 @@ function claim(i){
    HOLD is what's still in the air: the HUD shows the total minus HOLD, and counts up as each one lands. */
 const HOLD={coins:0, pts:0, xp:0};
 const FLY_TARGET={coins:'coinPill', pts:'passBtn', xp:'xpRow'};
+const flyAt=k=>k==='xp'?$('xpBar').parentNode:k==='pts'?$('passBar').parentNode:$(FLY_TARGET[k]);
 function flyTo(i, k, e, v){
   const from=board.children[i], to=$(FLY_TARGET[k]); if(!from||!to||document.hidden||!v){ return; }
   HOLD[k]+=v; renderHud();
-  const a=from.getBoundingClientRect(), b=(k==='xp'?$('xpBar').parentNode:to).getBoundingClientRect();
+  const a=from.getBoundingClientRect(), b=flyAt(k).getBoundingClientRect();
   const n=Math.max(3,Math.min(8,Math.round(2+Math.sqrt(v)*1.5)));
   let landed=0, left=v;
   const land=()=>{ if(left<=0) return; landed++; const s=landed===n?left:Math.min(left,Math.round(v*landed/n)-Math.round(v*(landed-1)/n)); left-=s; HOLD[k]=Math.max(0,HOLD[k]-s);
@@ -788,7 +800,7 @@ function flyTo(i, k, e, v){
   setTimeout(()=>{ if(left>0){ HOLD[k]=Math.max(0,HOLD[k]-left); left=0; renderHud(); } },2200);   // never leave a number stuck
   for(let j=0;j<n;j++){
     const p=document.createElement('div'); p.className='fly'; p.textContent=e; document.body.appendChild(p);
-    const x0=a.left+a.width/2, y0=a.top+a.height/2, x1=(k==='xp'?b.left+Math.min(b.width,b.width*xpFrac()):b.left+b.width/2), y1=b.top+b.height/2;
+    const x0=a.left+a.width/2, y0=a.top+a.height/2, x1=(k==='xp'?b.left+Math.min(b.width,b.width*xpFrac()):k==='pts'?b.left+b.width*passProg(S.pts-HOLD.pts).f:b.left+b.width/2), y1=b.top+b.height/2;
     const sx=x0+(Math.random()-.5)*90, sy=y0-30-Math.random()*60;      // burst out, then curve in
     const mx=(sx+x1)/2+(Math.random()-.5)*80, my=Math.min(sy,y1)-40-Math.random()*40;
     const an=p.animate([{transform:`translate(${x0}px,${y0}px) scale(.6)`,opacity:0},{transform:`translate(${sx}px,${sy}px) scale(1.15)`,opacity:1,offset:.25},
@@ -1209,15 +1221,16 @@ function render(){
 }
 function renderHud(){
   $('coins').textContent=S.coins-HOLD.coins; $('chips').textContent=S.chips||0;
-  $('passIc').textContent=CHAINS.N.items[0].e; $('pts').textContent=(S.pts||0)-HOLD.pts; $('passDot').hidden=!passReady();
+  $('passIc').textContent=CHAINS.N.items[0].e; $('passDot').hidden=!passReady(); $('passNm').textContent=T.passName;
+  { const g=passProg((S.pts||0)-HOLD.pts), bar=$('passBar'), w=g.f*100;
+    if($('passLv').textContent!==String(g.lv) && $('passLv').textContent!=='0'){ bar.style.transition='none'; bar.style.width='100%'; void bar.offsetWidth; bar.style.transition=''; }
+    $('passLv').textContent=g.lv; $('pts').textContent=`${g.a}/${g.b}`; bar.style.width=w+'%'; }
   xpAnim();
   $('giftBtn').hidden=!S.gifts.length; $('giftCount').textContent=S.gifts.length; renderPip();
   const ci=Math.min(S.ch,CHAPTERS.length-1);
   const chT=TASKS.filter(t=>t.ch===ci), dn=chT.filter(t=>S.done[t.id]).length;
   $('chNum').textContent = S.complete?'Event complete':'Chapter '+(ci+1);
   $('chName').textContent = CHAPTERS[ci].title;
-  $('chCount').textContent = S.complete?'✨':`${dn}/${chT.length}`;
-  $('chBar').style.width = (S.complete?100:dn/chT.length*100)+'%';
 }
 function fmt(s){ s=Math.max(0,s); return s>=60? Math.floor(s/60)+':'+String(s%60).padStart(2,'0') : '0:'+String(s).padStart(2,'0'); }
 const readySince={};
@@ -1697,7 +1710,11 @@ function showPass(){
     h+=`<div class="tier${ok&&open?'':' locked'}"><span class="tp">${t.pts}</span><span class="tr">${t.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span>${got?'<span style="color:var(--ok);font-weight:800">✓</span>':ok&&!open?`<small style="color:var(--muted)">Chapter ${t.ch+1}</small>`:ok?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-tier="${i}">Claim</button>`:''}</div>`;
   });
   h+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
+  { const L=passLast(), mr=passMoreReady(), next=L.pts+(passMoreEarned()+1)*PASS_MORE.every;
+    h=h.replace(/<div class="row-btns"><button class="bigbtn" onclick="closeModal\(\)">Close<\/button><\/div>$/,'')+`<div class="tier${S.pts>=L.pts&&tierOpen(L)?'':' locked'}"><span class="tp">+${PASS_MORE.every}</span><span class="tr">${PASS_MORE.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span><small style="flex:1;color:var(--muted);font-size:12px;letter-spacing:0;line-height:1.3">Every ${PASS_MORE.every} points after ${L.pts}, for ever${mr?`<br>${mr} waiting`:S.pts>=L.pts?`<br>Next at ${next}`:''}</small>${mr?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-more="1">Claim</button>`:''}</div><div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`; }
   openModal(h);
+  { const mb=$('modalBody').querySelector('[data-more]');
+    if(mb) mb.onclick=()=>{ if(!passMoreReady()) return; S.passMore=(S.passMore||0)+1; PASS_MORE.rw.forEach(r=>give(r[0],r[1])); SND.play('gift'); flo('Added to your gifts 🎁'); save(); render(); showPass(); }; }
   $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts||!tierOpen(PASS[i])) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>give(r[0],r[1])); SND.play('gift'); flo('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:T.lettersTitle, sub:`${T.letterWord} ${(i+1)/3} of ${FELIX.length}`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
 }
 function showComplete(){
