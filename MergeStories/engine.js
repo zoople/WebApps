@@ -611,7 +611,7 @@ function freshState(){
   }));
   const disc={};
   cells.forEach(c=>{ if(c.s==='open'&&c.it) disc[key(c.it.k,c.it.l)]=1; });
-  return {v:1, sideOn:CONFIG.sideOpen?1:0, salesBase:{}, deck:[], genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:0, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
+  return {v:1, sideOn:CONFIG.sideOpen?1:0, salesBase:{}, deck:[], store:[], genQ:cells.filter(c=>c.s==='open'&&c.it&&isGen(c.it)&&GEN_STORY[key(c.it.k,c.it.l)]).map(c=>key(c.it.k,c.it.l)), wheel:Array(20).fill(0), wheelRot:0, chips:0, xp:0, pts:0, passGot:{}, side:[], sideN:0, cells, coins:0, ch:0, done:{}, disc, unrev:{}, stats:{}, qt:{}, seenOrd:{}, gifts:[], seenIntro:{}, journal:[], complete:false};
 }
 function load(){
   try{ const raw=localStorage.getItem(CONFIG.saveKey) || (CONFIG.legacySaveKey && localStorage.getItem(CONFIG.legacySaveKey)); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.cells&&s.cells.length===63){ if(CHAINS.gK && s.ch>=1 && !s.cells.some(c=>c.it&&c.it.k==='gK') && !(s.gifts||[]).some(g=>g[0]==='gK')) (s.gifts=s.gifts||[]).push(['gK',1]);
@@ -619,7 +619,7 @@ function load(){
       if(!s.wheel){ s.wheel=Array(20).fill(0); s.wheelRot=0; } if(s.chips==null) s.chips=3; if(s.sideOn==null) s.sideOn=(s.ch>0||(s.sideDone||0)>0||(s.side||[]).length)?1:0; if(WHEEL_KEY && (s.ch>0||(s.done||{})[3]) && !s.cells.some(c=>c.it&&c.it.k===WHEEL_KEY) && !(s.gifts||[]).some(g=>g[0]===WHEEL_KEY)) (s.gifts=s.gifts||[]).push([WHEEL_KEY,1]); delete s.wheelUnread; s.wheelLast=null;
       if(!s.unrev) s.unrev={...s.disc}; // saves from before the collection: everything found so far waits to be revealed
       if(!s.stats){ const story=Object.keys(s.done||{}).length; s.stats={side:s.sideDone||0, story, disc:Object.keys(s.disc||{}).length}; }
-      s.qt=s.qt||{}; s.deck=s.deck||[]; s.deckLast=null; s.cells.forEach(c=>{ if(c.s==='web' && !webbable(c.it)) c.s='open'; }); s.salesBase=s.salesBase||{}; delete s.energy; delete s.eT; delete s.buys;
+      s.qt=s.qt||{}; s.deck=s.deck||[]; s.store=s.store||[]; s.deckLast=null; s.cells.forEach(c=>{ if(c.s==='web' && !webbable(c.it)) c.s='open'; }); s.salesBase=s.salesBase||{}; delete s.energy; delete s.eT; delete s.buys;
       if(!s.seenOrd){ s.seenOrd={}; TASKS.filter(t=>t.ch===s.ch&&!(s.done||{})[t.id]).slice(0,3).forEach(t=>s.seenOrd[t.id]=1); }
       return s; } } }catch(e){}
   return freshState();
@@ -782,8 +782,57 @@ function addXP(v){
   const before=stageOf(S.xp); S.xp+=v; const after=stageOf(S.xp);
   for(let l=before+1;l<=after;l++){
     stageReward(l).forEach(r=>S.gifts.push(r));
-    setTimeout(()=>{ SND.play('gift'); toast(`⭐ Stage level ${l}! A gift is waiting 🎁`,3000); },300);
+    const more=STORE && storeSlots(l)>storeSlots(l-1);
+    if(more && l===STORE.from && !S.storeSeen){ S.storeSeen=1; setTimeout(()=>playScene({title:STORE.name, lines:STORE.intro}, ()=>{ storeOn=true; render(); }),700); }
+    setTimeout(()=>{ SND.play('gift'); toast(`⭐ Stage level ${l}! A gift is waiting 🎁${more?`<br>${STORE.e} And a new ${STORE.one}: ${storeSlots(l)} of ${STORE.max}`:''}`,3000); },300);
   }
+}
+/* ============================================================ storage: spaces off the board.
+   Opens at stage `from` with one space, then one more every `every` stages, up to `max`.
+   Stored things aren't on the board, so orders don't see them and nothing reminds you of them. */
+const STORE=EVENT.storage||null;
+let storeOn=false;
+function storeSlots(l){ if(l==null) l=stageOf(S.xp); if(!STORE||l<STORE.from) return 0; return Math.min(STORE.max, 1+Math.floor((l-STORE.from)/STORE.every)); }
+const storeOpensAt=n=>STORE.from+(n-1)*STORE.every;   // the stage that opens space n (from 1)
+const canStore=it=>it && !it.st && !it.wrap && !it.on && !isGen(it);
+function storeItem(i){
+  const c=S.cells[i]; S.store=S.store||[];
+  if(c.s!=='open'||!canStore(c.it)){ SND.play('nope'); flo(c.it&&isGen(c.it)?'Generators stay on the board':`That can’t go in a ${STORE.one}`, i); return; }
+  if(S.store.length>=storeSlots()){ SND.play('nope'); flo(`Every ${STORE.one} is full`, i); return; }
+  S.store.push(c.it); c.it=null; if(sel===i) sel=-1; sellArm=false; SND.play('move'); save(); render();
+}
+function unstore(j){
+  const t=nearestEmpty(59); if(t<0){ SND.play('nope'); flo('No room on the board'); return; }
+  const it=S.store.splice(j,1)[0]; S.cells[t].it=it; fx[t]='spawn'; sel=t; SND.play('move'); save(); render();
+}
+function openStore(){
+  if(!S.storeSeen){ S.storeSeen=1; save(); playScene({title:STORE.name, lines:STORE.intro}, ()=>{ storeOn=true; render(); }); return; }
+  storeOn=!storeOn; SND.play('tap'); render();
+}
+function renderStore(){
+  const el=$('store'), btn=$('storeBtn'); if(!el||!btn) return;
+  const n=storeSlots(), st=S.store||[];
+  btn.hidden=!n; $('storeIc').textContent=STORE?STORE.e:''; $('storeN').textContent=st.length||''; 
+  if(!n) storeOn=false;
+  btn.classList.toggle('on',storeOn); el.hidden=!storeOn; if(!storeOn) return;
+  const r=$('info').getBoundingClientRect(), b=el.style;
+  b.left=r.left+'px'; b.top=r.top+'px'; b.width=r.width+'px'; b.height=r.height+'px';
+  b.gridTemplateColumns=`repeat(${Math.ceil(STORE.max/2)},1fr) 38px`;
+  let h='';
+  for(let j=0;j<STORE.max;j++){
+    if(j<st.length) h+=`<button class="sl" data-j="${j}">${def(st[j]).e}</button>`;
+    else if(j<n) h+=`<button class="sl empty" data-e="1"></button>`;
+    else h+=`<button class="sl lock" data-lock="${storeOpensAt(j+1)}">🔒<small>Stage ${storeOpensAt(j+1)}</small></button>`;
+  }
+  h+=`<button class="sx" data-x="1" aria-label="Close">✕</button>`;
+  if(el._h!==h){ el.innerHTML=h; el._h=h; }
+}
+function storeTap(e){
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.x){ storeOn=false; SND.play('tap'); render(); return; }
+  if(b.dataset.j!=null){ unstore(+b.dataset.j); return; }
+  if(b.dataset.lock){ SND.play('nope'); flo(`${STORE.e} This ${STORE.one} opens at stage ${b.dataset.lock}`); return; }
+  if(b.dataset.e){ if(sel>=0 && S.cells[sel] && S.cells[sel].it) storeItem(sel); else flo(`Drag something here to keep it off the board`); }
 }
 function isRes(it){ return CHAINS[it.k].type==='res'; }
 /* put items on the board near the bottom; anything that doesn't fit goes to gifts */
@@ -1093,7 +1142,7 @@ function render(){
     const f=fx; fx={};
     setTimeout(()=>{ Object.keys(f).forEach(i=>cellEls[i]&&cellEls[i].classList.remove(f[i])); }, f && Object.values(f).includes('hint')?2400:420);
   }
-  renderHud(); renderOrders(tasks); renderInfo();
+  renderHud(); renderOrders(tasks); renderInfo(); renderStore();
   if(S.genQ&&S.genQ.length&&!genBusy){ genBusy=true; setTimeout(playGenStory,450); }
 }
 function renderHud(){
@@ -1239,11 +1288,13 @@ function endPress(e,cancel){
   ghost.style.transform='translate(-999px,-999px)';
   [...board.querySelectorAll('.drop,.lift')].forEach(x=>x.classList.remove('drop','lift'));
   if(cancel) return;
+  if(p.drag && storeOn && inStore(e.clientX,e.clientY)){ storeItem(p.i); return; }
   if(p.drag){ drop(p.i, cellAt(e.clientX,e.clientY)); }
   else tap(p.i);
 }
 board.addEventListener('pointerup',e=>endPress(e,false));
 board.addEventListener('pointercancel',e=>endPress(e,true));
+function inStore(x,y){ const el=$('store'); if(!el||el.hidden) return false; const r=el.getBoundingClientRect(); return x>=r.left&&x<r.right&&y>=r.top&&y<r.bottom; }
 function cellAt(x,y){
   const r=board.getBoundingClientRect();
   if(x<r.left||x>=r.right||y<r.top||y>=r.bottom) return -1;
@@ -1570,11 +1621,11 @@ function showSOS(){
   const tl=left('sosT'), el=left('sosE');
   openModal(`<h2>I’m stuck</h2><p style="color:var(--muted);font-size:13px">• For when there’s genuinely nothing to do<br>• Each one refills every 30 minutes<br>• Time skips and egg timers are the better way</p>
     <div class="row-btns"><button class="bigbtn${tl?'':' gold'}" id="sosT" ${tl?'disabled style="opacity:.5"':''}>⏳ Skip 5 minutes${tl?` · ${fmt(tl)}`:''}</button>
-    <button class="bigbtn${el?'':' gold'}" id="sosE" ${el?'disabled style="opacity:.5"':''}>${CHAINS.ET.items[0].e} An egg timer${el?` · ${fmt(el)}`:''}</button></div>
+    ${CONFIG.sosTimer===false?'':`<button class="bigbtn${el?'':' gold'}" id="sosE" ${el?'disabled style="opacity:.5"':''}>${CHAINS.ET.items[0].e} An egg timer${el?` · ${fmt(el)}`:''}</button>`}</div>
     <div class="row-btns"><button class="bigbtn" id="sosBack">Back</button></div>`);
   $('sosBack').onclick=showMenu;
   if(!tl) $('sosT').onclick=()=>{ S.sosT=now(); timeSkip(5); SND.play('unweb'); flo('⏳ 5 minutes skipped'); save(); render(); showSOS(); };
-  if(!el) $('sosE').onclick=()=>{ S.sosE=now(); S.gifts.push(['ET',1]); SND.play('gift'); flo('Added to your gifts 🎁'); save(); render(); showSOS(); };
+  if(!el && $('sosE')) $('sosE').onclick=()=>{ S.sosE=now(); S.gifts.push(['ET',1]); SND.play('gift'); flo('Added to your gifts 🎁'); save(); render(); showSOS(); };
 }
 function showPass(){
   const nextT=PASS.find(t=>S.pts<t.pts), max=PASS[PASS.length-1].pts;
@@ -1596,9 +1647,10 @@ function showComplete(){
 $('journalBtn').onclick=()=>showBook();
 $('menuBtn').onclick=()=>{ resetArm=false; showMenu(); };
 $('giftBtn').onclick=placeGift;
+if($('storeBtn')){ $('storeBtn').onclick=()=>STORE&&openStore(); $('store').addEventListener('click',storeTap); }
 $('coinPill').onclick=showShop;
 $('passBtn').onclick=showPass;
-$('xpRow').onclick=()=>{ const l=stageOf(S.xp); toast(`⭐ Stage ${l}. Next level gives: ${stageReward(l+1).map(([k,lv])=>CHAINS[k].items[lv-1].e).join(' ')}<br><small>Claim stars ⭐ on the board to fill it</small>`,3200); };
+$('xpRow').onclick=()=>{ const l=stageOf(S.xp); toast(`⭐ Stage ${l}. Next level gives: ${stageReward(l+1).map(([k,lv])=>CHAINS[k].items[lv-1].e).join(' ')}${STORE&&storeSlots(l+1)>storeSlots(l)?` and a new ${STORE.e} ${STORE.one}`:''}<br><small>Claim stars ⭐ on the board to fill it</small>`,3200); };
 
 /* full screen toggle */
 const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;

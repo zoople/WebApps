@@ -99,3 +99,15 @@ These come from playing Larkspur Attic and Pennywhistle Fete to the end. Each le
 - **Letters:** a pass tier can carry `ch:n`, so its letter can't arrive before that chapter (the "Chapter n" label shows instead of Claim). Gate any letter that names later plot.
 - **Check with the scanner:** list each reveal's keyword and chapter, then scan every text source at its earliest possible time (orders in the visible window, story items under the cap, letters, generator stories, moon notes, cards).
 - **Adversarial bots:** a racer (merges coins, sells everything, reads every card it can afford) reached at most 2 readings ahead. A spender (buys everything in the shop at once) never deadlocked, but took up to about twice as long. The shop and mini shop now warn when a purchase would leave you short of a reading the story needs.
+
+## Left Luggage, played (7 Nov 2026): levels, timers and storage
+- **Stage levels must be worth something.** Gifts alone felt trivial. Storage (below) now hangs off the stage level, so levelling has a goal.
+- **Storage is standard from now on.** Every new story sets `EVENT.storage`, with a story conceit for the spaces (Left Luggage: Mr Holub's pigeonholes).
+  - Opens at stage 5 with one space, then one more every second stage, up to 10.
+  - Stored things are off the board: orders don't see them and nothing reminds you. Remembering is part of it.
+  - A plain bot ends Left Luggage at stage 13, so about 5 spaces by the ending.
+- **Egg timers are bought, not given.** The player had about 300 spare coins and every card read, because free timers (quest, card, stall, "I'm stuck") meant the shop was never needed.
+  - One free timer ever (an early quest step teaches it). The rest are bought, at a price that climbs (35, then ×1.3 each time, up to 250).
+  - `CONFIG.sosTimer:false` removes the free timer from "I'm stuck".
+  - Bots still all finish. Buyers can now afford about 2 timers instead of 3–4.
+- **Open questions:** finished top-of-chain items pile up because you're afraid an order will want them. The hourglass chain (time skips) isn't exciting.
