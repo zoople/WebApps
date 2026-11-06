@@ -3,12 +3,12 @@
    and somehow you have the job. Balance is built on Pennywhistle Fete's (generator numbers, order sizes, side stall
    with sales orders), plus Vesna's tarot deck: coins buy readings, every card is new, and story orders need cards. */
 const EVENT = {
-  id: 'left-luggage', title: 'The Left Luggage Office', tagline: 'What You Came to Leave', version: 'v6',
+  id: 'left-luggage', title: 'The Left Luggage Office', tagline: 'What You Came to Leave', version: 'v7',
   themeColor: '#16131f',
   cover: { art: `<svg class="cover" viewBox="0 0 360 230" role="img" aria-label="A night station: a big clock, a lit office window, a suitcase, an owl and a tarot card"><defs><linearGradient id="llSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2140"/><stop offset="1" stop-color="#16131f"/></linearGradient><radialGradient id="llLamp" cx=".5" cy=".55" r=".5"><stop offset="0" stop-color="#ffd77a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd77a" stop-opacity="0"/></radialGradient></defs><rect width="360" height="230" fill="url(#llSky)"/><g stroke="#3d3358" stroke-width="6" fill="none"><path d="M0 40 Q180 -20 360 40"/><path d="M40 30 V230 M320 30 V230 M110 14 V230 M250 14 V230"/></g><g transform="translate(180 62)"><circle r="30" fill="#efe3c4" stroke="#d9b45a" stroke-width="5"/><path d="M0 0 V-20 M0 0 L13 6" stroke="#2a2140" stroke-width="3" stroke-linecap="round"/><circle r="2.5" fill="#2a2140"/></g><rect x="118" y="112" width="124" height="70" rx="4" fill="#2a2140" stroke="#d9b45a" stroke-width="3"/><rect x="126" y="120" width="108" height="44" fill="#ffd77a" opacity=".85"/><rect x="100" y="96" width="160" height="110" fill="url(#llLamp)"/><text x="180" y="176" font-size="9" text-anchor="middle" fill="#d9b45a" font-family="serif" letter-spacing="1.5">LEFT LUGGAGE</text><path d="M0 200 H360 V230 H0Z" fill="#1f1a2e"/><path d="M0 200 H360" stroke="#d9b45a" stroke-width="2" opacity=".6"/><g transform="translate(58 166)"><rect width="52" height="36" rx="5" fill="#8c3b5a"/><rect x="18" y="-8" width="16" height="10" rx="3" fill="none" stroke="#d9b45a" stroke-width="3"/><path d="M0 14 H52" stroke="#d9b45a" stroke-width="2"/><rect x="40" y="18" width="10" height="7" fill="#efe3c4"/></g><g transform="translate(280 150)"><rect x="-4" y="40" width="40" height="8" fill="#3d3358"/><ellipse cx="16" cy="22" rx="15" ry="19" fill="#8a7458"/><ellipse cx="16" cy="28" rx="9" ry="11" fill="#cbb38d"/><circle cx="10" cy="14" r="6" fill="#f6ecd2"/><circle cx="22" cy="14" r="6" fill="#f6ecd2"/><circle cx="10" cy="14" r="3" fill="#16131f"/><circle cx="22" cy="14" r="3" fill="#16131f"/><path d="M14 19 l2 3 l2 -3z" fill="#d9b45a"/><path d="M3 4 l5 6 M29 4 l-5 6" stroke="#8a7458" stroke-width="4" stroke-linecap="round"/></g><g transform="translate(216 186) rotate(-12)"><rect width="26" height="40" rx="3" fill="#f6ecd2" stroke="#d9b45a" stroke-width="2"/><circle cx="13" cy="17" r="6" fill="none" stroke="#8c3b5a" stroke-width="2"/><path d="M13 8 v2 M13 24 v2 M4 17 h2 M20 17 h2" stroke="#8c3b5a" stroke-width="2"/></g><g fill="#efe3c4" opacity=".7"><circle cx="70" cy="70" r="1.2"/><circle cx="296" cy="84" r="1.4"/><circle cx="240" cy="40" r="1"/><circle cx="96" cy="110" r="1"/></g></svg>`,
     sub: 'What You Came to Leave',
     key: [["🔮", "Find out what everyone here came to leave behind, you included"], ["🧩", "Merge and fill orders to run the night office"], ["☀️", "No timer. Play at your own pace"]],
-    more: ["Tap a generator twice to make items; drag two matching items together to merge", "Generators are free to tap; they rest after a while and ⏲️ kitchen timers refill one", "🃏 Vesna’s deck: pay coins for a reading; every card is new and gives a small blessing", "Story orders need cards read, so keep some coins for Vesna", "🧳 Zofia’s kiosk buys anything you can spare, for coins and moons; her story orders need sales", "Tea isn’t for drinking: drop it on a generator and it finds rare items more often", "🔥 The furnace takes what you’re done with and gives you a moon of insight", "📦 Unclaimed parcels are free to tap, then fold flat", "⏱️ Time chargers make the generators around them recharge twice as fast", "Tap 🪙 for the Station Buffet"] },
+    more: ["Tap a generator twice to make items; drag two matching items together to merge", "Generators are free to tap; they rest after a while", "⏲️ Kitchen timers refill a resting generator. Buy them at the buffet; each one costs more than the last", "📬 Pigeonholes open at stage 5, with another every second stage: room to keep things off the board", "🃏 Vesna’s deck: pay coins for a reading; every card is new and gives a small blessing", "Story orders need cards read, so keep some coins for Vesna", "🧳 Zofia’s kiosk buys anything you can spare, for coins and moons; her story orders need sales", "Tea isn’t for drinking: drop it on a generator and it finds rare items more often", "🔥 The furnace takes what you’re done with and gives you a moon of insight", "📦 Unclaimed parcels are free to tap, then fold flat", "⏱️ Time chargers make the generators around them recharge twice as fast", "Tap 🪙 for the Station Buffet"] },
   terms: {
     passName: 'Insight', tokenNoun: 'moon', tokenIcon: '🌒',
     passHelp: '• Moons 🌒 drop from generators, orders, the furnace and Zofia’s kiosk<br>• Tap twice to claim them any time: 🌒 1 · 🌓 3 · 🌔 7 · 🌕 16 points<br>• Merging first is worth more, but takes board space<br>• Every 3rd reward comes with a postcard from Mr Pell ✉️',
@@ -24,10 +24,17 @@ const EVENT = {
   complete: { title: 'The Morning Train', text: 'You ran the night office, read all twenty-two cards and found out what you came to leave.',
     note: 'The office stays open. Merge as long as you like. Locker Thirteen has one thing nobody has claimed yet.' },
   /* reward numbers (the engine hands them out). Tables read "value or more → level" */
+  /* storage: pigeonholes behind the counter. Spaces off the board, opened by stage level */
+  storage: { name:'Pigeonholes', one:'pigeonhole', e:'📬', from:5, every:2, max:10, intro:[
+    ['H','“MEMO: Staff are entitled to one (1) pigeonhole behind the counter, for items in transit. Further pigeonholes will be allocated by seniority. — H.”'],
+    ['V','Seniority means how long you’ve lasted. Keep going and he’ll find you another one every couple of stages.'],
+    ['M','<em>(Mr Thursday inspects the pigeonholes and is visibly offended by the name.)</em>'],
+    ['N','<em>• Tap 📬 to open your pigeonholes<br>• Drag something in to keep it off the board<br>• Tap it to bring it back<br>• Orders can’t see what’s in there, so remember what you put away</em>'],
+  ]},
   rewards: {
     order: { coins:[[30,3],[14,2],[0,1]], xp:[[4,3],[2,2],[0,1]], points:[[3,2],[0,1]] },
     finale: [['C',4],['X',4],['N',3]],
-    side: { coins:[[24,3],[8,2],[0,1]], bigPoints:24, timerAt:12, timerChance:.3, lucky:[['C',1],['N',1]] },
+    side: { coins:[[24,3],[8,2],[0,1]], bigPoints:24, timerAt:12, timerChance:0, lucky:[['C',1],['N',1]] },
     discovery: { coinsPerLevel:0, topCoins:8, xpFrom:3 },   // coins only for a chain's top item, so early reveals don't flood the purse
     /* early quest steps pay tea, timers and nods, not coins, so coins follow the story instead of arriving all at once */
     quests: [[['X',1],['E',1]],[['E',2],['ET',1]],[['E',3],['H',1]],[['C',3],['H',2],['N',1]],[['E',4],['H',2],['N',2]],[['C',4],['H',3],['N',3]]],
@@ -66,7 +73,7 @@ const EVENT = {
       {num:'I', n:'The Magician', e:'🪄', effect:{focus:12}, story:[['V','The Magician. Everything you need is already on the table. You keep looking under it.'],['M','<em>(Mr Thursday looks under the table, finds nothing, and seems relieved.)</em>']]},
       {num:'II', n:'The High Priestess', e:'🌙', effect:{unweb:3}, story:[['V','The High Priestess. She knows something you don’t, and she’s not telling.'],['V','Don’t look at me like that. I’m not her; I’m much chattier.']]},
       {num:'III', n:'The Empress', e:'🌾', effect:{gift:['E',3]}, story:[['V','The Empress. Things grow when you stop checking on them every five minutes.'],['V','Have some tea. Sit still. Let something grow.']]},
-      {num:'IV', n:'The Emperor', e:'👑', effect:{gift:['ET',1]}, story:[['V','The Emperor. Rules, order, a very comfortable chair.'],['V','Mr Holub would love him. They’d form a committee.']]},
+      {num:'IV', n:'The Emperor', e:'👑', effect:{gift:['H',2]}, story:[['V','The Emperor. Rules, order, a very comfortable chair.'],['V','Mr Holub would love him. They’d form a committee.']]},
       {num:'V', n:'The Hierophant', e:'🔑', effect:{gift:['C',3]}, story:[['V','The Hierophant. The way things have always been done.'],['V','Notice he holds a key. Even tradition knows it might need to leave.']]},
       {num:'VI', n:'The Lovers', e:'💞', effect:{gift:['N',2]}, story:[['V','The Lovers. People think it’s romance. Mostly it’s a choice. You can’t walk two roads.'],['V','Well, you can, but slowly and badly.']]},
       {num:'VII', n:'The Chariot', e:'🐎', effect:{refill:true}, story:[['V','The Chariot. Two horses pulling different ways, and someone holding the reins anyway.'],['V','You don’t need them to agree. You just need to decide where you’re going.']]},
@@ -120,6 +127,7 @@ const CONFIG = {
   chargerScale: 1/6,     // a 2h Merge Mansion charger runs 20 min here
   cols: 7, rows: 9,
   saveKey: 'merge-stories:left-luggage',
+  sosTimer: false,       // kitchen timers are bought, never handed out (one comes free from a quest)
 };
 
 const CHAINS = {
@@ -401,7 +409,7 @@ const MOON_NOTES=[
 ];
 const P2={ shopName:'The Station Buffet', shopBlurb:'Vesna sells whatever the night mail brings. Her readings cost coins too, so keep some back' };
 const SHOP_ITEMS=[
-  {id:'ET', item:['ET',1], price:30, what:'Refills one generator. Drag it onto the one you need'},
+  {id:'ET', item:['ET',1], price:{base:35, mult:1.3, max:250}, what:'Refills one generator. Drag it onto the one you need. Dearer each time'},
   {id:'H1', item:['H',1], price:60, what:'Skips 15 minutes on every generator and the samovar'},
   {id:'E2', item:['E',2], price:25, what:'Strong coffee: drop it on a generator for 5 taps of better rare finds'},
 ];

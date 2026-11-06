@@ -47,6 +47,13 @@ A story names these chains and sets their numbers. The engine decides how they b
 | any chain | `tile:true` | Items are plain characters (e.g. digits) drawn as brass discs. Use this instead of keycap emoji (0️⃣), which some phones can't draw. |
 | any chain | `mergeBonus:{from, give}` | Merging up to level `from` or higher also drops `give` (Bellavista: numbers 2+ drop a star). |
 
+## Storage (every new story)
+- `EVENT.storage = {name, one, e, from, every, max, intro}` (e.g. Pigeonholes, pigeonhole, 📬, 5, 2, 10).
+- Opens at stage `from` with one space, then one more every `every` stages, up to `max`. The `intro` scene plays when it opens (or on the first tap for older saves).
+- Tap the button to open the spaces over the info panel. Drag an item in; tap a stored item to put it back on the board.
+- Stored items are off the board: orders, the stall and hints don't see them. Generators, wrapped gifts and story rosettes can't be stored.
+- `CONFIG.sosTimer:false` hides the free egg timer in "I'm stuck" (for stories where timers are bought).
+
 ## What a story sets
 - `EVENT`:
   - `id`, `title`, `tagline`, `version`, `themeColor`

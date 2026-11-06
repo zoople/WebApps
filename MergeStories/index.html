@@ -307,6 +307,17 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 
 /* toasts dock inside the bottom info panel: one at a time, never over the board */
 #toast{position:fixed;z-index:45;display:grid;cursor:pointer}
+#store{position:fixed;z-index:44;display:grid;grid-template-rows:1fr 1fr;gap:4px;padding:5px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--gold);border-radius:14px;box-shadow:0 -6px 18px #0006}
+#store[hidden]{display:none}
+#store button{font:inherit;color:inherit;border:0;cursor:pointer;min-width:0;min-height:0}
+#store .sl{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;background:#0004;font-size:22px;line-height:1}
+#store .sl.empty{background:#ffffff0c;border:1px dashed #ffffff38}
+#store .sl.lock{font-size:12px;opacity:.55;gap:2px}
+#store .sl.lock small{font-size:9px;white-space:nowrap}
+#store .sx{grid-column:-2;grid-row:1/3;border-radius:9px;background:#ffffff14;font-size:16px}
+.iconbtn.store{position:relative}.iconbtn.store.on{background:var(--gold);color:#2a1a10}
+.iconbtn.store .sn{position:absolute;right:-3px;top:-3px;font-style:normal;font-size:10px;font-weight:800;background:var(--velvet);border-radius:999px;padding:0 4px;line-height:15px}
+.iconbtn.store .sn:empty{display:none}
 #toast:empty{display:none}
 #toast .tx{position:absolute;right:9px;bottom:5px;font-size:10.5px;color:var(--muted);font-weight:700}
 #toast .tm{position:absolute;left:10px;bottom:5px;font-size:10.5px;color:var(--gold);font-weight:800}
@@ -436,6 +447,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
     <button class="pill" id="coinPill" title="Shop" aria-label="Coins, tickets and shop"><span>🪙</span><b id="coins">0</b><span id="chipsIc">🎟️</span><b id="chips">0</b><i class="plus">+</i></button>
     <span class="spacer"></span>
     <button class="pill gift" id="giftBtn" hidden>🎁 <b id="giftCount">1</b></button>
+    <button class="iconbtn store" id="storeBtn" hidden aria-label="Storage"><span id="storeIc"></span><i class="sn" id="storeN"></i></button>
     <button class="iconbtn" id="fsBtn" aria-label="Full screen" title="Full screen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path id="fsPath" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg></button>
     <button class="iconbtn" id="journalBtn" aria-label="Quests, collection and journal">📖<i class="pip" id="bookPip" hidden></i></button>
     <button class="iconbtn" id="menuBtn" aria-label="Menu">⋯</button>
@@ -451,6 +463,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 </div>
 <div class="overlay" id="scene" hidden></div>
 <div class="overlay modal" id="modal" hidden><div class="sheetbox" id="modalBody"></div></div>
+<div id="store" hidden></div>
 <div id="toast"></div>
 <div id="ghost"></div>
 
@@ -458,7 +471,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <script>
 /* Merge Stories: the console. With no story chosen it shows the shelf; once you pick one, that story's
    cartridge (events/<id>/event.js) and the shared engine load, and the story owns the front screen from then on. */
-const VERSION='v14 · 6 Nov 2026';
+const VERSION='v15 · 7 Nov 2026';
 const CURRENT_KEY='merge-stories:current';
 function ejectStory(){ try{ localStorage.removeItem(CURRENT_KEY); }catch(e){} location.href=location.pathname; }
 (function(){
