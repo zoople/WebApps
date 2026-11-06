@@ -315,7 +315,18 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 #store .sl.lock{font-size:12px;opacity:.55;gap:2px}
 #store .sl.lock small{font-size:9px;white-space:nowrap}
 #store .sx{grid-column:-2;grid-row:1/3;border-radius:9px;background:#ffffff14;font-size:16px}
-.iconbtn.store{position:relative}.iconbtn.store.on{background:var(--gold);color:#2a1a10}
+.iconbtn.store{position:relative}
+#store .sl.fresh{border:2px solid var(--gold);background:#d9b45a33;animation:nsGlow 1.1s ease-in-out 2}
+@keyframes nsGlow{0%,100%{box-shadow:0 0 0 0 #d9b45a00;transform:scale(1)}50%{box-shadow:0 0 18px 4px #d9b45acc;transform:scale(1.08)}}
+.newspace{text-align:center;padding:6px 0 2px}
+.newspace h2{margin:6px 0 10px}
+.newspace p{color:var(--muted);font-size:13px;margin:8px 0 0}
+.ns-burst{font-size:64px;line-height:1;display:inline-block;animation:nsPop .7s cubic-bezier(.2,1.6,.4,1) both;filter:drop-shadow(0 0 18px #d9b45a)}
+@keyframes nsPop{0%{transform:scale(.2) rotate(-20deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+.ns-pips{display:flex;gap:5px;justify-content:center}
+.ns-pips i{width:18px;height:18px;border-radius:5px;border:1px dashed #ffffff40}
+.ns-pips i.on{background:var(--gold);border:0}
+.ns-pips i.new{animation:nsGlow 1s ease-in-out infinite}.iconbtn.store.on{background:var(--gold);color:#2a1a10}
 .iconbtn.store .sn{position:absolute;right:-3px;top:-3px;font-style:normal;font-size:10px;font-weight:800;background:var(--velvet);border-radius:999px;padding:0 4px;line-height:15px}
 .iconbtn.store .sn:empty{display:none}
 #toast:empty{display:none}
@@ -471,7 +482,7 @@ button.pill{color:inherit;font:inherit;cursor:pointer}
 <script>
 /* Merge Stories: the console. With no story chosen it shows the shelf; once you pick one, that story's
    cartridge (events/<id>/event.js) and the shared engine load, and the story owns the front screen from then on. */
-const VERSION='v15 · 7 Nov 2026';
+const VERSION='v16 · 7 Nov 2026';
 const CURRENT_KEY='merge-stories:current';
 function ejectStory(){ try{ localStorage.removeItem(CURRENT_KEY); }catch(e){} location.href=location.pathname; }
 (function(){

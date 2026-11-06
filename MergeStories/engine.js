@@ -115,7 +115,7 @@ function ensureSide(){ S.side=S.side||[]; if(!S.sideOn) return; while(S.side.len
 /* every third tier also unlocks a note from a past winner */
 /* winners' notes: every third Rosette Board reward unlocks one (the story told by past winners) */
 /* the first time you claim each rosette level, Dot's fete scrapbook has something to say */
-const FOCUS=[2,5,12,30,75], FOCUS_MULT=5;
+const FOCUS=EVENT.focusTaps||[2,5,12,30,75], FOCUS_MULT=5;   // taps of better rare finds per booster level
 const isBoost = it => CHAINS[it.k].type==='boost';
 const canFocus=it=>isGen(it)&&typeof CHAINS[it.k].rare==='string'&&!!CHAINS[CHAINS[it.k].rare]&&CHAINS[CHAINS[it.k].rare].rare===true;
 function useOn(a,b){
@@ -783,7 +783,8 @@ function addXP(v){
   for(let l=before+1;l<=after;l++){
     stageReward(l).forEach(r=>S.gifts.push(r));
     const more=STORE && storeSlots(l)>storeSlots(l-1);
-    if(more && l===STORE.from && !S.storeSeen){ S.storeSeen=1; setTimeout(()=>playScene({title:STORE.name, lines:STORE.intro}, ()=>{ storeOn=true; render(); }),700); }
+    if(more && l===STORE.from && !S.storeSeen){ S.storeSeen=1; setTimeout(()=>playScene({title:STORE.name, lines:STORE.intro}, ()=>showNewSpace(storeSlots(l))),700); }
+    else if(more) setTimeout(()=>showNewSpace(storeSlots(l)),700);
     setTimeout(()=>{ SND.play('gift'); toast(`⭐ Stage level ${l}! A gift is waiting 🎁${more?`<br>${STORE.e} And a new ${STORE.one}: ${storeSlots(l)} of ${STORE.max}`:''}`,3000); },300);
   }
 }
@@ -805,8 +806,20 @@ function unstore(j){
   const t=nearestEmpty(59); if(t<0){ SND.play('nope'); flo('No room on the board'); return; }
   const it=S.store.splice(j,1)[0]; S.cells[t].it=it; fx[t]='spawn'; sel=t; SND.play('move'); save(); render();
 }
+/* a new space opening is a moment: a big card, then the spaces open with the new one glowing */
+let storeNew=-1;
+function showNewSpace(n){
+  if(!$('modal').hidden||storyOpen()){ setTimeout(()=>showNewSpace(n),800); return; }   // wait for whatever is open
+  const next=n<STORE.max?`Next one at stage ${storeOpensAt(n+1)}`:'That’s every one';
+  SND.play('magic');
+  openModal(`<div class="newspace"><div class="ns-burst">${STORE.e}</div><h2>A new ${STORE.one}!</h2>
+    <div class="ns-pips">${Array.from({length:STORE.max},(_,j)=>`<i class="${j<n-1?'on':j===n-1?'on new':''}"></i>`).join('')}</div>
+    <p>${n} of ${STORE.max} open · ${next}</p></div>
+    <div class="row-btns"><button class="bigbtn gold" id="nsOpen">Open ${STORE.name.toLowerCase()}</button></div>`);
+  $('nsOpen').onclick=()=>{ closeModal(); storeNew=n-1; storeOn=true; render(); setTimeout(()=>{ storeNew=-1; render(); },2600); };
+}
 function openStore(){
-  if(!S.storeSeen){ S.storeSeen=1; save(); playScene({title:STORE.name, lines:STORE.intro}, ()=>{ storeOn=true; render(); }); return; }
+  if(!S.storeSeen){ S.storeSeen=1; save(); playScene({title:STORE.name, lines:STORE.intro}, ()=>showNewSpace(storeSlots())); return; }
   storeOn=!storeOn; SND.play('tap'); render();
 }
 function renderStore(){
@@ -821,7 +834,7 @@ function renderStore(){
   let h='';
   for(let j=0;j<STORE.max;j++){
     if(j<st.length) h+=`<button class="sl" data-j="${j}">${def(st[j]).e}</button>`;
-    else if(j<n) h+=`<button class="sl empty" data-e="1"></button>`;
+    else if(j<n) h+=`<button class="sl empty${j===storeNew?' fresh':''}" data-e="1"></button>`;
     else h+=`<button class="sl lock" data-lock="${storeOpensAt(j+1)}">🔒<small>Stage ${storeOpensAt(j+1)}</small></button>`;
   }
   h+=`<button class="sx" data-x="1" aria-label="Close">✕</button>`;

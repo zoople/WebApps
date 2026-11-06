@@ -26,7 +26,7 @@ A story names these chains and sets their numbers. The engine decides how they b
 
 | Key | Type | Behaviour |
 |---|---|---|
-| `E` | booster (`type:'boost'`) | Drop on a generator: its next 2/5/12/30/75 taps (by level) find its rare chain 5× more often. **Can't be claimed.** |
+| `E` | booster (`type:'boost'`) | Drop on a generator: its next 2/5/12/30/75 taps by level (a story can set `EVENT.focusTaps`) find its rare chain 5× more often. **Can't be claimed.** |
 | `C` | coins (`claim:'coins'`) | Tap twice to claim. Spent in the shop and the mini shop. |
 | `X` | applause/xp (`claim:'xp'`) | Fills the stage bar. Each stage gives a gift. |
 | `N` | pass points (`claim:'points'`) | Pass tiers, notes and letters. |

@@ -3,7 +3,7 @@
    and somehow you have the job. Balance is built on Pennywhistle Fete's (generator numbers, order sizes, side stall
    with sales orders), plus Vesna's tarot deck: coins buy readings, every card is new, and story orders need cards. */
 const EVENT = {
-  id: 'left-luggage', title: 'The Left Luggage Office', tagline: 'What You Came to Leave', version: 'v7',
+  id: 'left-luggage', title: 'The Left Luggage Office', tagline: 'What You Came to Leave', version: 'v8',
   themeColor: '#16131f',
   cover: { art: `<svg class="cover" viewBox="0 0 360 230" role="img" aria-label="A night station: a big clock, a lit office window, a suitcase, an owl and a tarot card"><defs><linearGradient id="llSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2140"/><stop offset="1" stop-color="#16131f"/></linearGradient><radialGradient id="llLamp" cx=".5" cy=".55" r=".5"><stop offset="0" stop-color="#ffd77a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd77a" stop-opacity="0"/></radialGradient></defs><rect width="360" height="230" fill="url(#llSky)"/><g stroke="#3d3358" stroke-width="6" fill="none"><path d="M0 40 Q180 -20 360 40"/><path d="M40 30 V230 M320 30 V230 M110 14 V230 M250 14 V230"/></g><g transform="translate(180 62)"><circle r="30" fill="#efe3c4" stroke="#d9b45a" stroke-width="5"/><path d="M0 0 V-20 M0 0 L13 6" stroke="#2a2140" stroke-width="3" stroke-linecap="round"/><circle r="2.5" fill="#2a2140"/></g><rect x="118" y="112" width="124" height="70" rx="4" fill="#2a2140" stroke="#d9b45a" stroke-width="3"/><rect x="126" y="120" width="108" height="44" fill="#ffd77a" opacity=".85"/><rect x="100" y="96" width="160" height="110" fill="url(#llLamp)"/><text x="180" y="176" font-size="9" text-anchor="middle" fill="#d9b45a" font-family="serif" letter-spacing="1.5">LEFT LUGGAGE</text><path d="M0 200 H360 V230 H0Z" fill="#1f1a2e"/><path d="M0 200 H360" stroke="#d9b45a" stroke-width="2" opacity=".6"/><g transform="translate(58 166)"><rect width="52" height="36" rx="5" fill="#8c3b5a"/><rect x="18" y="-8" width="16" height="10" rx="3" fill="none" stroke="#d9b45a" stroke-width="3"/><path d="M0 14 H52" stroke="#d9b45a" stroke-width="2"/><rect x="40" y="18" width="10" height="7" fill="#efe3c4"/></g><g transform="translate(280 150)"><rect x="-4" y="40" width="40" height="8" fill="#3d3358"/><ellipse cx="16" cy="22" rx="15" ry="19" fill="#8a7458"/><ellipse cx="16" cy="28" rx="9" ry="11" fill="#cbb38d"/><circle cx="10" cy="14" r="6" fill="#f6ecd2"/><circle cx="22" cy="14" r="6" fill="#f6ecd2"/><circle cx="10" cy="14" r="3" fill="#16131f"/><circle cx="22" cy="14" r="3" fill="#16131f"/><path d="M14 19 l2 3 l2 -3z" fill="#d9b45a"/><path d="M3 4 l5 6 M29 4 l-5 6" stroke="#8a7458" stroke-width="4" stroke-linecap="round"/></g><g transform="translate(216 186) rotate(-12)"><rect width="26" height="40" rx="3" fill="#f6ecd2" stroke="#d9b45a" stroke-width="2"/><circle cx="13" cy="17" r="6" fill="none" stroke="#8c3b5a" stroke-width="2"/><path d="M13 8 v2 M13 24 v2 M4 17 h2 M20 17 h2" stroke="#8c3b5a" stroke-width="2"/></g><g fill="#efe3c4" opacity=".7"><circle cx="70" cy="70" r="1.2"/><circle cx="296" cy="84" r="1.4"/><circle cx="240" cy="40" r="1"/><circle cx="96" cy="110" r="1"/></g></svg>`,
     sub: 'What You Came to Leave',
@@ -25,6 +25,8 @@ const EVENT = {
     note: 'The office stays open. Merge as long as you like. Locker Thirteen has one thing nobody has claimed yet.' },
   /* reward numbers (the engine hands them out). Tables read "value or more → level" */
   /* storage: pigeonholes behind the counter. Spaces off the board, opened by stage level */
+  /* strong tea: taps of better rare finds per level (engine default 2/5/12/30/75 felt endless here) */
+  focusTaps: [1,3,6,12,25],
   storage: { name:'Pigeonholes', one:'pigeonhole', e:'📬', from:5, every:2, max:10, intro:[
     ['H','“MEMO: Staff are entitled to one (1) pigeonhole behind the counter, for items in transit. Further pigeonholes will be allocated by seniority. — H.”'],
     ['V','Seniority means how long you’ve lasted. Keep going and he’ll find you another one every couple of stages.'],
@@ -70,7 +72,7 @@ const EVENT = {
     ],
     cards: [
       {num:'0', n:'The Fool', e:'🐕', effect:{gift:['H',2]}, story:[['V','The Fool. A man stepping off a cliff, with a dog. Everyone thinks it’s a warning. It’s an invitation.'],['V','Zero. Not nothing: the number before anything happens.']]},
-      {num:'I', n:'The Magician', e:'🪄', effect:{focus:12}, story:[['V','The Magician. Everything you need is already on the table. You keep looking under it.'],['M','<em>(Mr Thursday looks under the table, finds nothing, and seems relieved.)</em>']]},
+      {num:'I', n:'The Magician', e:'🪄', effect:{focus:3}, story:[['V','The Magician. Everything you need is already on the table. You keep looking under it.'],['M','<em>(Mr Thursday looks under the table, finds nothing, and seems relieved.)</em>']]},
       {num:'II', n:'The High Priestess', e:'🌙', effect:{unweb:3}, story:[['V','The High Priestess. She knows something you don’t, and she’s not telling.'],['V','Don’t look at me like that. I’m not her; I’m much chattier.']]},
       {num:'III', n:'The Empress', e:'🌾', effect:{gift:['E',3]}, story:[['V','The Empress. Things grow when you stop checking on them every five minutes.'],['V','Have some tea. Sit still. Let something grow.']]},
       {num:'IV', n:'The Emperor', e:'👑', effect:{gift:['H',2]}, story:[['V','The Emperor. Rules, order, a very comfortable chair.'],['V','Mr Holub would love him. They’d form a committee.']]},
@@ -78,7 +80,7 @@ const EVENT = {
       {num:'VI', n:'The Lovers', e:'💞', effect:{gift:['N',2]}, story:[['V','The Lovers. People think it’s romance. Mostly it’s a choice. You can’t walk two roads.'],['V','Well, you can, but slowly and badly.']]},
       {num:'VII', n:'The Chariot', e:'🐎', effect:{refill:true}, story:[['V','The Chariot. Two horses pulling different ways, and someone holding the reins anyway.'],['V','You don’t need them to agree. You just need to decide where you’re going.']]},
       {num:'VIII', n:'Strength', e:'🦁', effect:{gift:['V',2]}, story:[['V','Strength. A woman closing a lion’s mouth with her bare hands. Gently.'],['V','The gently is the hard part.']]},
-      {num:'IX', n:'The Hermit', e:'🏮', effect:{focus:12}, story:[['V','The Hermit. An old man alone with a lantern, lighting one step at a time.'],['N','You point out that this is, roughly, the night shift.'],['V','Exactly. You’re a natural.']]},
+      {num:'IX', n:'The Hermit', e:'🏮', effect:{focus:3}, story:[['V','The Hermit. An old man alone with a lantern, lighting one step at a time.'],['N','You point out that this is, roughly, the night shift.'],['V','Exactly. You’re a natural.']]},
       {num:'X', n:'Wheel of Fortune', e:'🎡', effect:{refill:true}, story:[['V','The Wheel of Fortune. Whatever goes up comes round again.'],['V','People hate this card when they’re on top and love it when they’re not. It doesn’t care either way.']]},
       {num:'XI', n:'Justice', e:'⚖️', effect:{gift:['C',3]}, story:[['V','Justice. Every account balances in the end.'],['M','<em>(Mr Thursday stamps the card APPROVED. Justice, apparently, is now official.)</em>']]},
       {num:'XII', n:'The Hanged Man', e:'🙃', effect:{unweb:3}, story:[['V','The Hanged Man. Upside down, perfectly calm.'],['V','Sometimes the only way to see a thing properly is to stop trying to stand on it.']]},
@@ -87,7 +89,7 @@ const EVENT = {
       {num:'XV', n:'The Devil', e:'😈', effect:{gift:['C',4]}, story:[['V','The Devil. Two people chained to a rock. Look closer: the chains are loose. They could just step out.'],['V','He pays well, though. I’ll give him that.']]},
       {num:'XVI', n:'The Tower', e:'⚡', effect:{unweb:5}, story:[['V','The Tower. Lightning, a crown falling off, people leaping out of windows.'],['V','Everyone screams at this one. It’s only the bits that were built wrong falling down. The ground’s still there.']]},
       {num:'XVII', n:'The Star', e:'🌟', effect:{gift:['N',3]}, story:[['V','The Star. After the Tower, this. A woman pouring water under a sky full of stars.'],['V','Hope, but the quiet kind that doesn’t need to tell anyone.']]},
-      {num:'XVIII', n:'The Moon', e:'🐺', effect:{focus:20}, story:[['V','The Moon. Two dogs howling, a path into the dark, nothing quite what it seems.'],['V','You don’t have to see the whole path. You have to see the next stone.']]},
+      {num:'XVIII', n:'The Moon', e:'🐺', effect:{focus:5}, story:[['V','The Moon. Two dogs howling, a path into the dark, nothing quite what it seems.'],['V','You don’t have to see the whole path. You have to see the next stone.']]},
       {num:'XIX', n:'The Sun', e:'🌻', effect:{refill:true}, story:[['V','The Sun. A child on a horse, everything bright.'],['V','Don’t be suspicious of it. Some days are simply good.']]},
       {num:'XX', n:'Judgement', e:'📯', effect:{gift:['N',3]}, story:[['V','Judgement. A trumpet, and everyone sitting up in their graves to answer it.'],['V','Not other people’s judgement, but your own: the call to become what you were going to be anyway.']]},
       {num:'XXI', n:'The World', e:'🌍', effect:{gift:['H',2]}, story:[['V','The World. A dancer in a wreath. Something finished, and finished well.'],['V','And look: the ribbon has no end. Finished things are always also beginnings. Terribly inconvenient.']]},
@@ -411,7 +413,7 @@ const P2={ shopName:'The Station Buffet', shopBlurb:'Vesna sells whatever the ni
 const SHOP_ITEMS=[
   {id:'ET', item:['ET',1], price:{base:35, mult:1.3, max:250}, what:'Refills one generator. Drag it onto the one you need. Dearer each time'},
   {id:'H1', item:['H',1], price:60, what:'Skips 15 minutes on every generator and the samovar'},
-  {id:'E2', item:['E',2], price:25, what:'Strong coffee: drop it on a generator for 5 taps of better rare finds'},
+  {id:'E2', item:['E',2], price:25, what:'Strong coffee: drop it on a generator for 3 taps of better rare finds'},
 ];
 
 const REFLECTIONS=[
