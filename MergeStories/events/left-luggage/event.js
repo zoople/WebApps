@@ -3,7 +3,7 @@
    and somehow you have the job. Balance is built on Pennywhistle Fete's (generator numbers, order sizes, side stall
    with sales orders), plus Vesna's tarot deck: coins buy readings, every card is new, and story orders need cards. */
 const EVENT = {
-  id: 'left-luggage', title: 'The Left Luggage Office', tagline: 'What You Came to Leave', version: 'v4',
+  id: 'left-luggage', title: 'The Left Luggage Office', tagline: 'What You Came to Leave', version: 'v5',
   themeColor: '#16131f',
   cover: { art: `<svg class="cover" viewBox="0 0 360 230" role="img" aria-label="A night station: a big clock, a lit office window, a suitcase, an owl and a tarot card"><defs><linearGradient id="llSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2140"/><stop offset="1" stop-color="#16131f"/></linearGradient><radialGradient id="llLamp" cx=".5" cy=".55" r=".5"><stop offset="0" stop-color="#ffd77a" stop-opacity=".45"/><stop offset="1" stop-color="#ffd77a" stop-opacity="0"/></radialGradient></defs><rect width="360" height="230" fill="url(#llSky)"/><g stroke="#3d3358" stroke-width="6" fill="none"><path d="M0 40 Q180 -20 360 40"/><path d="M40 30 V230 M320 30 V230 M110 14 V230 M250 14 V230"/></g><g transform="translate(180 62)"><circle r="30" fill="#efe3c4" stroke="#d9b45a" stroke-width="5"/><path d="M0 0 V-20 M0 0 L13 6" stroke="#2a2140" stroke-width="3" stroke-linecap="round"/><circle r="2.5" fill="#2a2140"/></g><rect x="118" y="112" width="124" height="70" rx="4" fill="#2a2140" stroke="#d9b45a" stroke-width="3"/><rect x="126" y="120" width="108" height="44" fill="#ffd77a" opacity=".85"/><rect x="100" y="96" width="160" height="110" fill="url(#llLamp)"/><text x="180" y="176" font-size="9" text-anchor="middle" fill="#d9b45a" font-family="serif" letter-spacing="1.5">LEFT LUGGAGE</text><path d="M0 200 H360 V230 H0Z" fill="#1f1a2e"/><path d="M0 200 H360" stroke="#d9b45a" stroke-width="2" opacity=".6"/><g transform="translate(58 166)"><rect width="52" height="36" rx="5" fill="#8c3b5a"/><rect x="18" y="-8" width="16" height="10" rx="3" fill="none" stroke="#d9b45a" stroke-width="3"/><path d="M0 14 H52" stroke="#d9b45a" stroke-width="2"/><rect x="40" y="18" width="10" height="7" fill="#efe3c4"/></g><g transform="translate(280 150)"><rect x="-4" y="40" width="40" height="8" fill="#3d3358"/><ellipse cx="16" cy="22" rx="15" ry="19" fill="#8a7458"/><ellipse cx="16" cy="28" rx="9" ry="11" fill="#cbb38d"/><circle cx="10" cy="14" r="6" fill="#f6ecd2"/><circle cx="22" cy="14" r="6" fill="#f6ecd2"/><circle cx="10" cy="14" r="3" fill="#16131f"/><circle cx="22" cy="14" r="3" fill="#16131f"/><path d="M14 19 l2 3 l2 -3z" fill="#d9b45a"/><path d="M3 4 l5 6 M29 4 l-5 6" stroke="#8a7458" stroke-width="4" stroke-linecap="round"/></g><g transform="translate(216 186) rotate(-12)"><rect width="26" height="40" rx="3" fill="#f6ecd2" stroke="#d9b45a" stroke-width="2"/><circle cx="13" cy="17" r="6" fill="none" stroke="#8c3b5a" stroke-width="2"/><path d="M13 8 v2 M13 24 v2 M4 17 h2 M20 17 h2" stroke="#8c3b5a" stroke-width="2"/></g><g fill="#efe3c4" opacity=".7"><circle cx="70" cy="70" r="1.2"/><circle cx="296" cy="84" r="1.4"/><circle cx="240" cy="40" r="1"/><circle cx="96" cy="110" r="1"/></g></svg>`,
     sub: 'What You Came to Leave',
@@ -327,7 +327,7 @@ const TASKS = [
   {id:200, side0:1, ch:0, who:'Z', need:[['P',2],['F',1]], coins:8, say:'You’re the new one? Zofia, the kiosk on platform zero. Bring me a receipt and an odd glove. I sell what nobody claims.', beat:['Z','Platform zero. No, it’s not on the map. It is if you’re standing on it.'], more:[['Z','Regulation eleven: anything unclaimed after thirty days goes to the kiosk. Or sooner, if I like the look of it.'],['V','She always likes the look of it.'],['Z','Bring me anything you can spare, any time. Fair prices. Coins and a little insight, for those who need it.'],['N','<em>(Zofia’s Kiosk is open. Its orders never run out: sell anything you can spare for coins and moons.)</em>']]},
   {ch:0, who:'H', need:[['P',3]], coins:10, say:'“MEMO: The Night Clerk will submit a clipboard, in triplicate, to confirm receipt of this memo. — H.”', beat:['H','“MEMO: Clipboard received. One copy will do. — H.”']},
   {ch:0, who:'V', need:[['T',1],['F',2]], gifts:[['TR',1]], coins:8, say:'Find me an umbrella and a platform ticket: it’s raining between here and the buffet. Then you can borrow my deck. You look like someone who needs a reading.', beat:['V','There. Twenty-two cards. Tap the deck when you want a reading. The owl sits on the left.'], more:[['V','I don’t tell fortunes, before you ask. Fortunes are for people who want to be told. Cards are for people who want to look.']]},
-  {ch:0, who:'V', cards:1, need:[['T',2],['F',3]], coins:12, say:'Read your first card, then bring me the evening paper and a top hat. I’m doing a man’s horoscope by his hat. It’s more reliable.', beat:['V','One card. Most people stop there. You won’t.']},
+  {ch:0, who:'V', after:true, cards:1, need:[['T',2],['F',3]], coins:12, say:'Read your first card, then bring me the evening paper and a top hat. I’m doing a man’s horoscope by his hat. It’s more reliable.', beat:['V','One card. Most people stop there. You won’t.']},
   // ch2 — unclaimed
   {ch:1, who:'V', need:[['L',2]], coins:12, say:'A quill from the curiosity cart, please. I write the readings down. Nobody remembers them properly otherwise.', beat:['V','Thank you. Now I can be wrong in writing.']},
   {ch:1, who:'H', need:[['P',4]], coins:14, say:'“MEMO: The Night Clerk will submit a dossier proving the Night Clerk is the Night Clerk. — H.”', beat:['H','“MEMO: Dossier received. Inconclusive. Please continue to exist pending review. — H.”']},
@@ -349,7 +349,7 @@ const TASKS = [
   {ch:3, who:'M', need:[['T',5],['W',3]], coins:22, say:'(Mr Thursday has brought you a signal and a globe and is spinning the globe with one foot.)', beat:['M','<em>(It stops on the sea. He hoots, once, with great satisfaction.)</em>']},
   {ch:3, who:'H', need:[['F',5],['P',6]], coins:22, say:'“MEMO: All unclaimed briefcases are to be filed in a filing cabinet, alphabetically, by regret. — H.”', beat:['H','“MEMO: Filed. The R drawer is very full. — H.”']},
   {id:203, ch:3, who:'Z', sales:5, need:[['L',3]], coins:22, say:'Five more sales, and the evil eye charm. My sister left on the night train in 1991. She wrote: “Come when you’re ready.” I never felt ready.', beat:['Z','Five sold. I haven’t told anyone that about my sister in thirty years.'], more:[['V','You’ve told me every Thursday for thirty years, Zofia.'],['Z','Well. I haven’t told anyone who listened.']]},
-  {ch:3, who:'V', cards:10, need:[['M',5]], coins:26, say:'Ten cards read, and his drawing of the sea. He drew it when he was seven. He kept it for fifty-six years.', beat:['V','“One day.” On the back. He wrote that when he was forty, I think. The handwriting’s tired.'], more:[['N','You ask if he ever went.'],['V','He left last Tuesday with nothing but a ticket. Where else would a man go, with a drawing like that?']]},
+  {ch:3, who:'V', cards:10, need:[['M',5]], coins:26, say:'Ten cards read, and his drawing of the sea. He drew it when he was seven. He kept it for fifty-six years.', beat:['V','“One day.” On the back. He wrote that when he was forty, I think. The handwriting’s tired.'], more:[['N','You ask if he ever went.'],['V','Where do you think a man goes, with a drawing like that in his locker?']]},
   {ch:3, who:'H', need:[['B',3],['F',6]], coins:20, say:'“MEMO: A brass elephant has been reported in a suitcase. Elephants are not permitted in suitcases. Please investigate. — H.”', beat:['N','It is a very small brass elephant. The tag says: “Left because: Grandmother said it would bring luck, and it did, and I don’t need it now.”']},
   {x:1, ch:3, who:'M', need:[['T',6],['K',3]], coins:24, say:'(Mr Thursday has somehow got a steam engine onto the counter, and is sitting on an old camera.)', beat:['M','<em>(He takes your photograph. It is mostly owl.)</em>']},
   // ch5 — the night train
@@ -371,19 +371,19 @@ const TASKS = [
 const PASS=[
   {pts:12, rw:[['E',2]]},
   {pts:25, rw:[['H',1]]},
-  {pts:37, rw:[['C',2],['X',2]]},
+  {pts:37, ch:1, rw:[['C',2],['X',2]]},
   {pts:50, rw:[['E',3]]},
   {pts:62, rw:[['gD',2]]},
-  {pts:75, rw:[['H',2]]},
+  {pts:75, ch:2, rw:[['H',2]]},
   {pts:87, rw:[['E',3],['C',3]]},
   {pts:100, rw:[['gS',2]]},
-  {pts:112, rw:[['H',2]]},
+  {pts:112, ch:4, rw:[['H',2]]},
   {pts:125, rw:[['E',4]]},
   {pts:137, rw:[['gT',2]]},
-  {pts:150, rw:[['H',2],['X',3]]},
+  {pts:150, ch:4, rw:[['H',2],['X',3]]},
   {pts:165, rw:[['E',4],['C',3]]},
   {pts:182, rw:[['H',3]]},
-  {pts:200, rw:[['E',5],['C',4]]},
+  {pts:200, ch:5, rw:[['E',5],['C',4]]},
 ];
 const FELIX=[
   [['N','Tucked into the reward: a postcard. A small station with geraniums in every window box.'],['F','“Halt at Brennow. I got off because the station had geraniums. That’s it. That was the whole reason. I have never done anything for a reason that small. — A.P.”']],

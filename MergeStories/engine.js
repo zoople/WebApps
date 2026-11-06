@@ -137,8 +137,8 @@ function useOn(a,b){
   return false;
 }
 function showShop(){
-  const row=it=>{ const p=shopPrice(it), d=shopLook(it);
-    return `<div class="tier"><span class="tp">${d.e}</span><span class="tr" style="font-size:14px;letter-spacing:0">${d.n}<br><small style="color:var(--muted)">${it.what}</small></span><button class="sbtn" data-buy="${it.id}" ${S.coins<p?'disabled style="opacity:.5"':''}>🪙 ${p}</button></div>`; };
+  const row=it=>{ const p=shopPrice(it), d=shopLook(it), short=readingShort(p);
+    return `<div class="tier"><span class="tp">${d.e}</span><span class="tr" style="font-size:14px;letter-spacing:0">${d.n}<br><small style="color:var(--muted)">${it.what}</small>${short?`<br><small class="warnline">${short}</small>`:''}</span><button class="sbtn" data-buy="${it.id}" ${S.coins<p?'disabled style="opacity:.5"':''}>🪙 ${p}</button></div>`; };
   openModal(`<h2>🛒 ${P2.shopName}</h2><p style="color:var(--muted);font-size:13px">• ${P2.shopBlurb}<br>• ${earnLine()}<br>• ${CHAINS.CP?'Tickets go straight in; the rest goes':'Everything goes'} to your gifts 🎁${SHOP_ITEMS.some(x=>typeof x.price==='object')?'<br>• Some prices go up each time you buy':''}</p>
     <p>🪙 ${S.coins}${CHAINS.CP?` · 🎟️ ${S.chips||0}`:''}</p>${SHOP_ITEMS.map(row).join('')}<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`);
   $('modalBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{ const it=SHOP_ITEMS.find(x=>x.id===b.dataset.buy), p=shopPrice(it); if(S.coins<p) return;
@@ -150,6 +150,10 @@ function shopPrice(it){ const p=it.price; if(typeof p==='number') return p; if(t
   const n=(S.shopN||{})[it.id]||0; return Math.min(p.max||1e9, Math.round(p.base*Math.pow(p.mult||1,n))); }
 function shopGive(it){ (S.shopN=S.shopN||{})[it.id]=((S.shopN||{})[it.id]||0)+1;
   if(it.chips) S.chips=(S.chips||0)+it.chips; else if(it.item) S.gifts.push(it.item); else if(it.give) it.give(); }
+/* a gentle warning when a purchase would leave you short of the reading the story needs next (never a block) */
+function readingShort(p){ if(typeof DECK_N==='undefined'||!DECK_N||S.coins<p) return '';
+  const need=activeTasks().some(t=>t.cards&&deckDone()<t.cards); const left=S.coins-p;
+  return need && left<deckPrice() ? `Leaves 🪙 ${left}. A story order needs a reading (🪙 ${deckPrice()})` : ''; }
 const earnLine = () => `Earn coins from orders${CAST.S&&S.sideOn?` and the ${CAST.S.name} stall`:''}`;
 /* the mini shop: one item, offered right where you need it (a resting generator, the wheel when you're short).
    Saves a trip to the menu. `use` runs after paying (e.g. refill this generator now). */
@@ -161,7 +165,7 @@ function miniShop({id, title, sub, use, label}){
   m.innerHTML=`<button class="op-x" aria-label="Close">✕</button><div class="mini-h">${title}</div>${sub?`<p class="mini-s">${sub}</p>`:''}
     <div class="mini-row"><span class="e">${d.e}</span><span class="n">${label||d.n}<small>You have 🪙 ${S.coins}</small></span>
     <button class="bigbtn${ok?' gold':''}" id="miniBuy" ${ok?'':'disabled style="opacity:.5"'}>🪙 ${p}</button></div>
-    ${ok?'':`<p class="mini-s">${earnLine()}</p>`}`;
+    ${ok?(readingShort(p)?`<p class="mini-s warnline">${readingShort(p)}</p>`:''):`<p class="mini-s">${earnLine()}</p>`}`;
   document.body.appendChild(m);
   m.querySelector('.op-x').onclick=closeMini;
   if(ok) m.querySelector('#miniBuy').onclick=()=>{ const pp=shopPrice(it); if(S.coins<pp) return; S.coins-=pp; stat('shop'); SND.play('coin');
@@ -327,7 +331,12 @@ function showTicketHelp(){
 /* after the ending: the cast look back, knowing everything */
 function showReflections(){ playScene({title:'Reflections', sub:'Now that you know everything', lines:REFLECTIONS.map(([w,t])=>[w,t.replace(/\(([^)]*)\)/g,'<em>($1)</em>')])}); }
 
-function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i]).length; }
+/* spoiler gates. A pass tier can carry ch:n (its letter can't arrive before chapter n). The story chain can't be
+   merged or found above the highest level the orders have asked for so far, so its lore can't run ahead of the plot. */
+const tierOpen = t => !t.ch || S.ch>=t.ch || S.complete;
+function storyCap(){ if(!STORY_KEY) return 99; if(S.complete) return maxL(STORY_KEY);
+  let m=2; TASKS.forEach(t=>{ if(t.ch<=S.ch) t.need.forEach(([k,l])=>{ if(k===STORY_KEY && l>m) m=l; }); }); return Math.min(m,maxL(STORY_KEY)); }
+function passReady(){ return PASS.filter((t,i)=>S.pts>=t.pts && !S.passGot[i] && tierOpen(t)).length; }
 
 /* stage level: claimed applause (XP) fills it; each level-up drops a gift */
 const STAGE_XP=[0,6,15,28,45,66,92,124,162,206,256,316,386,466];
@@ -713,6 +722,7 @@ function produce(i){
   let [k,l]=pickDrop(it.focus>0 ? d.drop.map(x=>CHAINS[x[0]].rare===true?[x[0],x[1],x[2]*FOCUS_MULT]:x) : d.drop);
   if(it.focus>0) it.focus--;
   if(k==='N' && moonPending()){ const alt=d.drop.filter(x=>x[0]!=='N'); [k,l]=pickDrop(alt); } // one story rosette at a time
+  if(k===STORY_KEY && l>storyCap()) l=storyCap();   // generators can't turn up story pieces from later chapters
   S.cells[t].it=mkItem(k,l);
   fx[i]='pulse'; fx[t]='spawn';
   SND.play('spawn',l);
@@ -809,13 +819,14 @@ function drop(a,b){
     A.it=null; B.s='open'; fx[b]='reveal'; SND.play('unweb'); stat('open'); if(sel===a) sel=b; if(B.it) discover(B.it); revealAround(b);
     flo('✨ Cobwebs cleared', b); save(); render(); return; }
   if(B.s==='web'){
-    if(canMerge(A.it,B.it)){ doMerge(a,b); }
+    if(canMerge(A.it,B.it) && !(A.it.k===STORY_KEY && A.it.l+1>storyCap())){ doMerge(a,b); }
     else { SND.play('nope'); flo(`Stuck. Drop another ${def(B.it).e} on it`, b); }
     return;
   }
   // open
   if(!B.it){ B.it=A.it; A.it=null; sel=b; SND.play('move'); save(); render(); return; }
   if(A.it.wrap||B.it.wrap){ const tmp=B.it; B.it=A.it; A.it=tmp; sel=b; SND.play('move'); save(); render(); return; }
+  if(canMerge(A.it,B.it) && A.it.k===STORY_KEY && A.it.l+1>storyCap()){ SND.play('nope'); flo('Not yet. That part of the story comes later', b); return; }
   if(canMerge(A.it,B.it)){ doMerge(a,b); return; }
   if(isGen(B.it) && feed(a,b)) return;
   if(useOn(a,b)) return;
@@ -1570,12 +1581,12 @@ function showPass(){
   let h=`<h2>${T.passName}</h2><p style="color:var(--muted);font-size:13px">${T.passHelp}</p>
     <div class="passbar"><i style="width:${Math.min(100,S.pts/max*100)}%"></i></div><p style="margin:0 0 6px;font-size:13px">${CHAINS.N.items[0].e} ${S.pts} points${nextT?` · next reward at ${nextT.pts}`:' · pass complete'}</p>`;
   PASS.forEach((t,i)=>{
-    const got=S.passGot[i], ok=S.pts>=t.pts;
-    h+=`<div class="tier${ok?'':' locked'}"><span class="tp">${t.pts}</span><span class="tr">${t.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span>${got?'<span style="color:var(--ok);font-weight:800">✓</span>':ok?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-tier="${i}">Claim</button>`:''}</div>`;
+    const got=S.passGot[i], ok=S.pts>=t.pts, open=tierOpen(t);
+    h+=`<div class="tier${ok&&open?'':' locked'}"><span class="tp">${t.pts}</span><span class="tr">${t.rw.map(([k,l])=>CHAINS[k].items[l-1].e).join(' ')}</span>${got?'<span style="color:var(--ok);font-weight:800">✓</span>':ok&&!open?`<small style="color:var(--muted)">Chapter ${t.ch+1}</small>`:ok?`<button class="sbtn" style="background:var(--gold);color:#2a1a10" data-tier="${i}">Claim</button>`:''}</div>`;
   });
   h+=`<div class="row-btns"><button class="bigbtn" onclick="closeModal()">Close</button></div>`;
   openModal(h);
-  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>give(r[0],r[1])); SND.play('gift'); flo('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:T.lettersTitle, sub:`${T.letterWord} ${(i+1)/3} of ${FELIX.length}`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
+  $('modalBody').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.tier; if(S.passGot[i]||S.pts<PASS[i].pts||!tierOpen(PASS[i])) return; S.passGot[i]=1; PASS[i].rw.forEach(r=>give(r[0],r[1])); SND.play('gift'); flo('Added to your gifts 🎁'); save(); render(); if((i+1)%3===0){ closeModal(); playScene({title:T.lettersTitle, sub:`${T.letterWord} ${(i+1)/3} of ${FELIX.length}`, lines:FELIX[(i+1)/3-1]}); } else showPass(); });
 }
 function showComplete(){
   openModal(`<h3 style="margin-top:0">Event complete</h3><h2>${EVENT.complete.title}</h2><p>${EVENT.complete.text}</p><p style="color:var(--muted)">${EVENT.complete.note}</p><div class="row-btns"><button class="bigbtn gold" onclick="closeModal()">Keep playing</button>${REFLECTIONS.length?'<button class="bigbtn" id="reflGo">✨ Reflections</button>':''}</div>`);
