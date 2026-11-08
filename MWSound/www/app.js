@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = t => { if (t == null || !isFinite(t)) return '—'; t = Math.max(0, Math.round(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
@@ -372,8 +372,9 @@ function viewDetail(id) {
     '<button data-act="detect" data-id="' + id + '"' + (has ? '' : ' disabled') + '>✨ Auto-detect times</button>' +
     '<button data-act="edit">' + (view.edit ? '✔ Done editing' : '✎ Edit times') + '</button></div>';
   if (!has) h += '<p class="note">Auto-detect needs the episode downloaded. You can still stream it and mark times by hand.</p>';
-  if (names.length && st.every(x => x == null)) h += '<ul class="note"><li>Sketch order is listed below; start times are not known.</li><li>Play, then tap ⏱ at each sketch start — or 🔖 in the player to bookmark.</li></ul>';
-  if (!names.length) h += '<p class="note">No sketch list was published for this episode. Add sketches below, or use Auto-detect.</p>';
+  h += '<h2>' + (names.length ? names.length + ' sketches in running order*' : 'Sketches') + '</h2>';
+  if (names.length && st.every(x => x == null)) h += '<p class="note">Start times are not known yet — use ✨ Auto-detect, or ✎ Edit times and ⏱ while listening. 🔖 in the player bookmarks any spot.</p>';
+  if (!names.length) h += '<p class="note">No sketch list for this episode (series 5 has none). Use ✨ Auto-detect to number them, or ✎ Edit times → + Add sketch.</p>';
   if (view.edit) h += '<div class="actions"><button class="pri" data-act="marknext" data-id="' + id + '">⏱ Mark next sketch starts NOW</button></div><p class="note">Play the episode, tap the button at the start of each sketch in order. Fine-tune with the buttons under each row.</p>';
   names.forEach((n, i) => {
     const t = st[i], cur = P.ep && P.ep.id === id && curSketch() && curSketch().idx === i;
@@ -406,7 +407,7 @@ function viewBookmarks() {
 function viewSettings() {
   const total = Object.values(S.dl).reduce((a, b) => a + b, 0), cnt = Object.keys(S.dl).length, missing = EPS.filter(e => !S.dl[e.id]);
   const fullscr = document.fullscreenElement || view.fs;
-  return '<h2>Library</h2><div class="row"><div class="main"><div class="t">' + cnt + ' of ' + EPS.length + ' episodes saved</div><div class="s">' + mb(total) + ' on this phone</div></div></div>' +
+  return '<h2>Library</h2><div class="row"><div class="main"><div class="t">' + cnt + ' of ' + EPS.length + ' episodes saved</div><div class="s">' + mb(total) + ' on this phone</div></div></div><div class="row"><div class="main"><div class="t">Sketch lists: ' + EPS.filter(e => e.sketches.length).length + ' of ' + EPS.length + ' episodes</div><div class="s">' + EPS.reduce((a, e) => a + e.sketches.length, 0) + ' sketch names built in (series 1–4)*</div></div></div>' +
     '<div class="actions"><button data-act="dlall"' + (missing.length ? '' : ' disabled') + '>⬇ Download all remaining (' + missing.length + ' · ~' + Math.round(missing.length * 25.5) + ' MB)</button><button data-act="delall" class="danger"' + (cnt ? '' : ' disabled') + '>🗑 Delete all downloads</button></div>' +
     '<h2>Screen</h2><div class="actions"><button data-act="fs">⛶ ' + (fullscr ? 'Exit full screen' : 'Full screen') + '</button></div>' +
     '<h2>Your data</h2><div class="actions"><button data-act="clearsave" class="danger">Clear save (favourites, bookmarks, times, edits)</button></div><p class="note">Downloads are kept. Use “Delete all downloads” to remove those.</p>' +
@@ -441,7 +442,7 @@ document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]'); if (!el) return;
   const a = el.dataset.act, id = el.dataset.id, i = el.dataset.i != null ? +el.dataset.i : null, e = id ? byId[id] : null;
   switch (a) {
-    case 'open': view.detail = id; view.edit = getStarts(e).every(x => x == null); history.pushState({ d: id }, ''); render(); $('#main').scrollTop = 0; break;
+    case 'open': view.detail = id; view.edit = false; history.pushState({ d: id }, ''); render(); $('#main').scrollTop = 0; break;
     case 'back': history.back(); break;
     case 'ser': view.open[el.dataset.s] = !view.open[el.dataset.s]; render(true); break;
     case 'play': playEpisode(e, 0); break;

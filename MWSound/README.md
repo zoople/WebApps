@@ -1,4 +1,4 @@
-# M&W Sound (v1.1.0)
+# M&W Sound (v1.1.1)
 
 Offline-first player for *That Mitchell and Webb Sound* (archive.org item `that-mitchell-and-webb-sound-thmianweso`).
 
@@ -22,7 +22,7 @@ Verified:
 - UI loads without errors in headless Chromium: version, full-screen button, Clear save.
 - Browser path: decode a real MP3 -> auto-detect -> play a sketch from its detected time (synthetic audio).
 
-v1.1.0: bookmarks; auto-detect has Stricter/Looser sensitivity and ▶ per row to check each break by ear; episodes with no times open in edit mode. v1.0.2 fix: native download failed with ENOENT because Capacitor's `downloadFile` does not create the `mw/` folder; the app now creates it first (cause confirmed in the plugin source; *not yet re-tested on a device).
+v1.1.1: sketch list shown first in each episode, Settings shows how many sketch names are built in. v1.1.0: bookmarks; auto-detect has Stricter/Looser sensitivity and ▶ per row to check each break by ear; episodes with no times open in edit mode. v1.0.2 fix: native download failed with ENOENT because Capacitor's `downloadFile` does not create the `mw/` folder; the app now creates it first (cause confirmed in the plugin source; *not yet re-tested on a device).
 
 NOT verified (marked *):
 - *Download of real episodes: archive.org audio redirects to a mirror host that was blocked in the build sandbox.
