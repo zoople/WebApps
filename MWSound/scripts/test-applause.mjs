@@ -2,7 +2,7 @@
 // audience laughs in the middle, ended by applause (bright noise), then a new voice. No silent gaps.
 // Compares the applause detector against the old loudness-dip detector. Synthetic only: not a real-episode test.
 import { createRequire } from 'node:module';
-const { detect, features, detectFull } = createRequire(import.meta.url)('../www/detect.js');
+const { detect, features, detectFull, calibrate } = createRequire(import.meta.url)('../www/detect.js');
 const sr = 8000;
 function rngFn(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
 
@@ -79,3 +79,14 @@ for (const [name, o] of scenarios) for (const seed of [11, 23]) {
 console.log(rows.join('\n'));
 console.log('worst applause-detector score (clean + laugh scenarios):', worst + '/' + K);
 if (process.argv[2] === '--strict' && worst < K - 3) { console.error('FAIL'); process.exit(1); }
+
+// Learning check: calibrate on two "hand-marked" hard episodes, then score two unseen ones with default vs learned settings.
+{
+  const hard = { apLen: [1.2, 2], apAmp: 0.12 };
+  const mk = seed => { const ep = makeEpisode(seed, K, hard); return { ep, F: features(ep.audio, null, sr) }; };
+  const train = [mk(11), mk(23)], test = [mk(37), mk(41)];
+  const t0 = Date.now(), cal = calibrate(train.map(x => ({ F: x.F, K, truth: x.ep.truth.slice(1) })));
+  const sc = (x, P) => score(detectFull(x.F, K, 1, P).starts, x.ep.truth, tol);
+  console.log(`learning: trained on 2 marked episodes in ${Date.now() - t0} ms; train score ${cal.before.toFixed(2)} -> ${cal.after.toFixed(2)}`);
+  console.log('unseen hard episodes, correct of ' + K + ': default', test.map(x => sc(x)).join(' '), '| learned', test.map(x => sc(x, cal.P)).join(' '), '| params', JSON.stringify(cal.P));
+}

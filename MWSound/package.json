@@ -1,6 +1,6 @@
 {
   "name": "mw-sound",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "description": "Offline player for That Mitchell and Webb Sound with sketch-level favourites",
   "scripts": {

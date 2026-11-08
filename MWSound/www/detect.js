@@ -107,53 +107,58 @@
   }
 
   /* ---------- cue 1 + 2: applause then new voice ---------- */
-  const AP_TH = [0.72, 0.62, 0.5, 0.4];       // level 0 strict .. 3 loose
-  function applauseCands(F, level) {
+  // Tunable parameters. DEFAULT_P is a guess; calibrate() learns better ones from episodes the user has marked by hand.
+  const DEFAULT_P = { th: 0.62, wFlat: 0.5, minDur: 0.9, wChange: 0.7, dipW: 0.6, loudPow: 1 };
+  const thFor = (P, level) => P.th - (level - 1) * 0.11;                // Stricter / Looser
+  function prep(F) {                                                    // smoothing that does not depend on parameters
+    if (F._c) return F._c;
     const n = F.rms.length, dt = F.dt, hw = Math.max(1, Math.round(0.4 / dt));
     const flat = movavg(F.flat, hw), hi = movavg(F.hi, hw), rms = movavg(F.rms, hw);
-    const f50 = median(flat), f95 = pct(flat, 0.95), h50 = median(hi), h95 = pct(hi, 0.95);
     const rmsRef = new Float32Array(n), step = Math.max(1, Math.round(1 / dt)), R = Math.round(20 / dt);
     for (let i = 0; i < n; i += step) { const v = []; for (let j = Math.max(0, i - R); j < Math.min(n, i + R); j += step) v.push(rms[j]); const m = median(v); for (let k = i; k < Math.min(n, i + step); k++) rmsRef[k] = m; }
+    return (F._c = { flat, hi, rms, rmsRef, f50: median(flat), f95: pct(flat, 0.95), h50: median(hi), h95: pct(hi, 0.95), dips: {} });
+  }
+  function applauseCands(F, P, level) {
+    const C = prep(F), n = F.rms.length, dt = F.dt, { flat, hi, rms, rmsRef } = C;
     const ap = new Float32Array(n);
     for (let i = 0; i < n; i++) {
-      const nf = (flat[i] - f50) / (f95 - f50 + 1e-9), nh = (hi[i] - h50) / (h95 - h50 + 1e-9);
-      const loud = Math.min(1, (rms[i] / (rmsRef[i] + 1e-9)) / 1.1);   // applause is at least as loud as the speech around it
-      ap[i] = Math.max(0, Math.min(1.2, 0.5 * nf + 0.5 * nh)) * loud;
+      const nf = (flat[i] - C.f50) / (C.f95 - C.f50 + 1e-9), nh = (hi[i] - C.h50) / (C.h95 - C.h50 + 1e-9);
+      const loud = P.loudPow ? Math.min(1, (rms[i] / (rmsRef[i] + 1e-9)) / 1.1) : 1;
+      ap[i] = Math.max(0, Math.min(1.2, P.wFlat * nf + (1 - P.wFlat) * nh)) * loud;
     }
-    const th = AP_TH[level], runs = [];
-    let i = 0;
+    const th = thFor(P, level), runs = []; let i = 0;
     while (i < n) {
       if (ap[i] > th) {
         let j = i, gap = 0, last = i;
         while (j < n && gap <= Math.round(0.3 / dt)) { if (ap[j] > th) { last = j; gap = 0; } else gap++; j++; }
         const dur = (last - i + 1) * dt;
-        if (dur >= 0.9) { let s = 0; for (let k = i; k <= last; k++) s += ap[k]; runs.push({ a: i, b: last, dur, mean: s / (last - i + 1) }); }
+        if (dur >= P.minDur) { let sum = 0; for (let k = i; k <= last; k++) sum += ap[k]; runs.push({ a: i, b: last, dur, mean: sum / (last - i + 1) }); }
         i = last + 1;
       } else i++;
     }
-    // timbre change: compare the 4 s before the applause with the 3 s after it
     const band = (a, b) => { const v = new Float64Array(NB); let c = 0; for (let f = Math.max(0, a); f < Math.min(n, b); f++) { for (let k = 0; k < NB; k++) v[k] += F.bands[f * NB + k]; c++; } if (c) for (let k = 0; k < NB; k++) v[k] /= c; return v; };
     const vp = Math.round(4 / dt), va = Math.round(3 / dt), skip = Math.round(0.4 / dt);
     runs.forEach(r => {
       const A = band(r.a - vp - skip, r.a - skip), B = band(r.b + skip, r.b + skip + va);
       const mA = A.reduce((x, y) => x + y, 0) / NB, mB = B.reduce((x, y) => x + y, 0) / NB;
-      let d = 0; for (let k = 0; k < NB; k++) { const e = (A[k] - mA) - (B[k] - mB); d += e * e; }   // shape difference, not loudness
+      let d = 0; for (let k = 0; k < NB; k++) { const e = (A[k] - mA) - (B[k] - mB); d += e * e; }   // timbre shape difference, not loudness
       r.change = Math.sqrt(d);
       let mn = 1; for (let f = Math.max(0, r.b - Math.round(0.5 / dt)); f < Math.min(n, r.b + Math.round(2 / dt)); f++) mn = Math.min(mn, rms[f] / (rmsRef[f] + 1e-9));
       r.dip = mn;
     });
     const dp = pct(runs.map(r => r.change), 0.8) + 1e-9;
     return runs.filter(r => r.b * dt > 8).map(r => {
-      const chg = 0.65 + 0.7 * Math.min(1, r.change / dp), dipB = r.dip < 0.7 ? 1.15 : 1;
+      const chg = 1 - 0.5 * P.wChange + P.wChange * Math.min(1, r.change / dp), dipB = r.dip < 0.7 ? 1.15 : 1;
       return { t: Math.max(0, (r.b + 1) * dt - 0.5), strength: r.mean * Math.min(r.dur, 4) * chg * dipB, dur: r.dur, change: r.change, kind: 'applause' };
     });
   }
 
-  function detectFull(F, K, level) {
-    if (level == null) level = 1; level = Math.max(0, Math.min(3, level));
-    const ap = applauseCands(F, level);
+  function detectFull(F, K, level, P) {
+    if (level == null) level = 1; level = Math.max(0, Math.min(3, level)); P = Object.assign({}, DEFAULT_P, P || {});
+    const ap = applauseCands(F, P, level), C = prep(F);
+    const dl = C.dips[level] || (C.dips[level] = dipCands(F.rms, F.dt, level));
     // dip candidates not explained by an applause run are kept at reduced weight
-    const dips = dipCands(F.rms, F.dt, level).filter(d => ap.every(a => Math.abs(a.t - d.t) > 4)).map(d => ({ t: d.t, strength: d.strength * 0.6, kind: 'dip' }));
+    const dips = dl.filter(d => ap.every(a => Math.abs(a.t - d.t) > 4)).map(d => ({ t: d.t, strength: d.strength * P.dipW, kind: 'dip' }));
     let all = ap.concat(dips);
     if (K <= 0) {   // unknown sketch count: keep only breaks strong relative to this episode's strongest ones
       const top = all.map(c => c.strength).sort((a, b) => b - a).slice(0, 10), ref = top.length ? top[Math.floor(top.length / 2)] : 0, mult = [0.7, 0.6, 0.5, 0.4][level];
@@ -163,6 +168,35 @@
     return finish(all, K, level, 0.7);
   }
 
-  const api = { detect, features, detectFull };
+  /* ---------- learn the parameters from episodes the user has marked by hand ---------- */
+  // eps: [{F, truth:[start seconds, ...] (not including the first sketch at 0), K}]. Returns {P, before, after} scores 0..1.
+  function matchCount(found, truth, tol) { const used = new Set(); let hit = 0; truth.forEach(t => { let bi = -1, bd = tol + 1e-9; found.forEach((f, i) => { const d = Math.abs(f - t); if (!used.has(i) && d <= bd) { bd = d; bi = i; } }); if (bi >= 0) { used.add(bi); hit++; } }); return hit; }
+  function scoreP(eps, P, tol) {
+    let tot = 0, n = 0;
+    eps.forEach(e => {
+      const k = detectFull(e.F, e.K, 1, P).starts.slice(1).filter(x => x != null), b = detectFull(e.F, 0, 1, P).starts.slice(1);
+      const hitK = matchCount(k, e.truth, tol), hitB = matchCount(b, e.truth, tol), falseB = Math.max(0, b.length - hitB);
+      tot += (hitK + 0.5 * hitB - 0.5 * falseB) / e.truth.length; n++;
+    });
+    return n ? tot / n : 0;
+  }
+  const hits = (F, K, P, truth, tol) => matchCount(detectFull(F, K, 1, P).starts.slice(1).filter(x => x != null), truth, tol || 2.5);
+  const GRID = { th: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8], wFlat: [0, 0.25, 0.5, 0.75, 1], minDur: [0.5, 0.8, 1.2, 1.8], wChange: [0, 0.35, 0.7, 1], dipW: [0, 0.3, 0.6, 1], loudPow: [0, 1] };
+  function calibrate(eps, tol) {
+    tol = tol || 2.5;
+    let P = Object.assign({}, DEFAULT_P), best = scoreP(eps, P, tol); const before = best;
+    for (let round = 0; round < 2; round++) {
+      let improved = false;
+      Object.keys(GRID).forEach(k => GRID[k].forEach(v => {
+        if (v === P[k]) return;
+        const Q = Object.assign({}, P, { [k]: v }), sc = scoreP(eps, Q, tol);
+        if (sc > best + 1e-9) { best = sc; P = Q; improved = true; }
+      }));
+      if (!improved) break;
+    }
+    return { P, before, after: best };
+  }
+
+  const api = { detect, features, detectFull, calibrate, hits, DEFAULT_P };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MWDetect = api;
 })(typeof window !== 'undefined' ? window : globalThis);

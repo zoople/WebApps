@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const ERRS = [];
 function showErr(m) {
   ERRS.push(String(m).slice(0, 200)); if (ERRS.length > 8) ERRS.shift();
@@ -21,8 +21,8 @@ const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSO
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
 
 /* ---------- state ---------- */
-const S = { fav: load('mw.fav', []), marks: load('mw.marks', {}), names: load('mw.names', {}), dl: {}, dls: {}, bm: load('mw.bm', []) };
-const persist = () => { save('mw.fav', S.fav); save('mw.marks', S.marks); save('mw.names', S.names); save('mw.bm', S.bm); };
+const S = { fav: load('mw.fav', []), marks: load('mw.marks', {}), names: load('mw.names', {}), dl: {}, dls: {}, bm: load('mw.bm', []), teach: load('mw.teach', {}), params: load('mw.params', null) };
+const persist = () => { save('mw.fav', S.fav); save('mw.marks', S.marks); save('mw.names', S.names); save('mw.bm', S.bm); save('mw.teach', S.teach); save('mw.params', S.params); };
 const getNames = e => S.names[e.id] || e.sketches.map(s => s.n);
 const getStarts = e => {
   const n = getNames(e).length;
@@ -316,22 +316,42 @@ async function removeDownload(e) {
 }
 
 /* ---------- auto-detect ---------- */
-async function autoDetect(e) {
-  modal('<h3>Analysing ' + esc(epLabel(e)) + '…</h3><p class="note">Decoding the audio on your phone and looking for applause followed by a new voice. This can take a minute.</p>');
+async function featuresFor(e) {
+  const buf = await Store.bytes(e);
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ac = new AC({ sampleRate: 8000 });
   try {
-    const buf = await Store.bytes(e);
-    const AC = window.AudioContext || window.webkitAudioContext;
-    const ac = new AC({ sampleRate: 8000 });
     const ab = await new Promise((res, rej) => ac.decodeAudioData(buf, res, rej));
-    const c0 = ab.getChannelData(0), c1 = ab.numberOfChannels > 1 ? ab.getChannelData(1) : null;
-    const F = MWDetect.features(c0, c1, ab.sampleRate);
-    try { ac.close(); } catch (x) { }
+    return MWDetect.features(ab.getChannelData(0), ab.numberOfChannels > 1 ? ab.getChannelData(1) : null, ab.sampleRate);
+  } finally { try { ac.close(); } catch (x) { } }
+}
+async function autoDetect(e) {
+  modal('<h3>Analysing ' + esc(epLabel(e)) + '…</h3><p class="note">Decoding the audio on your phone and looking for applause followed by a new voice' + (S.params ? ' (using settings learned from your marks)' : '') + '. This can take a minute.</p>');
+  try {
+    const F = await featuresFor(e);
     DET = { e, F, K: getNames(e).length, level: getNames(e).length ? 1 : 0 };
     runDetect();
   } catch (x) { closeModal(); toast('Auto-detect failed: ' + ((x && x.message) || 'could not decode audio'), 5000); }
 }
+/* ---- teach the detector from episodes whose times the user has checked ---- */
+const teachTruth = e => getStarts(e).slice(1).filter(x => x != null);
+async function teachDetector() {
+  const ids = Object.keys(S.teach).filter(id => S.teach[id] && byId[id] && S.dl[id] && teachTruth(byId[id]).length >= 3);
+  if (!ids.length) { toast('Nothing to learn from yet — mark at least 4 sketch times on a downloaded episode and tap 🎓'); return; }
+  const eps = [];
+  for (let i = 0; i < ids.length; i++) {
+    const e = byId[ids[i]];
+    modal('<h3>Learning…</h3><p class="note">Analysing ' + esc(epLabel(e)) + ' (' + (i + 1) + '/' + ids.length + ')</p>');
+    try { eps.push({ F: await featuresFor(e), K: getNames(e).length || teachTruth(e).length + 1, truth: teachTruth(e), id: e.id }); } catch (x) { closeModal(); toast('Could not analyse ' + epLabel(e) + ': ' + ((x && x.message) || 'decode failed'), 5000); return; }
+  }
+  const r = MWDetect.calibrate(eps), hits = P => eps.reduce((a, x) => a + MWDetect.hits(x.F, x.K, P, x.truth), 0), tot = eps.reduce((a, x) => a + x.truth.length, 0);
+  const b = hits(null), a = hits(r.P);
+  if (a >= b) { S.params = r.P; persist(); }
+  modal('<h3>Detector ' + (a >= b ? 'updated' : 'unchanged') + '</h3><p class="note">Learned from ' + eps.length + ' episode(s). Your marked sketch starts it now finds (within 2.5 s): ' + b + ' → ' + a + ' of ' + tot + '.</p><p class="note">Tip: mark and teach 2–3 different episodes so it doesn’t over-fit to one.</p><div class="btns"><button id="cy" class="pri">OK</button></div>', m => { $('#cy', m).onclick = closeModal; });
+  render(true);
+}
 let DET = null;
-function runDetect() { const d = DET; showDetect(d.e, MWDetect.detectFull(d.F, d.K, d.level), d.K); }
+function runDetect() { const d = DET; showDetect(d.e, MWDetect.detectFull(d.F, d.K, d.level, S.params), d.K); }
 function showDetect(e, r, K) {
   const names = K ? getNames(e) : r.starts.map((_, i) => 'Sketch ' + (i + 1));
   const rows = r.starts.map((t, i) => '<div class="sk' + (t == null ? ' dim' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + esc(names[i]) + '</span><span class="tm">' + fmt(t) + '</span>' + (t != null ? '<button data-pl="' + t + '" aria-label="Listen">▶</button>' : '') + '</div>').join('');
@@ -381,6 +401,7 @@ function viewDetail(id) {
     (has ? '<button data-act="del" data-id="' + id + '">🗑 Delete download</button>' : '<button data-act="dl" data-id="' + id + '"' + (dls && dls.status === 'downloading' ? ' disabled' : '') + '>⬇ Download</button>') +
     '<button data-act="detect" data-id="' + id + '"' + (dls && dls.status === 'downloading' ? ' disabled' : '') + '>✨ Auto-detect times</button>' +
     '<button data-act="edit">' + (view.edit ? '✔ Done editing' : '✎ Edit times') + '</button></div>';
+  if (has && teachTruth(e).length >= 3) h += '<div class="actions"><button data-act="teach" data-id="' + id + '">' + (S.teach[id] ? '🎓 Taught ✓ — retrain detector' : '🎓 My times are correct: teach auto-detect') + '</button></div>';
   if (dls && (dls.status === 'downloading' || dls.status === 'error')) h += '<p class="note' + (dls.status === 'error' ? ' warn' : '') + '" id="dlstat">' + esc(dlText(dls)) + '</p>';
   else if (!has) h += '<p class="note">Auto-detect downloads the episode first (~26 MB), then analyses it. You can still stream it and mark times by hand.</p>';
   h += '<h2>' + (names.length ? names.length + ' sketches in running order*' : 'Sketches') + '</h2>';
@@ -422,7 +443,7 @@ function viewSettings() {
     '<div class="actions"><button data-act="dlall"' + (missing.length ? '' : ' disabled') + '>⬇ Download all remaining (' + missing.length + ' · ~' + Math.round(missing.length * 25.5) + ' MB)</button><button data-act="delall" class="danger"' + (cnt ? '' : ' disabled') + '>🗑 Delete all downloads</button></div>' +
     '<h2>Screen</h2><div class="actions"><button data-act="fs">⛶ ' + (fullscr ? 'Exit full screen' : 'Full screen') + '</button></div>' +
     '<h2>Your data</h2><div class="actions"><button data-act="clearsave" class="danger">Clear save (favourites, bookmarks, times, edits)</button></div><p class="note">Downloads are kept. Use “Delete all downloads” to remove those.</p>' +
-    '<h2>Move your times between devices</h2><div class="actions"><button data-act="export">Export</button><button data-act="import">Import</button></div><textarea id="xfer" placeholder="Export puts a JSON backup here. Paste one here and tap Import to restore."></textarea>' +
+    '<h2>Auto-detect learning</h2><div class="row"><div class="main"><div class="t">' + (S.params ? 'Using learned settings' : 'Default settings') + '</div><div class="s">' + Object.keys(S.teach).filter(k => S.teach[k]).length + ' taught episode(s). Open an episode, set its times by hand, then tap 🎓.</div></div></div><div class="actions"><button data-act="retrain"' + (Object.keys(S.teach).some(k => S.teach[k]) ? '' : ' disabled') + '>Retrain</button><button data-act="resetlearn" class="danger"' + (S.params || Object.keys(S.teach).length ? '' : ' disabled') + '>Reset learned settings</button></div><h2>Move your times between devices</h2><div class="actions"><button data-act="export">Export</button><button data-act="import">Import</button></div><textarea id="xfer" placeholder="Export puts a JSON backup here. Paste one here and tap Import to restore."></textarea>' +
     '<h2>Diagnostics</h2><div class="row"><div class="main"><div class="s">' + esc('v' + APP_VERSION + ' · ' + (native ? 'native' : 'browser') + ' · ' + EPS.length + ' episodes · ' + EPS.reduce((a, e) => a + e.sketches.length, 0) + ' sketch names · saved names for ' + Object.keys(S.names).length + ' eps · times for ' + Object.keys(S.marks).length + ' eps · ' + ((navigator.userAgent.match(/Chrome\/[\d.]+/) || ['WebView ?'])[0]) + ' · ' + screen.width + 'x' + screen.height + ' · errors: ' + (ERRS.length ? ERRS.join(' | ') : 'none')) + '</div></div></div><p class="note">Version ' + APP_VERSION + (native ? '' : ' (browser mode)') + '</p>' +
     '<details><summary>How it works</summary><ul><li>Episodes tab: ⬇ saves an episode for offline; ▶ streams it (or plays the saved copy).</li><li>While playing, the bar shows the episode and the sketch it’s on. ☆ favourites that sketch.</li><li>Favourites tab: plays just those sketches back to back — only the favourite parts.</li><li>Sketch names come from fan guides; <b>start times don’t exist online</b>, so use ✨ Auto-detect (guesses from gaps) and/or ✎ Edit times → ⏱ while listening.</li><li>Series 5 has no published sketch list; auto-detect numbers them and you can rename.</li><li>Nothing here needs the internet except downloading/streaming.</li></ul></details>';
 }
@@ -435,7 +456,7 @@ function render(keepScroll) {
 }
 
 /* ---------- actions ---------- */
-async function exportData() { const t = JSON.stringify({ v: 1, marks: S.marks, names: S.names, fav: S.fav, bm: S.bm }); const ta = $('#xfer'); ta.value = t; ta.select(); try { await navigator.clipboard.writeText(t); toast('Copied to clipboard'); } catch (x) { toast('Select the text and copy it'); } }
+async function exportData() { const t = JSON.stringify({ v: 1, marks: S.marks, names: S.names, fav: S.fav, bm: S.bm, params: S.params }); const ta = $('#xfer'); ta.value = t; ta.select(); try { await navigator.clipboard.writeText(t); toast('Copied to clipboard'); } catch (x) { toast('Select the text and copy it'); } }
 function importData() {
   try { const d = JSON.parse($('#xfer').value); if (d.marks) Object.assign(S.marks, d.marks); if (d.names) Object.assign(S.names, d.names); if (Array.isArray(d.fav)) d.fav.forEach(k => { if (!S.fav.includes(k)) S.fav.push(k); }); if (Array.isArray(d.bm)) d.bm.forEach(b => { if (b && b.id && !bmById(b.id)) S.bm.push(b); }); persist(); render(true); toast('Imported'); }
   catch (x) { toast('That doesn’t look like an export'); }
@@ -470,6 +491,12 @@ document.addEventListener('click', async ev => {
       autoDetect(e); break;
     }
     case 'edit': view.edit = !view.edit; render(true); break;
+    case 'teach': {
+      if (!S.teach[id] && !(await confirmBox('Teach auto-detect?', 'Use the sketch times on ' + epLabel(e) + ' as the correct answers. Only do this if you checked them by ear. The app will tune its detector to match them.', 'Teach', false))) break;
+      S.teach[id] = true; persist(); teachDetector(); break;
+    }
+    case 'retrain': teachDetector(); break;
+    case 'resetlearn': S.params = null; S.teach = {}; persist(); render(true); toast('Learned settings reset'); break;
     case 'marknext': {
       if (!P.ep || P.ep.id !== id) { toast('Play this episode first, then tap at each sketch start'); break; }
       const st = getStarts(e), k = st.findIndex(x => x == null); if (k < 0) { toast('Every sketch already has a time — use ⏱ now on a row to change one'); break; }
@@ -485,7 +512,7 @@ document.addEventListener('click', async ev => {
     case 'fs': setFullscreen(); break;
     case 'dlall': { const m = EPS.filter(x => !S.dl[x.id]); toast('Downloading ' + m.length + ' episodes one by one…'); for (const x of m) { if (navigator.onLine === false) break; await startDownload(x); } break; }
     case 'delall': if (await confirmBox('Delete all downloads?', 'Removes every downloaded episode from this phone. Favourites and sketch times stay.', 'Delete all')) { audio.pause(); audio.removeAttribute('src'); P.loadedId = null; P.ep = null; P.mode = null; for (const x of EPS) await Store.remove(x); S.dl = {}; updateNow(); render(true); } break;
-    case 'clearsave': if (await confirmBox('Clear save?', 'Deletes all favourites, bookmarks, sketch times and renamed sketches. Downloads are not touched. This can’t be undone.', 'Clear save')) { S.fav = []; S.marks = {}; S.names = {}; S.bm = []; persist(); updateNow(); render(true); toast('Save cleared'); } break;
+    case 'clearsave': if (await confirmBox('Clear save?', 'Deletes all favourites, bookmarks, sketch times and renamed sketches. Downloads are not touched. This can’t be undone.', 'Clear save')) { S.fav = []; S.marks = {}; S.names = {}; S.bm = []; S.teach = {}; S.params = null; persist(); updateNow(); render(true); toast('Save cleared'); } break;
     case 'bmmenu': { const b = bmById(el.dataset.b); if (b) bmMenu(b); break; }
     case 'bmplay': { const b = bmById(el.dataset.b); if (b) playEpisode(byId[b.ep], b.t); break; }
     case 'bmdel': { S.bm = S.bm.filter(x => x.id !== el.dataset.b); persist(); render(true); break; }
