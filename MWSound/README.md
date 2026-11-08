@@ -1,10 +1,11 @@
-# M&W Sound (v1.0.2)
+# M&W Sound (v1.1.0)
 
 Offline-first player for *That Mitchell and Webb Sound* (archive.org item `that-mitchell-and-webb-sound-thmianweso`).
 
 - Browse all 29 episodes; stream or download each one.
 - The player bar shows the episode and the sketch it is on. Tap the star to favourite a sketch.
 - Favourites tab plays just those sketch segments, back to back.
+- **Bookmarks:** tap 🔖 in the player to save the exact spot (works with no sketch list). Bookmarks tab: play, rename, delete, or "Use as a sketch start" to turn it into a sketch time.
 - Sketch **names** are pre-loaded for series 1-4. Sketch **start times** are not published anywhere I could find, so use
   Auto-detect (guesses from gaps in the audio) and/or Edit times -> "Mark next sketch starts NOW" while listening.
 - Real timestamps, if you find any, go in `www/data.js` under `MW_TIMESTAMPS`, e.g. `"s01e01": [0, 95.5, 210]`.
@@ -21,11 +22,12 @@ Verified:
 - UI loads without errors in headless Chromium: version, full-screen button, Clear save.
 - Browser path: decode a real MP3 -> auto-detect -> play a sketch from its detected time (synthetic audio).
 
-v1.0.2 fix: native download failed with ENOENT because Capacitor's `downloadFile` does not create the `mw/` folder; the app now creates it first (cause confirmed in the plugin source; *not yet re-tested on a device).
+v1.1.0: bookmarks; auto-detect has Stricter/Looser sensitivity and ▶ per row to check each break by ear; episodes with no times open in edit mode. v1.0.2 fix: native download failed with ENOENT because Capacitor's `downloadFile` does not create the `mw/` folder; the app now creates it first (cause confirmed in the plugin source; *not yet re-tested on a device).
 
 NOT verified (marked *):
 - *Download of real episodes: archive.org audio redirects to a mirror host that was blocked in the build sandbox.
 - *Native download/playback on an Android device (Capacitor Filesystem `downloadFile`, `convertFileSrc`, seeking in saved files).
 - *Playback with the screen locked. The manifest has only INTERNET: no foreground service or wake lock, so Android may pause audio after the screen has been off for a while. Test on a phone; if it stops, a foreground-service plugin is needed.
 - *Auto-detect on real episodes. On a synthetic file with 1.2 s gaps it found 13 of 14 boundaries and mis-placed the last one (amplitude dips mistaken for a gap). Real shows have music and laughter, so expect misses; treat results as guesses.
+- *Series 5 sketch names: British Comedy Guide wasn't reachable from the build sandbox, so Series 5 has no names (auto-detect numbers them; rename in app).
 - *Sketch start times: none found online (searched web, YouTube, British Comedy Guide, Wikipedia; reddit was not searchable). `MW_TIMESTAMPS` is still empty.

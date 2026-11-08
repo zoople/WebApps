@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.1.0';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = t => { if (t == null || !isFinite(t)) return '—'; t = Math.max(0, Math.round(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
@@ -14,8 +14,8 @@ const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSO
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
 
 /* ---------- state ---------- */
-const S = { fav: load('mw.fav', []), marks: load('mw.marks', {}), names: load('mw.names', {}), dl: {}, dls: {} };
-const persist = () => { save('mw.fav', S.fav); save('mw.marks', S.marks); save('mw.names', S.names); };
+const S = { fav: load('mw.fav', []), marks: load('mw.marks', {}), names: load('mw.names', {}), dl: {}, dls: {}, bm: load('mw.bm', []) };
+const persist = () => { save('mw.fav', S.fav); save('mw.marks', S.marks); save('mw.names', S.names); save('mw.bm', S.bm); };
 const getNames = e => S.names[e.id] || e.sketches.map(s => s.n);
 const getStarts = e => {
   const n = getNames(e).length;
@@ -175,7 +175,7 @@ function updateNow() {
   if (!c) { $('#nowEp').textContent = 'Nothing playing'; $('#nowSk').textContent = 'Pick an episode or play your favourites'; $('#bFav').textContent = '☆'; return; }
   const names = getNames(c.e), known = getStarts(c.e).some(x => x != null);
   $('#nowEp').textContent = epLabel(c.e) + ' · ' + epDate(c.e) + (P.local ? '' : ' · streaming');
-  $('#nowSk').textContent = c.idx >= 0 ? (c.idx + 1) + '/' + names.length + '  ' + names[c.idx] : (known ? 'Intro' : (names.length ? 'Sketch times not set yet' : 'No sketch list for this episode'));
+  $('#nowSk').textContent = c.idx >= 0 ? (c.idx + 1) + '/' + names.length + '  ' + names[c.idx] : (known ? 'Intro' : (names.length ? 'Sketch times not set — tap 🔖 to bookmark' : 'No sketch list — tap 🔖 to bookmark'));
   $('#bFav').textContent = c.idx >= 0 && isFav(c.e.id, c.idx) ? '★' : '☆';
   $('#tmode').textContent = P.mode === 'queue' ? 'favourites ' + (P.qi + 1) + '/' + P.items.length : '';
   $('#bPlay').textContent = audio.paused ? '▶' : '⏸';
@@ -224,7 +224,8 @@ $('#bPrev').onclick = () => {
   const t = audio.currentTime, st = getStarts(P.ep).filter(x => x != null).sort((a, b) => a - b), cur = st.filter(x => x <= t - 3).pop();
   audio.currentTime = cur != null ? cur : 0;
 };
-$('#bFav').onclick = () => { const c = curSketch(); if (!c || c.idx < 0) { toast('No sketch to favourite yet'); return; } toggleFav(c.e.id, c.idx); };
+$('#bMark').onclick = () => addBookmark();
+$('#bFav').onclick = () => { const c = curSketch(); if (!c || c.idx < 0) { toast('No sketch here yet — tap 🔖 to bookmark this spot instead'); return; } toggleFav(c.e.id, c.idx); };
 if ('mediaSession' in navigator) {
   const h = (a, f) => { try { navigator.mediaSession.setActionHandler(a, f); } catch (x) { } };
   h('play', () => audio.play()); h('pause', () => audio.pause()); h('nexttrack', () => $('#bNext').click()); h('previoustrack', () => $('#bPrev').click());
@@ -234,6 +235,49 @@ function toggleFav(id, idx) {
   const k = favKey(id, idx), i = S.fav.indexOf(k);
   if (i >= 0) S.fav.splice(i, 1); else S.fav.push(k);
   persist(); updateNow(); render(true);
+}
+/* ---------- bookmarks (work even when no sketch times are known) ---------- */
+const bmById = id => S.bm.find(b => b.id === id);
+function addBookmark() {
+  const e = P.ep;
+  if (!e || !audio.getAttribute('src')) { toast('Play an episode first, then tap 🔖'); return; }
+  const t = Math.round((audio.currentTime || 0) * 10) / 10, c = curSketch();
+  const label = c && c.idx >= 0 ? getNames(c.e)[c.idx] : '';
+  S.bm.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ep: e.id, t, label, at: Date.now() });
+  persist(); render(true); toast('🔖 ' + epLabel(e) + ' at ' + fmt(t) + ' saved');
+}
+function bmRow(b) {
+  const e = byId[b.ep]; if (!e) return '';
+  return '<div class="row"><div class="main" data-act="bmmenu" data-b="' + b.id + '"><div class="t">' + esc(b.label || 'Bookmark') + '</div><div class="s">' + epLabel(e) + ' · ' + epDate(e) + ' · ' + fmt(b.t) + (S.dl[e.id] ? ' · ✓ offline' : ' · streams') + '</div></div>' +
+    '<button data-act="bmplay" data-b="' + b.id + '" aria-label="Play from bookmark">▶</button><button data-act="bmdel" data-b="' + b.id + '" aria-label="Delete bookmark">🗑</button></div>';
+}
+const bmSorted = () => S.bm.filter(b => byId[b.ep]).sort((a, b) => EPS.indexOf(byId[a.ep]) - EPS.indexOf(byId[b.ep]) || a.t - b.t);
+function bmMenu(b) {
+  const e = byId[b.ep];
+  modal('<h3>' + esc(b.label || 'Bookmark') + '</h3><p class="note">' + epLabel(e) + ' · ' + fmt(b.t) + '</p><div class="actions"><button data-m="play" class="pri">▶ Play from here</button><button data-m="sketch">📌 Use as a sketch start</button><button data-m="ren">✎ Rename</button><button data-m="del" class="danger">🗑 Delete</button></div><div class="btns"><button data-m="close">Close</button></div>', m => {
+    m.onclick = async ev => {
+      const k = ev.target.dataset && ev.target.dataset.m; if (!k) return;
+      if (k === 'close') closeModal();
+      else if (k === 'play') { closeModal(); playEpisode(e, b.t); }
+      else if (k === 'del') { closeModal(); S.bm = S.bm.filter(x => x.id !== b.id); persist(); render(true); }
+      else if (k === 'ren') { closeModal(); const v = await promptBox('Rename bookmark', b.label); if (v) { b.label = v; persist(); render(true); } }
+      else if (k === 'sketch') bmAssign(b);
+    };
+  });
+}
+function bmAssign(b) {
+  const e = byId[b.ep], names = getNames(e), st = getStarts(e);
+  const rows = names.map((n, i) => '<button data-i="' + i + '" style="width:100%;text-align:left;margin:3px 0">' + (i + 1) + '. ' + esc(n) + ' <span style="color:var(--mut)">(' + fmt(st[i]) + ')</span></button>').join('');
+  modal('<h3>Which sketch starts at ' + fmt(b.t) + '?</h3>' + rows + '<button data-i="new" style="width:100%;margin:6px 0">+ New sketch here</button><div class="btns"><button data-i="cancel">Cancel</button></div>', m => {
+    m.onclick = async ev => {
+      const k = ev.target.closest('button') && ev.target.closest('button').dataset.i; if (k == null) return;
+      if (k === 'cancel') { closeModal(); return; }
+      let idx;
+      if (k === 'new') { const v = await promptBox('Name this sketch', 'Sketch ' + (names.length + 1)); if (!v) return; const n = names.slice(); n.push(v); S.names[e.id] = n; idx = n.length - 1; persist(); }
+      else idx = +k;
+      setMark(e.id, idx, b.t); closeModal(); render(true); updateNow(); toast('Sketch ' + (idx + 1) + ' now starts at ' + fmt(b.t));
+    };
+  });
 }
 function favItems() {
   return S.fav.map(k => { const [id, i] = k.split(':'); return { id, idx: +i }; }).filter(x => byId[x.id] && getNames(byId[x.id])[x.idx] != null)
@@ -277,16 +321,20 @@ async function autoDetect(e) {
     const rms = new Float32Array(frames);
     for (let f = 0; f < frames; f++) { let s = 0; for (let i = f * hop; i < (f + 1) * hop; i++) { const v = c1 ? (c0[i] + c1[i]) / 2 : c0[i]; s += v * v; } rms[f] = Math.sqrt(s / hop); }
     try { ac.close(); } catch (x) { }
-    const K = getNames(e).length, r = MWDetect.detect(rms, hop / sr, K);
-    showDetect(e, r, K);
+    DET = { e, rms, dt: hop / sr, K: getNames(e).length, level: getNames(e).length ? 1 : 0 };
+    runDetect();
   } catch (x) { closeModal(); toast('Auto-detect failed: ' + ((x && x.message) || 'could not decode audio'), 5000); }
 }
+let DET = null;
+function runDetect() { const d = DET; showDetect(d.e, MWDetect.detect(d.rms, d.dt, d.K, d.level), d.K); }
 function showDetect(e, r, K) {
   const names = K ? getNames(e) : r.starts.map((_, i) => 'Sketch ' + (i + 1));
-  const rows = r.starts.map((t, i) => '<div class="sk"><span class="n">' + (i + 1) + '</span><span class="nm">' + esc(names[i]) + '</span><span class="tm">' + fmt(t) + '</span></div>').join('');
+  const rows = r.starts.map((t, i) => '<div class="sk' + (t == null ? ' dim' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + esc(names[i]) + '</span><span class="tm">' + fmt(t) + '</span>' + (t != null ? '<button data-pl="' + t + '" aria-label="Listen">▶</button>' : '') + '</div>').join('');
   const msg = K ? 'Found ' + r.found + ' of ' + r.needed + ' expected gaps. Blank times are left unset.' : 'No sketch list for this episode, so I numbered the ' + r.starts.length + ' sketches found.';
-  modal('<h3>Suggested sketch times</h3><p class="note">' + esc(msg) + ' These are guesses* — check a few by ear and fix any that are off.</p>' + rows +
-    '<div class="btns"><button id="cn">Discard</button><button id="cy" class="pri">Use these</button></div>', m => {
+  modal('<h3>Suggested sketch times</h3><p class="note">' + esc(msg) + ' These are guesses* — tap ▶ to hear each one (starts 2s early).</p><p class="note">Sensitivity ' + (DET.level + 1) + '/4 — looser finds more but with more false breaks.</p>' + rows +
+    '<div class="btns"><button id="lo"' + (DET.level <= 0 ? ' disabled' : '') + '>Stricter</button><button id="hi"' + (DET.level >= 3 ? ' disabled' : '') + '>Looser</button></div><div class="btns"><button id="cn">Discard</button><button id="cy" class="pri">Use these</button></div>', m => {
+      m.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { P.mode = 'episode'; P.ep = e; P.items = []; P.segEnd = null; loadEp(e).then(ok => { if (ok) { audio.currentTime = Math.max(0, +b.dataset.pl - 2); audio.play().catch(() => { }); updateNow(); } }); });
+      $('#lo', m).onclick = () => { DET.level--; runDetect(); }; $('#hi', m).onclick = () => { DET.level++; runDetect(); };
       $('#cn', m).onclick = closeModal;
       $('#cy', m).onclick = () => { if (!K) S.names[e.id] = names; S.marks[e.id] = r.starts.slice(); persist(); closeModal(); render(true); updateNow(); toast('Times saved — adjust any that are off'); };
     });
@@ -324,6 +372,7 @@ function viewDetail(id) {
     '<button data-act="detect" data-id="' + id + '"' + (has ? '' : ' disabled') + '>✨ Auto-detect times</button>' +
     '<button data-act="edit">' + (view.edit ? '✔ Done editing' : '✎ Edit times') + '</button></div>';
   if (!has) h += '<p class="note">Auto-detect needs the episode downloaded. You can still stream it and mark times by hand.</p>';
+  if (names.length && st.every(x => x == null)) h += '<ul class="note"><li>Sketch order is listed below; start times are not known.</li><li>Play, then tap ⏱ at each sketch start — or 🔖 in the player to bookmark.</li></ul>';
   if (!names.length) h += '<p class="note">No sketch list was published for this episode. Add sketches below, or use Auto-detect.</p>';
   if (view.edit) h += '<div class="actions"><button class="pri" data-act="marknext" data-id="' + id + '">⏱ Mark next sketch starts NOW</button></div><p class="note">Play the episode, tap the button at the start of each sketch in order. Fine-tune with the buttons under each row.</p>';
   names.forEach((n, i) => {
@@ -332,6 +381,7 @@ function viewDetail(id) {
       '<button data-act="playsk" data-id="' + id + '" data-i="' + i + '" aria-label="Play sketch">▶</button><button data-act="fav" data-id="' + id + '" data-i="' + i + '" aria-label="Favourite">' + (isFav(id, i) ? '★' : '☆') + '</button></div>';
     if (view.edit) h += '<div class="edit"><button data-act="nudge" data-d="-1" data-id="' + id + '" data-i="' + i + '">−1s</button><button data-act="nudge" data-d="1" data-id="' + id + '" data-i="' + i + '">+1s</button><button data-act="setnow" data-id="' + id + '" data-i="' + i + '">⏱ now</button><button data-act="clr" data-id="' + id + '" data-i="' + i + '">clear</button><button data-act="ren" data-id="' + id + '" data-i="' + i + '">rename</button></div>';
   });
+  { const l = bmSorted().filter(b => b.ep === id); if (l.length) h += '<h2>Bookmarks</h2>' + l.map(bmRow).join(''); }
   if (view.edit) h += '<div class="actions"><button data-act="addsk" data-id="' + id + '">+ Add sketch</button></div>';
   return h;
 }
@@ -348,13 +398,18 @@ function viewFavs() {
   });
   return h;
 }
+function viewBookmarks() {
+  const l = bmSorted();
+  if (!l.length) return '<p class="note" style="margin-top:20px">No bookmarks yet.</p><ul class="note"><li>Tap 🔖 in the player to save the spot you are listening to.</li><li>Works with no sketch list or times.</li><li>Tap a bookmark → “Use as a sketch start” to turn it into a sketch time.</li></ul>';
+  return '<p class="note">Tap a bookmark for options.</p>' + l.map(bmRow).join('');
+}
 function viewSettings() {
   const total = Object.values(S.dl).reduce((a, b) => a + b, 0), cnt = Object.keys(S.dl).length, missing = EPS.filter(e => !S.dl[e.id]);
   const fullscr = document.fullscreenElement || view.fs;
   return '<h2>Library</h2><div class="row"><div class="main"><div class="t">' + cnt + ' of ' + EPS.length + ' episodes saved</div><div class="s">' + mb(total) + ' on this phone</div></div></div>' +
     '<div class="actions"><button data-act="dlall"' + (missing.length ? '' : ' disabled') + '>⬇ Download all remaining (' + missing.length + ' · ~' + Math.round(missing.length * 25.5) + ' MB)</button><button data-act="delall" class="danger"' + (cnt ? '' : ' disabled') + '>🗑 Delete all downloads</button></div>' +
     '<h2>Screen</h2><div class="actions"><button data-act="fs">⛶ ' + (fullscr ? 'Exit full screen' : 'Full screen') + '</button></div>' +
-    '<h2>Your data</h2><div class="actions"><button data-act="clearsave" class="danger">Clear save (favourites, times, edits)</button></div><p class="note">Downloads are kept. Use “Delete all downloads” to remove those.</p>' +
+    '<h2>Your data</h2><div class="actions"><button data-act="clearsave" class="danger">Clear save (favourites, bookmarks, times, edits)</button></div><p class="note">Downloads are kept. Use “Delete all downloads” to remove those.</p>' +
     '<h2>Move your times between devices</h2><div class="actions"><button data-act="export">Export</button><button data-act="import">Import</button></div><textarea id="xfer" placeholder="Export puts a JSON backup here. Paste one here and tap Import to restore."></textarea>' +
     '<p class="note">Version ' + APP_VERSION + (native ? '' : ' (browser mode)') + '</p>' +
     '<details><summary>How it works</summary><ul><li>Episodes tab: ⬇ saves an episode for offline; ▶ streams it (or plays the saved copy).</li><li>While playing, the bar shows the episode and the sketch it’s on. ☆ favourites that sketch.</li><li>Favourites tab: plays just those sketches back to back — only the favourite parts.</li><li>Sketch names come from fan guides; <b>start times don’t exist online</b>, so use ✨ Auto-detect (guesses from gaps) and/or ✎ Edit times → ⏱ while listening.</li><li>Series 5 has no published sketch list; auto-detect numbers them and you can rename.</li><li>Nothing here needs the internet except downloading/streaming.</li></ul></details>';
@@ -362,15 +417,15 @@ function viewSettings() {
 function render(keepScroll) {
   const main = $('#main'), sy = main.scrollTop;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === view.tab));
-  $('#favcount').textContent = S.fav.length || '';
-  main.innerHTML = view.tab === 'eps' ? (view.detail ? viewDetail(view.detail) : viewEpisodes()) : view.tab === 'favs' ? viewFavs() : viewSettings();
+  $('#favcount').textContent = S.fav.length || ''; $('#bmcount').textContent = S.bm.length || '';
+  main.innerHTML = view.tab === 'eps' ? (view.detail ? viewDetail(view.detail) : viewEpisodes()) : view.tab === 'favs' ? viewFavs() : view.tab === 'bm' ? viewBookmarks() : viewSettings();
   if (keepScroll) main.scrollTop = sy;
 }
 
 /* ---------- actions ---------- */
-async function exportData() { const t = JSON.stringify({ v: 1, marks: S.marks, names: S.names, fav: S.fav }); const ta = $('#xfer'); ta.value = t; ta.select(); try { await navigator.clipboard.writeText(t); toast('Copied to clipboard'); } catch (x) { toast('Select the text and copy it'); } }
+async function exportData() { const t = JSON.stringify({ v: 1, marks: S.marks, names: S.names, fav: S.fav, bm: S.bm }); const ta = $('#xfer'); ta.value = t; ta.select(); try { await navigator.clipboard.writeText(t); toast('Copied to clipboard'); } catch (x) { toast('Select the text and copy it'); } }
 function importData() {
-  try { const d = JSON.parse($('#xfer').value); if (d.marks) Object.assign(S.marks, d.marks); if (d.names) Object.assign(S.names, d.names); if (Array.isArray(d.fav)) d.fav.forEach(k => { if (!S.fav.includes(k)) S.fav.push(k); }); persist(); render(true); toast('Imported'); }
+  try { const d = JSON.parse($('#xfer').value); if (d.marks) Object.assign(S.marks, d.marks); if (d.names) Object.assign(S.names, d.names); if (Array.isArray(d.fav)) d.fav.forEach(k => { if (!S.fav.includes(k)) S.fav.push(k); }); if (Array.isArray(d.bm)) d.bm.forEach(b => { if (b && b.id && !bmById(b.id)) S.bm.push(b); }); persist(); render(true); toast('Imported'); }
   catch (x) { toast('That doesn’t look like an export'); }
 }
 async function setFullscreen() {
@@ -386,7 +441,7 @@ document.addEventListener('click', async ev => {
   const el = ev.target.closest('[data-act]'); if (!el) return;
   const a = el.dataset.act, id = el.dataset.id, i = el.dataset.i != null ? +el.dataset.i : null, e = id ? byId[id] : null;
   switch (a) {
-    case 'open': view.detail = id; view.edit = false; history.pushState({ d: id }, ''); render(); $('#main').scrollTop = 0; break;
+    case 'open': view.detail = id; view.edit = getStarts(e).every(x => x == null); history.pushState({ d: id }, ''); render(); $('#main').scrollTop = 0; break;
     case 'back': history.back(); break;
     case 'ser': view.open[el.dataset.s] = !view.open[el.dataset.s]; render(true); break;
     case 'play': playEpisode(e, 0); break;
@@ -411,7 +466,10 @@ document.addEventListener('click', async ev => {
     case 'fs': setFullscreen(); break;
     case 'dlall': { const m = EPS.filter(x => !S.dl[x.id]); toast('Downloading ' + m.length + ' episodes one by one…'); for (const x of m) { if (navigator.onLine === false) break; await startDownload(x); } break; }
     case 'delall': if (await confirmBox('Delete all downloads?', 'Removes every downloaded episode from this phone. Favourites and sketch times stay.', 'Delete all')) { audio.pause(); audio.removeAttribute('src'); P.loadedId = null; P.ep = null; P.mode = null; for (const x of EPS) await Store.remove(x); S.dl = {}; updateNow(); render(true); } break;
-    case 'clearsave': if (await confirmBox('Clear save?', 'Deletes all favourites, sketch times and renamed sketches. Downloads are not touched. This can’t be undone.', 'Clear save')) { S.fav = []; S.marks = {}; S.names = {}; persist(); updateNow(); render(true); toast('Save cleared'); } break;
+    case 'clearsave': if (await confirmBox('Clear save?', 'Deletes all favourites, bookmarks, sketch times and renamed sketches. Downloads are not touched. This can’t be undone.', 'Clear save')) { S.fav = []; S.marks = {}; S.names = {}; S.bm = []; persist(); updateNow(); render(true); toast('Save cleared'); } break;
+    case 'bmmenu': { const b = bmById(el.dataset.b); if (b) bmMenu(b); break; }
+    case 'bmplay': { const b = bmById(el.dataset.b); if (b) playEpisode(byId[b.ep], b.t); break; }
+    case 'bmdel': { S.bm = S.bm.filter(x => x.id !== el.dataset.b); persist(); render(true); break; }
     case 'export': exportData(); break;
     case 'import': importData(); break;
   }

@@ -4,7 +4,10 @@
 (function (root) {
   function median(a) { const b = Array.from(a).sort((x, y) => x - y); return b[Math.floor(b.length / 2)] || 0; }
 
-  function detect(rms, dt, K) {
+  // level 0 = strict ... 3 = loose. Looser levels also accept shallower/shorter dips, ranked below clear gaps.
+  const LV = [{ r: 0.45, w: 0.4, wt: 1 }, { r: 0.6, w: 0.3, wt: 0.5 }, { r: 0.72, w: 0.25, wt: 0.3 }, { r: 0.85, w: 0.2, wt: 0.2 }];
+  function detect(rms, dt, K, level) {
+    if (level == null) level = 1; level = Math.max(0, Math.min(3, level));
     const n = rms.length;
     const pre = new Float64Array(n + 1);
     for (let i = 0; i < n; i++) pre[i + 1] = pre[i] + rms[i];
@@ -22,17 +25,23 @@
       const m = median(vals);
       for (let k = i; k < Math.min(n, i + step); k++) ref[k] = m;
     }
-    const cands = [];
-    let i = 0;
-    while (i < n) {
-      if (sm[i] / (ref[i] + 1e-9) < 0.45) {
-        let j = i, mn = 1;
-        while (j < n && sm[j] / (ref[j] + 1e-9) < 0.45) { mn = Math.min(mn, sm[j] / (ref[j] + 1e-9)); j++; }
-        const width = (j - i) * dt;
-        if (width >= 0.4 && i * dt > 5) cands.push({ t: Math.max(0, j * dt - 0.25), depth: mn, width, strength: (1 - mn) * Math.min(width, 3) });
-        i = j;
-      } else i++;
+    let cands = [];
+    for (let L = 0; L <= level; L++) {
+      const th = LV[L].r; let i = 0;
+      while (i < n) {
+        if (sm[i] / (ref[i] + 1e-9) < th) {
+          let j = i, mn = 1;
+          while (j < n && sm[j] / (ref[j] + 1e-9) < th) { mn = Math.min(mn, sm[j] / (ref[j] + 1e-9)); j++; }
+          const width = (j - i) * dt;
+          const cut = mn + 0.4 * (th - mn); let k = j - 1; while (k > i && sm[k] / (ref[k] + 1e-9) > cut) k--;
+          if (width >= LV[L].w && i * dt > 5) cands.push({ t: Math.max(0, (k + 1) * dt - 0.25), depth: mn, width, strength: (1 - mn) * Math.min(width, 3) * LV[L].wt, L });
+          i = j;
+        } else i++;
+      }
     }
+    // same dip found at several levels: keep the strongest
+    cands.sort((a, b) => b.strength - a.strength);
+    cands = cands.filter((c, k) => cands.slice(0, k).every(x => Math.abs(x.t - c.t) > 1.5));
     function pick(list, max, minSep) {
       const chosen = [];
       list.slice().sort((a, b) => b.strength - a.strength).forEach(c => {
@@ -46,10 +55,11 @@
       starts = [0].concat(chosen.map(c => Math.round(c.t * 10) / 10));
       while (starts.length < K) starts.push(null);
     } else {
-      chosen = pick(cands.filter(c => c.strength > 0.9), 25, 25);
+      const floor = 0.62 - 0.14 * level; // looser level -> lower bar for counting a dip as a sketch break
+      chosen = pick(cands.filter(c => c.strength > floor), 25, 20);
       starts = [0].concat(chosen.map(c => Math.round(c.t * 10) / 10));
     }
-    return { starts, found: chosen.length, needed: Math.max(0, K - 1), candidates: cands.length };
+    return { starts, found: chosen.length, needed: Math.max(0, K - 1), candidates: cands.length, level };
   }
 
   const api = { detect };
