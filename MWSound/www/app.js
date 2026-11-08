@@ -1,5 +1,12 @@
 'use strict';
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.1.2';
+const ERRS = [];
+function showErr(m) {
+  ERRS.push(String(m).slice(0, 200)); if (ERRS.length > 8) ERRS.shift();
+  try { let b = document.getElementById('errbar'); if (!b) { b = document.createElement('div'); b.id = 'errbar'; b.onclick = () => b.remove(); document.body.appendChild(b); } b.textContent = '⚠ ' + ERRS[ERRS.length - 1] + ' (tap to hide)'; } catch (x) { }
+}
+window.addEventListener('error', e => showErr(e.message + (e.lineno ? ' @' + e.lineno : '')));
+window.addEventListener('unhandledrejection', e => showErr('promise: ' + ((e.reason && e.reason.message) || e.reason)));
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = t => { if (t == null || !isFinite(t)) return '—'; t = Math.max(0, Math.round(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
@@ -281,7 +288,7 @@ function bmAssign(b) {
 }
 function favItems() {
   return S.fav.map(k => { const [id, i] = k.split(':'); return { id, idx: +i }; }).filter(x => byId[x.id] && getNames(byId[x.id])[x.idx] != null)
-    .sort((a, b) => EPS.indexOf(byId[a.id]) - EPS.indexOf(byId[b.id]) || (getStarts(byId[a.id])[a.idx] ?? a.idx) - (getStarts(byId[b.id])[b.idx] ?? b.idx));
+    .sort((a, b) => EPS.indexOf(byId[a.id]) - EPS.indexOf(byId[b.id]) || (getStarts(byId[a.id])[a.idx] == null ? a.idx : getStarts(byId[a.id])[a.idx]) - (getStarts(byId[b.id])[b.idx] == null ? b.idx : getStarts(byId[b.id])[b.idx]));
 }
 
 /* ---------- downloads ---------- */
@@ -346,12 +353,13 @@ function rowHtml(e) {
   const names = getNames(e), has = S.dl[e.id], st = S.dls[e.id];
   const known = getStarts(e).filter(x => x != null).length;
   let sub = (names.length ? names.length + ' sketches' : 'no sketch list yet') + (names.length ? (known ? ' · ' + known + ' timed' : ' · times not set') : '');
+  const prev = names.length ? names.slice(0, 3).join(' · ') + (names.length > 3 ? ' …' : '') : '';
   let bar = '', cls = 's';
   if (st && st.status === 'downloading') { const p = st.total ? Math.round(st.got / st.total * 100) : 0; sub = 'Downloading ' + (st.total ? p + '% · ' + mb(st.got) + ' / ' + mb(st.total) : mb(st.got)); bar = '<div class="bar"><i style="width:' + p + '%"></i></div>'; }
   else if (st && st.status === 'error') { sub = st.msg; cls = 's warn'; }
   else if (has) sub += ' · ✓ saved (' + mb(has) + ')';
   const dlBtn = st && st.status === 'downloading' ? '<button disabled>…</button>' : has ? '<button data-act="del" data-id="' + e.id + '" aria-label="Delete download">🗑</button>' : '<button data-act="dl" data-id="' + e.id + '" aria-label="Download">⬇</button>';
-  return '<div class="row' + (P.ep && P.ep.id === e.id ? ' cur' : '') + '" id="row-' + e.id + '"><div class="main" data-act="open" data-id="' + e.id + '"><div class="t">' + epLabel(e) + ' · ' + epDate(e) + '</div><div class="' + cls + '">' + esc(sub) + '</div>' + bar + '</div>' +
+  return '<div class="row' + (P.ep && P.ep.id === e.id ? ' cur' : '') + '" id="row-' + e.id + '"><div class="main" data-act="open" data-id="' + e.id + '"><div class="t">' + epLabel(e) + ' · ' + epDate(e) + '</div><div class="' + cls + '">' + esc(sub) + '</div>' + (prev && !bar ? '<div class="s pv">' + esc(prev) + '</div>' : '') + bar + '</div>' +
     '<button data-act="play" data-id="' + e.id + '" aria-label="Play">▶</button>' + dlBtn + '</div>';
 }
 function updateRow(id) { const el = document.getElementById('row-' + id); if (el && !view.detail) el.outerHTML = rowHtml(byId[id]); }
@@ -412,7 +420,7 @@ function viewSettings() {
     '<h2>Screen</h2><div class="actions"><button data-act="fs">⛶ ' + (fullscr ? 'Exit full screen' : 'Full screen') + '</button></div>' +
     '<h2>Your data</h2><div class="actions"><button data-act="clearsave" class="danger">Clear save (favourites, bookmarks, times, edits)</button></div><p class="note">Downloads are kept. Use “Delete all downloads” to remove those.</p>' +
     '<h2>Move your times between devices</h2><div class="actions"><button data-act="export">Export</button><button data-act="import">Import</button></div><textarea id="xfer" placeholder="Export puts a JSON backup here. Paste one here and tap Import to restore."></textarea>' +
-    '<p class="note">Version ' + APP_VERSION + (native ? '' : ' (browser mode)') + '</p>' +
+    '<h2>Diagnostics</h2><div class="row"><div class="main"><div class="s">' + esc('v' + APP_VERSION + ' · ' + (native ? 'native' : 'browser') + ' · ' + EPS.length + ' episodes · ' + EPS.reduce((a, e) => a + e.sketches.length, 0) + ' sketch names · saved names for ' + Object.keys(S.names).length + ' eps · times for ' + Object.keys(S.marks).length + ' eps · ' + ((navigator.userAgent.match(/Chrome\/[\d.]+/) || ['WebView ?'])[0]) + ' · ' + screen.width + 'x' + screen.height + ' · errors: ' + (ERRS.length ? ERRS.join(' | ') : 'none')) + '</div></div></div><p class="note">Version ' + APP_VERSION + (native ? '' : ' (browser mode)') + '</p>' +
     '<details><summary>How it works</summary><ul><li>Episodes tab: ⬇ saves an episode for offline; ▶ streams it (or plays the saved copy).</li><li>While playing, the bar shows the episode and the sketch it’s on. ☆ favourites that sketch.</li><li>Favourites tab: plays just those sketches back to back — only the favourite parts.</li><li>Sketch names come from fan guides; <b>start times don’t exist online</b>, so use ✨ Auto-detect (guesses from gaps) and/or ✎ Edit times → ⏱ while listening.</li><li>Series 5 has no published sketch list; auto-detect numbers them and you can rename.</li><li>Nothing here needs the internet except downloading/streaming.</li></ul></details>';
 }
 function render(keepScroll) {
