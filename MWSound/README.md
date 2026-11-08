@@ -1,4 +1,4 @@
-# M&W Sound (v1.1.3)
+# M&W Sound (v1.2.0)
 
 Offline-first player for *That Mitchell and Webb Sound* (archive.org item `that-mitchell-and-webb-sound-thmianweso`).
 
@@ -22,12 +22,12 @@ Verified:
 - UI loads without errors in headless Chromium: version, full-screen button, Clear save.
 - Browser path: decode a real MP3 -> auto-detect -> play a sketch from its detected time (synthetic audio).
 
-v1.1.3: Auto-detect always enabled (offers to download first); download progress/error shown on the episode screen. v1.1.2: sketch names on every episode row, on-screen error banner and Settings > Diagnostics, CSS fix for older WebViews. v1.1.1: sketch list shown first in each episode, Settings shows how many sketch names are built in. v1.1.0: bookmarks; auto-detect has Stricter/Looser sensitivity and ▶ per row to check each break by ear; episodes with no times open in edit mode. v1.0.2 fix: native download failed with ENOENT because Capacitor's `downloadFile` does not create the `mw/` folder; the app now creates it first (cause confirmed in the plugin source; *not yet re-tested on a device).
+v1.2.0: auto-detect rewritten around applause (end of a sketch = sustained bright noisy clap) followed by a voice/tone change, with loudness dips as a weaker fallback. Synthetic waveform test: `npm test` (scripts/test-applause.mjs). v1.1.3: Auto-detect always enabled (offers to download first); download progress/error shown on the episode screen. v1.1.2: sketch names on every episode row, on-screen error banner and Settings > Diagnostics, CSS fix for older WebViews. v1.1.1: sketch list shown first in each episode, Settings shows how many sketch names are built in. v1.1.0: bookmarks; auto-detect has Stricter/Looser sensitivity and ▶ per row to check each break by ear; episodes with no times open in edit mode. v1.0.2 fix: native download failed with ENOENT because Capacitor's `downloadFile` does not create the `mw/` folder; the app now creates it first (cause confirmed in the plugin source; *not yet re-tested on a device).
 
 NOT verified (marked *):
 - *Download of real episodes: archive.org audio redirects to a mirror host that was blocked in the build sandbox.
 - *Native download/playback on an Android device (Capacitor Filesystem `downloadFile`, `convertFileSrc`, seeking in saved files).
 - *Playback with the screen locked. The manifest has only INTERNET: no foreground service or wake lock, so Android may pause audio after the screen has been off for a while. Test on a phone; if it stops, a foreground-service plugin is needed.
-- *Auto-detect on real episodes. On a synthetic file with 1.2 s gaps it found 13 of 14 boundaries and mis-placed the last one (amplitude dips mistaken for a gap). Real shows have music and laughter, so expect misses; treat results as guesses.
+- *Auto-detect on real episodes. v1.2.0 looks for applause then a new voice. On synthetic audio (voices, loud mid-sketch laughs, applause) it found 12/12 boundaries where the old dip detector found 1/12, but it only found 4/12 when applause was quieter than the laughs. Real episodes are untested: treat results as guesses, use Stricter/Looser and ▶ to check by ear.
 - *Series 5 sketch names: British Comedy Guide wasn't reachable from the build sandbox, so Series 5 has no names (auto-detect numbers them; rename in app).
 - *Sketch start times: none found online (searched web, YouTube, British Comedy Guide, Wikipedia; reddit was not searchable). `MW_TIMESTAMPS` is still empty.

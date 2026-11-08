@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.2.0';
 const ERRS = [];
 function showErr(m) {
   ERRS.push(String(m).slice(0, 200)); if (ERRS.length > 8) ERRS.shift();
@@ -317,27 +317,25 @@ async function removeDownload(e) {
 
 /* ---------- auto-detect ---------- */
 async function autoDetect(e) {
-  modal('<h3>Analysing ' + esc(epLabel(e)) + '…</h3><p class="note">Decoding the audio on your phone and looking for gaps between sketches. This can take a minute.</p>');
+  modal('<h3>Analysing ' + esc(epLabel(e)) + '…</h3><p class="note">Decoding the audio on your phone and looking for applause followed by a new voice. This can take a minute.</p>');
   try {
     const buf = await Store.bytes(e);
     const AC = window.AudioContext || window.webkitAudioContext;
     const ac = new AC({ sampleRate: 8000 });
     const ab = await new Promise((res, rej) => ac.decodeAudioData(buf, res, rej));
-    const sr = ab.sampleRate, n = ab.length, hop = Math.round(sr * 0.1), frames = Math.floor(n / hop);
     const c0 = ab.getChannelData(0), c1 = ab.numberOfChannels > 1 ? ab.getChannelData(1) : null;
-    const rms = new Float32Array(frames);
-    for (let f = 0; f < frames; f++) { let s = 0; for (let i = f * hop; i < (f + 1) * hop; i++) { const v = c1 ? (c0[i] + c1[i]) / 2 : c0[i]; s += v * v; } rms[f] = Math.sqrt(s / hop); }
+    const F = MWDetect.features(c0, c1, ab.sampleRate);
     try { ac.close(); } catch (x) { }
-    DET = { e, rms, dt: hop / sr, K: getNames(e).length, level: getNames(e).length ? 1 : 0 };
+    DET = { e, F, K: getNames(e).length, level: getNames(e).length ? 1 : 0 };
     runDetect();
   } catch (x) { closeModal(); toast('Auto-detect failed: ' + ((x && x.message) || 'could not decode audio'), 5000); }
 }
 let DET = null;
-function runDetect() { const d = DET; showDetect(d.e, MWDetect.detect(d.rms, d.dt, d.K, d.level), d.K); }
+function runDetect() { const d = DET; showDetect(d.e, MWDetect.detectFull(d.F, d.K, d.level), d.K); }
 function showDetect(e, r, K) {
   const names = K ? getNames(e) : r.starts.map((_, i) => 'Sketch ' + (i + 1));
   const rows = r.starts.map((t, i) => '<div class="sk' + (t == null ? ' dim' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + esc(names[i]) + '</span><span class="tm">' + fmt(t) + '</span>' + (t != null ? '<button data-pl="' + t + '" aria-label="Listen">▶</button>' : '') + '</div>').join('');
-  const msg = K ? 'Found ' + r.found + ' of ' + r.needed + ' expected gaps. Blank times are left unset.' : 'No sketch list for this episode, so I numbered the ' + r.starts.length + ' sketches found.';
+  const msg = K ? 'Found ' + r.found + ' of ' + r.needed + ' expected sketch breaks (' + (r.applause || 0) + ' by applause). Blank times are left unset.' : 'No sketch list for this episode, so I numbered the ' + r.starts.length + ' sketches found.';
   modal('<h3>Suggested sketch times</h3><p class="note">' + esc(msg) + ' These are guesses* — tap ▶ to hear each one (starts 2s early).</p><p class="note">Sensitivity ' + (DET.level + 1) + '/4 — looser finds more but with more false breaks.</p>' + rows +
     '<div class="btns"><button id="lo"' + (DET.level <= 0 ? ' disabled' : '') + '>Stricter</button><button id="hi"' + (DET.level >= 3 ? ' disabled' : '') + '>Looser</button></div><div class="btns"><button id="cn">Discard</button><button id="cy" class="pri">Use these</button></div>', m => {
       m.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { P.mode = 'episode'; P.ep = e; P.items = []; P.segEnd = null; loadEp(e).then(ok => { if (ok) { audio.currentTime = Math.max(0, +b.dataset.pl - 2); audio.play().catch(() => { }); updateNow(); } }); });
