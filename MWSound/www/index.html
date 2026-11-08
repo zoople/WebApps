@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#14110f">
+<title>M&amp;W Sound</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand"><b>M&amp;W Sound</b> <span class="ver" id="ver"></span></div>
+  <div class="net" id="net" title="network"></div>
+  <button class="icon" id="fs" aria-label="Full screen">⛶</button>
+</header>
+
+<nav id="tabs">
+  <button data-tab="eps" class="on">Episodes</button>
+  <button data-tab="favs">Favourites <span id="favcount" class="badge"></span></button>
+  <button data-tab="set">Settings</button>
+</nav>
+
+<main id="main"></main>
+
+<footer id="now" class="idle">
+  <div class="nowtext">
+    <div id="nowEp">Nothing playing</div>
+    <div id="nowSk">Pick an episode or play your favourites</div>
+  </div>
+  <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Seek">
+  <div class="times"><span id="tcur">0:00</span><span id="tmode"></span><span id="tdur">0:00</span></div>
+  <div class="ctrl">
+    <button id="bPrev" aria-label="Previous sketch">⏮</button>
+    <button id="bBack" aria-label="Back 15 seconds">−15</button>
+    <button id="bPlay" class="big" aria-label="Play or pause">▶</button>
+    <button id="bFwd" aria-label="Forward 30 seconds">+30</button>
+    <button id="bNext" aria-label="Next sketch">⏭</button>
+    <button id="bFav" aria-label="Favourite this sketch">☆</button>
+  </div>
+</footer>
+
+<audio id="audio" preload="metadata"></audio>
+<div id="toast" role="status"></div>
+<div id="modal" hidden></div>
+
+<script src="data.js"></script>
+<script src="detect.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

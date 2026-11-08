@@ -1,0 +1,17 @@
+{
+  "name": "mw-sound",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Offline player for That Mitchell and Webb Sound with sketch-level favourites",
+  "scripts": {
+    "data": "node scripts/build-data.mjs",
+    "test": "node scripts/test-detect.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/filesystem": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0"
+  }
+}

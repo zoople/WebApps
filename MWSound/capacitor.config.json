@@ -1,0 +1,7 @@
+{
+  "appId": "com.michael.mwsound",
+  "appName": "MW Sound",
+  "webDir": "www",
+  "backgroundColor": "#14110f",
+  "android": { "allowMixedContent": false }
+}

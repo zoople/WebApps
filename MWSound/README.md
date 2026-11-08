@@ -1,0 +1,29 @@
+# M&W Sound (v1.0.1)
+
+Offline-first player for *That Mitchell and Webb Sound* (archive.org item `that-mitchell-and-webb-sound-thmianweso`).
+
+- Browse all 29 episodes; stream or download each one.
+- The player bar shows the episode and the sketch it is on. Tap the star to favourite a sketch.
+- Favourites tab plays just those sketch segments, back to back.
+- Sketch **names** are pre-loaded for series 1-4. Sketch **start times** are not published anywhere I could find, so use
+  Auto-detect (guesses from gaps in the audio) and/or Edit times -> "Mark next sketch starts NOW" while listening.
+- Real timestamps, if you find any, go in `www/data.js` under `MW_TIMESTAMPS`, e.g. `"s01e01": [0, 95.5, 210]`.
+
+## Build the APK
+- In this repo the workflow is `.github/workflows/build-mw-apk.yml` (runs on changes under `MWSound/`, or Actions -> Build MW Sound APK -> Run workflow). Download the `mw-sound-apk` artifact.
+- Locally: `cd MWSound && npm install && npx cap add android && npx cap sync android && cd android && ./gradlew assembleDebug`.
+  Needs JDK 17+, the Android SDK (platform 34, build-tools 34.0.0) and `ANDROID_HOME`.
+
+## Verification status (v1.0.1)
+Verified:
+- All 29 file names/dates in `www/data.js` match the archive.org item's file list exactly (checked via the metadata API).
+- Debug APK builds (Capacitor 6.2, compileSdk 34) and contains the current `www/` files.
+- UI loads without errors in headless Chromium: version, full-screen button, Clear save.
+- Browser path: decode a real MP3 -> auto-detect -> play a sketch from its detected time (synthetic audio).
+
+NOT verified (marked *):
+- *Download of real episodes: archive.org audio redirects to a mirror host that was blocked in the build sandbox.
+- *Native download/playback on an Android device (Capacitor Filesystem `downloadFile`, `convertFileSrc`, seeking in saved files).
+- *Playback with the screen locked. The manifest has only INTERNET: no foreground service or wake lock, so Android may pause audio after the screen has been off for a while. Test on a phone; if it stops, a foreground-service plugin is needed.
+- *Auto-detect on real episodes. On a synthetic file with 1.2 s gaps it found 13 of 14 boundaries and mis-placed the last one (amplitude dips mistaken for a gap). Real shows have music and laughter, so expect misses; treat results as guesses.
+- *Sketch start times: none found online (searched web, YouTube, British Comedy Guide, Wikipedia; reddit was not searchable). `MW_TIMESTAMPS` is still empty.
