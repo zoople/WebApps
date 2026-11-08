@@ -1,4 +1,4 @@
-# M&W Sound (v1.0.1)
+# M&W Sound (v1.0.2)
 
 Offline-first player for *That Mitchell and Webb Sound* (archive.org item `that-mitchell-and-webb-sound-thmianweso`).
 
@@ -14,12 +14,14 @@ Offline-first player for *That Mitchell and Webb Sound* (archive.org item `that-
 - Locally: `cd MWSound && npm install && npx cap add android && npx cap sync android && cd android && ./gradlew assembleDebug`.
   Needs JDK 17+, the Android SDK (platform 34, build-tools 34.0.0) and `ANDROID_HOME`.
 
-## Verification status (v1.0.1)
+## Verification status (v1.0.2)
 Verified:
 - All 29 file names/dates in `www/data.js` match the archive.org item's file list exactly (checked via the metadata API).
 - Debug APK builds (Capacitor 6.2, compileSdk 34) and contains the current `www/` files.
 - UI loads without errors in headless Chromium: version, full-screen button, Clear save.
 - Browser path: decode a real MP3 -> auto-detect -> play a sketch from its detected time (synthetic audio).
+
+v1.0.2 fix: native download failed with ENOENT because Capacitor's `downloadFile` does not create the `mw/` folder; the app now creates it first (cause confirmed in the plugin source; *not yet re-tested on a device).
 
 NOT verified (marked *):
 - *Download of real episodes: archive.org audio redirects to a mirror host that was blocked in the build sandbox.

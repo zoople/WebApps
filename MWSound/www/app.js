@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = t => { if (t == null || !isFinite(t)) return '—'; t = Math.max(0, Math.round(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
@@ -65,6 +65,8 @@ const Store = {
     const url = epUrl(e);
     if (native) {
       const tmp = this.key(e) + '.part';
+      // Capacitor's Android downloadFile ignores `recursive` and fails with ENOENT if the folder is missing
+      try { await FS.mkdir({ path: 'mw', directory: 'DATA', recursive: true }); } catch (x) { /* already exists */ }
       try { await FS.deleteFile({ path: tmp, directory: 'DATA' }); } catch (x) { }
       const h = await FS.addListener('progress', p => { if (p.url === url) onProg(p.bytes, p.contentLength); });
       try {
