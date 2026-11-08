@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.1.3';
 const ERRS = [];
 function showErr(m) {
   ERRS.push(String(m).slice(0, 200)); if (ERRS.length > 8) ERRS.shift();
@@ -362,7 +362,11 @@ function rowHtml(e) {
   return '<div class="row' + (P.ep && P.ep.id === e.id ? ' cur' : '') + '" id="row-' + e.id + '"><div class="main" data-act="open" data-id="' + e.id + '"><div class="t">' + epLabel(e) + ' · ' + epDate(e) + '</div><div class="' + cls + '">' + esc(sub) + '</div>' + (prev && !bar ? '<div class="s pv">' + esc(prev) + '</div>' : '') + bar + '</div>' +
     '<button data-act="play" data-id="' + e.id + '" aria-label="Play">▶</button>' + dlBtn + '</div>';
 }
-function updateRow(id) { const el = document.getElementById('row-' + id); if (el && !view.detail) el.outerHTML = rowHtml(byId[id]); }
+const dlText = st => st.status === 'error' ? '⚠ Download failed: ' + st.msg : 'Downloading ' + (st.total ? Math.round(st.got / st.total * 100) + '% · ' + mb(st.got) + ' / ' + mb(st.total) : mb(st.got));
+function updateRow(id) {
+  const el = document.getElementById('row-' + id); if (el && !view.detail) el.outerHTML = rowHtml(byId[id]);
+  const d = document.getElementById('dlstat'); if (d && S.dls[id]) d.textContent = dlText(S.dls[id]);
+}
 function viewEpisodes() {
   let h = '';
   [1, 2, 3, 4, 5].forEach(s => {
@@ -377,9 +381,10 @@ function viewDetail(id) {
   let h = '<button class="back" data-act="back">← All episodes</button><h2 style="margin-top:4px">' + epLabel(e) + ' · ' + epDate(e) + '</h2>';
   h += '<div class="actions"><button class="pri" data-act="play" data-id="' + id + '">▶ Play episode</button>' +
     (has ? '<button data-act="del" data-id="' + id + '">🗑 Delete download</button>' : '<button data-act="dl" data-id="' + id + '"' + (dls && dls.status === 'downloading' ? ' disabled' : '') + '>⬇ Download</button>') +
-    '<button data-act="detect" data-id="' + id + '"' + (has ? '' : ' disabled') + '>✨ Auto-detect times</button>' +
+    '<button data-act="detect" data-id="' + id + '"' + (dls && dls.status === 'downloading' ? ' disabled' : '') + '>✨ Auto-detect times</button>' +
     '<button data-act="edit">' + (view.edit ? '✔ Done editing' : '✎ Edit times') + '</button></div>';
-  if (!has) h += '<p class="note">Auto-detect needs the episode downloaded. You can still stream it and mark times by hand.</p>';
+  if (dls && (dls.status === 'downloading' || dls.status === 'error')) h += '<p class="note' + (dls.status === 'error' ? ' warn' : '') + '" id="dlstat">' + esc(dlText(dls)) + '</p>';
+  else if (!has) h += '<p class="note">Auto-detect downloads the episode first (~26 MB), then analyses it. You can still stream it and mark times by hand.</p>';
   h += '<h2>' + (names.length ? names.length + ' sketches in running order*' : 'Sketches') + '</h2>';
   if (names.length && st.every(x => x == null)) h += '<p class="note">Start times are not known yet — use ✨ Auto-detect, or ✎ Edit times and ⏱ while listening. 🔖 in the player bookmarks any spot.</p>';
   if (!names.length) h += '<p class="note">No sketch list for this episode (series 5 has none). Use ✨ Auto-detect to number them, or ✎ Edit times → + Add sketch.</p>';
@@ -458,7 +463,14 @@ document.addEventListener('click', async ev => {
     case 'dl': startDownload(e); updateRow(id); if (view.detail) render(true); break;
     case 'del': removeDownload(e); break;
     case 'fav': toggleFav(id, i); break;
-    case 'detect': autoDetect(e); break;
+    case 'detect': {
+      if (!S.dl[id]) {
+        if (!(await confirmBox('Download first?', 'Auto-detect analyses the saved file. Download ' + epLabel(e) + ' (~26 MB) now and then detect?', 'Download & detect', false))) break;
+        const dp = startDownload(e); render(true); await dp;
+        if (!S.dl[id]) { render(true); toast('Download did not finish — see the message under the buttons', 5000); break; }
+      }
+      autoDetect(e); break;
+    }
     case 'edit': view.edit = !view.edit; render(true); break;
     case 'marknext': {
       if (!P.ep || P.ep.id !== id) { toast('Play this episode first, then tap at each sketch start'); break; }

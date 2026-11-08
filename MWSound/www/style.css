@@ -67,3 +67,4 @@ footer#now.idle .times,footer#now.idle #seek{opacity:.4}
 
 .row .s.pv{color:var(--ink);opacity:.7;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #errbar{position:fixed;left:8px;right:8px;top:8px;z-index:30;background:#7a1f14;color:#fff;border-radius:10px;padding:8px 10px;font-size:13px}
+.note.warn{color:var(--acc)}
