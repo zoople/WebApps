@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="open-loops.webmanifest">
+<meta name="theme-color" content="#2f6f5e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Open Loops">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>Open Loops: a mini-course on organising a busy life</title>
+<style>
+:root{
+  --bg:#f6f3ee;--card:#fffdf9;--ink:#23211d;--muted:#6b665c;--line:#ddd6c8;
+  --acc:#2f6f5e;--acc-soft:#dcebe5;--acc2:#b85a1f;--acc2-soft:#f6e3d3;--warn:#a3321f;--ok:#2f6f5e;
+  --radius:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#161512;--card:#201f1b;--ink:#ece8df;--muted:#a29c8f;--line:#38352e;
+  --acc:#6cc2a9;--acc-soft:#223630;--acc2:#e59a62;--acc2-soft:#3a2b20;--warn:#ef8a74;--ok:#6cc2a9}
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:80px}
+header.top{padding-top:calc(8px + env(safe-area-inset-top));position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:8px;padding:8px 12px}
+header.top .brand{font-weight:700;font-size:15px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.top .ver{font-size:12px;color:var(--muted);font-weight:600;border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+button,.btn{font:inherit;font-size:15px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  border-radius:10px;padding:8px 12px;cursor:pointer;min-height:40px}
+button:hover{border-color:var(--acc)}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+@media (prefers-color-scheme:dark){button.primary{color:#0d1a16}}
+button.small{font-size:13px;padding:4px 10px;min-height:32px}
+button.danger{border-color:var(--warn);color:var(--warn)}
+button:disabled{opacity:.45;cursor:default}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:30px;line-height:1.2;margin:.4em 0 .2em}
+h2{font-size:24px;line-height:1.25;margin:1.4em 0 .3em}
+h3{font-size:19px;margin:1.6em 0 .2em;line-height:1.3}
+h4{font-size:15px;margin:.2em 0 .3em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+p{margin:.6em 0}
+ul,ol{padding-left:1.25em;margin:.6em 0}
+li{margin:.3em 0}
+.kicker{color:var(--acc);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.sub{color:var(--muted);margin-top:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:14px 0}
+figure.diagram{margin:20px 0;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+figure.diagram{overflow-x:auto;-webkit-overflow-scrolling:touch}
+figure.diagram svg{width:100%;min-width:660px;height:auto;display:block}
+figcaption{font-size:14px;color:var(--muted);margin-top:6px}
+svg text{fill:var(--ink);font:14px system-ui,sans-serif}
+svg .mut{fill:var(--muted);font-size:13px}
+svg .b{font-weight:700}
+svg .box{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+svg .acc{fill:var(--acc-soft);stroke:var(--acc);stroke-width:1.5}
+svg .acc2{fill:var(--acc2-soft);stroke:var(--acc2);stroke-width:1.5}
+svg .ln{stroke:var(--muted);stroke-width:1.5;fill:none}
+svg .ln2{stroke:var(--acc);stroke-width:2;fill:none}
+svg .dot{fill:var(--acc)}
+.fit{border-left:4px solid var(--acc);background:var(--acc-soft);padding:10px 14px;border-radius:0 var(--radius) var(--radius) 0;margin:18px 0}
+.fit.paper{border-color:var(--acc2);background:var(--acc2-soft)}
+.fit h4{color:var(--ink)}
+.take{border:2px solid var(--acc);border-radius:var(--radius);padding:10px 16px;margin:22px 0}
+pre{background:#14130f;color:#e8e4d9;border-radius:10px;padding:12px;overflow-x:auto;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;margin:10px 0;white-space:pre}
+code{font:0.9em ui-monospace,Menlo,Consolas,monospace;background:var(--acc-soft);padding:1px 5px;border-radius:5px}
+pre code{background:none;padding:0}
+.activity{background:var(--card);border:2px solid var(--acc);border-radius:var(--radius);padding:14px 16px;margin:26px 0}
+.activity>h3{margin-top:0}
+.activity .hint{font-size:14px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+label.f{display:flex;gap:8px;align-items:center;margin:6px 0}
+input[type=text],input[type=number],select,textarea{font:inherit;font-size:16px;width:100%;padding:8px 10px;border:1px solid var(--line);
+  border-radius:10px;background:var(--bg);color:var(--ink)}
+input[type=range]{width:100%}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--acc);flex:none}
+textarea{min-height:120px}
+.audio{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;margin:12px 0}
+.audio .msg{font-size:13px;color:var(--muted);flex-basis:100%}
+.mods{display:grid;gap:10px;margin:14px 0}
+.mod{display:flex;gap:12px;align-items:center;text-align:left;padding:12px 14px;border-radius:var(--radius);width:100%}
+.mod .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--acc-soft);color:var(--acc);font-weight:700;display:grid;place-items:center}
+.mod.done .n{background:var(--acc);color:#fff}
+.mod b{display:block;font-size:16px}
+.mod span.s{font-size:13px;color:var(--muted)}
+.pager{display:flex;justify-content:space-between;gap:10px;margin:26px 0}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.dots{display:grid;grid-template-columns:repeat(15,1fr);gap:5px;margin:10px 0}
+.dots i{aspect-ratio:1;border-radius:50%;background:var(--acc);transition:opacity .25s,transform .25s}
+.dots i.off{opacity:.08;transform:scale(.6)}
+.bar{display:flex;height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin:10px 0}
+.bar div{display:grid;place-items:center;font-size:12px;color:#fff;overflow:hidden;white-space:nowrap}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
+.cards{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chip{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer;font-size:15px}
+.chip.sel{border-color:var(--acc);background:var(--acc-soft);outline:2px solid var(--acc)}
+.chip.ok{border-color:var(--ok);background:var(--acc-soft)}
+.chip.bad{border-color:var(--warn)}
+.bucket{padding:8px 12px;border:2px dashed var(--line);border-radius:10px;background:var(--card);cursor:pointer;font-size:14px;font-weight:600}
+.bucket:hover{border-color:var(--acc)}
+.grid{display:grid;gap:4px}
+.cell{min-height:44px;border:1px solid var(--line);border-radius:8px;display:grid;place-items:center;font-size:11px;text-align:center;cursor:pointer;background:var(--bg);padding:2px}
+.fb{font-size:15px;margin:8px 0;padding:8px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.muted{color:var(--muted)}
+.warn{color:var(--warn);font-weight:600}
+details{margin:10px 0}
+summary{cursor:pointer;font-weight:600}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:14px;z-index:50}
+.nospeak{}
+footer.note{font-size:13px;color:var(--muted);margin-top:30px;border-top:1px solid var(--line);padding-top:10px}
+</style>
+</head>
+<body>
+<header class="top">
+  <button id="homeBtn" class="small" aria-label="All modules">☰ Modules</button>
+  <div class="brand">Open Loops <span class="ver">v0.2</span></div>
+  <button id="fsBtn" class="small" aria-label="Full screen">⛶ Full screen</button>
+</header>
+<div id="upd"></div>
+<main id="view"></main>
+<!-- ============ MODULE 1 ============ -->
+<template id="t-m1">
+<div class="prose">
+<p>Most organising advice assumes you have a list problem. You probably have a <b>seeing</b> problem. Those need different fixes, and mixing them up is why a lot of systems collapse in week three.</p>
+
+<h3>Two jobs hiding inside one list</h3>
+<p>Any organising system does two jobs:</p>
+<ul>
+<li><b>Store:</b> hold every commitment, idea and obligation somewhere you trust, so your head can stop doing it.</li>
+<li><b>Show:</b> put in front of you only what matters right now, so you can act without a committee meeting in your skull.</li>
+</ul>
+<p>The trouble is that most to-do lists do both jobs at once. The list has to be complete, or you stop trusting it. But a complete list is long, and a long list is exactly what you can't look at on a bad Tuesday. So you either keep the list thin and lose things, or keep it complete and avoid opening it. Both are failures of the same design.</p>
+<p>Think of a warehouse and a shop window. The warehouse should hold everything. The shop window should show about five things, arranged so you can pick one. If the warehouse is the window, you're standing in a stockroom with the lights off. The proper terms: the warehouse is your <b>system of record</b> (or source of truth), and the window is a <b>view</b>, meaning a filtered, sorted slice of the record, usually produced by a <b>query</b>.</p>
+
+<h3>Why your head is the wrong warehouse</h3>
+<p>David Allen, whose book Getting Things Done came out in 2001, calls unfinished commitments <b>open loops</b>. Each one keeps a small amount of attention reserved for itself, in your <b>working memory</b>, whether or not you do anything about it. A well-known 2011 study by Masicampo and Baumeister found that making a specific plan for an unfinished goal reduced how much it kept intruding on later tasks. The practical reading is that you don't always need to finish a thing to quiet it. You need to capture it, decide the next step, and trust that the step lives somewhere reliable.</p>
+<p>So the first rule of the whole course is boring and powerful: <b>everything gets exactly one home</b>. Not two places "just in case". One.</p>
+
+<h3>Your situation specifically</h3>
+<p>You've got projects with subtasks, unpredictable work around your team, recurring duties, goals with no deadline, admin and IT bits, and little daily habits. These are different kinds of thing with different rhythms. A single list sorted by date can't represent them, because half of them don't have dates. But views can. A view called "Today" can pull a deadline from a project, a recurring monthly sheet, a team issue and a lunchtime walk into one short page, without any of them having to live in the same place.</p>
+<p>That's the architecture this course builds: a calm, boring store, and a handful of small views on top of it.</p>
+
+<h3>How the course works</h3>
+<p>Each module has the same shape:</p>
+<ul>
+<li>An idea, explained properly, with a diagram.</li>
+<li>An activity you can do right here, which saves on your device.</li>
+<li>An Obsidian fit, showing how to build it in your vault.</li>
+<li>A paper fit, for the notebook side of your life.</li>
+</ul>
+<p>You don't have to adopt all of it. In fact, don't. The last module is about picking a minimum viable version and rolling it out slowly, because the usual way people fail at this is by building a cathedral in one weekend and then never going in.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 260" role="img" aria-label="Store holds everything, views show a small slice">
+  <rect class="box" x="20" y="30" width="250" height="200" rx="14"/>
+  <text class="b" x="36" y="56">STORE (system of record)</text>
+  <text class="mut" x="36" y="76">Everything, in its proper home</text>
+  <g class="dot">
+    <circle cx="50" cy="105" r="6"/><circle cx="76" cy="105" r="6"/><circle cx="102" cy="105" r="6"/><circle cx="128" cy="105" r="6"/><circle cx="154" cy="105" r="6"/><circle cx="180" cy="105" r="6"/><circle cx="206" cy="105" r="6"/><circle cx="232" cy="105" r="6"/>
+    <circle cx="50" cy="131" r="6"/><circle cx="76" cy="131" r="6"/><circle cx="102" cy="131" r="6"/><circle cx="128" cy="131" r="6"/><circle cx="154" cy="131" r="6"/><circle cx="180" cy="131" r="6"/><circle cx="206" cy="131" r="6"/><circle cx="232" cy="131" r="6"/>
+    <circle cx="50" cy="157" r="6"/><circle cx="76" cy="157" r="6"/><circle cx="102" cy="157" r="6"/><circle cx="128" cy="157" r="6"/><circle cx="154" cy="157" r="6"/><circle cx="180" cy="157" r="6"/><circle cx="206" cy="157" r="6"/><circle cx="232" cy="157" r="6"/>
+    <circle cx="50" cy="183" r="6"/><circle cx="76" cy="183" r="6"/><circle cx="102" cy="183" r="6"/><circle cx="128" cy="183" r="6"/><circle cx="154" cy="183" r="6"/><circle cx="180" cy="183" r="6"/>
+  </g>
+  <path class="ln2" d="M275 130 L 415 130" marker-end="url(#ar)"/>
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" style="color:var(--acc)"/></marker></defs>
+  <text class="mut" x="298" y="118">query</text>
+  <text class="mut" x="285" y="152">(filter + sort)</text>
+  <rect class="acc" x="425" y="60" width="255" height="140" rx="14"/>
+  <text class="b" x="441" y="86">VIEW: Today</text>
+  <text class="mut" x="441" y="106">Small by construction</text>
+  <circle class="dot" cx="455" cy="136" r="6"/><circle class="dot" cx="481" cy="136" r="6"/><circle class="dot" cx="507" cy="136" r="6"/>
+  <text x="441" y="172" class="mut">3 to 5 things, chosen for you</text>
+</svg>
+<figcaption>The store is allowed to be big. The view is not.</figcaption>
+</figure>
+
+<section class="activity" data-act="1">
+<h3>Activity: shrink the pile</h3>
+<p class="hint">Sixty open commitments, one dot each. Switch filters on and watch the number you actually have to look at drop. Nothing is deleted. It's all still in the store.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Obsidian is naturally a store-plus-views tool. Notes are the store. Queries, written with the Tasks or Dataview plugins, are the views. The rule for your vault is that you never maintain a list by hand if a query can build it for you. A hand-written "Active Projects" note goes stale the next time you finish one; a query never does.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>On paper, the store and the view are physically the same page, which is why paper feels calm only while it's thin. A daily page is a great view, since it holds one day. A single master list in a notebook is a bad one, because it grows and you have to re-read all of it. Paper wants a small store and a ruthless view.</p></aside>
+<div class="take"><b>Takeaway.</b> Separate storing from showing. The store is complete and trusted; the view is small and temporary. Overwhelm usually means you're looking at the store.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 2 ============ -->
+<template id="t-m2">
+<div class="prose">
+<p>A lot of the mess in your description comes from one fact: you've listed things that look similar (stuff to do) but behave completely differently. Before any tool, you need names for the kinds of thing, because each kind has a different home and a different way of surfacing.</p>
+
+<h3>The seven kinds</h3>
+<ul>
+<li><b>Project:</b> an outcome that takes more than one step and has a finish line. Test: can you say "it's done" and everyone agrees? Shipping a game build, doing your tax return, planning a trip.</li>
+<li><b>Task (next action):</b> one physical step you can start without further thinking. "Download P60" is a task. "Sort out tax" is a project wearing a task's coat.</li>
+<li><b>Event:</b> fixed time and place. Dentist at 3pm on Tuesday. It lives on a calendar and nowhere else, because it's the one thing that genuinely can't move.</li>
+<li><b>Recurring commitment:</b> repeats on a known schedule. The monthly sales enablement sheet. It should generate its own next copy.</li>
+<li><b>Reactive stream:</b> arrives unpredictably, and you can't schedule its arrival. A team member off sick, an IT ticket, a developer who needs coaching. You manage it with capacity, not dates.</li>
+<li><b>Goal or area:</b> something you want to progress or maintain with no natural deadline. Learning a skill, keeping the team healthy, fitness. It needs a time budget instead of a due date.</li>
+<li><b>Habit:</b> a tiny repeated behaviour, judged by consistency rather than completion. A lunchtime walk, enough water.</li>
+</ul>
+
+<h3>Goal versus project versus area</h3>
+<p>This trio causes most of the confusion, so it's worth being exact. If something has an outcome and an end ("model one prop by 20 December"), it's a project. If it's an ongoing standard you want to uphold ("keep my team in good shape"), it's an <b>area of responsibility</b>, a term from Tiago Forte's PARA method (Projects, Areas, Resources, Archives). A goal with no date and no outcome is really a wish with a good haircut. It becomes real when you attach a time budget (module 8) or convert it into a project.</p>
+
+<h3>The rule that saves you the most grief</h3>
+<p><b>Don't date what isn't dated.</b> When you give a goal or a habit a fake due date, you manufacture a pile of overdue items that you'll learn to ignore, and then you'll ignore the real ones too. Dates belong to events, deadlines and recurring commitments. Everything else gets a different trigger: a time slot, a cue, or a capacity budget.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 330" role="img" aria-label="Map of the seven kinds by timing and finish line">
+  <rect class="box" x="60" y="20" width="620" height="260" rx="10"/>
+  <line class="ln" x1="370" y1="20" x2="370" y2="280" stroke-dasharray="4 4"/>
+  <line class="ln" x1="60" y1="150" x2="680" y2="150" stroke-dasharray="4 4"/>
+  <text class="mut" x="60" y="300">Fixed / predictable timing</text>
+  <text class="mut" x="680" y="300" text-anchor="end">Unpredictable / open-ended timing</text>
+  <text class="mut" x="64" y="316">When does it surface?</text>
+  <text class="mut" transform="rotate(-90 22 150)" x="22" y="150" text-anchor="middle">Has a finish line? (top = yes)</text>
+  <rect class="acc" x="90" y="40" width="130" height="34" rx="8"/><text class="b" x="155" y="62" text-anchor="middle">Event</text>
+  <rect class="acc" x="240" y="86" width="110" height="34" rx="8"/><text class="b" x="295" y="108" text-anchor="middle">Task</text>
+  <rect class="acc" x="400" y="46" width="130" height="34" rx="8"/><text class="b" x="465" y="68" text-anchor="middle">Project</text>
+  <rect class="acc2" x="100" y="176" width="140" height="34" rx="8"/><text class="b" x="170" y="198" text-anchor="middle">Recurring</text>
+  <rect class="acc2" x="262" y="226" width="90" height="34" rx="8"/><text class="b" x="307" y="248" text-anchor="middle">Habit</text>
+  <rect class="acc2" x="400" y="176" width="130" height="34" rx="8"/><text class="b" x="465" y="198" text-anchor="middle">Goal / area</text>
+  <rect class="acc2" x="548" y="226" width="124" height="34" rx="8"/><text class="b" x="610" y="248" text-anchor="middle">Reactive</text>
+</svg>
+<figcaption>Green kinds finish. Orange kinds never finish; they continue. Different shapes need different homes.</figcaption>
+</figure>
+
+<section class="activity" data-act="2">
+<h3>Activity: name the kind</h3>
+<p class="hint">Tap an item, then tap the kind you think it is. You get a reason either way.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Resist the urge to build seven elaborate folders. A tiny structure is enough:</p>
+<ul>
+<li>An Inbox note, where everything lands first.</li>
+<li>A Projects folder, one note per project, with its tasks inside it.</li>
+<li>An Areas folder for ongoing things like Team and Goals.</li>
+<li>A Habits note, kept separate from the task system.</li>
+<li>Your daily notes, which act as the Today page.</li>
+</ul>
+<p>Events stay in your calendar, and recurring tasks use the Tasks plugin's recurrence (module 6). A frontmatter property such as <code>type: project</code> lets you filter later without creating more folders.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>The Bullet Journal method, created by Ryder Carroll, already separates these: a future log for dated things, a monthly log, daily logs, and "collections" for lists by topic. Your seven kinds map onto those pages. Events go in the future log, recurring things on the monthly page, projects and areas as collections, and the daily page is for tasks and habits.</p></aside>
+<div class="take"><b>Takeaway.</b> Classify before you organise. Projects and tasks finish; recurring items, reactive work, areas and habits continue. Each kind surfaces differently, so each gets a different trigger, and only some of them ever get a date.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 3 ============ -->
+<template id="t-m3">
+<div class="prose">
+<p>Everything in your life needs a single front door. If ideas can arrive in your notebook, your phone, your email, a sticky note and a voice memo, you've created five inboxes, and the only person who checks all five is a version of you who doesn't exist.</p>
+
+<h3>Capture is not organising</h3>
+<p>The main mistake at the capture stage is trying to decide things while you capture them. "Should this be a task or a project? What's its priority? When's it due?" All of that is a different mental mode, and it makes capture slow, which makes you skip it. So split the work into two clean steps:</p>
+<ul>
+<li><b>Capture:</b> get it out of your head in under ten seconds, with no decisions.</li>
+<li><b>Process:</b> later, in a batch, decide what each item is and where it goes.</li>
+</ul>
+<p>The idea comes straight from GTD: capture everything into a trusted inbox, then clarify. You can have more than one capture <i>point</i> (paper pad, phone, email) as long as they all drain into one <b>inbox</b> that you empty on a schedule.</p>
+
+<h3>The triage questions</h3>
+<p>When you process an item, ask in this order:</p>
+<ul>
+<li>Is it actionable? If not, it's trash, reference material, or a <b>someday/maybe</b> idea.</li>
+<li>Does it take under two minutes? If yes, do it now. This is the two-minute rule, and the logic is that tracking it costs more than doing it.</li>
+<li>Is it one step? Then it's a <b>task</b>. Give it a home, and a date only if it really has one.</li>
+<li>Is it more than one step? Then it's a <b>project</b>. Write the outcome, and the very next action.</li>
+</ul>
+<p>The diagram has it as a flow. Notice the three exits on the left that stop an item from ever becoming a to-do. Most clutter is people turning ideas into obligations by accident.</p>
+
+<h3>What "inbox zero" actually means</h3>
+<p>It doesn't mean everything is done. It means everything has been <b>decided</b>. A clear inbox with forty well-placed tasks is a good state; an inbox with forty unsorted scraps is not. Process daily for ten minutes if you can, and at the very latest before your weekly review (module 11).</p>
+
+<h3>The real next action</h3>
+<p>A <b>next action</b> is the smallest visible physical step, written starting with a verb. "Tax" is a topic. "Find login for HMRC account" is a next action. If a task makes you flinch every time you see it, it's usually a project in disguise, and splitting it fixes the flinch.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 340" role="img" aria-label="Triage flowchart">
+  <rect class="acc" x="270" y="10" width="160" height="34" rx="8"/><text class="b" x="350" y="32" text-anchor="middle">Item in the inbox</text>
+  <path class="ln" d="M350 44 L350 66"/>
+  <rect class="box" x="250" y="66" width="200" height="36" rx="8"/><text x="350" y="89" text-anchor="middle">Actionable?</text>
+  <path class="ln" d="M250 84 L150 84 L150 112"/><text class="mut" x="200" y="78">no</text>
+  <rect class="box" x="40" y="112" width="220" height="62" rx="8"/><text x="150" y="134" text-anchor="middle">Trash</text><text x="150" y="152" text-anchor="middle">Reference note</text><text x="150" y="168" text-anchor="middle">Someday / maybe</text>
+  <path class="ln" d="M450 84 L550 84 L550 112"/><text class="mut" x="490" y="78">yes</text>
+  <rect class="box" x="450" y="112" width="200" height="36" rx="8"/><text x="550" y="135" text-anchor="middle">Under 2 minutes?</text>
+  <path class="ln" d="M650 130 L675 130 L675 200"/><text class="mut" x="652" y="124">yes</text>
+  <rect class="acc" x="610" y="200" width="80" height="34" rx="8"/><text class="b" x="650" y="222" text-anchor="middle">Do it</text>
+  <path class="ln" d="M550 148 L550 180"/><text class="mut" x="556" y="168">no</text>
+  <rect class="box" x="450" y="180" width="200" height="0" rx="8"/>
+  <rect class="box" x="430" y="184" width="150" height="36" rx="8"/><text x="505" y="207" text-anchor="middle">More than one step?</text>
+  <path class="ln" d="M430 202 L330 202 L330 240"/><text class="mut" x="380" y="196">no</text>
+  <rect class="acc" x="250" y="240" width="160" height="50" rx="8"/><text class="b" x="330" y="262" text-anchor="middle">Task</text><text class="mut" x="330" y="280" text-anchor="middle">home + date if real</text>
+  <path class="ln" d="M580 202 L610 202" opacity="0"/>
+  <path class="ln" d="M505 220 L505 240"/><text class="mut" x="512" y="236">yes</text>
+  <rect class="acc" x="430" y="240" width="200" height="50" rx="8"/><text class="b" x="530" y="262" text-anchor="middle">Project</text><text class="mut" x="530" y="280" text-anchor="middle">outcome + next action</text>
+</svg>
+<figcaption>Four questions, in order. Three of the exits are not to-dos at all.</figcaption>
+</figure>
+
+<section class="activity" data-act="3">
+<h3>Activity: brain dump, then triage</h3>
+<p class="hint">Write whatever's in your head, one item per line. Start the timer if you like. Then step through each line and decide what it is. At the end you get a clean Markdown block you can paste into Obsidian.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Pick one note as the inbox, either a dedicated Inbox note or a heading in today's daily note, and make that the only place raw capture goes. Quick capture on mobile is the weak point of most vaults, so choose the lowest-friction route you'll really use. Then process it daily. Processed tasks become checkbox lines inside the relevant project or area note, and anything that isn't actionable goes to reference or a Someday note.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>This is where paper shines. A pocket notebook or a daily page is the fastest capture device there is, with no app to open. The Bullet Journal's rapid logging fits: short lines marked with a symbol, one for task, one for event, one for note. The step people skip is the processing. Paper only works as an inbox if you carry its contents into your real system, daily or weekly. Module 12 covers a simple bridge from paper pages into the vault.</p></aside>
+<div class="take"><b>Takeaway.</b> Capture fast and decide later, from one inbox. Processing means every item ends up as trash, reference, someday, a task, a project, or something done on the spot.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 4 ============ -->
+<template id="t-m4">
+<div class="prose">
+<p>You asked a sharp question: is a low-priority task inside a high-priority project better or worse than a high-priority task inside a low-priority project? The honest answer is that the question hides a mistake, and once you see it the balancing gets much easier.</p>
+
+<h3>Two different questions wearing the same word</h3>
+<p>"Priority" is being asked to answer two jobs:</p>
+<ul>
+<li><b>Project priority</b> answers: which outcomes deserve my limited attention this month? It's about <b>importance</b>, and it changes slowly.</li>
+<li><b>Task priority</b> answers: of the moves available right now, which one first? It's mostly about <b>urgency</b>, which changes daily and can be calculated from dates.</li>
+</ul>
+<p>Comparing them directly is like comparing a salary to a bus timetable. They're not on the same scale. The Eisenhower matrix, attributed to US President Dwight Eisenhower, makes the same split: importance on one axis, urgency on the other, giving four boxes. Do first (important and urgent), schedule (important, not urgent), delegate (urgent, not important), eliminate (neither).</p>
+
+<h3>The two-step method</h3>
+<p>Instead of one global ranking, choose in two steps:</p>
+<ul>
+<li><b>Step one: choose the projects.</b> Limit how many are <i>active</i>. In Kanban this is a <b>work-in-progress limit</b> (WIP limit), and two or three active projects is a sensible start*. Everything else is "on deck": safe, visible in the store, but not competing for today.</li>
+<li><b>Step two: choose the task within them.</b> Use deadline pressure first, then whether it unblocks other work, then how well it fits your energy and the time you have.</li>
+</ul>
+
+<h3>So, your actual question</h3>
+<p>Take the high-priority project's low-priority task first only if it does something for the project: it has a date coming, or it blocks something else. If it's genuinely optional polish, it should wait, even inside a hot project. Conversely, a "high-priority" task in a low-priority project wins only if the word "high" means a real deadline or a blocker. If it just means "I feel anxious about it", it's an importance claim, and the project's priority already told you the answer.</p>
+<p>Put simply, <b>tasks should inherit importance from their project by default</b>. You only override a task's priority when its situation differs: a hard date, or a dependency. This also means you don't have to prioritise every task by hand, which was never sustainable anyway.</p>
+
+<h3>Derive urgency, don't type it</h3>
+<p>Urgency is arithmetic on dates, so let the system compute it. A task due in two days is more urgent than one due in two weeks, whatever label you stuck on it. The Obsidian Tasks plugin, for example, calculates an urgency score from priority and dates that you can sort by*. Your own manual "priority" field is then reserved for the thing only you know: importance.</p>
+
+<h3>A tiebreak order for stuck moments</h3>
+<ul>
+<li>Does something have a real deadline within three days?</li>
+<li>Does it unblock another person or another task?</li>
+<li>Does it belong to a top-priority active project?</li>
+<li>Is it the smallest thing that moves a project forward?</li>
+</ul>
+<p>Stop at the first yes. If none apply, you have the luxury of choosing by energy.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 300" role="img" aria-label="Importance and urgency matrix">
+  <rect class="box" x="90" y="20" width="580" height="240" rx="10"/>
+  <line class="ln" x1="380" y1="20" x2="380" y2="260"/>
+  <line class="ln" x1="90" y1="140" x2="670" y2="140"/>
+  <rect class="acc" x="380" y="20" width="290" height="120"/><text class="b" x="525" y="60" text-anchor="middle">Do first</text><text class="mut" x="525" y="82" text-anchor="middle">important + urgent</text><text class="mut" x="525" y="100" text-anchor="middle">real deadline, hot project</text>
+  <rect class="box" x="90" y="20" width="290" height="120"/><text class="b" x="235" y="60" text-anchor="middle">Schedule</text><text class="mut" x="235" y="82" text-anchor="middle">important, not urgent</text><text class="mut" x="235" y="100" text-anchor="middle">where good outcomes come from</text>
+  <rect class="box" x="380" y="140" width="290" height="120"/><text class="b" x="525" y="180" text-anchor="middle">Delegate or batch</text><text class="mut" x="525" y="202" text-anchor="middle">urgent, not important</text><text class="mut" x="525" y="220" text-anchor="middle">admin, many IT requests</text>
+  <rect class="box" x="90" y="140" width="290" height="120"/><text class="b" x="235" y="180" text-anchor="middle">Drop or park</text><text class="mut" x="235" y="202" text-anchor="middle">neither</text>
+  <text class="mut" x="525" y="280" text-anchor="middle">URGENT (from dates)</text>
+  <text class="mut" x="235" y="280" text-anchor="middle">not urgent</text>
+  <text class="mut" transform="rotate(-90 40 80)" x="40" y="80" text-anchor="middle">IMPORTANT (from project)</text>
+</svg>
+<figcaption>Project priority sets the row. Dates set the column. You rarely need a third number.</figcaption>
+</figure>
+
+<section class="activity" data-act="4">
+<h3>Activity: the balancer</h3>
+<p class="hint">Edit the tasks below (names, project priority 1 to 3 where 3 is highest, task priority, days until due, whether it blocks something). Then switch the rule and watch the order change. The blended rule is a heuristic I made up for this exercise, not a standard formula*.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Encode the two-step method in your vault like this:</p>
+<ul>
+<li>Each project note gets frontmatter properties for <code>status</code> (active, on-deck, done) and <code>importance</code> (1 to 3).</li>
+<li>Tasks inside it carry only dates, plus a priority marker when they differ from the project.</li>
+<li>Your Today and Week views only pull from projects whose status is active. That one property is your WIP limit, enforced by a query rather than by willpower.</li>
+</ul>
+<p>The Tasks plugin handles dates, priorities and recurrence on checkbox lines. Dataview handles project-level tables. A commonly recommended split is Tasks for task views and Dataview for project views.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>Write the two or three active projects on one card, and keep it at the front of the notebook or on the desk. Each morning, pick tasks from those projects only. The rest of your projects can live in a collection page in the back, ready for review day.</p></aside>
+<div class="take"><b>Takeaway.</b> Importance belongs to the project; urgency comes from the dates. Choose active projects first (a WIP limit), then choose tasks inside them. Tasks inherit importance by default.</div>
+</div>
+</template>
+<!-- ============ MODULE 5 ============ -->
+<template id="t-m5">
+<div class="prose">
+<p>Dates are the sharpest tool in the box, and most people use them like a hammer on everything. The fix is to use fewer dates, but to say exactly what each one means.</p>
+
+<h3>Three dates, three meanings</h3>
+<p>A single "due date" can't carry everything you want from it. Split it into three jobs:</p>
+<ul>
+<li><b>Due date:</b> the point after which something bad happens, usually to someone else or to a hard commitment. Tax deadline, a build handed to a publisher, a report someone is waiting for.</li>
+<li><b>Scheduled date:</b> the day you <i>plan to work</i> on it. It's a promise to yourself, and it can slide without anyone being harmed.</li>
+<li><b>Start date:</b> the earliest day the task should appear at all. Before it, the task is hidden from your views.</li>
+</ul>
+<p>These three are what the Obsidian Tasks plugin offers, by the way: due, scheduled and start, written with a calendar, hourglass and take-off emoji. Most to-do apps flatten them into one, which is why most to-do lists overflow.</p>
+
+<h3>The honesty test for a due date</h3>
+<p>Ask: <b>what actually happens if this slips a week?</b> If the answer is "nothing much", it isn't due, it's scheduled. A list full of fake deadlines trains you to ignore deadlines. Keep real due dates rare, and they'll keep their authority.</p>
+
+<h3>Start dates are the secret weapon against overwhelm</h3>
+<p>A task that can't be started for three weeks has no business on your screen today. Giving it a start date removes it from your views until it's relevant, while it stays safely in the store (remember module 1). This is the single most effective way to shrink a list without losing anything. It's the same logic as the mail you deliberately put in a drawer until the right month, which GTD formalises as a tickler file.</p>
+
+<h3>Working backwards from a deadline</h3>
+<p>For a project with a real deadline, plan <b>backwards</b>. Take the due date, subtract the effort you think the work needs, then subtract a buffer, and you get the <b>latest sensible start</b>. If that date is already close or past, you've found the real problem early. Tasks inside the project then get scheduled dates in a sensible order, and only the final step carries the true due date.</p>
+
+<h3>Overdue is a decision, not a debt</h3>
+<p>Overdue items pile up when you quietly roll them forward every day. Instead, treat each overdue item as a small decision at review time: do it now, reschedule it for a specific day, or drop it deliberately. Rescheduling with a real date is fine. Silently carrying it is the thing that builds guilt.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 200" role="img" aria-label="Timeline: hidden, then start, scheduled, due">
+  <line class="ln" x1="30" y1="110" x2="670" y2="110"/>
+  <rect x="30" y="92" width="190" height="36" rx="6" fill="var(--bg)" stroke="var(--line)" stroke-dasharray="4 4"/>
+  <text class="mut" x="125" y="115" text-anchor="middle">hidden from your views</text>
+  <circle class="dot" cx="220" cy="110" r="9"/>
+  <text class="b" x="220" y="80" text-anchor="middle">START</text><text class="mut" x="220" y="150" text-anchor="middle">appears</text>
+  <circle cx="430" cy="110" r="9" fill="var(--acc2)"/>
+  <text class="b" x="430" y="80" text-anchor="middle">SCHEDULED</text><text class="mut" x="430" y="150" text-anchor="middle">I plan to work on it</text>
+  <circle cx="620" cy="110" r="9" fill="var(--warn)"/>
+  <text class="b" x="620" y="80" text-anchor="middle">DUE</text><text class="mut" x="620" y="150" text-anchor="middle">real consequence</text>
+  <path class="ln2" d="M229 110 L 421 110"/>
+  <text class="mut" x="325" y="100" text-anchor="middle">visible, can slide</text>
+</svg>
+<figcaption>Only the due date is a hard edge. The other two shape what you see.</figcaption>
+</figure>
+
+<section class="activity" data-act="5">
+<h3>Activity: watch the list breathe</h3>
+<p class="hint">Eight tasks, each with a start, scheduled and due date (in days from today). Drag the slider to move "today" forward and see what's hidden, ready, planned for today, or overdue. Then toggle off start dates and notice how much noisier the list gets.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>With the Tasks plugin, dates sit on the task line itself. A task might look like this:</p>
+<pre class="nospeak"><code>- [ ] Draft launch email 🛫 2026-11-20 ⏳ 2026-11-24 📅 2026-11-27</code></pre>
+<p>Your Today view then asks for tasks that are scheduled today, due today or overdue, and hides anything whose start date is in the future. Tasks queries support start, scheduled and due filters, and adding the word <code>explain</code> inside a query block makes the plugin tell you how it read your query, which is very handy when something doesn't show.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>The Bullet Journal's <b>future log</b> is a start date in paper form: a task for March goes on the March page and doesn't bother you until you open that month. A tickler file of folders (twelve months and thirty-one days) does the same with physical documents.</p></aside>
+<div class="take"><b>Takeaway.</b> Due is a hard edge, scheduled is a plan, start is an appearance time. Use start dates to hide what isn't ready, and treat overdue items as decisions at review.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 6 ============ -->
+<template id="t-m6">
+<div class="prose">
+<p>Recurring work is the easiest thing in your life to organise, because it's predictable, and the most embarrassing thing to drop, for the same reason. The goal is to make it generate itself, so remembering it isn't a daily act of willpower.</p>
+
+<h3>Make the recurrence create the next one</h3>
+<p>When you finish the monthly sales enablement sheet, the system should already have next month's copy waiting. If you have to remember to recreate it, you've merely moved the burden. In a task system this is a <b>recurrence rule</b>: you state the pattern once, and completing the task spawns the next instance with the new dates.</p>
+
+<h3>Fixed schedule or when done?</h3>
+<p>There are two honest ways a task can repeat, and choosing the right one matters:</p>
+<ul>
+<li><b>Fixed schedule:</b> the next one is due on the same calendar pattern no matter when you finished. A monthly report due on the last day of the month. Being late doesn't shift the next deadline.</li>
+<li><b>When done:</b> the next one is counted from the day you actually finished. Maintenance jobs like "check backups every 2 weeks". If you're late, the gap doesn't collapse into a pile of catch-up copies.</li>
+</ul>
+<p>Rule of thumb: if someone external sets the rhythm, use a fixed schedule. If the rhythm is for your own upkeep, use when done.</p>
+
+<h3>Add lead time</h3>
+<p>A recurring item with only a due date appears on the day it's due, which is too late. Give it a start date a week or so earlier so it surfaces when you can still prepare. The monthly sheet might be due on the last day of the month, start appearing a week before, and be scheduled for the Monday of that last week.</p>
+
+<h3>Define "done" and keep the record</h3>
+<p>You said you need to <i>record</i> the monthly sheet. That's two jobs: do it, and keep proof. Make the output a link on the task or a line in a log, so each completion leaves a trace. The completion date that task systems stamp on finished items already gives you a history for free. For anything with more than three steps, keep a small checklist template note for the job, so you aren't rebuilding the steps from memory each month.</p>
+
+<h3>Recurring is not the same as reactive</h3>
+<p>Keep this clean. "Do the sales sheet" recurs on a known date. "Team member is struggling" does not, and trying to force it into a recurrence will give you a lot of empty reminders. The next module deals with that stream properly.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 220" role="img" aria-label="Recurrence cycle">
+  <rect class="acc" x="30" y="80" width="150" height="60" rx="10"/><text class="b" x="105" y="106" text-anchor="middle">Appears</text><text class="mut" x="105" y="124" text-anchor="middle">start date, 1 week early</text>
+  <rect class="acc" x="270" y="80" width="150" height="60" rx="10"/><text class="b" x="345" y="106" text-anchor="middle">Done</text><text class="mut" x="345" y="124" text-anchor="middle">tick, log the output</text>
+  <rect class="acc2" x="510" y="80" width="160" height="60" rx="10"/><text class="b" x="590" y="106" text-anchor="middle">Next one created</text><text class="mut" x="590" y="124" text-anchor="middle">dates move on automatically</text>
+  <path class="ln2" d="M180 110 L270 110"/><path class="ln2" d="M420 110 L510 110"/>
+  <path class="ln" d="M590 80 C 590 20, 105 20, 105 80"/>
+  <text class="mut" x="350" y="38" text-anchor="middle">repeats on its pattern</text>
+</svg>
+<figcaption>You do the middle step. The system does the other two.</figcaption>
+</figure>
+
+<section class="activity" data-act="6">
+<h3>Activity: build a recurrence rule</h3>
+<p class="hint">Choose a pattern and see the exact line for the Obsidian Tasks plugin, plus what the next dates would be. Then try the "when done" switch with a late completion to see how the schedule changes.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>The Tasks plugin writes recurrence with a loop emoji followed by plain words, such as <code>every weekday</code>, <code>every 2 weeks</code> or <code>every month on the last</code>, with <code>when done</code> added at the end when you want the next date counted from completion. The plugin's own documentation warns that plain <code>every month</code> behaves differently on awkward days like the 31st, and recommends <code>every month on the last</code> for end-of-month work. When you complete a recurring task, the plugin creates the next one for you.</p>
+<p>Further reading: <a href="https://publish.obsidian.md/tasks/Getting+Started/Recurring+Tasks" target="_blank" rel="noopener">the Tasks plugin's recurring tasks guide</a>.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>Paper can't regenerate things, so use the monthly page. At each monthly migration, copy your recurring items onto the new month with their dates. It costs two minutes and doubles as a reminder.</p></aside>
+<div class="take"><b>Takeaway.</b> Recurring work should recreate itself. Pick fixed schedule or when done on purpose, add lead time with a start date, and leave a trace each time it's finished.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 7 ============ -->
+<template id="t-m7">
+<div class="prose">
+<p>This is the hardest category for a planner, and your description is honest about why: the team is always either ill, playing up, or needing development, and you never know which. You can't schedule the arrival. What you can schedule is your <b>capacity</b> to deal with it.</p>
+
+<h3>Stop trying to date the undatable</h3>
+<p>If you try to track unpredictable work like deadlines, you'll fail, because there's nothing to put in the date field. Switch from tracking <i>when</i> to managing <i>room</i>. The real constraint isn't the date, it's whether you have slack when something lands.</p>
+
+<h3>Four moves that tame a reactive stream</h3>
+<ul>
+<li><b>Triage at arrival.</b> Give every incoming thing one of four labels within a minute: now (genuinely urgent), today, this week, or just log it. Most things are not "now", and a fast label stops everything feeling equally on fire.</li>
+<li><b>Reserve a buffer.</b> Block recurring time in your week that is explicitly for reactive work. If nothing lands, you use it for project work. If something does, you aren't blowing up your plan.</li>
+<li><b>Convert the predictable parts into rhythm.</b> "Needs developing" and "needs checking in on" are predictable, even if the exact trigger isn't. Put regular one-to-ones and development sessions on the calendar. This turns a chunk of reactive work into scheduled work, which is far cheaper.</li>
+<li><b>Capture to the person, not to the pile.</b> Give each team member a note. Anything about them goes there, in dated entries, with a running "next one-to-one agenda" list at the top. You aren't hunting through your global inbox before a conversation. This is a <b>running agenda</b>, a standard management habit.</li>
+</ul>
+
+<h3>Admin and IT: batch them</h3>
+<p>Small admin and IT jobs are interrupt-driven and low-value per item. Collect them in one list and process them in a <b>batch</b>, one slot per week or per day, rather than switching to each as it appears. Switching costs more than the tasks themselves. Anything truly blocking (your laptop won't boot) skips the queue; everything else waits for the batch.</p>
+
+<h3>The capacity rule</h3>
+<p>If you plan a week to 100% of your hours, any interruption forces something to be dropped, and it will be something important and quiet. A common rule of thumb is to plan around 60 to 70 percent of your time and leave the rest as buffer*. The right figure depends on how reactive your job is, which you can measure: track your reactive hours for two weeks and plan the following month around the real number.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 230" role="img" aria-label="Week split into planned work, recurring, reactive buffer">
+  <text class="b" x="30" y="30">A week, planned to about two-thirds</text>
+  <rect class="acc" x="30" y="46" width="300" height="46" rx="6"/><text class="b" x="180" y="74" text-anchor="middle">Project work (planned)</text>
+  <rect class="acc2" x="330" y="46" width="70" height="46"/><text x="365" y="74" text-anchor="middle" class="b">Recurring</text>
+  <rect x="400" y="46" width="100" height="46" fill="var(--bg)" stroke="var(--line)" stroke-dasharray="5 4"/><text x="450" y="74" text-anchor="middle" class="b">Team 1:1s</text>
+  <rect x="500" y="46" width="170" height="46" rx="0" fill="var(--bg)" stroke="var(--warn)" stroke-dasharray="5 4"/><text x="585" y="74" text-anchor="middle" class="b">Reactive buffer</text>
+  <text class="mut" x="30" y="120">Reactive work lands in the buffer. If it doesn't land, the buffer turns into project time.</text>
+  <rect class="box" x="30" y="140" width="640" height="70" rx="10"/>
+  <text class="b" x="46" y="164">Per person: one note</text>
+  <text class="mut" x="46" y="184">dated log · running agenda for next 1:1 · last and next 1:1 dates</text>
+  <text class="mut" x="46" y="200">things you notice go here, not into the global inbox</text>
+</svg>
+<figcaption>Predictable parts get calendar slots. Unpredictable parts get slack.</figcaption>
+</figure>
+
+<section class="activity" data-act="7">
+<h3>Activity: capacity planner</h3>
+<p class="hint">Put in your real numbers. The planner works out how much genuinely free project time you have once the fixed and reactive loads are paid for, and tells you if you've overbooked.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Create a People folder with one note per person. Put <code>last_1to1</code> and <code>next_1to1</code> in the note's properties, with a dated log below. A Dataview table can then list your team by who you've spoken to least recently:</p>
+<pre class="nospeak"><code>TABLE last_1to1 AS "Last 1:1", next_1to1 AS "Next"
+FROM "People"
+SORT last_1to1 ASC</code></pre>
+<p>Treat this as a template*: I can't run Obsidian from here, so paste it into a scratch note and check it, and adjust the property names to match yours. It is an easy way to see who's slipping off your radar without a single reminder.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>One page per person at the back of the notebook, with a running agenda written in the margin as things occur. Before each one-to-one, the page is already your agenda. A "waiting for" list on the facing page captures what you've delegated.</p></aside>
+<div class="take"><b>Takeaway.</b> Manage reactive work with capacity, not dates: triage on arrival, protect a buffer, convert predictable parts into scheduled rhythm, and keep one running note per person.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 8 ============ -->
+<template id="t-m8">
+<div class="prose">
+<p>Goals with no date and no deadline are the ones most likely to be abandoned, for a plain reason: nothing forces them. Every other item in your life has a trigger, and the goal has only your good intentions. This module is about giving it a trigger that isn't a fake deadline.</p>
+
+<h3>Give it a slot, not a deadline</h3>
+<p>The most reliable way to make progress on an open-ended goal is to give it a <b>recurring time slot</b>: a regular appointment with yourself, such as two sessions of ninety minutes a week. This is sometimes called <b>time blocking</b>. Put it on your calendar as an event, not as a task, because an event is a fixed block that you have to actively cancel, whereas a task can slip silently.</p>
+
+<h3>Define the smallest session</h3>
+<p>Every goal needs a <b>minimum viable session</b>: the shortest meaningful amount of work, such as fifteen minutes. On a bad day you do the minimum rather than nothing, which keeps the thread alive. Keep a one-line <b>next step</b> in the goal's note so you can start a session without having to think about what to do.</p>
+
+<h3>Count sessions, not outcomes</h3>
+<p>Outcome goals ("be fluent") are out of your direct control and give you nothing to tick. Process goals ("six sessions this month") are fully in your control. Track the process, and let the outcome follow. When you can name an outcome and a date, it has graduated, and you convert it into a project.</p>
+
+<h3>Cap the number</h3>
+<p>You can't give ten goals a real slot. Two or three active at once is realistic*, and the rest sit in a "someday" list that you read at your monthly review. If a goal has had no session for a month, make a conscious call: keep it, shrink it, or let it go. Letting go on purpose is a feature, not a failure.</p>
+
+<h3>Protect the slots from the reactive stream</h3>
+<p>Your goal slots will be the first thing to be eaten by the buffer from module 7. Two defences help. Put them early in the week, before the reactive load builds. And treat a slot that gets eaten as a trigger to <i>move</i> it to a named alternative time, not to cancel it.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 240" role="img" aria-label="Weekly template with goal slots">
+  <g class="b"><text x="110" y="24" text-anchor="middle">Mon</text><text x="210" y="24" text-anchor="middle">Tue</text><text x="310" y="24" text-anchor="middle">Wed</text><text x="410" y="24" text-anchor="middle">Thu</text><text x="510" y="24" text-anchor="middle">Fri</text></g>
+  <text class="mut" x="30" y="62">AM</text><text class="mut" x="30" y="122">Mid</text><text class="mut" x="30" y="182">PM</text>
+  <rect class="acc2" x="60" y="40" width="100" height="40" rx="6"/><text x="110" y="65" text-anchor="middle">Goal slot</text>
+  <rect class="acc" x="160" y="40" width="100" height="40" rx="6"/><text x="210" y="65" text-anchor="middle">Project</text>
+  <rect class="acc" x="260" y="40" width="100" height="40" rx="6"/><text x="310" y="65" text-anchor="middle">Project</text>
+  <rect class="acc2" x="360" y="40" width="100" height="40" rx="6"/><text x="410" y="65" text-anchor="middle">Goal slot</text>
+  <rect class="acc" x="460" y="40" width="100" height="40" rx="6"/><text x="510" y="65" text-anchor="middle">Project</text>
+  <rect class="box" x="60" y="100" width="500" height="40" rx="6"/><text x="310" y="125" text-anchor="middle">Team 1:1s, lunch walk, admin batch</text>
+  <rect class="box" x="60" y="160" width="400" height="40" rx="6"/><text x="260" y="185" text-anchor="middle">Reactive buffer (shrinks if quiet)</text>
+  <rect class="box" x="460" y="160" width="100" height="40" rx="6"/><text x="510" y="185" text-anchor="middle">Weekly review</text>
+</svg>
+<figcaption>Goals appear as fixed blocks early in the week. They're protected, but they can be moved.</figcaption>
+</figure>
+
+<section class="activity" data-act="8">
+<h3>Activity: design your week</h3>
+<p class="hint">Name your goals, pick a brush, and tap cells to fill in a typical week. Totals update underneath. Aim to leave some slots deliberately empty.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Keep one note per goal with three parts: the next step, a short session log, and a link to any related project. A Dataview query can then flag goals you haven't touched in a while:</p>
+<pre class="nospeak"><code>TABLE file.mtime AS "Last touched"
+FROM "Goals"
+WHERE date(today) - file.mtime &gt; dur(14 days)
+SORT file.mtime ASC</code></pre>
+<p>Again a template*: test it in a scratch note. The calendar slot itself lives in your calendar, not in Obsidian, so that it behaves like an appointment.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>Draw your week template once on a card, and copy the goal slots onto each weekly spread in your notebook. In the daily log, write a one-line next step beside the slot so it's the first thing you see when you sit down.</p></aside>
+<div class="take"><b>Takeaway.</b> Open-ended goals need a recurring calendar slot, a minimum session, a visible next step, and a cap on how many you run. Convert a goal into a project the moment it gets an outcome and a date.</div>
+</div>
+</template>
+<!-- ============ MODULE 9 ============ -->
+<template id="t-m9">
+<div class="prose">
+<p>Habits are the one category where the usual task logic works against you. A task is finished and disappears; a habit is never finished, so if you treat it like a task you generate a permanent trail of overdue guilt.</p>
+
+<h3>Habits are not tasks</h3>
+<p>Keep habits out of your task system entirely. No due dates, no overdue list, no red badges. A habit gets a light-touch tracker where you can see the shape of the week at a glance, and where missing a day costs nothing but a blank box. This is the same principle as module 2: don't date what isn't dated.</p>
+
+<h3>Anchor, tiny, place</h3>
+<p>A habit that depends on remembering is fragile. A habit that attaches to something you already do is sturdy. Build each one from three parts:</p>
+<ul>
+<li><b>Anchor:</b> an existing routine or event that reliably happens. "When I close my laptop for lunch."</li>
+<li><b>Tiny version:</b> the smallest form of the behaviour, small enough to do on your worst day. "Put my shoes on and step outside."</li>
+<li><b>Place:</b> where it happens, so the situation itself cues you.</li>
+</ul>
+<p>Psychologists call the "when X, then Y" form an <b>implementation intention</b>; Peter Gollwitzer's research on these found they improve follow-through compared with vague intentions. Linking a new habit to an existing routine is commonly called <b>habit stacking</b>.</p>
+
+<h3>Design the environment first</h3>
+<p>Your water habit is the textbook case. Trying to remember to drink is hard; putting a full bottle on the desk is easy. Reducing <b>friction</b> beats increasing motivation. For the lunchtime walk, the friction is deciding to go and finding your shoes, so leave them by the door and block the time on your calendar so the decision was already made.</p>
+
+<h3>Never miss twice</h3>
+<p>One missed day is noise. Two in a row starts a new pattern. The rule "never miss twice" lets you be human, because you aren't aiming at an unbroken streak, only at a quick return. Track "days done this week" rather than a chain, because streaks turn a single slip into a catastrophe and a catastrophe into quitting.</p>
+
+<h3>Add slowly</h3>
+<p>Start with one to three habits at a time*. When one is automatic (you'd notice if you skipped it), add the next. A tracker with fifteen habits on day one is another way of building the cathedral.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 190" role="img" aria-label="Anchor, tiny action, reward chain">
+  <rect class="box" x="20" y="60" width="180" height="70" rx="12"/><text class="b" x="110" y="88" text-anchor="middle">Anchor</text><text class="mut" x="110" y="108" text-anchor="middle">close laptop for lunch</text>
+  <rect class="acc" x="260" y="60" width="180" height="70" rx="12"/><text class="b" x="350" y="88" text-anchor="middle">Tiny action</text><text class="mut" x="350" y="108" text-anchor="middle">shoes on, step outside</text>
+  <rect class="acc2" x="500" y="60" width="180" height="70" rx="12"/><text class="b" x="590" y="88" text-anchor="middle">Reward</text><text class="mut" x="590" y="108" text-anchor="middle">tick the box, fresh air</text>
+  <path class="ln2" d="M200 95 L260 95"/><path class="ln2" d="M440 95 L500 95"/>
+  <text class="mut" x="350" y="168" text-anchor="middle">Friction removed: shoes by the door, slot on the calendar</text>
+</svg>
+<figcaption>The cue is the anchor, not your memory.</figcaption>
+</figure>
+
+<section class="activity" data-act="9">
+<h3>Activity: build a habit card</h3>
+<p class="hint">Fill in the three parts, and the card writes your sentence. Below it is a two-week tracker where you tap days done. It saves on this device.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Keep habits as simple checkboxes in a Habits note or in the daily note, and strictly without due dates so the Tasks plugin never lists them as overdue. If you already have a script that copies ticked habits into the daily note and resets them, that is exactly the right shape: the habit list is a template, and each day gets a fresh set of boxes. Review the weekly count, not the streak.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>A habit grid on the monthly page is hard to beat: a row per habit, a column per day, shaded boxes. It's visible every time you open the notebook, and the visual gap-and-fill pattern is more motivating than any app badge.</p></aside>
+<div class="take"><b>Takeaway.</b> Keep habits out of the task system. Build each from an anchor, a tiny version and a place, remove friction, never miss twice, and add them slowly.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 10 ============ -->
+<template id="t-m10">
+<div class="prose">
+<p>This is the module where the whole thing becomes visible. You've split the kinds of thing, given each a home, and learned what the triggers are. Now you assemble <b>views</b>, the small windows that stop you needing to look at everything.</p>
+
+<h3>The five views you actually need</h3>
+<ul>
+<li><b>Today:</b> what you'll look at every morning. Calendar events, a few chosen tasks, anything due or scheduled today, and your habit strip.</li>
+<li><b>This week:</b> a looser look ahead, mainly for planning and to catch deadlines before they're tomorrow's problem.</li>
+<li><b>Projects:</b> only the active ones, each with its single next action. A project with no next action is <b>stalled</b>, and this view is where stalled projects get caught.</li>
+<li><b>Waiting and reactive:</b> things delegated or pending on other people, plus your admin and IT batch.</li>
+<li><b>Someday and goals:</b> read monthly, not daily.</li>
+</ul>
+
+<h3>The Today page recipe</h3>
+<p>Today should feel like a short note from a sensible friend, not a ledger. A good composition:</p>
+<ul>
+<li>Fixed events, from your calendar, because they define the available time.</li>
+<li>Up to three <b>must-dos</b>, chosen by you each morning, which is the Eisenhower step from module 4.</li>
+<li>Anything scheduled for today or overdue, capped to a small number.</li>
+<li>Your reactive buffer, shown as a block rather than a list.</li>
+<li>Your one to three habits.</li>
+</ul>
+<p>The cap is the point. A view without a limit is just the store again.</p>
+
+<h3>Choose, don't be shown</h3>
+<p>The most effective morning ritual takes about five minutes: look at the calendar, scan the candidate list, and pick three. The picking is the prioritising. You do it with fresh information, once, and then you stop deciding for the day. People who skip this and just work down a list end up doing whatever is easiest or loudest.</p>
+
+<h3>Views are cheap, so test them</h3>
+<p>Because a view is just a query, you can build it in minutes and delete it without losing any data. If a view makes you anxious or you never open it, it's the wrong view, not a character flaw. Change it.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 280" role="img" aria-label="Three layers: notes, queries, views">
+  <rect class="box" x="30" y="190" width="640" height="70" rx="10"/><text class="b" x="46" y="214">STORE: notes and tasks</text><text class="mut" x="46" y="234">Projects · Areas · People · Habits · Inbox · Daily notes</text>
+  <path class="ln2" d="M200 190 L200 150"/><path class="ln2" d="M350 190 L350 150"/><path class="ln2" d="M500 190 L500 150"/>
+  <rect class="acc" x="110" y="100" width="180" height="50" rx="8"/><text class="b" x="200" y="130" text-anchor="middle">query: due or scheduled</text>
+  <rect class="acc" x="300" y="100" width="100" height="50" rx="8"/><text class="b" x="350" y="130" text-anchor="middle">query: active</text>
+  <rect class="acc" x="420" y="100" width="160" height="50" rx="8"/><text class="b" x="500" y="130" text-anchor="middle">query: not touched</text>
+  <path class="ln2" d="M200 100 L200 62"/><path class="ln2" d="M350 100 L350 62"/><path class="ln2" d="M500 100 L500 62"/>
+  <rect class="acc2" x="130" y="20" width="140" height="42" rx="8"/><text class="b" x="200" y="46" text-anchor="middle">TODAY</text>
+  <rect class="acc2" x="280" y="20" width="140" height="42" rx="8"/><text class="b" x="350" y="46" text-anchor="middle">PROJECTS</text>
+  <rect class="acc2" x="430" y="20" width="140" height="42" rx="8"/><text class="b" x="500" y="46" text-anchor="middle">GOALS CHECK</text>
+</svg>
+<figcaption>Notes at the bottom never move. Views at the top change as often as you like.</figcaption>
+</figure>
+
+<section class="activity" data-act="10">
+<h3>Activity: build your Today view</h3>
+<p class="hint">Choose what goes on your Today page. The builder writes the Obsidian Tasks query for you, with a cap, and tells you if the view is getting too crowded.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Put the Today queries into your daily-note template, so every new day arrives with the right view already built. Use the Tasks plugin for task lists and Dataview for the project table, which is the split the community generally recommends. The Tasks plugin's <code>explain</code> line shows how a query was understood, and <code>limit</code> caps the number of results, which is the discipline from this module in one word.</p>
+<p>The queries from the builder come from the Tasks documentation as I understand it*. Paste them into a scratch note first. If a line is wrong, the plugin tells you which one it couldn't read.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>The paper Today page is a card or half-page with three big boxes for must-dos, a strip for fixed events, a small "if time" list and the habit boxes. The physical size of the page is the cap. If it doesn't fit, it isn't today.</p></aside>
+<div class="take"><b>Takeaway.</b> Build a few small views on top of the store: Today, week, projects, waiting, someday. Cap each one, and spend five minutes each morning choosing three things.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 11 ============ -->
+<template id="t-m11">
+<div class="prose">
+<p>Every system decays unless something maintains it. Reviews are the maintenance, and they're the part most people skip, which is why most systems quietly fall apart around the third week. The good news is that a review is a small, repeatable routine, and you can make it nearly mindless.</p>
+
+<h3>Three rhythms</h3>
+<ul>
+<li><b>Daily, about five minutes in the morning:</b> glance at the calendar, process the inbox if it's piling up, pick your three. Optionally a two-minute shutdown at the end: tick what's done, and note tomorrow's first move.</li>
+<li><b>Weekly, thirty to sixty minutes*:</b> the keystone. David Allen called the weekly review the critical success factor of Getting Things Done. It has three phases, "get clear, get current, get creative".</li>
+<li><b>Monthly, about twenty to thirty minutes*:</b> look at areas, goals and the someday list. In the Bullet Journal method this is <b>migration</b>: you go through every open item and consciously move it forward, schedule it, or drop it. Practitioners often report that a surprising share of open items just evaporates at this point, and that's usually a benefit.</li>
+</ul>
+
+<h3>What happens in a weekly review</h3>
+<ul>
+<li><b>Get clear:</b> empty the inboxes, including paper, phone and email. Process them to zero.</li>
+<li><b>Get current:</b> look at last week's calendar for loose ends, and next week's for what you need to prepare. Check every active project has a next action. Handle overdue items by deciding, not rolling.</li>
+<li><b>Get creative:</b> look at goals and someday ideas, and ask what deserves a slot. Pick next week's projects, within the WIP limit.</li>
+</ul>
+
+<h3>A review is not doing</h3>
+<p>The temptation in a review is to start doing the tasks you find. Don't. You're servicing the system, not working inside it. Set a timer, and write the findings down as tasks for later.</p>
+
+<h3>A rescue review for bad weeks</h3>
+<p>You will miss a weekly review, probably in the very week you need it most. Have a ten-minute fallback ready: clear the inbox, scan the calendar for the next seven days, list overdue items and decide on each, pick your three for tomorrow. That's enough to stop the slide, and it keeps the habit of reviewing alive.</p>
+
+<h3>Why this beats a better app</h3>
+<p>A mediocre system with regular reviews will outperform a gorgeous one that nobody maintains. If you take one thing from this whole course, make it the review, because the review is where open loops get closed.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 260" role="img" aria-label="Nested daily, weekly, monthly loops">
+  <ellipse cx="350" cy="130" rx="320" ry="110" class="box"/><text class="b" x="350" y="38" text-anchor="middle">MONTHLY: migrate, check goals and someday</text>
+  <ellipse cx="350" cy="140" rx="230" ry="75" class="acc2"/><text class="b" x="350" y="98" text-anchor="middle">WEEKLY: clear, current, creative</text>
+  <ellipse cx="350" cy="150" rx="130" ry="40" class="acc"/><text class="b" x="350" y="147" text-anchor="middle">DAILY</text><text class="mut" x="350" y="164" text-anchor="middle">pick three</text>
+</svg>
+<figcaption>Small loops keep the big loops cheap.</figcaption>
+</figure>
+
+<section class="activity" data-act="11">
+<h3>Activity: run a weekly review</h3>
+<p class="hint">Work through the checklist, with an optional timer. Your ticks are saved for this week, and you can reset them next week.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>Make a Weekly Review note template with the checklist above, and a few queries embedded: projects with no next action, tasks completed this week, overdue items, and goals untouched for two weeks. Creating the note from a template takes one command, so the starting friction is tiny. Pair it with a recurring task on a fixed day to remind you.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>A weekly spread with a short review checklist printed or drawn on it works well. The monthly migration is the Bullet Journal's best idea, so lean on it: at month-end, re-write only what still matters on the next page. The act of copying is the filter.</p></aside>
+<div class="take"><b>Takeaway.</b> Daily to pick, weekly to clear and plan, monthly to prune. Keep a ten-minute rescue review for bad weeks. Reviews are the maintenance that keeps the whole thing trustworthy.</div>
+</div>
+</template>
+
+<!-- ============ MODULE 12 ============ -->
+<template id="t-m12">
+<div class="prose">
+<p>The last module is about the choice you raised yourself: paper or digital, or some mix. The honest answer isn't that one wins. It's that each fails in a predictable way, and a good hybrid uses each where the other is weakest.</p>
+
+<h3>Where each one fails</h3>
+<ul>
+<li><b>Paper is great at:</b> fast capture, focus with no notifications, the physical feeling of crossing something off.</li>
+<li><b>Paper is bad at:</b> searching, recurrence, rearranging, and being lost or damaged.</li>
+<li><b>Digital is great at:</b> queries, recurrence, search, backup, links between things.</li>
+<li><b>Digital is bad at:</b> its own temptation. The classic trap is <b>system-building as procrastination</b>: hours spent tuning dashboards feel productive and aren't. Complete visibility of everything also feeds the overwhelm we started with.</li>
+</ul>
+
+<h3>Three workable hybrids</h3>
+<ul>
+<li><b>Paper day, digital store:</b> capture and plan the day on paper, then keep projects, recurrence and records in Obsidian. A weekly step moves what matters from the page into the vault.</li>
+<li><b>Digital everything, paper for the week:</b> Obsidian is the system, but you hand-draw the weekly plan on paper and look at that, not the screen.</li>
+<li><b>Minimal digital:</b> one inbox note, one Today view, one weekly review. Paper optional.</li>
+</ul>
+
+<h3>The bridge from paper to vault</h3>
+<p>The hybrid lives or dies on a cheap bridge. The simplest is to photograph the day's page and put the image into that day's note, then process anything actionable during your daily or weekly review. The photo is the capture; the processing is the triage from module 3. If you already have a way of turning a photo of a page into text and tasks, that is the bridge, and you should lean on it instead of hand-typing.</p>
+
+<h3>Two guard rails against over-building</h3>
+<ul>
+<li><b>A setup budget:</b> cap tinkering at a small fixed slot per week, say thirty minutes*, and keep it separate from real work.</li>
+<li><b>A freeze period:</b> after you set up, change nothing for four weeks. You can't judge a system you keep rebuilding.</li>
+</ul>
+
+<h3>The minimum viable system</h3>
+<p>Everything in this course reduces to three things you can start with tomorrow:</p>
+<ul>
+<li>One inbox, emptied daily.</li>
+<li>One Today view, capped, chosen each morning.</li>
+<li>One weekly review, with a ten-minute rescue version.</li>
+</ul>
+<p>Add the rest one piece at a time, only when you feel its absence: recurrence first, then people notes, then goal slots, then habits.</p>
+</div>
+
+<figure class="diagram">
+<svg viewBox="0 0 700 220" role="img" aria-label="Paper to vault bridge">
+  <rect class="acc2" x="20" y="70" width="140" height="70" rx="10"/><text class="b" x="90" y="98" text-anchor="middle">Paper day page</text><text class="mut" x="90" y="118" text-anchor="middle">fast capture</text>
+  <rect class="box" x="210" y="70" width="140" height="70" rx="10"/><text class="b" x="280" y="98" text-anchor="middle">Photo into</text><text class="b" x="280" y="116" text-anchor="middle">daily note</text>
+  <rect class="acc" x="400" y="70" width="140" height="70" rx="10"/><text class="b" x="470" y="98" text-anchor="middle">Triage</text><text class="mut" x="470" y="118" text-anchor="middle">module 3 flow</text>
+  <rect class="acc" x="580" y="70" width="100" height="70" rx="10"/><text class="b" x="630" y="98" text-anchor="middle">Store</text><text class="mut" x="630" y="118" text-anchor="middle">+ views</text>
+  <path class="ln2" d="M160 105 L210 105"/><path class="ln2" d="M350 105 L400 105"/><path class="ln2" d="M540 105 L580 105"/>
+  <text class="mut" x="350" y="190" text-anchor="middle">The bridge only needs to be cheap, not clever.</text>
+</svg>
+<figcaption>Paper does what it's best at, then hands over to the vault.</figcaption>
+</figure>
+
+<section class="activity" data-act="12">
+<h3>Activity: draft your blueprint</h3>
+<p class="hint">Answer five quick questions and get a suggested hybrid, a minimal starting set, and a four-week rollout you can copy.</p>
+<div class="act-body"></div>
+</section>
+
+<div class="prose">
+<aside class="fit"><h4>Obsidian fit</h4>
+<p>A complete but small starting vault structure: an Inbox note, a Projects folder with a status and importance property per project, an Areas folder holding Team and Goals, a People folder, a Habits note, daily notes with the Today query in the template, and a weekly review template. Install the Tasks plugin first and Dataview second, and nothing else until you miss it.</p></aside>
+<aside class="fit paper"><h4>Paper fit</h4>
+<p>A single notebook with an index, a future log, monthly pages, weekly spreads and daily pages, plus a card for your active projects. That's the entire Bullet Journal skeleton, and it's enough.</p></aside>
+<div class="take"><b>Takeaway.</b> Use paper for speed and focus, digital for recurrence, search and queries, and make the bridge between them cheap. Start with an inbox, a Today view and a weekly review, then freeze the system for four weeks.</div>
+<footer class="note">Items marked with an asterisk (*) are rules of thumb or things I couldn't verify directly, so treat them as starting points. Obsidian query code is provided as templates that I could not run from here: paste into a scratch note and check before relying on it.</footer>
+</div>
+</template>
+<script>
+"use strict";
+const VERSION='0.2';
+const BUILD_DATE='12 Nov 2026';
+const KEY='openloops-course';
+const MODS=[
+ {n:1,t:'Why seeing everything is the problem',s:'Store versus show',m:9},
+ {n:2,t:'Seven kinds of thing',s:'Projects, tasks, events, recurring, reactive, goals, habits',m:9},
+ {n:3,t:'One inbox',s:'Capture fast, triage later',m:9},
+ {n:4,t:'Project priority versus task priority',s:'Importance, urgency, and a WIP limit',m:10},
+ {n:5,t:'Dates that behave',s:'Due, scheduled and start',m:9},
+ {n:6,t:'Recurring things you already know about',s:'Make them create themselves',m:8},
+ {n:7,t:'The unpredictable stream',s:'Team, admin and IT',m:9},
+ {n:8,t:'Goals with no date',s:'Slots, not deadlines',m:8},
+ {n:9,t:'Habits without guilt',s:'Anchor, tiny, place',m:8},
+ {n:10,t:'Views: seeing a little',s:'Building Today and friends',m:9},
+ {n:11,t:'Rhythm: the reviews',s:'Daily, weekly, monthly',m:9},
+ {n:12,t:'Paper, digital, or both',s:'A hybrid and your starting blueprint',m:10}
+];
+let S={done:{},a:{}};
+try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&typeof p==='object')S=Object.assign(S,p)}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function A(n){S.a['m'+n]=S.a['m'+n]||{};return S.a['m'+n]}
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
+const FENCE='```';
+function copyText(text,btn){
+  const done=()=>{if(btn){const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>btn.textContent=o,1500)}else toast('Copied')};
+  const fallback=()=>{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done()}catch(e){toast('Select the text and copy it by hand')}ta.remove()};
+  try{navigator.clipboard.writeText(text).then(done,fallback)}catch(e){fallback()}
+}
+
+/* ---------- full screen ---------- */
+$('#fsBtn').onclick=async()=>{
+  try{
+    if(document.fullscreenElement){await document.exitFullscreen()}
+    else if(document.documentElement.requestFullscreen){await document.documentElement.requestFullscreen()}
+    else throw new Error('unsupported');
+  }catch(e){toast('Full screen is blocked in this viewer. Open the page in its own browser tab and try again.')}
+};
+document.addEventListener('fullscreenchange',()=>{$('#fsBtn').textContent=document.fullscreenElement?'⛶ Exit full screen':'⛶ Full screen'});
+
+/* ---------- audio / read aloud ---------- */
+let curAudio=null;
+function stopAudio(){try{if(curAudio){curAudio.pause();curAudio=null}}catch(e){}try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}}
+function moduleText(root,title){
+  const out=[title+'.'];
+  $$('h3,p,li',root).forEach(n=>{
+    if(n.closest('pre,.activity,.audio,footer,.nospeak'))return;
+    const t=n.textContent.replace(/\s+/g,' ').trim();
+    if(t)out.push(t.endsWith('.')||t.endsWith('?')||t.endsWith(':')?t:t+'.');
+  });
+  return out;
+}
+function chunk(lines){
+  const out=[];
+  lines.forEach(l=>{
+    const parts=l.match(/[^.!?]+[.!?]*\s*/g)||[l];
+    let cur='';
+    parts.forEach(p=>{if((cur+p).length>220){if(cur)out.push(cur);cur=p}else cur+=p});
+    if(cur)out.push(cur);
+  });
+  return out;
+}
+function audioBar(n,root,title){
+  const bar=document.createElement('div');bar.className='audio';
+  bar.innerHTML='<button class="primary small" data-a="pod">▶ Podcast version</button><button class="small" data-a="tts">🔊 Read aloud (device voice)</button><button class="small" data-a="stop" hidden>■ Stop</button><div class="msg"></div>';
+  const msg=$('.msg',bar),stopB=$('[data-a=stop]',bar);
+  const setMsg=t=>msg.textContent=t;
+  $('[data-a=pod]',bar).onclick=()=>{
+    stopAudio();
+    const a=new Audio('audio/m'+String(n).padStart(2,'0')+'.mp3');
+    curAudio=a;setMsg('Loading…');
+    a.addEventListener('error',()=>{setMsg('The podcast audio has not been rendered yet. Try the device voice for now.');stopB.hidden=true});
+    a.addEventListener('playing',()=>{setMsg('Playing the two-host version.');stopB.hidden=false});
+    a.addEventListener('ended',()=>{stopB.hidden=true;setMsg('')});
+    a.play().catch(()=>{});
+  };
+  $('[data-a=tts]',bar).onclick=()=>{
+    stopAudio();
+    if(!('speechSynthesis' in window)){setMsg('This viewer has no built-in voice.');return}
+    const parts=chunk(moduleText(root,title));
+    const voices=speechSynthesis.getVoices();
+    const v=voices.find(x=>/en-GB/i.test(x.lang))||voices.find(x=>/^en/i.test(x.lang));
+    let i=0;
+    const next=()=>{
+      if(i>=parts.length){stopB.hidden=true;setMsg('');return}
+      const u=new SpeechSynthesisUtterance(parts[i++]);
+      if(v)u.voice=v;u.rate=0.98;u.onend=next;u.onerror=()=>{stopB.hidden=true};
+      speechSynthesis.speak(u);
+    };
+    stopB.hidden=false;setMsg('Reading with your device voice. This is a stand-in until the natural voices are approved.');
+    next();
+  };
+  stopB.onclick=()=>{stopAudio();stopB.hidden=true;setMsg('Stopped.')};
+  return bar;
+}
+
+/* ---------- navigation ---------- */
+const view=$('#view');
+function go(h){try{location.hash=h}catch(e){}render()}
+$('#homeBtn').onclick=()=>go('home');
+window.addEventListener('hashchange',render);
+function render(){
+  stopAudio();
+  const h=(location.hash||'#home').slice(1);
+  const m=/^m(\d+)$/.exec(h);
+  window.scrollTo(0,0);
+  if(m&&MODS[+m[1]-1])renderModule(+m[1]);else renderHome();
+}
+function renderHome(){
+  const doneN=Object.keys(S.done).filter(k=>S.done[k]).length;
+  view.innerHTML=`
+  <div class="kicker">A mini-course</div>
+  <h1>Open Loops</h1>
+  <p class="muted" style="font-size:14px;margin:0 0 6px">Version v${VERSION} · ${BUILD_DATE}</p>
+  <p class="sub">How to organise a life made of projects, people, routines, goals and habits, without feeling buried by it.</p>
+  <div class="prose">
+  <p>This course is built around one problem: you have several different kinds of commitment, each with its own rhythm, and one long list can't hold them without becoming a source of dread. The twelve modules take them apart, give each a proper home, and then build small views so you only ever look at a little at a time.</p>
+  <p>Each module has an idea, a diagram, an activity you can do on the spot, an Obsidian fit and a paper fit. Every module also has a listen button. The podcast version is a two-host conversation about the module. The device voice button reads the full text instead.</p>
+  <p>Don't try to adopt everything. The last module picks a minimum starting set.</p>
+  </div>
+  <div class="mods">${MODS.map(m=>`<button class="mod ${S.done[m.n]?'done':''}" data-n="${m.n}"><span class="n">${S.done[m.n]?'✓':m.n}</span><span><b>${esc(m.t)}</b><span class="s">${esc(m.s)} · about ${m.m} min</span></span></button>`).join('')}</div>
+  <p class="muted">${doneN} of ${MODS.length} modules marked complete.</p>
+  <div class="card">
+    <h4>Audio for offline</h4>
+    <p class="muted" style="font-size:14px">Save all twelve podcast episodes on this device so they play with no signal. About 14 MB, so use Wi-Fi.</p>
+    <div class="row"><button class="small primary" id="saveAud">Save audio for offline</button><span id="audMsg" class="muted" style="font-size:13px"></span></div>
+  </div>
+  ${/iPhone|iPad|iPod/.test(navigator.userAgent)&&!document.documentElement.requestFullscreen?'<p class="muted" style="font-size:13px">On iPhone: Share, then Add to Home Screen, for a full-screen app.</p>':''}
+  <div class="card">
+    <h4>Your saved progress</h4>
+    <p class="muted" style="font-size:14px">Everything you type in the activities saves on this device only. Version ${VERSION}.</p>
+    <div id="clearArea"><button class="danger small" id="clearBtn">Clear save</button></div>
+  </div>
+  <footer class="note">Items marked with an asterisk (*) are rules of thumb or things I couldn't verify directly. Obsidian query code is given as templates that I could not run from here: test it in a scratch note first.</footer>`;
+  $$('.mod',view).forEach(b=>b.onclick=()=>go('m'+b.dataset.n));
+  $('#saveAud').onclick=saveAudio;
+  caches&&caches.open&&caches.open('olaudio-v1').then(c=>c.keys()).then(k=>{const m=$('#audMsg');if(m&&k.length>=12)m.textContent='All 12 saved on this device.';else if(m&&k.length)m.textContent=k.length+' of 12 saved.'}).catch(()=>{});
+  $('#clearBtn').onclick=()=>{
+    $('#clearArea').innerHTML='<p class="warn">Clear all saved progress and activity answers?</p><div class="row"><button class="danger small" id="clrYes">Yes, clear everything</button><button class="small" id="clrNo">Cancel</button></div>';
+    $('#clrYes').onclick=()=>{S={done:{},a:{}};try{localStorage.removeItem(KEY)}catch(e){}toast('Save cleared');renderHome()};
+    $('#clrNo').onclick=()=>renderHome();
+  };
+}
+function renderModule(n){
+  const m=MODS[n-1];
+  const tpl=document.getElementById('t-m'+n);
+  view.innerHTML=`<div class="kicker">Module ${n} of ${MODS.length}</div><h1>${esc(m.t)}</h1><p class="sub">${esc(m.s)} · about ${m.m} min</p><div id="mbody"></div>`;
+  const body=$('#mbody');
+  body.appendChild(tpl.content.cloneNode(true));
+  body.insertBefore(audioBar(n,body,m.t),body.firstChild);
+  $$('.activity',body).forEach(sec=>{
+    const fn=window['act'+sec.dataset.act];
+    if(fn){try{fn($('.act-body',sec))}catch(e){$('.act-body',sec).innerHTML='<p class="warn">This activity failed to load.</p>';console.error(e)}}
+  });
+  if(window.innerWidth<700)$$('figcaption',body).forEach(f=>f.textContent+=' (Swipe sideways to see the whole diagram.)');
+  const done=!!S.done[n];
+  const pager=document.createElement('div');
+  pager.innerHTML=`<div class="row"><button class="primary" id="doneBtn">${done?'✓ Completed (tap to undo)':'Mark module complete'}</button></div>
+  <div class="pager"><button id="prevB" ${n===1?'disabled':''}>← Previous</button><button id="allB">All modules</button><button id="nextB" ${n===MODS.length?'disabled':''}>Next →</button></div>`;
+  body.appendChild(pager);
+  $('#doneBtn').onclick=e=>{S.done[n]=!S.done[n];save();e.target.textContent=S.done[n]?'✓ Completed (tap to undo)':'Mark module complete'};
+  $('#prevB').onclick=()=>go('m'+(n-1));$('#nextB').onclick=()=>go('m'+(n+1));$('#allB').onclick=()=>go('home');
+}
+
+/* ======================= ACTIVITIES ======================= */
+
+/* 1: shrink the pile */
+function act1(r){
+  const st=A(1);st.f=st.f||{};
+  let seed=11;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const types=['proj','task','task','task','rec','react','goal','hab','hab'];
+  const items=[];
+  for(let i=0;i<60;i++){
+    const type=types[Math.floor(rnd()*types.length)];
+    items.push({type,startIn:rnd()<0.45?Math.floor(rnd()*28)+2:0,dueIn:(type==='proj'||type==='task'||type==='rec')?Math.floor(rnd()*40):null,
+      imp:rnd()<0.3,active:rnd()<0.4});
+  }
+  const F=[
+   ['start','Hide what hasn’t started yet (start dates)',x=>x.startIn===0],
+   ['own','Move habits and goals to their own tracker',x=>x.type!=='hab'&&x.type!=='goal'],
+   ['act','Only work from active projects (a WIP limit)',x=>!(x.type==='proj'||x.type==='task')||x.active],
+   ['soon','Only what is due within a week, or genuinely important',x=>x.imp||(x.dueIn!==null&&x.dueIn<=7)],
+  ];
+  function draw(){
+    let vis=items.slice();
+    F.forEach(([k,,fn])=>{if(st.f[k])vis=vis.filter(fn)});
+    if(st.f.cap){vis=vis.slice().sort((a,b)=>(b.imp-a.imp)||((a.dueIn??99)-(b.dueIn??99))).slice(0,5)}
+    const set=new Set(vis);
+    r.innerHTML=`<div class="dots">${items.map(x=>`<i class="${set.has(x)?'':'off'}"></i>`).join('')}</div>
+    <p><b>${vis.length}</b> of 60 visible.</p>
+    ${F.map(([k,l])=>`<label class="f"><input type="checkbox" data-k="${k}" ${st.f[k]?'checked':''}>${l}</label>`).join('')}
+    <label class="f"><input type="checkbox" data-k="cap" ${st.f.cap?'checked':''}>Cap the view at five items (your Today list)</label>
+    <p class="fb">${vis.length>12?'Still a lot to look at. Try more filters.':vis.length>5?'Getting calmer.':'That is a view you can act on. The other '+(60-vis.length)+' are still stored, just not in your face.'}</p>`;
+    $$('input',r).forEach(c=>c.onchange=()=>{st.f[c.dataset.k]=c.checked;save();draw()});
+  }
+  draw();
+}
+
+/* 2: name the kind */
+function act2(r){
+  const st=A(2);st.ok=st.ok||{};
+  const B=[['proj','Project'],['task','Task'],['event','Event'],['rec','Recurring'],['react','Reactive'],['goal','Goal / area'],['hab','Habit']];
+  const I=[
+   [1,'Ship the v1.2 patch to players','proj','A finish line and many steps: a project.'],
+   [2,'Download the P60 for the tax return','task','One physical step. The tax return itself is the project.'],
+   [3,'Dentist, Tuesday 3pm','event','Fixed time and place. It lives on the calendar.'],
+   [4,'Monthly sales enablement sheet','rec','Known schedule, repeats: a recurring commitment.'],
+   [5,'A team member calls in sick','react','You can’t schedule its arrival, so manage it with a buffer.'],
+   [6,'Learn low-poly modelling','goal','No natural deadline. Give it a time slot, or convert to a project later.'],
+   [7,'Walk at lunch','hab','A tiny repeated behaviour, judged by consistency.'],
+   [8,'A new IT ticket arrives','react','Unpredictable arrival. Batch it.'],
+   [9,'Drink enough water','hab','A habit. Design the environment, not a due date.'],
+   [10,'Buy printer ink','task','One step, no outcome beyond itself.'],
+   [11,'Keep the team in good shape','goal','An ongoing standard to uphold: an area of responsibility.'],
+   [12,'Plan the trip','proj','A finish line (trip planned) with many steps.']
+  ];
+  let sel=null,fb='';
+  function draw(){
+    const left=I.filter(x=>!st.ok[x[0]]);
+    r.innerHTML=`<p><b>${I.length-left.length}</b> of ${I.length} sorted.</p>
+    <div class="cards">${left.map(x=>`<span class="chip ${sel===x[0]?'sel':''}" data-id="${x[0]}">${esc(x[1])}</span>`).join('')||'<span class="muted">All sorted. Nice.</span>'}</div>
+    <div class="row">${B.map(b=>`<button class="bucket" data-b="${b[0]}">${b[1]}</button>`).join('')}</div>
+    <div class="fb">${fb||'Tap an item, then a kind.'}</div>
+    <div class="row"><button class="small" id="rs">Reset this activity</button></div>`;
+    $$('.chip',r).forEach(c=>c.onclick=()=>{sel=+c.dataset.id;draw()});
+    $$('.bucket',r).forEach(b=>b.onclick=()=>{
+      if(sel==null){fb='Pick an item first.';draw();return}
+      const it=I.find(x=>x[0]===sel);
+      if(b.dataset.b===it[2]){st.ok[sel]=true;save();fb='Right. '+it[3];sel=null}
+      else{const right=B.find(x=>x[0]===it[2])[1];fb='Not quite. “'+it[1]+'” is a '+right.toLowerCase()+'. '+it[3];}
+      draw();
+    });
+    $('#rs',r).onclick=()=>{st.ok={};save();sel=null;fb='';draw()};
+  }
+  draw();
+}
+
+/* 3: brain dump + triage */
+function act3(r){
+  const st=A(3);st.items=st.items||[];st.text=st.text||'';st.stage=st.stage||'dump';st.i=st.i||0;
+  let timer=null,secs=300;
+  const D=[['trash','Trash'],['ref','Reference'],['some','Someday'],['now','Do now (under 2 min)'],['task','Task'],['proj','Project']];
+  function draw(){
+    clearInterval(timer);
+    if(st.stage==='dump'){
+      r.innerHTML=`<textarea id="t" placeholder="One thing per line. Work stuff, home stuff, worries, ideas. Don't judge.">${esc(st.text)}</textarea>
+      <div class="row"><button id="tm" class="small">Start 5-minute timer</button><span id="tmv" class="muted"></span></div>
+      <div class="row"><button class="primary" id="go">Start triage</button></div>`;
+      $('#t',r).oninput=e=>{st.text=e.target.value;save()};
+      $('#tm',r).onclick=()=>{secs=300;clearInterval(timer);timer=setInterval(()=>{secs--;const v=$('#tmv',r);if(!v){clearInterval(timer);return}v.textContent=Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0');if(secs<=0){clearInterval(timer);v.textContent='Time. Wrap up.'}},1000)};
+      $('#go',r).onclick=()=>{const lines=st.text.split('\n').map(s=>s.trim()).filter(Boolean);if(!lines.length){toast('Write at least one line first');return}st.items=lines.map(t=>({t,d:null}));st.i=0;st.stage='tri';save();draw()};
+    }else if(st.stage==='tri'){
+      const it=st.items[st.i];
+      if(!it){st.stage='out';save();draw();return}
+      r.innerHTML=`<p class="muted">Item ${st.i+1} of ${st.items.length}</p>
+      <div class="card" style="font-size:19px">${esc(it.t)}</div>
+      <p class="hint">Actionable? Under two minutes? One step or several?</p>
+      <div class="row">${D.map(d=>`<button class="bucket" data-d="${d[0]}">${d[1]}</button>`).join('')}</div>
+      <div class="row"><button class="small" id="bk" ${st.i===0?'disabled':''}>← Back</button><button class="small" id="sk">Skip to results</button></div>`;
+      $$('.bucket',r).forEach(b=>b.onclick=()=>{it.d=b.dataset.d;st.i++;save();draw()});
+      $('#bk',r).onclick=()=>{st.i--;save();draw()};
+      $('#sk',r).onclick=()=>{st.stage='out';save();draw()};
+    }else{
+      const g=k=>st.items.filter(x=>x.d===k).map(x=>x.t);
+      const md=[];
+      if(g('task').length)md.push('## Tasks',...g('task').map(t=>'- [ ] '+t),'');
+      if(g('proj').length)md.push('## Projects (each needs an outcome and a next action)',...g('proj').map(t=>'- '+t),'');
+      if(g('some').length)md.push('## Someday / maybe',...g('some').map(t=>'- '+t),'');
+      if(g('ref').length)md.push('## Reference',...g('ref').map(t=>'- '+t),'');
+      const text=md.join('\n').trim()||'(Nothing to file yet.)';
+      const un=st.items.filter(x=>!x.d).length;
+      r.innerHTML=`<table><tr><td>Trashed</td><td>${g('trash').length}</td><td>Done on the spot</td><td>${g('now').length}</td></tr>
+      <tr><td>Tasks</td><td>${g('task').length}</td><td>Projects</td><td>${g('proj').length}</td></tr>
+      <tr><td>Someday</td><td>${g('some').length}</td><td>Reference</td><td>${g('ref').length}</td></tr></table>
+      ${un?`<p class="warn">${un} item(s) not decided yet.</p>`:''}
+      <p class="hint">Paste this into your Obsidian inbox or project notes:</p>
+      <pre class="nospeak">${esc(text)}</pre>
+      <div class="row"><button class="primary small" id="cp">Copy</button><button class="small" id="rs">Start over</button></div>`;
+      $('#cp',r).onclick=e=>copyText(text,e.target);
+      $('#rs',r).onclick=()=>{st.stage='dump';st.items=[];st.i=0;save();draw()};
+    }
+  }
+  draw();
+}
+
+/* 4: balancer */
+function act4(r){
+  const st=A(4);
+  const DEF=()=>[
+   {n:'Fix crash on load',p:'Game launch',P:3,T:3,d:2,b:true},
+   {n:'Update store screenshots',p:'Game launch',P:3,T:1,d:14,b:false},
+   {n:'Polish menu animation',p:'Game launch',P:3,T:1,d:30,b:false},
+   {n:'Gather income documents',p:'Tax return',P:2,T:2,d:20,b:true},
+   {n:'Submit the return',p:'Tax return',P:2,T:3,d:40,b:false},
+   {n:'Reply to vendor (they keep chasing)',p:'Vault tidy-up',P:1,T:3,d:1,b:false},
+   {n:'Reorganise old notes',p:'Vault tidy-up',P:1,T:1,d:60,b:false}
+  ];
+  st.rows=st.rows||DEF();st.rule=st.rule||'blend';st.wip=st.wip||3;
+  const urg=d=>d==null?0:d<=2?3:d<=7?2:d<=14?1:0;
+  function score(x,rule){
+    if(rule==='proj')return x.P*1000+(x.b?100:0)+urg(x.d)*10+x.T;
+    if(rule==='task')return x.T*1000+urg(x.d)*100+x.P*10+(x.b?1:0);
+    return x.P*2+x.T+urg(x.d)*1.5+(x.b?2:0);
+  }
+  function draw(){
+    const projs={};
+    st.rows.forEach(x=>{const k=x.p;if(!projs[k])projs[k]={P:x.P,d:x.d==null?999:x.d};projs[k].P=Math.max(projs[k].P,x.P);projs[k].d=Math.min(projs[k].d,x.d==null?999:x.d)});
+    const order=Object.keys(projs).sort((a,b)=>projs[b].P-projs[a].P||projs[a].d-projs[b].d);
+    const activeSet=new Set(order.slice(0,st.wip));
+    const rows=st.rows.map((x,i)=>({...x,i,active:activeSet.has(x.p)}));
+    const rank=rows.filter(x=>x.active).sort((a,b)=>score(b,st.rule)-score(a,st.rule));
+    const off=rows.filter(x=>!x.active);
+    r.innerHTML=`<div class="row">
+      <select id="rule" style="flex:1"><option value="blend">Blended rule</option><option value="proj">Project-first</option><option value="task">Task-first</option></select>
+      <select id="wip" style="flex:1">${[1,2,3,4].map(n=>`<option value="${n}">${n} active project${n>1?'s':''}</option>`).join('')}</select></div>
+    <h4>Your order of play</h4>
+    <ol>${rank.map(x=>`<li><b>${esc(x.n)}</b> <span class="pill">${esc(x.p)}</span><br><span class="muted" style="font-size:14px">importance ${x.P} · task priority ${x.T} · ${x.d==null?'no date':'due in '+x.d+' d'}${x.b?' · blocks something':''}</span></li>`).join('')||'<li>No active tasks.</li>'}</ol>
+    ${off.length?`<h4>On deck (not competing today)</h4><p class="muted" style="font-size:14px">${off.map(x=>esc(x.n)).join(' · ')}</p>`:''}
+    <details><summary>Edit the tasks</summary>
+    ${st.rows.map((x,i)=>`<div class="card" data-i="${i}">
+      <input type="text" data-f="n" value="${esc(x.n)}" aria-label="Task">
+      <div class="row"><input type="text" data-f="p" value="${esc(x.p)}" aria-label="Project" style="flex:2">
+      <label class="muted">Proj. importance<select data-f="P">${[1,2,3].map(v=>`<option ${x.P===v?'selected':''}>${v}</option>`).join('')}</select></label>
+      <label class="muted">Task priority<select data-f="T">${[1,2,3].map(v=>`<option ${x.T===v?'selected':''}>${v}</option>`).join('')}</select></label></div>
+      <div class="row"><label class="muted">Due in (days)<input type="number" data-f="d" value="${x.d==null?'':x.d}" placeholder="none"></label>
+      <label class="f"><input type="checkbox" data-f="b" ${x.b?'checked':''}> blocks something</label>
+      <button class="small danger" data-del="${i}">Remove</button></div></div>`).join('')}
+    <div class="row"><button class="small" id="add">Add a task</button><button class="small" id="rs">Reset examples</button></div></details>
+    <p class="fb">${st.rule==='proj'?'Project-first sorts by importance, so a low-importance task never beats a high-importance project, even with a deadline tomorrow. Compare with the blended rule.':st.rule==='task'?'Task-first lets “high priority” tasks in unimportant projects jump the queue. Notice how the vault tidy-up task rises.':'Blended: importance counts, dates count, blockers count. A guideline, not a law*.'}</p>`;
+    $('#rule',r).value=st.rule;$('#wip',r).value=st.wip;
+    $('#rule',r).onchange=e=>{st.rule=e.target.value;save();draw()};
+    $('#wip',r).onchange=e=>{st.wip=+e.target.value;save();draw()};
+    $$('[data-i]',r).forEach(card=>{const i=+card.dataset.i;$$('[data-f]',card).forEach(inp=>inp.onchange=()=>{
+      const f=inp.dataset.f,x=st.rows[i];
+      if(f==='b')x.b=inp.checked;else if(f==='P'||f==='T')x[f]=+inp.value;else if(f==='d')x.d=inp.value===''?null:+inp.value;else x[f]=inp.value;
+      save();draw();const det=$('details',r);if(det)det.open=true;
+    })});
+    $$('[data-del]',r).forEach(b=>b.onclick=()=>{st.rows.splice(+b.dataset.del,1);save();draw();$('details',r).open=true});
+    $('#add',r).onclick=()=>{st.rows.push({n:'New task',p:'Game launch',P:2,T:2,d:7,b:false});save();draw();$('details',r).open=true};
+    $('#rs',r).onclick=()=>{st.rows=DEF();save();draw()};
+  }
+  draw();
+}
+
+/* 5: watch the list breathe */
+function act5(r){
+  const st=A(5);if(st.t==null)st.t=0;if(st.use==null)st.use=true;
+  const T=[['Draft launch email',20,24,27],['Book flights',0,5,14],['Gather tax documents',3,10,30],['Submit tax return',25,32,40],
+           ['Update store page',8,12,16],['Team review prep',11,14,15],['Renew domain',18,25,30],['Plan Q1 roadmap',22,30,38]];
+  function status(x,t){
+    const [,s,sch,d]=x;
+    if(st.use&&t<s)return['hidden','Hidden until day '+s];
+    if(t>d)return['over','Overdue'];
+    if(t===sch)return['today','Planned for today'];
+    if(t>sch)return['late','Past plan, due day '+d];
+    return['ready','Ready, due day '+d];
+  }
+  function draw(){
+    const rows=T.map(x=>({x,s:status(x,st.t)}));
+    const vis=rows.filter(o=>o.s[0]!=='hidden');
+    const col={ready:'var(--muted)',today:'var(--acc)',late:'var(--acc2)',over:'var(--warn)'};
+    r.innerHTML=`<label class="f" style="display:block">Today is day <b>${st.t}</b> from now<input type="range" id="sl" min="0" max="40" value="${st.t}"></label>
+    <label class="f"><input type="checkbox" id="us" ${st.use?'checked':''}> Hide tasks until their start date</label>
+    <p><b>${vis.length}</b> of ${T.length} visible.</p>
+    <table>${rows.map(o=>`<tr style="opacity:${o.s[0]==='hidden'?.35:1}"><td>${esc(o.x[0])}</td><td style="color:${col[o.s[0]]||'inherit'}">${o.s[1]}</td></tr>`).join('')}</table>
+    <p class="hint">Each task: start ${T.map(x=>x[1]).join(', ')} · scheduled ${T.map(x=>x[2]).join(', ')} · due ${T.map(x=>x[3]).join(', ')} (days from now, in task order).</p>`;
+    $('#sl',r).oninput=e=>{st.t=+e.target.value;save();draw()};
+    $('#us',r).onchange=e=>{st.use=e.target.checked;save();draw()};
+  }
+  draw();
+}
+
+/* 6: recurrence builder */
+function act6(r){
+  const st=A(6);
+  const today=new Date();today.setHours(12,0,0,0);
+  const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const lastDay=(y,m)=>new Date(y,m+1,0,12);
+  const def={name:'Sales enablement sheet',pat:'month',n:1,on:'last',wd:'Friday',when:false,lead:7,late:5,due:iso(lastDay(today.getFullYear(),today.getMonth()))};
+  Object.keys(def).forEach(k=>{if(st[k]==null)st[k]=def[k]});
+  const WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  function rule(){
+    const n=+st.n||1;
+    let s;
+    if(st.pat==='day')s=n>1?`every ${n} days`:'every day';
+    else if(st.pat==='weekday')s='every weekday';
+    else if(st.pat==='week')s=(n>1?`every ${n} weeks`:'every week')+(st.when?'':` on ${st.wd}`);
+    else if(st.pat==='month')s=(n>1?`every ${n} months`:'every month')+(st.when||st.on==='same'?'':st.on==='last'?' on the last':` on the ${st.on}`);
+    else s=n>1?`every ${n} years`:'every year';
+    return s;
+  }
+  function addMonths(d,k,on){
+    const y=d.getFullYear(),m=d.getMonth()+k;
+    if(on==='last')return lastDay(y,m);
+    const day=on==='1st'?1:on==='15th'?15:d.getDate();
+    const ld=lastDay(y,m).getDate();
+    return new Date(y,m,Math.min(day,ld),12);
+  }
+  function next(d,from){
+    const n=+st.n||1;const x=new Date(from||d);
+    if(st.pat==='day'){x.setDate(x.getDate()+n);return x}
+    if(st.pat==='weekday'){do{x.setDate(x.getDate()+1)}while(x.getDay()===0||x.getDay()===6);return x}
+    if(st.pat==='week'){const target=WD.indexOf(st.wd);x.setDate(x.getDate()+7*(n-1)+1);while(x.getDay()!==target)x.setDate(x.getDate()+1);return x}
+    if(st.pat==='month')return addMonths(x,n,st.on);
+    x.setFullYear(x.getFullYear()+n);return x;
+  }
+  function nextWD(fin){
+    const n=+st.n||1;const x=new Date(fin);
+    if(st.pat==='day'){x.setDate(x.getDate()+n)}
+    else if(st.pat==='weekday'){do{x.setDate(x.getDate()+1)}while(x.getDay()===0||x.getDay()===6)}
+    else if(st.pat==='week'){x.setDate(x.getDate()+7*n)}
+    else if(st.pat==='month'){return addMonths(x,n,'same')}
+    else x.setFullYear(x.getFullYear()+n);
+    return x;
+  }
+  function draw(){
+    const due=new Date(st.due+'T12:00:00');
+    const valid=!isNaN(due);
+    const R=rule()+(st.when?' when done':'');
+    let startS='';
+    if(valid){const s=new Date(due);s.setDate(s.getDate()-(+st.lead||0));startS=iso(s)}
+    const line=`- [ ] ${st.name||'Task'} 🔁 ${R}${valid&&st.lead>0?' 🛫 '+startS:''}${valid?' 📅 '+st.due:''}`;
+    let list=[];
+    if(valid){let c=due;for(let i=0;i<4;i++){c=next(due,c);list.push(iso(c))}}
+    let wd='';
+    if(valid){const fin=new Date(due);fin.setDate(fin.getDate()+(+st.late||0));wd=iso(nextWD(fin))}
+    r.innerHTML=`<label class="f" style="display:block">Task name<input type="text" id="nm" value="${esc(st.name)}"></label>
+    <div class="row"><select id="pat" style="flex:1">${[['day','Every N days'],['weekday','Every weekday'],['week','Every N weeks'],['month','Every N months'],['year','Every N years']].map(o=>`<option value="${o[0]}" ${st.pat===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
+    <label class="muted">N <input type="number" id="n" min="1" max="12" value="${st.n}" style="width:70px"></label></div>
+    ${st.pat==='month'?`<label class="f" style="display:block">Which day<select id="on">${[['same','Same date as the due date'],['last','The last day'],['1st','The 1st'],['15th','The 15th']].map(o=>`<option value="${o[0]}" ${st.on===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></label>`:''}
+    ${st.pat==='week'?`<label class="f" style="display:block">On<select id="wd">${WD.map(w=>`<option ${st.wd===w?'selected':''}>${w}</option>`).join('')}</select></label>`:''}
+    <div class="row"><label class="muted">Next due date<input type="text" id="due" value="${esc(st.due)}" placeholder="YYYY-MM-DD" style="width:140px"></label>
+    <label class="muted">Appears (days early)<input type="number" id="lead" min="0" max="60" value="${st.lead}" style="width:90px"></label></div>
+    <label class="f"><input type="checkbox" id="wh" ${st.when?'checked':''}> Count from when I finish (“when done”)</label>
+    <h4>Line for your note</h4><pre class="nospeak">${esc(line)}</pre>
+    <div class="row"><button class="primary small" id="cp">Copy</button></div>
+    ${valid?`<h4>Next four due dates (fixed schedule)</h4><p>${list.join(' · ')} <span class="muted">(approximate; the plugin has its own rules for awkward month-ends)</span></p>
+    <label class="f" style="display:block">If I finish it this many days late<input type="number" id="late" min="0" max="60" value="${st.late}" style="width:90px"></label>
+    <div class="fb">Fixed schedule: the next one is still due <b>${list[0]}</b>.<br>When done: the next one would be due <b>${wd}</b>, counted from the day you actually finished.</div>`:'<p class="warn">Enter the due date as YYYY-MM-DD.</p>'}${st.when&&(st.pat==='week'||(st.pat==='month'&&st.on!=='same'))?'<p class="hint">With “when done” the fixed-day part is dropped, because the next date is counted from your finish day.</p>':''}`;
+    const bind=(id,fn)=>{const e=$('#'+id,r);if(e)e.onchange=()=>{fn(e);save();draw()}};
+    bind('nm',e=>st.name=e.value);bind('pat',e=>st.pat=e.value);bind('n',e=>st.n=Math.max(1,+e.value||1));bind('on',e=>st.on=e.value);bind('wd',e=>st.wd=e.value);
+    bind('due',e=>st.due=e.value.trim());bind('lead',e=>st.lead=Math.max(0,+e.value||0));bind('wh',e=>st.when=e.checked);bind('late',e=>st.late=Math.max(0,+e.value||0));
+    $('#cp',r).onclick=e=>copyText(line,e.target);
+  }
+  draw();
+}
+
+/* 7: capacity planner */
+function act7(r){
+  const st=A(7);
+  const def={tot:40,meet:8,rec:3,team:4,admin:3,react:8};
+  Object.keys(def).forEach(k=>{if(st[k]==null)st[k]=def[k]});
+  const L=[['tot','Working hours per week'],['meet','Fixed meetings'],['rec','Recurring jobs (reports, sheets)'],['team','Planned team time (1:1s, development)'],['admin','Admin and IT batch'],['react','Reactive buffer (your best estimate)']];
+  const colors={meet:'#6b7a8f',rec:'#b85a1f',team:'#8a6bb0',admin:'#a0864a',react:'#a3321f'};
+  function draw(){
+    const used=st.meet+st.rec+st.team+st.admin+st.react;
+    const free=st.tot-used;
+    const pct=k=>Math.max(0,st[k]/st.tot*100);
+    r.innerHTML=L.map(([k,l])=>`<label class="f" style="display:block">${l}: <b>${st[k]} h</b><input type="range" data-k="${k}" min="0" max="${k==='tot'?60:30}" step="1" value="${st[k]}"></label>`).join('')+
+    `<div class="bar">${['meet','rec','team','admin','react'].map(k=>`<div style="width:${pct(k)}%;background:${colors[k]}" title="${k}">${st[k]>=3?st[k]+'h':''}</div>`).join('')}<div style="flex:1;background:var(--acc)">${free>0?free+'h free':''}</div></div>
+    <p class="muted" style="font-size:13px">Meetings · recurring · team · admin · reactive · free for projects and goals</p>
+    <div class="fb">${free<0?`<span class="warn">Overbooked by ${-free} hours.</span> Something has to give before the week starts, not during it.`:
+      `Free for projects and goals: <b>${free} h</b> (${Math.round(free/st.tot*100)}% of the week). ${free/st.tot<0.25?'That is thin. Look at whether the reactive estimate or the meetings can shrink.':'Plan project work into this, and leave some of it unplanned as slack*.'}`}</div>
+    <p class="hint">If the reactive figure is a guess, log your actual reactive hours for two weeks, then plan next month around that number.</p>`;
+    $$('input',r).forEach(i=>i.oninput=()=>{st[i.dataset.k]=+i.value;save();draw()});
+  }
+  draw();
+}
+
+/* 8: week grid */
+function act8(r){
+  const st=A(8);
+  st.g=st.g||{};st.ga=st.ga||'Goal A';st.gb=st.gb||'Goal B';st.brush=st.brush||'proj';
+  const D=['Mon','Tue','Wed','Thu','Fri'],S4=['Early AM','Late AM','Early PM','Late PM'];
+  const brushes=()=>[['proj','Projects','#2f6f5e'],['ga',st.ga||'Goal A','#b85a1f'],['gb',st.gb||'Goal B','#8a6bb0'],['team','Team / 1:1s','#6b7a8f'],['react','Reactive buffer','#a3321f'],['admin','Admin batch','#a0864a'],['rev','Review','#3f7fae'],['free','Free','#999999']];
+  function draw(){
+    const B=brushes();const map=Object.fromEntries(B.map(b=>[b[0],b]));
+    const cnt={};B.forEach(b=>cnt[b[0]]=0);Object.values(st.g).forEach(v=>{if(cnt[v]!=null)cnt[v]++});
+    const total=20,filled=Object.keys(st.g).length;
+    const warns=[];
+    if(filled>=10&&!cnt.react)warns.push('No reactive buffer: the first interruption will wreck the week.');
+    if(filled>=10&&!cnt.free)warns.push('No free slot: that plan has no slack*.');
+    if(filled>=10&&!cnt.rev)warns.push('No weekly review slot.');
+    if(cnt.ga+cnt.gb===0&&filled>=10)warns.push('No goal slots, so goals are relying on spare time.');
+    r.innerHTML=`<div class="row"><input type="text" id="ga" value="${esc(st.ga)}" style="flex:1" aria-label="Goal A"><input type="text" id="gb" value="${esc(st.gb)}" style="flex:1" aria-label="Goal B"></div>
+    <div class="row">${B.map(b=>`<button class="small" data-b="${b[0]}" style="${st.brush===b[0]?`background:${b[2]};color:#fff;border-color:${b[2]}`:`border-color:${b[2]}`}">${esc(b[1])}</button>`).join('')}</div>
+    <div class="grid" style="grid-template-columns:50px repeat(5,1fr)"><div></div>${D.map(d=>`<div class="muted" style="text-align:center;font-size:13px">${d}</div>`).join('')}
+    ${S4.map((s,si)=>`<div class="muted" style="font-size:11px;align-self:center">${s}</div>`+D.map((d,di)=>{const k=di+'-'+si,v=st.g[k];const b=v?map[v]:null;return `<div class="cell" data-k="${k}" style="${b?`background:${b[2]};color:#fff;border-color:${b[2]}`:''}">${b?esc(b[1]):''}</div>`}).join('')).join('')}</div>
+    <div class="row" style="margin-top:10px"><button class="small" id="cl">Clear grid</button><span class="muted" style="font-size:13px">${filled} of ${total} slots filled</span></div>
+    <p class="muted" style="font-size:14px">${B.map(b=>cnt[b[0]]?esc(b[1])+' '+cnt[b[0]]:'').filter(Boolean).join(' · ')||'Pick a brush, then tap slots.'}</p>
+    ${warns.map(w=>`<p class="warn">${w}</p>`).join('')}`;
+    $('#ga',r).onchange=e=>{st.ga=e.target.value;save();draw()};$('#gb',r).onchange=e=>{st.gb=e.target.value;save();draw()};
+    $$('[data-b]',r).forEach(b=>b.onclick=()=>{st.brush=b.dataset.b;save();draw()});
+    $$('.cell',r).forEach(c=>c.onclick=()=>{if(st.g[c.dataset.k]===st.brush)delete st.g[c.dataset.k];else st.g[c.dataset.k]=st.brush;save();draw()});
+    $('#cl',r).onclick=()=>{st.g={};save();draw()};
+  }
+  draw();
+}
+
+/* 9: habit card */
+function act9(r){
+  const st=A(9);
+  st.anchor=st.anchor||'I close my laptop for lunch';st.tiny=st.tiny||'put my shoes on and step outside';st.place=st.place||'by the front door';st.days=st.days||{};
+  const ANC=['I close my laptop for lunch','I pour my morning coffee','I sit down at my desk','I finish brushing my teeth','I get home and put the kettle on','(my own)'];
+  function draw(){
+    const custom=!ANC.slice(0,-1).includes(st.anchor);
+    const sentence=`After ${st.anchor.replace(/^I /,'I ')}, I will ${st.tiny} ${st.place?'('+st.place+')':''}.`.replace(' .','.');
+    const d=st.days;let done=0,miss=0,twice=false;
+    for(let i=0;i<14;i++){if(d[i]==='y')done++;if(d[i]==='n'){miss++;if(d[i-1]==='n')twice=true}}
+    r.innerHTML=`<label class="f" style="display:block">Anchor (something that already happens)<select id="an">${ANC.map(a=>`<option ${(!custom&&st.anchor===a)||(custom&&a==='(my own)')?'selected':''}>${esc(a)}</option>`).join('')}</select></label>
+    ${custom?`<input type="text" id="anc" value="${esc(st.anchor==='(my own)'?'':st.anchor)}" placeholder="When I…">`:''}
+    <label class="f" style="display:block">Tiny version (your worst-day version)<input type="text" id="ti" value="${esc(st.tiny)}"></label>
+    <label class="f" style="display:block">Place<input type="text" id="pl" value="${esc(st.place)}"></label>
+    <div class="card" style="font-size:18px">${esc(sentence)}</div>
+    <div class="row"><button class="small primary" id="cp">Copy</button></div>
+    <h4>Two weeks (tap: done, missed, blank)</h4>
+    <div class="grid" style="grid-template-columns:repeat(7,1fr)">${Array.from({length:14},(_,i)=>`<div class="cell" data-d="${i}" style="min-height:40px;${d[i]==='y'?'background:var(--acc);color:#fff':d[i]==='n'?'border-color:var(--warn);color:var(--warn)':''}">${d[i]==='y'?'✓':d[i]==='n'?'✗':i+1}</div>`).join('')}</div>
+    <div class="fb">${twice?'<span class="warn">Two misses in a row.</span> Restart today with just the tiny version. That is the whole rule.':`Done ${done}, missed ${miss}. A single miss is noise; the rule is to never miss twice.`}</div>
+    <button class="small" id="rs">Reset tracker</button>`;
+    $('#an',r).onchange=e=>{st.anchor=e.target.value==='(my own)'?'(my own)':e.target.value;save();draw()};
+    const ac=$('#anc',r);if(ac)ac.onchange=e=>{st.anchor=e.target.value||'(my own)';save();draw()};
+    $('#ti',r).onchange=e=>{st.tiny=e.target.value;save();draw()};$('#pl',r).onchange=e=>{st.place=e.target.value;save();draw()};
+    $('#cp',r).onclick=e=>copyText(sentence,e.target);
+    $$('[data-d]',r).forEach(c=>c.onclick=()=>{const i=c.dataset.d,v=d[i];if(!v)d[i]='y';else if(v==='y')d[i]='n';else delete d[i];st.sentence=sentence;save();draw()});
+    $('#rs',r).onclick=()=>{st.days={};save();draw()};
+    st.sentence=sentence;
+  }
+  draw();
+}
+
+/* 10: Today builder */
+function act10(r){
+  const st=A(10);
+  if(!st.o)st.o={over:true,today:true,sched:true,start:true,act:false,high:false,wait:false,proj:false};
+  st.lim=st.lim||8;
+  function draw(){
+    const o=st.o;
+    const dates=[];
+    if(o.over)dates.push('due before today');
+    if(o.today)dates.push('due today');
+    if(o.sched)dates.push('scheduled on or before today');
+    const q=['not done'];
+    if(dates.length)q.push(dates.map(x=>'('+x+')').join(' OR '));
+    if(o.start)q.push('(no start date) OR (starts on or before today)');
+    if(o.act)q.push('path includes Projects/Active');
+    q.push('sort by priority','sort by due','limit '+st.lim);
+    let out='## Today\n'+FENCE+'tasks\n'+q.join('\n')+'\n'+FENCE;
+    if(o.high)out+='\n\n## Top priorities\n'+FENCE+'tasks\nnot done\npriority is high\nlimit 3\n'+FENCE;
+    if(o.wait)out+='\n\n## Waiting for\n'+FENCE+'tasks\nnot done\ntags include #waiting\nsort by due\n'+FENCE;
+    if(o.proj)out+='\n\n## Active projects\n'+FENCE+'dataview\nTABLE importance, status\nFROM "Projects"\nWHERE status = "active"\nSORT importance DESC\n'+FENCE;
+    const blocks=1+(o.high?1:0)+(o.wait?1:0)+(o.proj?1:0);
+    const crowd=st.lim>10||blocks>=4;
+    const C=[['over','Overdue (decide on them, don’t roll them)'],['today','Due today'],['sched','Scheduled for today or earlier'],['start','Hide tasks that haven’t started yet'],['act','Only from the Projects/Active folder (your WIP limit)'],['high','A separate “top priorities” block'],['wait','A “waiting for” block (tag #waiting)'],['proj','An active-projects table (Dataview)']];
+    r.innerHTML=C.map(([k,l])=>`<label class="f"><input type="checkbox" data-k="${k}" ${o[k]?'checked':''}>${l}</label>`).join('')+
+    `<label class="f" style="display:block">Cap the main list at <b>${st.lim}</b> tasks<input type="range" id="lim" min="3" max="20" value="${st.lim}"></label>
+    <pre class="nospeak">${esc(out)}</pre>
+    <div class="row"><button class="primary small" id="cp">Copy</button></div>
+    <div class="fb">${crowd?'<span class="warn">That is getting crowded.</span> A Today view you won’t read is a store, not a view. Lower the cap or drop a block.':'Compact enough to read in one glance. Habits and calendar events sit around it, not inside it.'}</div>
+    <p class="hint">Habits and calendar events aren’t tasks, so they don’t appear in this query. Put your habit checkboxes and a link to your calendar just above it in the daily-note template.</p>`;
+    $$('input[type=checkbox]',r).forEach(c=>c.onchange=()=>{o[c.dataset.k]=c.checked;save();draw()});
+    $('#lim',r).oninput=e=>{st.lim=+e.target.value;save();draw()};
+    $('#cp',r).onclick=e=>copyText(out,e.target);
+  }
+  draw();
+}
+
+/* 11: weekly review */
+function act11(r){
+  const st=A(11);
+  const wk=(()=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+3-(d.getDay()+6)%7);const w1=new Date(d.getFullYear(),0,4);const w=1+Math.round(((d-w1)/864e5-3+(w1.getDay()+6)%7)/7);return d.getFullYear()+'-W'+w})();;
+  if(st.wk!==wk){st.wk=wk;st.c={};save()}
+  const P=[['Get clear',['Empty paper pad, notebook and loose notes into the inbox','Empty phone notes and voice memos into the inbox','Skim email for anything that needs a decision','Process the inbox to zero (module 3 flow)']],
+           ['Get current',['Look back over last week’s calendar for loose ends','Look ahead at next two weeks of calendar for prep needed','Check every active project has a next action','Decide on each overdue item: do, reschedule, or drop','Check the waiting-for list and nudge where needed']],
+           ['Get creative',['Review goals and someday list: does anything deserve a slot?','Choose next week’s active projects (within the WIP limit)','Block goal slots, buffer and the next review in the calendar','Note one thing that worked and one that didn’t']]];
+  const RES=['Clear the inbox','Scan the next seven days of calendar','Decide on each overdue item','Pick the three for tomorrow'];
+  let secs=st.secs||0,timer=null,rescue=!!st.rescue;
+  function draw(){
+    const list=rescue?[['Rescue review (ten minutes)',RES]]:P;
+    let n=0,d=0;list.forEach(([,it],pi)=>it.forEach((_,i)=>{n++;if(st.c[(rescue?'r':'p')+pi+'-'+i])d++}));
+    r.innerHTML=`<p class="muted">Week ${wk}. ${d} of ${n} done.</p>
+    <div class="row"><button class="small" id="tm">${timer?'Pause timer':'Start timer'}</button><span id="tv" class="muted">${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}</span>
+    <button class="small" id="rsc">${rescue?'Full review':'Rescue version'}</button></div>
+    ${list.map(([ph,it],pi)=>`<h4>${ph}</h4>${it.map((t,i)=>{const k=(rescue?'r':'p')+pi+'-'+i;return `<label class="f"><input type="checkbox" data-k="${k}" ${st.c[k]?'checked':''}>${esc(t)}</label>`}).join('')}`).join('')}
+    <div class="fb">${d===n?'Review done. Close the notebook and stop; do not start doing the tasks you found.':'Services the system, not the tasks. If you find a task, write it down and move on.'}</div>
+    <button class="small" id="rs">Reset this week</button>`;
+    $$('input[type=checkbox]',r).forEach(c=>c.onchange=()=>{st.c[c.dataset.k]=c.checked;save();draw()});
+    $('#tm',r).onclick=()=>{if(timer){clearInterval(timer);timer=null;st.secs=secs;save();draw()}else{timer=setInterval(()=>{secs++;const v=$('#tv',r);if(!v){clearInterval(timer);return}v.textContent=Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')},1000);draw()}};
+    $('#rsc',r).onclick=()=>{clearInterval(timer);timer=null;rescue=!rescue;st.rescue=rescue;save();draw()};
+    $('#rs',r).onclick=()=>{clearInterval(timer);timer=null;st.c={};secs=0;st.secs=0;save();draw()};
+  }
+  draw();
+}
+
+/* 12: blueprint */
+function act12(r){
+  const st=A(12);st.q=st.q||{};
+  const Q=[
+   ['q1','Where do ideas hit you first?',[['paper','Paper'],['phone','Phone or computer'],['either','Whichever is nearest']]],
+   ['q2','When you build a digital system, you usually…',[['tinker','Tinker for hours, then drift away'],['simple','Keep it simple and use it']]],
+   ['q3','How often do you need to search old notes?',[['often','Often'],['rare','Rarely']]],
+   ['q4','Recurring jobs (monthly reports and so on)…',[['forget','I forget them too often'],['ok','I mostly remember']]],
+   ['q5','Is planning away from a screen valuable to you?',[['yes','Yes'],['no','Not really']]]
+  ];
+  function draw(){
+    const q=st.q;const all=Q.every(x=>q[x[0]]);
+    let out='';
+    if(all){
+      let p=0,d=0;
+      if(q.q1==='paper')p+=2;if(q.q1==='phone')d+=2;
+      if(q.q2==='tinker')p+=2;
+      if(q.q3==='often')d+=1;if(q.q4==='forget')d+=1;
+      if(q.q5==='yes')p+=1;else d+=1;
+      const hy=p>=d+2?['Paper day, digital store','Capture and plan your day on paper. Keep projects, recurrence and records in Obsidian, and move things across at the weekly review.']:
+               d>=p+2?['Digital, with paper for the week','Run everything in Obsidian, but hand-draw the weekly plan on paper and look at that, not the screen.']:
+               ['Balanced hybrid','Paper for the daily page and fast capture; Obsidian for projects, recurrence, people and goals; a photo of the page in the daily note is the bridge.'];
+      const hab=A(9).sentence;
+      out=`# My blueprint\n\n**Shape:** ${hy[0]}\n${hy[1]}\n\n## Minimum viable system (start here)\n- One inbox, emptied daily\n- One Today view, capped, with three chosen each morning\n- One weekly review, with a ten-minute rescue version\n\n## Four-week rollout\n- Week 1: inbox and the daily pick-three. Nothing else.\n- Week 2: weekly review, plus active projects with a WIP limit of 2 or 3.\n- Week 3: recurring tasks with start dates, plus one note per team member.\n- Week 4: goal slots on the calendar, plus one habit card${hab?' ('+hab+')':''}.\n- After week 4: freeze the system for four weeks. Setup budget: about 30 minutes a week*.\n\n## Starting vault structure\n- Inbox note\n- Projects/ (status and importance properties)\n- Areas/ (Team, Goals)\n- People/\n- Habits note\n- Daily notes with the Today query in the template\n- Weekly review template\n- Plugins: Tasks first, Dataview second, nothing else until missed`;
+    }
+    r.innerHTML=Q.map(([k,t,o])=>`<h4>${t}</h4><div class="cards">${o.map(a=>`<span class="chip ${q[k]===a[0]?'sel':''}" data-k="${k}" data-v="${a[0]}">${a[1]}</span>`).join('')}</div>`).join('')+
+    (all?`<h4>Your blueprint</h4><pre class="nospeak" style="white-space:pre-wrap">${esc(out)}</pre><div class="row"><button class="primary small" id="cp">Copy</button></div>`:'<p class="hint">Answer all five to see your blueprint.</p>')+
+    '<div class="row"><button class="small" id="rs">Reset answers</button></div>';
+    $$('.chip',r).forEach(c=>c.onclick=()=>{q[c.dataset.k]=c.dataset.v;save();draw()});
+    if(all)$('#cp',r).onclick=e=>copyText(out,e.target);
+    $('#rs',r).onclick=()=>{st.q={};save();draw()};
+  }
+  draw();
+}
+
+
+/* ---------- offline audio, update check, service worker, full screen on first tap ---------- */
+async function saveAudio(){
+  const msg=$('#audMsg'),btn=$('#saveAud');
+  if(!('caches' in window)){msg.textContent='This browser cannot store audio offline.';return}
+  btn.disabled=true;
+  try{
+    const c=await caches.open('olaudio-v1');let done=0;
+    for(let n=1;n<=12;n++){
+      const u='audio/m'+String(n).padStart(2,'0')+'.mp3';
+      if(!(await c.match(u))){const r=await fetch(u);if(!r.ok)throw new Error('http '+r.status);await c.put(u,r)}
+      done++;msg.textContent=done+' of 12 saved…';
+    }
+    msg.textContent='All 12 saved on this device.';
+  }catch(e){msg.textContent='Stopped: check your connection and tap again.'}
+  btn.disabled=false;
+}
+async function checkUpdate(){
+  try{
+    const ac=new AbortController();const to=setTimeout(()=>ac.abort(),8000);
+    const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(to);
+    if(!r.ok)return;
+    const m=/const VERSION='([^']+)'/.exec(await r.text());
+    if(m&&m[1]!==VERSION){
+      $('#upd').innerHTML='<div class="card" style="margin:8px 12px"><b>New version v'+esc(m[1])+' available.</b> <button class="primary small" id="updB">Update now</button></div>';
+      $('#updB').onclick=()=>{location.href=location.pathname+'?v='+encodeURIComponent(m[1])};
+    }
+  }catch(e){}
+}
+checkUpdate();setInterval(checkUpdate,5*60*1000);
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+document.addEventListener('click',function once(e){
+  document.removeEventListener('click',once,true);
+  if(e.target.closest&&e.target.closest('#clearBtn,#clrYes'))return;
+  try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen){const p=document.documentElement.requestFullscreen({navigationUI:'hide'});p&&p.catch&&p.catch(()=>{})}}catch(x){}
+},true);
+
+render();
+</script>
+</body>
+</html>
