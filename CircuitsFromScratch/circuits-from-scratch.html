@@ -154,6 +154,8 @@ kbd{font:500 12px var(--mono);border:1px solid var(--line);border-radius:4px;pad
 .fb{font-size:14px;padding:8px 12px;border-radius:6px}
 .fb.ok{background:var(--good-bg)} .fb.no{background:var(--bad-bg)}
 .score{font:600 15px var(--mono)}
+.mod .needs{font-size:13px;color:var(--muted);display:block;margin-top:4px}
+.pf{font-weight:700;padding:2px 8px;border-radius:5px;margin-right:6px}.pf.pass{background:var(--good-bg);color:var(--good)}.pf.fail{background:var(--bad-bg);color:var(--bad)}
 details.reveal{border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:10px}
 details.reveal summary{cursor:pointer;font-weight:600}
 details.reveal p{margin:8px 0 0}
@@ -399,7 +401,7 @@ function OPAMP(x,y,label,dead,swap){
   var o='<path class="body'+(dead?" dead":"")+'" style="stroke:var(--ink);stroke-width:1.8" d="M'+x+' '+(y-30)+' L'+x+' '+(y+30)+' L'+(x+60)+' '+y+' Z"/>';
   o+='<path class="part" d="M'+(x-10)+' '+(y-15)+' H'+x+' M'+(x-10)+' '+(y+15)+' H'+x+' M'+(x+60)+' '+y+' H'+(x+70)+' M'+(x+30)+' '+(y-15)+' V'+(y-35)+' M'+(x+30)+' '+(y+15)+' V'+(y+35)+'"/>';
   o+=T(x+8,y-11,swap?"+":"−","nlbl")+T(x+8,y+19,swap?"−":"+","nlbl");
-  o+=T(x+36,y-24,"V+","lbl","start")+T(x+36,y+32,"V−","lbl","start");
+  o+=T(x+36,y-24,"Vcc","lbl","start")+T(x+36,y+32,"Vee","lbl","start");
   if(label)o+=T(x+24,y+4,label,"lbl");
   return o;
 }
@@ -465,6 +467,29 @@ function tt(cols,rows,cur){var h='<div class="ttwrap"><table class="tt"><tr>'+co
 
 var MODS=[];
 
+/* ================= randomised quiz helpers ================= */
+/* seeded random numbers: the same seed always gives the same questions (so a reload keeps your attempt) */
+function RNG(seed){var a=seed>>>0;
+  function f(){a=(a+0x6D2B79F5)>>>0;var t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;}
+  return {f:f,int:function(lo,hi){return lo+Math.floor(f()*(hi-lo+1));},pick:function(x){return x[Math.floor(f()*x.length)];},
+    shuffle:function(x){x=x.slice();for(var i=x.length-1;i>0;i--){var j=Math.floor(f()*(i+1)),t=x[i];x[i]=x[j];x[j]=t;}return x;}};
+}
+/* engineering format: eng(0.0136,"A") -> "13.6 mA" */
+function eng(v,u){if(v===0)return "0 "+u;var a=Math.abs(v),P=[[1e6,"M"],[1e3,"k"],[1,""],[1e-3,"m"],[1e-6,"µ"],[1e-9,"n"],[1e-12,"p"]],d=1e-12,s="p";
+  for(var i=0;i<P.length;i++){if(+(a/P[i][0]).toPrecision(3)>=1){d=P[i][0];s=P[i][1];break;}}
+  return (+(v/d).toPrecision(3)).toString()+" "+s+u;}
+/* numeric multiple-choice: correct answer first (the app shuffles the order), wrong answers from typical slips */
+function mcn(q,ans,u,wrongs,w,m){var f=function(x){return eng(x,u);},ca=f(ans),seen={},o=[ca];seen[ca]=1;
+  wrongs.concat([ans*10,ans/10,ans*2,ans/2,ans*3]).forEach(function(x){if(o.length>=4||!isFinite(x)||x<=0)return;var s=f(x);if(!seen[s]){seen[s]=1;o.push(s);}});
+  return {q:q,o:o,c:0,w:w,m:m||null};}
+/* text multiple-choice: correct answer first */
+function mct(q,right,wrongs,w){return {q:q,o:[right].concat(wrongs.slice(0,3)),c:0,w:w,m:null};}
+/* resistor colour code */
+var CC=[["black","#222",0],["brown","#7B4A21",1],["red","#D13B2E",2],["orange","#EA8A1F",3],["yellow","#E8CD2B",4],["green","#2E9B4E",5],["blue","#2E6FD0",6],["violet","#8A4FD0",7],["grey","#8C959C",8],["white","#F2F2F2",9]];
+/* a handheld multimeter face: x,y = top-left, 90 x 52 */
+function METER(x,y,txt,tag,bad){return '<rect class="body" style="stroke:var(--ink);stroke-width:1.8" x="'+x+'" y="'+y+'" width="92" height="56" rx="8"/><rect x="'+(x+8)+'" y="'+(y+8)+'" width="76" height="24" rx="3" style="fill:var(--canvas);stroke:var(--line)"/>'+
+  T(x+46,y+26,txt,bad?"blbl":"nlbl")+T(x+46,y+47,tag,"lbl");}
+
 /* generic bipolar transistor. o: {m:mirror, pnp:bool, eTop:bool (emitter leg at top), state, label}
    pins: B=(x-24s,y), top=(x+18s,y-30), bottom=(x+18s,y+30) */
 function BJT(x,y,o){
@@ -483,6 +508,891 @@ function BJT(x,y,o){
 /* a second, free-standing battery (vertical, + at top, leads y±20) */
 function BATL(x,y,label){return '<path class="part" d="M'+x+' '+(y-20)+' V'+(y-5)+' M'+(x-12)+' '+(y-5)+' H'+(x+12)+' M'+x+' '+(y+5)+' V'+(y+20)+'"/><path class="part" style="stroke-width:4" d="M'+(x-6)+' '+(y+5)+' H'+(x+6)+'"/>'+T(x-16,y-4,"+","nlbl")+T(x+16,y+4,label,"nlbl","start");}
 function ledB(i,imax){return i<=0?0:clamp(Math.sqrt(i/(imax||8.8e-3)),0,1);}
+/*FRAG-START*/
+/* ======================= MODULE: Voltage, current & resistance ======================= */
+(function(){
+function kf(I,max){return clamp(Math.sqrt(Math.abs(I)/max),0.06,1);}
+var VS=[[1.5,"1.5 V"],[3,"3 V"],[5,"5 V"],[9,"9 V"],[12,"12 V"]];
+var RSEL=[[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"],[10000,"10 kΩ"]];
+function waterDiag(s){
+  var V=s.V,Rv=s.R,I=V/Rv,k=kf(I,0.12),w=clamp(19-4*Math.log10(Rv),2.5,14),o="";
+  var pipe='style="fill:none;stroke-linejoin:round;stroke-linecap:round;';
+  o+=T(8,18,"WATER","nlbl","start");
+  o+='<polyline points="50,75 50,40 250,40" '+pipe+'stroke:var(--line);stroke-width:16"/><polyline points="50,75 50,110 290,110" '+pipe+'stroke:var(--line);stroke-width:16"/><polyline points="250,40 290,40" '+pipe+'stroke:var(--line);stroke-width:16"/>';
+  o+='<polyline points="50,75 50,40 290,40" '+pipe+'stroke:var(--s1);opacity:.35;stroke-width:12"/><polyline points="50,75 50,110 290,110" '+pipe+'stroke:var(--s1);opacity:.35;stroke-width:12"/>';
+  o+='<polyline points="290,40 290,110" '+pipe+'stroke:var(--line);stroke-width:'+(w+4).toFixed(1)+'"/><polyline points="290,40 290,110" '+pipe+'stroke:var(--s1);opacity:.5;stroke-width:'+w.toFixed(1)+'"/>';
+  o+=F([50,75,50,40,290,40,290,110,50,110,50,75],"b",k);
+  o+='<circle cx="50" cy="75" r="19" style="fill:var(--canvas);stroke:var(--ink);stroke-width:1.8"/>'+T(50,79,"pump","lbl");
+  o+=T(70,66,"pressure "+fV(V),"nlbl","start")+T(170,30,"flow","lbl")+T(300,78,"narrow","lbl","start")+T(300,92,"pipe","lbl","start");
+  o+=T(8,168,"ELECTRICITY","nlbl","start");
+  o+=W([50,200,50,180,290,180,290,200],true)+W([290,260,290,280,50,280,50,240],false)+BATL(50,220,V+" V")+R(290,200,290,260,fR(Rv),-1);
+  o+=F([50,200,50,180,290,180,290,200,290,260,290,280,50,280,50,240],"b",k);
+  o+=T(150,176,"current","lbl");
+  return {svg:svg(340,300,o),I:I};
+}
+function ohmDiag(s){
+  var V=s.V,Rv=s.R,I=V/Rv,k=kf(I,0.25),o="";begin(24,262,V);
+  o+=FLAG(200,60,k,"b")+R(200,60,200,200,fR(Rv),-1)+GND(200,200,k,"b");
+  o+=TAG(214,78,"top of resistor "+fV(V),"start")+TAG(214,192,"bottom 0 V","start")+TAG(214,136,"drop "+fV(V),"start");
+  o+=TAG(100,136,"I = "+fI(I),"start");
+  return {svg:finish(o,340,262,50),I:I};
+}
+function bandDiag(s){
+  var d1=CC[s.d1],d2=CC[s.d2],m=CC[s.m],o="",val=(s.d1*10+s.d2)*Math.pow(10,s.m);
+  o+='<path d="M30 75 H92 M248 75 H310" style="stroke:var(--ink);stroke-width:3"/><rect x="88" y="45" width="164" height="60" rx="24" style="fill:#E9D8B4;stroke:var(--ink);stroke-width:1.6"/>';
+  [[112,d1],[142,d2],[172,m]].forEach(function(b){o+='<rect x="'+b[0]+'" y="45" width="15" height="60" style="fill:'+b[1][1]+';stroke:var(--ink);stroke-width:.8"/>';});
+  o+='<rect x="218" y="45" width="15" height="60" style="fill:#C9A227;stroke:var(--ink);stroke-width:.8"/>';
+  o+=T(119,125,String(s.d1),"nlbl")+T(149,125,String(s.d2),"nlbl")+T(179,125,"×"+Math.pow(10,s.m),"nlbl")+T(225,125,"±5%","lbl");
+  o+=T(119,141,"1st","lbl")+T(149,141,"2nd","lbl")+T(179,141,"mult.","lbl")+T(225,141,"tol.","lbl");
+  o+=T(170,24,fR(val),"nlbl");
+  return {svg:svg(340,160,o),val:val};
+}
+function powDiag(s){
+  var V=s.V,Rv=s.R,I=V/Rv,P=V*V/Rv,k=kf(I,0.3),o="";begin(24,262,V);
+  var h=clamp((P-0.1)/0.9,0,1);
+  if(P>0.25)o+='<circle class="glow" cx="200" cy="130" r="'+(18+22*h).toFixed(0)+'" opacity="'+(0.25+0.5*h).toFixed(2)+'" filter="url(#blur)"/>';
+  o+=FLAG(200,60,k,"b")+R(200,60,200,200,fR(Rv),-1,P>0.5?"badp":"")+GND(200,200,k,"b");
+  if(P>0.6)o+='<path class="burn" d="M180 110 l40 40 M220 110 l-40 40"/>';
+  o+=TAG(214,100,fV(V)+" across it","start")+TAG(214,136,"current "+fI(I),"start")+TAG(214,172,"heat "+fx(P,2)+" W","start");
+  return {svg:finish(o,340,262,50),P:P,I:I};
+}
+function ledDiag(s){
+  var Vs=s.Vs,Rv=s.R,o="",I=Rv>0?Math.max(0,(Vs-2)/Rv):1,burnt=I>0.03,b=burnt?"burnt":ledB(I,0.02),k=burnt?1:kf(I,0.03);
+  begin(24,262,Vs);
+  o+=FLAG(200,50,k,"b");
+  if(Rv>0)o+=R(200,50,200,110,fR(Rv),-1);else o+=W([200,50,200,110],"bad");
+  o+=W([200,110,200,125],"mid")+(burnt?"":"")+LED(200,145,b)+GND(200,165,k,"b");
+  if(Rv===0)o+=T(214,84,"just a wire!","blbl","start");
+  return {svg:finish(o,340,262,50),I:I,burnt:burnt};
+}
+
+/* ---------- quiz bank ---------- */
+var VL=[3,5,6,9,12],RL=[100,200,220,330,470,500,1000,2200,4700,10000];
+var bank=[
+ function(R){var V=R.pick(VL),r=R.pick(RL),I=V/r;return mcn("A "+V+" V battery is connected across a "+fR(r)+" resistor. How much current flows?",I,"A",[I*1000,V*r/1000,r/V/1000],"I = V ÷ R = "+V+" ÷ "+r+" = "+eng(I,"A")+".",{k:"ohmI",V:V,R:r,ans:I});},
+ function(R){var i=R.pick([1,2,4,5,10,20]),r=R.pick([220,330,470,1000,2200,4700]),V=i/1000*r;return mcn("A current of "+i+" mA flows through a "+fR(r)+" resistor. What is the voltage across it?",V,"V",[i*r,V/1000,V/2],"V = I × R = "+(i/1000)+" A × "+r+" Ω = "+eng(V,"V")+". Convert milliamps to amps before multiplying.",{k:"ohmV",I:i/1000,R:r,ans:V});},
+ function(R){var V=R.pick([3,6,9,12]),i=R.pick([1,2,3,4,6,12]),r=V/(i/1000);return mcn("A resistor has "+V+" V across it and "+i+" mA flowing through it. What is its resistance?",r,"Ω",[V*i,r/1000,i/V*1000],"R = V ÷ I = "+V+" ÷ "+(i/1000)+" = "+eng(r,"Ω")+".",{k:"ohmR",V:V,I:i/1000,ans:r});},
+ function(R){var V=R.pick([5,9,12]),r=R.pick([100,220,330,470,1000]),P=V*V/r;return mcn("A "+fR(r)+" resistor has "+V+" V across it. How much power does it turn into heat?",P,"W",[V/r,V*V/(2*r)],"I = V ÷ R = "+eng(V/r,"A")+", and P = V × I = "+eng(P,"W")+" (or V² ÷ R).",{k:"pow",V:V,R:r,ans:P});},
+ function(R){var d1=R.pick([1,2,3,4,5,6,8]),d2=R.pick([0,2,3,4,5,7]),m=R.pick([0,1,2,3,4]),v=(d1*10+d2)*Math.pow(10,m);
+   return mcn("A resistor's bands are "+CC[d1][0]+", "+CC[d2][0]+", "+CC[m][0]+", then gold. What is its value?",v,"Ω",[(d2*10+d1)*Math.pow(10,m),v*10,v/10],"First two bands are digits ("+d1+" and "+d2+"), the third is the number of zeros ("+m+"), and gold is just the tolerance: "+eng(v,"Ω")+".",{k:"band",d1:d1,d2:d2,m:m,ans:v});},
+ function(R){var Vs=R.pick([5,7,9,12]),i=R.pick([5,10,20]),r=(Vs-2)/(i/1000);return mcn("A red LED drops about 2 V and should carry "+i+" mA from a "+Vs+" V supply. What series resistor is needed?",r,"Ω",[Vs/(i/1000),(Vs+2)/(i/1000),r/10],"The resistor gets what the LED doesn't: "+Vs+" − 2 = "+(Vs-2)+" V. R = V ÷ I = "+(Vs-2)+" ÷ "+(i/1000)+" = "+eng(r,"Ω")+".",{k:"ledR",Vs:Vs,I:i/1000,ans:r});},
+ function(R){var P=R.pick([["pressure","voltage"],["flow rate","current"],["a narrow pipe","resistance"]]);var all=["voltage","current","resistance","power"];
+   return mct("In the water picture, which electrical quantity matches <b>"+P[0]+"</b>?",P[1],all.filter(function(x){return x!==P[1];}),"Pressure pushes, so it's voltage. Flow rate is how much moves per second, so it's current. A narrow pipe holds the flow back, so it's resistance.");},
+ function(R){var V=R.pick([3,5,6]),r=R.pick([220,330,470,1000]),f=R.pick([2,3]),I=V/r;return mcn("A resistor carries "+eng(I,"A")+" with "+V+" V across it. The voltage is raised to "+(V*f)+" V. What's the new current?",I*f,"A",[I/f,I,I+f/1000],"Current is proportional to voltage (I = V ÷ R, same R). "+f+"× the voltage gives "+f+"× the current.",{k:"scaleI",V:V,R:r,f:f,ans:I*f});},
+ function(R){var a=R.pick([1.5,2.2,3.3,4.7,6.8,10,22,47]),n=function(x){return (+x.toPrecision(6)).toString();};
+   return mct("What is "+a+" kΩ written in plain ohms?",n(a*1000)+" Ω",[n(a*100)+" Ω",n(a*10000)+" Ω",n(a)+" Ω"],"k means ×1000: "+a+" × 1000 = "+n(a*1000)+" Ω.");},
+ function(R){var r=R.pick([100,220,330,470,1000,2200]),V=R.pick([5,9,12]),r2=r*2,I=V/r;return mcn("The same "+V+" V is put across a resistor twice as big as before ("+fR(r2)+" instead of "+fR(r)+"). The original current was "+eng(I,"A")+". What is it now?",I/2,"A",[I*2,I,I/4],"Double the resistance (same voltage) halves the current: "+V+" ÷ "+r2+" = "+eng(V/r2,"A")+".",{k:"scaleR",V:V,R:r,ans:V/r2});}
+];
+
+(MODS.banks=MODS.banks||{}).basics=bank;
+MODS.push({id:"basics",n:1,title:"Voltage, current & resistance",blurb:"Start here. What electricity is doing in a wire, using water pipes as the picture. Ohm's law, resistors, reading their colour bands, and picking one for an LED.",mistakes:"A resistor that's too small for its job, an LED with no resistor.",needs:"",
+steps:[
+{title:"Electricity as water in pipes",part:"Part 1 · The big picture",init:{V:5,R:1000},
+ diag:function(s){var d=waterDiag(s);return {svg:d.svg,meters:[["Pressure (voltage)",fV(s.V),true],["Pipe (resistance)",fR(s.R),false],["Flow (current)",fI(d.I),d.I>1e-6]],
+   now:"The pump pushes with "+fV(s.V)+" of 'pressure' through a pipe of "+fR(s.R)+". The flow is "+fI(d.I)+". Narrower pipe or weaker pump means less flow. Same circuit drawn underneath: battery, resistor, and the loop of wire."};},
+ ctl:[{k:"V",type:"seg",label:"Pump / battery",opts:VS},{k:"R",type:"seg",label:"Pipe / resistor",opts:RSEL}],
+ text:`<p>You can't see electricity, so use a picture you can: <b>water in a closed loop of pipe</b>. Every circuit idea in this course has a water version.</p>
+<table class="cmp"><tr><th>Water</th><th>Electricity</th><th>Unit</th></tr>
+<tr><td>Pump pressure</td><td><b>Voltage</b> (the push)</td><td>volts, V</td></tr>
+<tr><td>Flow rate</td><td><b>Current</b> (how much moves per second)</td><td>amps, A (mA = thousandth)</td></tr>
+<tr><td>Narrow pipe</td><td><b>Resistance</b> (holds the flow back)</td><td>ohms, Ω (kΩ = thousand)</td></tr>
+<tr><td>Pump</td><td><b>Battery</b></td><td></td></tr>
+<tr><td>Pipe</td><td><b>Wire</b></td><td></td></tr></table>
+<ul><li>Try the buttons. A stronger pump gives more flow.</li><li>A narrower pipe gives less flow.</li><li>Nothing flows unless the loop is complete.</li></ul>
+<div class="why"><span class="k">Say it with the real words</span><b>Voltage</b> pushes, <b>resistance</b> resists, and <b>current</b> is what results. More voltage means more current. More resistance means less current.</div>
+<details class="reveal"><summary>Where the picture stops being accurate</summary><ul><li>Wires have almost no resistance, like a huge pipe.</li><li>What moves is electric charge (tiny electrons), and the loop is always full of it already. Nothing is used up. The battery just pushes it around.</li><li>Pipes can leak. A wire only carries current if the loop is complete.</li></ul></details>`},
+
+{title:"Ohm's law",part:"Part 1 · The big picture",init:{V:5,R:1000},
+ diag:function(s){var d=ohmDiag(s);return {svg:d.svg,meters:[["Voltage across it",fV(s.V),true],["Resistance",fR(s.R),false],["Current (V ÷ R)",fI(d.I),true]],
+   now:"I = V ÷ R = "+s.V+" ÷ "+s.R+" = "+d.I.toFixed(5).replace(/0+$/,"")+" A, which is "+fI(d.I)+". Double the voltage and the current doubles. Double the resistance and the current halves."};},
+ ctl:[{k:"V",type:"seg",label:"Voltage",opts:VS},{k:"R",type:"seg",label:"Resistance",opts:[[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"],[4700,"4.7 kΩ"],[10000,"10 kΩ"]]}],
+ text:`<p>One rule joins all three. It's called <b>Ohm's law</b>:</p>
+<div class="formula">V = I × R</div>
+<ul><li><b>Current:</b> I = V ÷ R</li><li><b>Voltage:</b> V = I × R</li><li><b>Resistance:</b> R = V ÷ I</li></ul>
+<p>Use volts, amps and ohms. Convert first: <b>5 mA = 0.005 A</b> and <b>2.2 kΩ = 2200 Ω</b>.</p>
+<h3>Worked example</h3>
+<ul><li>9 V across 4.7 kΩ.</li><li>I = 9 ÷ 4700 = 0.0019 A.</li><li>That's <b>1.9 mA</b>.</li></ul>
+<div class="why"><span class="k">Water version</span>Same pump, half-width pipe: half the flow. Ohm's law just says exactly how much.</div>
+<p class="hint">Try: 12 V and 330 Ω. Predict the current, then check the meter.</p>`},
+
+{title:"Reading a resistor's colour bands",part:"Part 2 · Resistors in real life",init:{d1:4,d2:7,m:2},
+ diag:function(s){var d=bandDiag(s);return {svg:d.svg,meters:[["Value",fR(d.val),true],["Digits",s.d1+" "+s.d2,false],["Zeros",String(s.m),false]],
+   now:"Bands: "+CC[s.d1][0]+" ("+s.d1+"), "+CC[s.d2][0]+" ("+s.d2+"), "+CC[s.m][0]+" ("+s.m+" zeros). So "+s.d1+s.d2+" followed by "+s.m+" zeros = "+d.val+" Ω = "+fR(d.val)+". Gold on the end just means ±5% tolerance."};},
+ ctl:[{k:"d1",type:"range",label:"1st band",min:1,max:9,step:1,fmt:function(v){return CC[v][0];}},{k:"d2",type:"range",label:"2nd band",min:0,max:9,step:1,fmt:function(v){return CC[v][0];}},{k:"m",type:"range",label:"3rd band",min:0,max:6,step:1,fmt:function(v){return CC[v][0]+" ("+v+" zeros)";}}],
+ text:`<p>Small resistors are too tiny to print numbers on, so they wear <b>coloured bands</b>.</p>
+<ul><li><b>Hold it so the gold (or silver) band is on the right</b> and read from the left.</li><li><b>Bands 1 and 2:</b> two digits.</li><li><b>Band 3:</b> how many zeros to add.</li><li><b>Gold:</b> tolerance, how far off it might be (±5%).</li></ul>
+<p style="line-height:2.1">${CC.map(function(c){return "<span style=\"white-space:nowrap;margin-right:10px\"><i style=\"display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--ink);background:"+c[1]+";vertical-align:-1px\"></i> <b>"+c[2]+"</b> "+c[0]+"</span>";}).join(" ")}</p>
+<p>Example: <b>brown, black, red</b> is 1, 0, then 2 zeros: <b>1000 Ω = 1 kΩ</b>.</p>
+<div class="why"><span class="k">Check with a meter</span>If you're unsure, measure it. The Multimeter module shows how. Bands are easy to misread in poor light, especially red, brown and orange.</div>`},
+
+{title:"Power: resistors get hot",part:"Part 2 · Resistors in real life",mist:true,init:{V:9,R:100},
+ diag:function(s){var d=powDiag(s);var st=d.P>0.6?"burnt":d.P>0.25?"overloaded":"fine";return {svg:d.svg,bad:d.P>0.25,
+   meters:[["Heat produced",fx(d.P,2)+" W",d.P>0.25?"warn":true],["Rating of this resistor","0.25 W",false],["Status",st,d.P>0.25?"warn":true]],
+   now:d.P>0.6?"Far over its rating. The resistor would cook, smoke and fail. "+fx(d.P,2)+" W is "+Math.round(d.P/0.25)+"× what it can take.":d.P>0.25?"Over the 0.25 W rating: it gets too hot to touch and its value drifts. Use a higher-resistance part, or a bigger-wattage resistor.":"Within its rating: "+fx(d.P,2)+" W is "+Math.round(d.P/0.25*100)+"% of what a quarter-watt resistor can take."};},
+ ctl:[{k:"V",type:"seg",label:"Voltage",opts:[[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"R",type:"seg",label:"Resistor",opts:[[47,"47 Ω"],[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"]]}],
+ text:`<p>Current through resistance makes <b>heat</b>. The energy per second is <b>power</b>, measured in <b>watts (W)</b>:</p>
+<div class="formula">P = V × I &nbsp;&nbsp; or &nbsp;&nbsp; P = V² ÷ R</div>
+<p>Typical hobby resistors are rated <b>¼ W (0.25 W)</b>. Go over that and they overheat.</p>
+<div class="why bad"><span class="k">The mistake</span>Choosing a resistor only by its ohms. A 100 Ω across 9 V is "correct" in value, but it makes 0.81 W: over three times the rating.</div>
+<div class="why fix"><span class="k">The fix</span>Work out P = V² ÷ R first. Stay under about half the rating. If it's too much, raise the resistance, or use a ½ W, 1 W or bigger part.</div>
+<div class="why"><span class="k">Water version</span>Pushing lots of water through a narrow pipe makes the pipe work hard (friction). The wattage rating is how much of that the pipe can stand.</div>`},
+
+{title:"Choosing a resistor for an LED",part:"Part 2 · Resistors in real life",init:{Vs:5,R:330},
+ diag:function(s){var d=ledDiag(s);return {svg:d.svg,bad:d.burnt,
+   meters:[["Supply",fV(s.Vs),true],["Resistor",s.R>0?fR(s.R):"none",s.R>0?false:"warn"],["LED current",d.burnt?"far too much":fI(d.I),d.burnt?"warn":d.I>1e-3],["Ideal for 10 mA",fR(Math.round((s.Vs-2)/0.01)),false]],
+   now:d.burnt?"Nothing limits the current, so far more than the LED can take flows. It burns out in a flash.":(d.I<5e-4?"Very little current: the LED is dim or off.":"The LED takes about 2 V, so the resistor gets the other "+fV(s.Vs-2)+". I = "+fx(s.Vs-2,1)+" ÷ "+s.R+" = "+fI(d.I)+".")};},
+ ctl:[{k:"Vs",type:"seg",label:"Supply",opts:[[3.3,"3.3 V"],[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"R",type:"seg",label:"Resistor",opts:[[0,"none ✗",1],[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"],[4700,"4.7 kΩ"]]}],
+ text:`<p>An LED isn't like a resistor. Once it conducts, it keeps a <b>roughly fixed voltage across it</b> (about 2 V for red) and will take <b>as much current as you let it</b>. Too much and it dies.</p>
+<p>So a <b>series resistor</b> sets the current. It gets whatever voltage the LED doesn't:</p>
+<div class="formula">R = (supply − LED drop) ÷ current</div>
+<ul><li>5 V supply, red LED, 10 mA wanted.</li><li>Resistor gets 5 − 2 = 3 V.</li><li>R = 3 ÷ 0.01 = <b>300 Ω</b>. Round to the next standard value, 330 Ω.</li></ul>
+<p>Most small LEDs are happy at <b>5 to 20 mA</b>.</p>
+<div class="why bad"><span class="k">Try the mistake</span>Choose "none". The LED has nothing to hold the current back.</div>
+<div class="why"><span class="k">Water version</span>The LED is a valve that opens fully once there's enough push. The resistor is the narrow pipe that stops it flooding.</div>`},
+
+{quiz:true,gen:true,count:5,title:"Check: voltage, current & resistance",part:"Check",bank:bank},
+
+{final:true,title:"Explain it back",part:"Finish",
+ text:`<details class="reveal"><summary>1. What do voltage, current and resistance mean, in water terms and electrical terms?</summary><p>Voltage is the push (pump pressure). Current is the flow (how much moves per second). Resistance is how hard it is to push through (a narrow pipe).</p></details>
+<details class="reveal"><summary>2. State Ohm's law three ways.</summary><p>V = I × R, I = V ÷ R, R = V ÷ I. Use volts, amps, ohms.</p></details>
+<details class="reveal"><summary>3. How do you read a 3-band resistor?</summary><p>Two digits, then that many zeros. Brown, black, red is 10 followed by two zeros: 1000 Ω.</p></details>
+<details class="reveal"><summary>4. Why does a resistor have a power rating?</summary><p>Current through it makes heat, P = V × I. A ¼ W resistor can only shed 0.25 W before it overheats.</p></details>
+<details class="reveal"><summary>5. How do you pick the resistor for an LED?</summary><p>R = (supply − LED drop) ÷ wanted current. The resistor takes the voltage the LED doesn't.</p></details>
+<h3>Build it yourself</h3>
+<p>In a simulator (VoltSim or any other) or on a breadboard: 5 V supply, 330 Ω resistor, red LED, back to 0 V. Then swap in 1 kΩ and watch the LED dim.</p>`}
+]});
+})();
+
+/* ======================= MODULE: Capacitors from scratch ======================= */
+(function(){
+function kf(I,max){return clamp(Math.sqrt(Math.abs(I)/max),0.06,1);}
+function plates(x,y1,y2,v,vmax){var n=Math.round(clamp(v/(vmax||5),0,1)*5),pl="",mi="";for(var i=0;i<n;i++){pl+="+";mi+="−";}return T(x,y1,pl,"nlbl")+T(x,y2,mi,"nlbl");}
+var CSEL=[[470e-6,"470 µF"],[1000e-6,"1000 µF"],[4700e-6,"4700 µF"]];
+
+/* ---- step 1: current stops when it's full (LED in series) ---- */
+function fullDiag(s){
+  var v=s.v,Il=Math.max(0,(5-v-1.9)/330),Id=s.hold?v/100:0,Ic=Il-Id,b=ledB(Il),k=kf(Il,0.0094),kd=kf(Id,0.05),kc=kf(Ic,0.0094),o="";
+  begin(24,262);
+  o+=FLAG(150,50,k,"b")+R(150,50,150,100,"330 Ω",-1)+W([150,100,150,108],"mid")+LED(150,128,b)+W([150,148,150,175],v)+D(150,160,v);
+  o+=W([150,160,260,160,260,168],v)+PUSH(260,168,205,!!s.hold,"")+W([260,205,260,212],s.hold?v:false)+R(260,212,260,245,"100 Ω",1)+GND(260,245,s.hold?kd:0,"b");
+  o+=CAP(150,175,215,fC(s.C),true,-1)+GND(150,215,Ic>0?kc:0,"b")+plates(168,184,214,v,3.1);
+  if(Il>1e-5)o+=F([150,100,150,108],"b",k)+F([150,148,150,175],"b",k);
+  if(s.hold)o+=F([150,160,260,160,260,168],"b",kd)+F([260,205,260,245],"b",kd);
+  o+=TAG(138,160,"Vc "+fV(v),"end");
+  return {svg:finish(o,340,262,50),Il:Il,b:b,Ic:Ic};
+}
+function fullSim(s,dt){var C=s.C,n=Math.min(300,Math.max(1,Math.ceil(dt/0.002))),h=dt/n;
+  for(var i=0;i<n;i++){var Il=Math.max(0,(5-s.v-1.9)/330),Id=s.hold?s.v/100:0;s.v=clamp(s.v+h*(Il-Id)/C,0,5);}
+  hpush(s,{v:s.v,i:Math.max(0,(5-s.v-1.9)/330)*1000},9);}
+
+/* ---- step 2: the time constant ---- */
+function tauDiag(s){
+  var v=s.v,I=(5-v)/s.R,k=clamp((5-v)/5,0.06,1),o="";begin(24,262);
+  o+=FLAG(200,50,k,"b")+R(200,50,200,115,fR(s.R),-1)+W([200,115,200,150],v)+D(200,132,v)+CAP(200,150,190,fC(s.C),true,-1)+GND(200,190,k,"b")+plates(218,158,190,v);
+  if(I>1e-7)o+=F([200,115,200,150],"b",k);
+  o+=TAG(214,132,"Vc "+fV(v),"start");
+  return {svg:finish(o,340,262,50),I:I};
+}
+function tauSim(s,dt){var tau=s.R*s.C;s.v=5+(s.v-5)*Math.exp(-dt/tau);if(s.t63==null&&s.v>=3.16)s.t63=s.t;hpush(s,{v:s.v,i:(5-s.v)/s.R*1000},tau*6);}
+
+/* ---- step 3: measure an unknown capacitor by timing ---- */
+function mysDiag(s){
+  var v=s.v,k=clamp((5-v)/5,0.06,1),o="";begin(24,262);
+  o+=FLAG(150,50,k,"b")+R(150,50,150,115,"100 kΩ",-1)+W([150,115,150,150],v)+D(150,132,v)+CAP(150,150,190,"?",true,-1)+GND(150,190,k,"b");
+  o+='<path class="ref" style="stroke-width:2" d="M232 138 L154 132 M232 164 L154 214"/><circle cx="154" cy="132" r="3" style="fill:var(--bad)"/><circle cx="154" cy="214" r="3" style="fill:var(--ink)"/>';
+  o+=METER(232,118,fx(v,2)+" V","voltmeter");
+  return {svg:finish(o,340,262,50)};
+}
+var MYS={a:22e-6,b:47e-6,c:100e-6};
+function mysSim(s,dt){var tau=100000*MYS[s.cap];s.v=5+(s.v-5)*Math.exp(-dt/tau);if(s.t63==null&&s.v>=3.16)s.t63=s.t;hpush(s,{v:s.v},tau*5.5);}
+
+/* ---- step 4: fade-out light (cap in parallel with LED) ---- */
+function fadeDiag(s){
+  var v=s.v,p=!!s.btn,Ib=p?(5-v)/47:0,Il=Math.max(0,(v-1.9)/330),Ic=Ib-Il,b=ledB(Il),kb=kf(Ib,0.1),kl=kf(Il,0.0094),kc=kf(Ic,0.1),o="";begin(24,262);
+  o+=FLAG(100,50,p?kb:0,"b")+PUSH(100,50,90,p,"button")+W([100,90,100,100],p)+R(100,100,100,135,"47 Ω",-1)+W([100,135,250,135],v)+D(100,135,v)+D(150,135,v)+D(250,135,v);
+  o+=W([150,135,150,155],v)+CAP(150,155,195,fC(s.C),true,-1)+plates(168,164,194,v)+R(250,135,250,175,"330 Ω",1)+W([250,175,250,185],Il>0?"mid":false)+LED(250,205,b);
+  if(p){o+=GND(150,195,Ic>0?kc:0,"b")+GND(250,225,kl,"b");
+    if(Ib>1e-4)o+=F([100,50,100,135],"b",kb);
+    if(Ic>1e-4)o+=F([150,135,150,155],"b",kc);
+    if(Il>1e-5)o+=F([250,135,250,175],"b",kl)+F([250,185,250,225],"b",kl);}
+  else{o+=GND(150,195,0)+GND(250,225,0);
+    if(Il>1e-5)o+=F([150,155,150,135,250,135,250,175],"b",kl)+F([250,185,250,RB,150,RB,150,195],"b",kl);}
+  o+=TAG(112,126,"Vc "+fV(v),"start");
+  return {svg:finish(o,340,262,50),Il:Il,Ib:Ib,b:b};
+}
+function fadeSim(s,dt){var n=Math.min(300,Math.max(1,Math.ceil(dt/0.001))),h=dt/n;
+  for(var i=0;i<n;i++){var Ib=s.btn?(5-s.v)/47:0,Il=Math.max(0,(s.v-1.9)/330);s.v=clamp(s.v+h*(Ib-Il)/s.C,0,5);}
+  var Il2=Math.max(0,(s.v-1.9)/330);
+  if(s.btn){s.rel=null;s.off=null;}else if(s.rel==null&&s.wasp){s.rel=s.t;}
+  s.wasp=s.btn;if(s.rel!=null&&s.off==null&&Il2<2e-4)s.off=s.t-s.rel;
+  hpush(s,{v:s.v,i:Il2*1000},10);}
+
+/* ---- step 5: reading capacitor codes ---- */
+var CODES=[["104",100e-9],["103",10e-9],["473",47e-9],["222",2.2e-9],["102",1e-9],["224",220e-9]];
+function codeDiag(s){
+  var c=CODES[s.ci],o="";
+  o+='<path d="M120 100 V150 M200 100 V150" style="stroke:var(--ink);stroke-width:2.5"/><circle cx="160" cy="70" r="40" style="fill:#E8A84C;stroke:var(--ink);stroke-width:1.6"/>'+'<text x="160" y="80" text-anchor="middle" style="font:700 26px var(--mono);fill:#2a1a05">'+c[0]+'</text>';
+  o+=T(160,22,"ceramic disc capacitor","lbl")+T(160,176,"marking "+c[0]+" = "+c[0].slice(0,2)+" followed by "+c[0].slice(2)+" zeros, in pF","lbl");
+  o+='<rect x="248" y="50" width="34" height="70" rx="5" style="fill:#2B4A7A;stroke:var(--ink);stroke-width:1.4"/><rect x="248" y="50" width="9" height="70" style="fill:#C8D4E6"/><text x="252.5" y="92" text-anchor="middle" style="font:700 12px var(--mono);fill:#2B4A7A">−</text><path d="M255 120 V150 M275 120 V150" style="stroke:var(--ink);stroke-width:2.5"/>'+T(265,22,"electrolytic","lbl")+T(265,164,"stripe = −","lbl");
+  return {svg:svg(340,190,o),v:c[1]};
+}
+
+/* ---- quiz bank ---- */
+var RL=[1000,2200,4700,10000,47000,100000],CL=[10e-6,22e-6,47e-6,100e-6,470e-6];
+var bank=[
+ function(R){var r=R.pick(RL),c=R.pick(CL),t=r*c;return mcn("A resistor of "+fR(r)+" charges a "+fC(c)+" capacitor. What is the time constant τ = R × C?",t,"s",[t*1000,t/1000,t*5],"τ = R × C = "+r+" Ω × "+(c*1e6)+" µF = "+eng(t,"s")+". Work in ohms and farads (1 µF = 0.000001 F).",{k:"tau",R:r,C:c,ans:t});},
+ function(R){var r=R.pick([1000,2200,4700,10000]),c=R.pick([10e-6,47e-6,100e-6,470e-6]),t=r*c;return mcn("With "+fR(r)+" and "+fC(c)+", about how long until the capacitor is essentially full (99%)?",5*t,"s",[t,2*t,10*t],"τ = "+eng(t,"s")+". After 5τ the capacitor is about 99% charged: "+eng(5*t,"s")+".",{k:"full",R:r,C:c,ans:5*t});},
+ function(R){var V=R.pick([5,9,12]);return mcn("An empty capacitor charges from a "+V+" V supply through a resistor. What is its voltage after exactly one time constant?",V*0.632,"V",[V/2,V*0.368,V*0.9],"After one τ it has covered about 63% of the gap: 0.632 × "+V+" = "+eng(V*0.632,"V")+".",{k:"v63",V:V,ans:V*0.632});},
+ function(R){var V=R.pick([5,9,12]),r=R.pick([220,470,1000,2200,4700]),I=V/r;return mcn("The switch has just closed on an <b>empty</b> capacitor in series with a "+fR(r)+" resistor and a "+V+" V supply. What is the current at that first instant?",I,"A",[I/2,I*0.632,V/r/10],"The capacitor is at 0 V, so the whole "+V+" V is across the resistor: I = "+V+" ÷ "+r+" = "+eng(I,"A")+". Then it shrinks as the capacitor charges.",{k:"i0",V:V,R:r,ans:I});},
+ function(R){var V=R.pick([5,9,12]);return mcn("An LED (drops 2 V) and a resistor charge an empty capacitor from a "+V+" V supply. At what capacitor voltage does the LED go out?",V-2,"V",[V,V/2,2],"The LED needs 2 V across it, so it can only pass current while the capacitor is below "+V+" − 2 = "+(V-2)+" V. Above that, nothing flows.",{k:"ledstop",V:V,ans:V-2});},
+ function(R){var d=R.pick([10,15,22,33,47,68]),m=R.pick([1,2,3,4,5]),v=d*Math.pow(10,m)*1e-12;return mcn("A ceramic capacitor is marked <b>"+d+m+"</b>. What is its value?",v,"F",[v*10,v/10,v*1000],"First two digits "+d+", then "+m+" zeros, in picofarads: "+(d*Math.pow(10,m))+" pF = "+eng(v,"F")+".",{k:"code",d:d,m:m,ans:v});},
+ function(R){var r=R.pick([10000,47000,100000]),c=R.pick([10e-6,22e-6,47e-6,100e-6]),t=r*c;return mcn("You time a capacitor through a "+fR(r)+" resistor. It reaches 63% of the supply after "+eng(t,"s")+". What is its capacitance?",c,"F",[c*10,c/10,t/(2*r)],"One time constant: τ = R × C, so C = τ ÷ R = "+eng(t,"s")+" ÷ "+r+" Ω = "+eng(c,"F")+".",{k:"cfromt",R:r,t:t,ans:c});},
+ function(R){return mct("A capacitor has been connected to a DC supply (through a resistor) for a long time. How much current flows through it?",R.pick(["Practically none: it's full","Practically none, it has charged up to the supply"]),["The same as at the start","Half the starting current","The current keeps growing"],"A capacitor blocks steady DC once it's full. Current flows only while its voltage is still changing.");},
+ function(R){var r=R.pick([1000,4700,10000]),c=R.pick([10e-6,47e-6,100e-6]),f=R.pick([2,3,5,10]),t=r*c;return mcn("Same "+fR(r)+" resistor, but the "+fC(c)+" capacitor is swapped for one "+f+" times bigger. What is the new time constant?",t*f,"s",[t/f,t,t+f],"τ = R × C. A "+f+"× bigger C means a "+f+"× bigger τ: "+eng(t,"s")+" × "+f+" = "+eng(t*f,"s")+". (Bigger tank, same pipe, longer to fill.)",{k:"tauscale",R:r,C:c,f:f,ans:t*f});},
+ function(R){var n=R.pick([2.2,4.7,10,22,47,100]),pl=function(x){return (+x.toPrecision(6)).toString();};return mct(pl(n)+" µF is how many nanofarads?",pl(n*1000)+" nF",[pl(n*100)+" nF",pl(n*10000)+" nF",pl(n/1000)+" nF"],"1 µF = 1000 nF, so "+pl(n)+" × 1000 = "+pl(n*1000)+" nF.");}
+];
+
+(MODS.banks=MODS.banks||{}).caps=bank;
+MODS.push({id:"caps",n:2,title:"Capacitors from scratch",blurb:"What a capacitor is, why the current stops when it's full, the RC time constant, an LED that fades out, and how to measure and read them.",mistakes:"Expecting current through a full capacitor, ignoring polarity and voltage rating, touching a charged one.",needs:"Voltage, current & resistance",
+steps:[
+{title:"The current stops when it's full",part:"Part 1 · What a capacitor does",init:{v:0,C:1000e-6,hold:false,win:9},sim:fullSim,
+ diag:function(s){var d=fullDiag(s);return {svg:d.svg,
+   meters:[["Capacitor voltage",fV(s.v),s.v>0.05],["Current into LED",fI(d.Il),d.Il>1e-4],["LED",d.b>0.05?"on":"off",d.b>0.05],["Capacitor full?",s.v>3.05?"yes":"no",s.v>3.05]],
+   now:s.hold?"Emptying: the button gives the capacitor a quick path to the 0 V rail through 100 Ω, so its voltage collapses. The LED lights brightly because nothing is pushing back against the supply.":(s.v>3.05?"Full. The capacitor's voltage is 3.1 V, which is the supply (5 V) minus the LED's 1.9 V. There's no voltage left to push current, so the LED is dark even though the battery is still connected.":"Charging. Current flows round the loop and piles charge onto the capacitor's plates. As the capacitor's voltage rises it pushes back, so the current falls and the LED fades.")};},
+ ctl:[{k:"C",type:"seg",label:"Capacitor",opts:CSEL,set:function(s,v){s.C=v;}},{k:"hold",type:"hold",label:"Hold to empty it"},{type:"act",label:"Reset (empty now)",run:function(s){s.v=0;hclear(s);s.t=0;}}],
+ scope:function(s){return {panels:[{title:"Capacitor voltage",unit:"V",min:0,max:5,ticks:[0,2.5,5],series:[{key:"v",name:"Capacitor voltage",c:1}],refs:[{v:3.1,label:"LED goes out at 3.1 V"}]},{title:"LED current",unit:"mA",min:0,max:10,ticks:[0,5,10],series:[{key:"i",name:"LED current",c:2}]}],win:9};},
+ text:`<p>A <b>capacitor</b> stores electric charge. Picture a <b>water tank split in half by a stretchy rubber sheet</b>. Water can't pass through the sheet. But push water into one side and the sheet stretches, which shoves the same amount of water out of the other side.</p>
+<ul><li>While the sheet is stretching, water flows round the loop.</li><li>The more it stretches, the harder it pushes back.</li><li>Once the sheet pushes back as hard as the pump pushes, <b>the flow stops</b>. The tank is full.</li></ul>
+<p>In the circuit, that rubber sheet is the thin gap between the capacitor's two plates. Watch the LED and the current.</p>
+<div class="why"><span class="k">The real words</span><b>Charging current</b> flows only while the capacitor's voltage is still changing. When its voltage equals the supply (here, supply minus the LED's drop), the current is <b>zero</b>. So a full capacitor <b>blocks steady DC</b>.</div>
+<ul><li>Press <b>Reset</b>, then watch the LED fade as the capacitor fills.</li><li>Hold <b>empty it</b> and see the LED flash back to life.</li><li>Try a bigger capacitor: it takes longer, like a bigger tank.</li></ul>`},
+
+{title:"How long does it take? The time constant",part:"Part 1 · What a capacitor does",init:{v:0,R:10000,C:100e-6,t63:null},sim:tauSim,
+ timeScale:function(s){return s.R*s.C*5/6;},
+ onChange:function(s){s.v=0;s.t=0;s.t63=null;hclear(s);},
+ diag:function(s){var d=tauDiag(s),tau=s.R*s.C;return {svg:d.svg,
+   meters:[["Capacitor",fV(s.v),s.v>0.05],["Current",fI(d.I),d.I>1e-6],["τ = R × C",fT(tau),false],["Reached 63% at",s.t63!=null?fT(s.t63):"…",s.t63!=null]],
+   now:"τ = "+fR(s.R)+" × "+fC(s.C)+" = "+fT(tau)+". The clock here runs "+(tau*5/6>=1?Math.round(tau*5/6)+"× faster":(Math.round(100/(tau*5/6))/100)+"× slower")+" than real time so that every setting takes about 6 seconds to fill. After one τ the capacitor is at 63%; after 5τ it's about 99% full."};},
+ ctl:[{k:"R",type:"seg",label:"Resistor",opts:[[1000,"1 kΩ"],[10000,"10 kΩ"],[47000,"47 kΩ"]]},{k:"C",type:"seg",label:"Capacitor",opts:[[10e-6,"10 µF"],[100e-6,"100 µF"],[470e-6,"470 µF"]]},{type:"act",label:"Empty it and start again",run:function(s){s.v=0;s.t=0;s.t63=null;hclear(s);}}],
+ scope:function(s){var tau=s.R*s.C;return {panels:[{title:"Capacitor voltage",unit:"V",min:0,max:5,ticks:[0,2.5,5],series:[{key:"v",name:"Capacitor voltage",c:1}],refs:[{v:3.16,label:"63% = one τ"}]},{title:"Current",unit:"mA",min:0,max:5/s.R*1000,ticks:[0,5/s.R*500,5/s.R*1000],series:[{key:"i",name:"Charging current",c:2}]}],win:tau*6};},
+ text:`<p>How fast does the tank fill? Two things set it:</p>
+<ul><li><b>Pipe width:</b> a narrower pipe (more resistance R) is slower.</li><li><b>Tank size:</b> a bigger tank (more capacitance C) is slower.</li></ul>
+<div class="formula">τ = R × C</div>
+<p>τ (the Greek letter tau, "time constant") is measured in <b>seconds</b> when R is in ohms and C in farads.</p>
+<ul><li>After <b>1τ</b>: about 63% charged.</li><li>After <b>5τ</b>: about 99%, "full" for practical purposes.</li></ul>
+<p>It fills fast at first, when the voltage gap is big, and slows as it nears full. The same shape appears in every RC circuit.</p>
+<p class="hint">Example: 10 kΩ × 100 µF = 10 000 Ω × 0.0001 F = 1 s.</p>`},
+
+{title:"Measuring a mystery capacitor",part:"Part 2 · Measuring",init:{v:0,cap:"b",ans:false,t63:null},sim:mysSim,
+ onChange:function(s){s.v=0;s.t=0;s.t63=null;hclear(s);},
+ diag:function(s){var d=mysDiag(s),tau=100000*MYS[s.cap];return {svg:d.svg,
+   meters:[["Voltmeter reads",fV(s.v),true],["Time since start",fx(s.t,1)+" s",false],["Reached 3.16 V (63%)",s.t63!=null?fx(s.t63,1)+" s":"not yet",s.t63!=null],["Answer",s.ans?(s.t63!=null?"C = "+fx(s.t63,1)+" s ÷ 100 kΩ = "+fC(MYS[s.cap]):"wait for 63%"):"hidden",s.ans]],
+   now:"The capacitor's value is hidden. Watch the voltmeter and note the time it reaches 3.16 V, which is 63% of 5 V. That time equals R × C, so C = time ÷ 100 kΩ."};},
+ ctl:[{k:"cap",type:"seg",label:"Mystery capacitor",opts:[["a","A"],["b","B"],["c","C"]]},{k:"ans",type:"tog",label:"Show the answer"},{type:"act",label:"Empty it and start the stopwatch",run:function(s){s.v=0;s.t=0;s.t63=null;hclear(s);}}],
+ scope:function(s){return {panels:[{title:"Voltage across the capacitor",unit:"V",min:0,max:5,ticks:[0,2.5,5],series:[{key:"v",name:"Voltage",c:1}],refs:[{v:3.16,label:"63%"}]}],win:100000*MYS[s.cap]*5.5};},
+ text:`<p>Two ways to find an unknown capacitor's value.</p>
+<h3>1. The capacitance setting on a multimeter</h3>
+<ul><li><b>Discharge it first</b>: short its legs through a resistor.</li><li>Switch the meter to the capacitor symbol (⊣⊢) mode.</li><li>Touch the probes to the legs. Electrolytics: red probe on the + leg.</li><li>The Multimeter module has the full steps.</li></ul>
+<h3>2. Time it (this step)</h3>
+<ul><li>Charge it through a known resistor (100 kΩ here).</li><li>Watch a voltmeter across it. Note when it reaches <b>63% of the supply</b>.</li><li>That time is τ. So <b>C = τ ÷ R</b>.</li></ul>
+<p>Press the buttons, wait, and work out each capacitor before revealing the answer.</p>
+<div class="why"><span class="k">Why 63%?</span>It's where the exponential curve of charging is after exactly one τ. It's easy to spot on a graph and gives you C directly.</div>`},
+
+{title:"A light that fades out",part:"Part 3 · Timing",init:{v:0,C:4700e-6,btn:false,win:10},sim:fadeSim,
+ diag:function(s){var d=fadeDiag(s);var onT=s.rel!=null?(s.off!=null?fT(s.off):fT(s.t-s.rel)+"…"):"–";return {svg:d.svg,
+   meters:[["Capacitor",fV(s.v),s.v>1.9],["LED current",fI(d.Il),d.b>0.05],["LED stayed lit after release",onT,s.rel!=null]],
+   now:s.btn?"Button down: the battery tops up the capacitor (through 47 Ω) and powers the LED.":(d.Il>2e-4?"Button released. The battery is out of the loop. The capacitor is now the power source: it pushes current through the 330 Ω and the LED, and its voltage slowly drops. The LED fades as the current shrinks.":(s.rel!=null?"The LED has gone out, though the capacitor still holds about 2 V. An LED needs about 1.9 V across it to conduct, so below that there's no current.":"Press and hold the button, then release."))};},
+ ctl:[{k:"btn",type:"hold",label:"Hold the button"},{k:"C",type:"seg",label:"Capacitor",opts:CSEL,set:function(s,v){s.C=v;}}],
+ scope:function(s){return {panels:[{title:"Capacitor voltage",unit:"V",min:0,max:5,ticks:[0,2.5,5],series:[{key:"v",name:"Capacitor voltage",c:1}],refs:[{v:1.9,label:"LED needs 1.9 V"}]},{title:"LED current",unit:"mA",min:0,max:10,ticks:[0,5,10],series:[{key:"i",name:"LED current",c:2}]}],win:10};},
+ text:`<p>Here the capacitor sits <b>beside</b> the LED instead of in series. The button charges it. When you let go, the capacitor is a small battery: it keeps the LED going until it runs out.</p>
+<ul><li>Hold the button for a second. The capacitor fills.</li><li>Release. The LED slowly fades.</li><li>Pick a bigger capacitor: it stays lit longer.</li></ul>
+<p>The fade time is roughly <b>R × C</b> times a few. Bigger C or bigger R makes it last longer. That's how <b>delay-off lights, fade effects and simple timers</b> work.</p>
+<div class="why"><span class="k">Why does it stop at 2 V, not 0 V?</span>An LED only conducts when it has about 1.9 V across it. When the capacitor falls to that, the LED goes out even though the capacitor isn't empty.</div>
+<div class="why"><span class="k">Water version</span>A tank with a small tap on the bottom. Fill it, then let it dribble out through the tap. A bigger tank or narrower tap lasts longer. The LED is a sprinkler that only works above a minimum pressure.</div>`},
+
+{title:"Reading capacitor markings",part:"Part 4 · Practical facts",init:{ci:0},
+ diag:function(s){var d=codeDiag(s);return {svg:d.svg,meters:[["Marking",CODES[s.ci][0],false],["Value",eng(d.v,"F"),true]],now:"The ceramic disc is marked "+CODES[s.ci][0]+": "+CODES[s.ci][0].slice(0,2)+" followed by "+CODES[s.ci][0].slice(2)+" zeros means "+(+CODES[s.ci][0].slice(0,2)*Math.pow(10,+CODES[s.ci][0][2]))+" pF = "+eng(d.v,"F")+"."};},
+ ctl:[{k:"ci",type:"seg",label:"Marking",opts:CODES.map(function(c,i){return [i,c[0]];})}],
+ text:`<h3>Units</h3>
+<ul><li>The farad (F) is huge, so we use small parts.</li><li><b>1 µF</b> (microfarad) = 1/1,000,000 F.</li><li><b>1 µF = 1000 nF</b> (nanofarads).</li><li><b>1 nF = 1000 pF</b> (picofarads).</li></ul>
+<h3>Two common types</h3>
+<ul><li><b>Ceramic discs:</b> small, no polarity. Often a 3-digit code: two digits then zeros, in <b>pF</b>. So <b>104</b> = 100 000 pF = <b>100 nF</b>.</li><li><b>Electrolytic cans:</b> bigger values (1 µF and up). <b>They have a + and a − leg.</b> The stripe marks −. Connect them the right way round.</li></ul>
+<h3>Voltage rating</h3>
+<ul><li>Every capacitor has a maximum voltage printed on it. Pick one with <b>at least double</b> your supply.</li></ul>
+<div class="why bad"><span class="k">Handle with care</span>A charged capacitor can hold its voltage for a long time. Big ones in mains equipment can hurt you. Always discharge first through a resistor (never a bare screwdriver).</div>`},
+
+{quiz:true,gen:true,count:5,title:"Check: capacitors",part:"Check",bank:bank},
+
+{final:true,title:"Explain it back",part:"Finish",
+ text:`<details class="reveal"><summary>1. Why does current stop flowing when a capacitor is full?</summary><p>The capacitor's voltage rises until it equals the supply, so nothing pushes any more. There is no current once its voltage stops changing: it blocks steady DC.</p></details>
+<details class="reveal"><summary>2. What sets how long a capacitor takes to charge?</summary><p>The time constant τ = R × C. After 1τ it's at 63%, after 5τ about 99%.</p></details>
+<details class="reveal"><summary>3. Why does an LED in series with a capacitor go out before the capacitor reaches the supply voltage?</summary><p>The LED needs about 2 V across it to conduct, so the capacitor stops charging when its voltage reaches supply − 2 V.</p></details>
+<details class="reveal"><summary>4. How can you find an unknown capacitor's value without a capacitance meter?</summary><p>Charge it through a known resistor and time how long it takes to reach 63%. C = τ ÷ R.</p></details>
+<details class="reveal"><summary>5. What does a marking of 473 mean?</summary><p>47 followed by 3 zeros, in picofarads: 47 000 pF = 47 nF.</p></details>
+<h3>Build it yourself</h3>
+<p>5 V, 330 Ω, LED and a 1000 µF capacitor in series, back to 0 V. Watch the LED fade as it fills. Then parallel version: capacitor beside the LED, button on the supply.</p>`}
+]});
+})();
+
+/* ======================= MODULE: Other basic parts ======================= */
+(function(){
+function kf(I,max){return clamp(Math.sqrt(Math.abs(I)/max),0.06,1);}
+function ntc(T){return 10000*Math.exp(3950*(1/(T+273.15)-1/298.15));}
+function ldrR(l){return 100000*Math.pow(0.01,l);}
+
+/* ---- 1. switches ---- */
+function swClosed(s){return s.kind==="tog"?!!s.on:s.kind==="no"?!!s.held:!s.held;}
+function swDiag(s){
+  var cl=swClosed(s),I=cl?(5-1.9)/330:0,b=ledB(I),k=kf(I,0.0094),o="";begin(24,262);
+  o+=FLAG(200,45,k,"b");
+  if(s.kind==="tog")o+=SW(200,45,200,90,cl,"switch",-1);
+  else if(s.kind==="no")o+=PUSH(200,45,90,cl,"button (normally open)");
+  else o+=PUSH(200,45,90,!cl,"button (normally closed)");
+  o+=W([200,90,200,100],cl)+R(200,100,200,140,"330 Ω",1)+W([200,140,200,150],cl?"mid":false)+LED(200,170,b)+GND(200,190,k,"b");
+  if(cl)o+=F([200,90,200,100],"b",k)+F([200,140,200,150],"b",k);
+  return {svg:finish(o,340,262,50),cl:cl};
+}
+/* ---- 2. diode / LED ---- */
+function dioDiag(s){
+  var led=s.dev==="led",vf=led?1.9:0.7,fwd=s.dir==="fwd",I=fwd?Math.max(0,(5-vf)/330):0,k=kf(I,0.0134),b=led?ledB(I,0.0094):0,o="";begin(24,262);
+  o+=FLAG(200,50,k,"b")+R(200,50,200,105,"330 Ω",-1);
+  var top=fwd?(I>0?"mid":true):true;
+  o+=W([200,105,200,125],I>0?"mid":true);
+  var Vd=fwd?(I>0?vf:0):5;
+  if(led){o+=fwd?LED(200,145,b):'<g transform="rotate(180 200 145)">'+LED(200,145,0)+'</g>';}
+  else o+=fwd?DIODE(200,125,165):DIODE(200,165,125);
+  o+=W([200,165,200,175],I>0?"mid":false)+GND(200,175,k,"b");
+  if(I>1e-5)o+=F([200,105,200,125],"b",k)+F([200,165,200,175],"b",k);
+  o+=TAG(186,148,"across it: "+fV(Vd),"end");
+  return {svg:finish(o,340,262,50),I:I,Vd:Vd,led:led,b:b};
+}
+/* ---- 3. potentiometer ---- */
+function potDiag(s){
+  var f=s.f,o="";begin(24,262);
+  if(s.mode==="div"){
+    var P=POT(150,70,220,f,"10 kΩ pot"),vo=5*f;
+    o+=FLAG(150,70,0.3)+P.svg+GND(150,220,0.3)+W([P.wx,P.wy,215,P.wy],vo);
+    o+='<path class="ref" style="stroke-width:2" d="M232 '+(P.wy-4).toFixed(0)+' L216 '+P.wy.toFixed(0)+'"/>'+METER(232,P.wy-30,fx(vo,2)+" V","wiper voltage");
+    o+=T(140,64,"end A (5 V)","lbl","end")+T(140,238,"end B (0 V)","lbl","end");
+    return {svg:finish(o,340,262,50),vo:vo,R:null};
+  }
+  var Rp=Math.max(10,10000*(1-f)),I=Math.max(0,(5-1.9)/(330+Rp)),b=ledB(I,0.0094),k=kf(I,0.0094);
+  o+=FLAG(200,50,k,"b")+R(200,50,200,105,fR(Math.round(Rp/10)*10)+" (pot, 2 legs)",-1)+'<path class="part" d="M180 108 L222 62"/><path class="partf" d="M222 62 l-9 3 l5 6 z"/>';
+  o+=W([200,105,200,112],I>0?"mid":true)+R(200,112,200,150,"330 Ω",1)+W([200,150,200,160],I>0?"mid":false)+LED(200,180,b)+GND(200,200,k,"b");
+  if(I>1e-5)o+=F([200,105,200,112],"b",k)+F([200,150,200,160],"b",k);
+  return {svg:finish(o,340,262,50),I:I,Rp:Rp};
+}
+/* ---- 4. sensors ---- */
+function senDiag(s){
+  var ld=s.sen==="ldr",Rs=ld?ldrR(s.lvl):ntc(s.T),vo=5*10000/(Rs+10000),o="";begin(24,262);
+  var kk=clamp(5/(Rs+10000)/0.0005,0.1,1);
+  o+=FLAG(200,45,kk,"b")+(ld?LDR(200,45,125,"LDR"):THERM(200,45,125,"NTC thermistor"))+W([200,125,200,150],vo)+D(200,138,vo)+R(200,150,200,215,"10 kΩ",1)+GND(200,215,kk,"b");
+  o+=W([200,138,250,138],vo)+TAG(256,142,"out "+fV(vo),"start");
+  return {svg:finish(o,340,262,50),Rs:Rs,vo:vo};
+}
+/* ---- 5. gallery ---- */
+var PARTS=[
+ ["Resistor","Holds the current back.","a narrow section of pipe"],
+ ["Capacitor","Stores charge; blocks steady DC.","a tank split by a rubber sheet"],
+ ["Electrolytic capacitor","Bigger capacitor with a + and − leg.","a bigger tank, fitted only one way round"],
+ ["Diode","Current flows one way only.","a one-way (check) valve"],
+ ["LED","A diode that lights up.","a one-way valve with a sprinkler on the end"],
+ ["Battery","Pushes current round the loop.","the pump"],
+ ["Switch","Opens or closes the loop.","a tap"],
+ ["Potentiometer","A resistor with a sliding middle tap; a dial that splits voltage.","a pipe with a movable side outlet"],
+ ["LDR","Resistance falls as light increases.","a valve that opens in the light"],
+ ["Thermistor (NTC)","Resistance falls as it warms up.","a valve that opens with heat"],
+ ["Inductor (coil)","Resists changes in current.","a heavy water wheel: slow to start and slow to stop"],
+ ["NPN transistor","A small current controls a big one.","a big tap worked by a small tap"]
+];
+function galDiag(s){
+  var o="",i,c,r,cx,y0;
+  for(i=0;i<12;i++){c=i%3;r=Math.floor(i/3);cx=62+c*108;y0=8+r*98;
+    var hi=i===s.p;
+    o+='<rect x="'+(cx-50)+'" y="'+(y0-6)+'" width="100" height="94" rx="8" style="fill:'+(hi?"var(--good-bg)":"none")+';stroke:'+(hi?"var(--hi)":"var(--line)")+'"/>';
+    if(i===0)o+=R(cx,y0,cx,y0+60,"");
+    if(i===1)o+=CAP(cx,y0,y0+60,"");
+    if(i===2)o+=CAP(cx,y0,y0+60,"",true);
+    if(i===3)o+=DIODE(cx,y0,y0+60);
+    if(i===4)o+=LED(cx-4,y0+30,0);
+    if(i===5)o+=BATL(cx,y0+30,"");
+    if(i===6)o+=SW(cx,y0,cx,y0+60,false);
+    if(i===7){var P=POT(cx-8,y0,y0+60,0.5,"");o+=P.svg;}
+    if(i===8)o+=LDR(cx-6,y0,y0+60,"");
+    if(i===9)o+=THERM(cx-4,y0,y0+60,"");
+    if(i===10)o+=IND(cx,y0,y0+60,"",1);
+    if(i===11)o+=NPN(cx-8,y0+30,false,"");
+    o+=T(cx,y0+80,["resistor","capacitor","electrolytic","diode","LED","battery","switch","pot","LDR","thermistor","inductor","NPN"][i],"lbl");
+  }
+  return svg(340,408,o);
+}
+/* ---- quiz ---- */
+var bank=[
+ function(R){var V=R.pick([5,9,12]),r=R.pick([220,330,470,1000]),vf=R.pick([[0.7,"silicon diode","0.7"],[2,"red LED","2"]]),I=(V-vf[0])/r;return mcn("A "+vf[1]+" (drops "+vf[2]+" V) is wired the right way round in series with a "+fR(r)+" resistor on a "+V+" V supply. What current flows?",I,"A",[V/r,(V+vf[0])/r,(V-vf[0])/r*1000],"The resistor gets "+V+" − "+vf[2]+" = "+(+(V-vf[0]).toFixed(2))+" V. I = V ÷ R = "+eng(I,"A")+".",{k:"diodeI",V:V,R:r,vf:vf[0],ans:I});},
+ function(R){var V=R.pick([5,9,12]),f=R.pick([0.2,0.25,0.3,0.4,0.6,0.75,0.8]),v=V*f;return mcn("A 10 kΩ potentiometer has "+V+" V across its two outer ends. Its wiper is "+Math.round(f*100)+"% of the way from the 0 V end to the + end. What voltage is on the wiper?",v,"V",[V*(1-f),V/2,V*f*2],"A pot is a divider: the wiper voltage is the supply times how far along it is: "+V+" × "+f+" = "+eng(v,"V")+".",{k:"potV",V:V,f:f,ans:v});},
+ function(R){var V=R.pick([5,9,12]),rs=R.pick([1000,2000,5000,20000,50000]),rb=10000,v=V*rb/(rs+rb);return mcn("A sensor of "+fR(rs)+" sits above a fixed 10 kΩ resistor on a "+V+" V supply. What voltage is at the middle point?",v,"V",[V*rs/(rs+rb),V/2],"It's a voltage divider: V × bottom ÷ (top + bottom) = "+V+" × 10000 ÷ "+(rs+rb)+" = "+eng(v,"V")+".",{k:"divV",V:V,Rt:rs,Rb:rb,ans:v});},
+ function(R){var t=R.pick([["normally-open (NO) push button","lit only <b>while you hold it down</b>"],["normally-closed (NC) push button","lit <b>until you press it</b>, then off while held"]]);
+   var ans=t[0].indexOf("NC")>0?"The LED is on until you press it, then off while you hold it":"The LED is off until you press it, then on while you hold it";var w=t[0].indexOf("NC")>0?"The LED is off until you press it, then on while you hold it":"The LED is on until you press it, then off while you hold it";
+   return mct("An LED is wired through a "+t[0]+". What do you see?",ans,[w,"The LED is always on","The LED is always off"],"Normally open means the contacts are apart until pressed, so it only connects when pressed. Normally closed is the reverse.");},
+ function(R){var t=R.pick([["NTC","goes down","goes up"],["PTC","goes up","goes down"]]);return mct("As a "+t[0]+" thermistor warms up, its resistance…",t[1],[t[2],"stays the same","goes to zero"],"NTC = negative temperature coefficient (resistance falls as it warms). PTC = positive (resistance rises as it warms).");},
+ function(R){var p=R.pick([["a one-way (check) valve","diode"],["the pump","battery"],["a tank split by a rubber sheet","capacitor"],["a narrow pipe","resistor"],["a tap","switch"]]);var all=["diode","battery","capacitor","resistor","switch","inductor"];
+   return mct("In the water picture, <b>"+p[0]+"</b> corresponds to which component?",p[1],R.shuffle(all.filter(function(x){return x!==p[1];})),"Check-valve: current goes one way only (diode). Pump: pushes (battery). Rubber-sheet tank: stores charge (capacitor). Narrow pipe: resists (resistor). Tap: opens/closes the loop (switch).");},
+ function(R){var t=R.pick([["LED","the <b>longer</b> leg is the anode (goes towards +)","The shorter leg, or the side with the flat edge on the case, is the cathode (towards −)"]]);return mct("Which statement about an LED's legs is right?","The longer leg is the anode (towards +); the flat edge on the case marks the cathode (towards −)",["The longer leg is the cathode (towards −)","Both legs are the same; it works either way round","The flat edge marks the anode (towards +)"],"Current only flows in through the anode. Longer leg = anode; flat side = cathode.");},
+ function(R){return mct("What does the stripe on an electrolytic capacitor mark?",R.pick(["The negative (−) leg","The − side: connect it towards the lower voltage"]),["The positive (+) leg","The voltage rating","Which end gets soldered first"],"Electrolytics are polarised: wrong way round can make them hot, leak or burst. The stripe marks −.");},
+ function(R){var V=R.pick([5,9,12]);return mcn("A diode is fitted <b>backwards</b> in a "+V+" V circuit with a resistor. What voltage is across the diode?",V,"V",[0.7,V/2,V-0.7],"Backwards, a diode blocks current. No current means no drop across the resistor, so the diode gets the whole "+V+" V.",{k:"revV",V:V,ans:V});}
+];
+
+(MODS.banks=MODS.banks||{}).parts=bank;
+MODS.push({id:"parts",n:3,title:"Other basic parts",blurb:"Switches, diodes and LEDs, potentiometers, light and temperature sensors, and a gallery of every symbol you'll meet, each with a water picture.",mistakes:"A diode or LED fitted backwards, the wrong switch type, a pot used with the wrong legs.",needs:"Voltage, current & resistance",
+steps:[
+{title:"Switches and push buttons",part:"Part 1 · Controlling the loop",init:{kind:"tog",on:false,held:false},
+ diag:function(s){var d=swDiag(s);return {svg:d.svg,meters:[["Loop",d.cl?"closed":"open",d.cl],["LED",d.cl?"on":"off",d.cl]],
+   now:d.cl?"The switch is closed, so the loop is complete and current flows.":"The switch is open: a gap anywhere stops all the current in the loop."};},
+ ctl:[{k:"kind",type:"seg",label:"Type",opts:[["tog","toggle switch"],["no","push button (NO)"],["nc","push button (NC)"]]},{k:"on",type:"tog",label:"Toggle switch"},{k:"held",type:"hold",label:"Hold the button"}],
+ text:`<p>A <b>switch</b> opens or closes the loop.</p>
+<ul><li><b>Toggle switch:</b> stays where you put it.</li><li><b>Push button, normally open (NO):</b> connects only <b>while pressed</b>. This is the usual kind.</li><li><b>Push button, normally closed (NC):</b> connected until pressed.</li></ul>
+<p>A switch has almost no resistance when closed, and an enormous one when open.</p>
+<div class="why"><span class="k">Water version</span>A tap. Open means water can flow round the loop. Closed means nothing moves.</div>
+<p class="hint">"Normally" means resting, with nothing pressing it.</p>`},
+
+{title:"Diodes and LEDs: one-way valves",part:"Part 2 · One-way parts",mist:true,init:{dev:"diode",dir:"fwd"},
+ diag:function(s){var d=dioDiag(s);return {svg:d.svg,bad:s.dir!=="fwd",
+   meters:[["Fitted",s.dir==="fwd"?"the right way":"backwards",s.dir==="fwd"?true:"warn"],["Current",fI(d.I),d.I>1e-4],["Across the "+(d.led?"LED":"diode"),fV(d.Vd),d.I>0?false:"warn"]],
+   now:s.dir==="fwd"?"Right way round: it conducts and drops about "+(d.led?"2":"0.7")+" V. The resistor gets the rest of the 5 V, which sets the current: "+fI(d.I)+".":"Backwards: it blocks. No current flows, so no voltage is dropped across the resistor, and the diode itself has the whole 5 V across it. The LED stays dark."};},
+ ctl:[{k:"dev",type:"seg",label:"Part",opts:[["diode","silicon diode"],["led","red LED"]]},{k:"dir",type:"seg",label:"Fitted",opts:[["fwd","the right way"],["rev","backwards ✗",1]]}],
+ text:`<p>A <b>diode</b> lets current through <b>one way only</b>: in at the <b>anode</b> (the flat side of the triangle), out at the <b>cathode</b> (the bar).</p>
+<ul><li>Right way: it conducts and drops about <b>0.7 V</b> (silicon diode) or <b>1.8 to 3 V</b> (LED, depending on colour).</li><li>Backwards: it blocks.</li></ul>
+<p>An <b>LED</b> is a diode that gives off light when current flows.</p>
+<ul><li><b>Longer leg</b> is the anode (+).</li><li><b>Flat edge</b> on the case is the cathode (−).</li></ul>
+<div class="why bad"><span class="k">The mistake</span>Fitting an LED backwards. Nothing breaks. It just never lights, which is easy to blame on something else.</div>
+<div class="why"><span class="k">Water version</span>A one-way (check) valve. The "drop" is the little push needed to open the valve.</div>`},
+
+{title:"The potentiometer: a dial that splits voltage",part:"Part 3 · Adjustable parts",init:{mode:"div",f:0.4},
+ diag:function(s){var d=potDiag(s);return {svg:d.svg,
+   meters:s.mode==="div"?[["Wiper position",Math.round(s.f*100)+"%",true],["Wiper voltage",fV(d.vo),true]]:[["Pot in the loop",fR(Math.round(d.Rp/10)*10),false],["LED current",fI(d.I),d.I>1e-4]],
+   now:s.mode==="div"?"With 5 V across the whole track, the wiper picks off a fraction of it: "+Math.round(s.f*100)+"% of the way up gives "+fV(d.vo)+".":"Using only two legs, the pot is just a variable resistor: more resistance in the loop means less current and a dimmer LED."};},
+ ctl:[{k:"mode",type:"seg",label:"Use it as",opts:[["div","a voltage divider (3 legs)"],["var","a variable resistor (2 legs)"]]},{k:"f",type:"range",label:"Dial position",min:0,max:1,step:0.01,fmt:function(v){return Math.round(v*100)+"%";}}],
+ text:`<p>A <b>potentiometer</b> ("pot") is a resistor track with a <b>sliding contact (the wiper)</b>. Turn the knob and the wiper moves along.</p>
+<h3>Three legs: a voltage divider</h3>
+<ul><li>Ends go to 5 V and 0 V.</li><li>The wiper (middle leg) gives <b>any voltage in between</b>.</li><li>Halfway gives half.</li></ul>
+<h3>Two legs: a variable resistor</h3>
+<ul><li>Use one end and the wiper.</li><li>Turning the knob changes the resistance in the loop. Handy for dimming.</li></ul>
+<div class="why"><span class="k">Water version</span>A long pipe with a movable outlet. The further along the outlet, the lower the pressure it gives. Real name: a <b>voltage divider</b>, covered properly in the series and parallel module.</div>`},
+
+{title:"Light and temperature sensors",part:"Part 3 · Adjustable parts",init:{sen:"ldr",lvl:0.7,T:25},
+ diag:function(s){var d=senDiag(s);return {svg:d.svg,meters:[[s.sen==="ldr"?"Light":"Temperature",s.sen==="ldr"?Math.round(s.lvl*100)+"%":s.T+" °C",true],["Sensor resistance",fR(Math.round(d.Rs/10)*10),false],["Output voltage",fV(d.vo),d.vo>2.5]],
+   now:"A sensor is a resistor whose value changes. Put it in a voltage divider with a fixed 10 kΩ, and the changing resistance becomes a changing voltage you can read: "+fV(d.vo)+"."};},
+ ctl:[{k:"sen",type:"seg",label:"Sensor",opts:[["ldr","LDR (light)"],["ntc","NTC thermistor"]]},{k:"lvl",type:"range",label:"Light",min:0,max:1,step:0.01,fmt:function(v){return Math.round(v*100)+"%";}},{k:"T",type:"range",label:"Temperature",min:0,max:50,step:1,fmt:function(v){return v+" °C";}}],
+ text:`<p>Some resistors change value with the world around them.</p>
+<ul><li><b>LDR</b> (light-dependent resistor): about <b>1 kΩ in bright light</b>, 100 kΩ or more in the dark.</li><li><b>NTC thermistor:</b> resistance <b>falls as it warms</b>. (NTC means negative temperature coefficient.) A common one is 10 kΩ at 25 °C.</li></ul>
+<p>A chip can't read resistance directly. So put the sensor over a fixed resistor and read the voltage in the middle. That's a divider, and the voltage moves as the sensor changes.</p>
+<p class="hint">Move the sliders and watch the output voltage. Swap sensors with the buttons.</p>
+<div class="why"><span class="k">Water version</span>A valve that opens as light or heat increases. The Op-amps and Wheatstone modules turn this into a night light and a thermostat.</div>`},
+
+{title:"Every symbol you'll meet",part:"Part 4 · Reference",init:{p:0},
+ diag:function(s){return {svg:galDiag(s),meters:[["Part",PARTS[s.p][0],true]],now:"<b>"+PARTS[s.p][0]+".</b> "+PARTS[s.p][1]+" Water picture: "+PARTS[s.p][2]+"."};},
+ ctl:[{k:"p",type:"range",label:"Part",min:0,max:11,step:1,fmt:function(v){return PARTS[v][0];}}],
+ text:`<p>Slide through the twelve parts that appear across this course. For each: the symbol, what it does, and the water picture.</p>
+<ul><li><b>Resistor, capacitor, diode, LED, battery, switch:</b> covered in this and the previous modules.</li><li><b>Potentiometer, LDR, thermistor:</b> resistors you can change.</li><li><b>Inductor and NPN transistor:</b> they get their own modules later.</li></ul>
+<div class="why"><span class="k">Reading a diagram</span>Lines are wires, a dot is a join, and a little hump means one wire crosses another without connecting.</div>`},
+
+{quiz:true,gen:true,count:5,title:"Check: the basic parts",part:"Check",bank:bank},
+
+{final:true,title:"Explain it back",part:"Finish",
+ text:`<details class="reveal"><summary>1. What does a diode do, and what is an LED?</summary><p>A diode lets current through one way only. An LED is a diode that lights up when current flows.</p></details>
+<details class="reveal"><summary>2. Which leg of an LED is which?</summary><p>Long leg = anode (towards +). Flat edge on the case = cathode (towards −).</p></details>
+<details class="reveal"><summary>3. How is a potentiometer used as a voltage divider?</summary><p>Ends to the supply and 0 V; the wiper gives a voltage anywhere between.</p></details>
+<details class="reveal"><summary>4. How do you turn a sensor's changing resistance into a voltage?</summary><p>Put it in series with a fixed resistor across the supply and measure the middle point.</p></details>
+<details class="reveal"><summary>5. What's the difference between NO and NC buttons?</summary><p>Normally open connects only while pressed. Normally closed is connected until pressed.</p></details>`}
+]});
+})();
+
+/* ======================= MODULE: Measuring with a multimeter ======================= */
+(function(){
+function kf(I,max){return clamp(Math.sqrt(Math.abs(I)/max),0.06,1);}
+var MODES=[
+ {k:"V",lab:"V",name:"Volts (DC)",how:"in PARALLEL: touch the probes across the part, with the circuit powered",red:3,disp:"5.02 V"},
+ {k:"A",lab:"A",name:"Amps (DC)",how:"in SERIES: break the circuit and put the meter in the gap, powered",red:1,disp:"9.4 mA"},
+ {k:"R",lab:"Ω",name:"Ohms (resistance)",how:"on its own: circuit POWERED OFF, part out of the circuit",red:3,disp:"4.70 kΩ"},
+ {k:"C",lab:"•))",name:"Continuity (beeper)",how:"circuit POWERED OFF: beeps if there's a complete path",red:3,disp:"0.2 Ω ♪"},
+ {k:"D",lab:"▷|",name:"Diode test",how:"powered off: red on the anode, black on the cathode",red:3,disp:"0.62 V"},
+ {k:"F",lab:"⊣⊢",name:"Capacitance",how:"capacitor DISCHARGED and out of the circuit",red:3,disp:"100 µF"}
+];
+var JNAMES=["10A","mA","COM","V Ω"];
+function dmmDiag(s){
+  var m=MODES[s.mode],o="",i;
+  o+='<rect x="95" y="8" width="150" height="284" rx="14" class="body" style="stroke:var(--ink);stroke-width:2"/>';
+  o+='<rect x="110" y="22" width="120" height="46" rx="4" style="fill:var(--canvas);stroke:var(--line)"/><text x="170" y="55" text-anchor="middle" style="font:700 24px var(--mono);fill:var(--ink)">'+m.disp+'</text>';
+  o+='<circle cx="170" cy="150" r="50" style="fill:var(--canvas);stroke:var(--ink);stroke-width:1.6"/>';
+  for(i=0;i<MODES.length;i++){var a=(-150+i*60)*Math.PI/180,lx=170+66*Math.cos(a),ly=150+66*Math.sin(a)+4;o+=T(lx.toFixed(0),ly.toFixed(0),MODES[i].lab,i===s.mode?"nlbl":"lbl");}
+  var pa=(-150+s.mode*60);o+='<g transform="rotate('+(pa+90)+' 170 150)"><path d="M170 150 V108" style="stroke:var(--accent);stroke-width:5;stroke-linecap:round"/><circle cx="170" cy="150" r="7" style="fill:var(--accent)"/></g>';
+  for(i=0;i<4;i++){var jx=120+i*33,used=(i===2||i===m.red);o+='<circle cx="'+jx+'" cy="250" r="11" style="fill:'+(used?(i===2?"#222":"var(--bad)"):"var(--canvas)")+';stroke:var(--ink);stroke-width:1.6"/>'+T(jx,278,JNAMES[i],"lbl");}
+  return svg(340,300,o);
+}
+function jackText(s){var m=MODES[s.mode];return "black in COM, red in "+JNAMES[m.red];}
+
+/* ---- 2. voltage in parallel ---- */
+function voltDiag(s){
+  var V=s.V,R1=1000,R2=2000,I=V/(R1+R2),v1=I*R1,v2=I*R2,mid=V-v1,o="";begin(24,262,V);var k=kf(I,0.012);
+  o+=FLAG(150,60,k,"b")+R(150,60,150,120,"R1 1 kΩ",-1)+W([150,120,150,140],mid)+D(150,130,mid)+R(150,140,150,200,"R2 2 kΩ",-1)+GND(150,200,k,"b");
+  var pts={R1:[[45,"top"],[130,"mid"]],R2:[[130,"mid"],[225,"bot"]],all:[[45,"top"],[225,"bot"]],rev:[[225,"bot"],[130,"mid"]]},p=pts[s.at],val,vt=[V,mid,0];
+  function volt(n){return n==="top"?V:n==="mid"?mid:0;}
+  val=volt(p[0][1])*0;var red=p[1],blk=p[0];
+  // red probe on 'red', black probe on 'blk' ; reading = V(red)-V(blk)
+  var rn=s.at==="rev"?"mid":(s.at==="R2"?"mid":s.at==="R1"?"top":"top"),bn=s.at==="rev"?"bot":(s.at==="R1"?"mid":"bot");
+  if(s.at==="rev"){rn="bot";bn="mid";}
+  var ry={top:45,mid:130,bot:225},reading=volt(rn)-volt(bn);
+  o+='<path class="ref" style="stroke-width:2" d="M232 140 L154 '+ry[rn]+' M232 166 L154 '+ry[bn]+'"/><circle cx="154" cy="'+ry[rn]+'" r="3.5" style="fill:var(--bad)"/><circle cx="154" cy="'+ry[bn]+'" r="3.5" style="fill:var(--ink)"/>';
+  o+=METER(232,118,(reading<0?"−":"")+fx(Math.abs(reading),2)+" V","voltmeter");
+  return {svg:finish(o,340,262,50),reading:reading,v1:v1,v2:v2,I:I};
+}
+/* ---- 3. current in series ---- */
+function ampDiag(s){
+  var V=s.V,R_=s.R,I=V/(R_+0.5),k=kf(I,0.04),o="";begin(24,262,V);
+  o+=FLAG(130,50,k,"b")+W([130,50,130,75],true)+W([130,115,130,125],"mid")+R(130,125,130,185,fR(R_),-1)+GND(130,185,k,"b");
+  o+='<path class="ref" style="stroke-width:2" d="M160 85 L132 75 M160 105 L132 115"/><circle cx="132" cy="75" r="3.5" style="fill:var(--bad)"/><circle cx="132" cy="115" r="3.5" style="fill:var(--ink)"/>';
+  o+=METER(160,62,fI(I),"ammeter (in the gap)");
+  o+=F([130,50,130,75,160,85],"b",k)+F([160,105,130,115,130,125],"b",k);
+  o+=T(80,98,"gap in the wire","lbl");
+  return {svg:finish(o,340,262,50),I:I};
+}
+/* ---- 4. ammeter mistake ---- */
+function shortDiag(s){
+  var V=s.V,R_=330,ok=s.at==="series",I=ok?V/R_:V/0.5,blown=!ok,k=blown?1:kf(I,0.04),o="";begin(24,262,V);
+  if(blown)TOPV=false;
+  o+=FLAG(130,50,k,blown?"x":"b");
+  if(s.at==="series"){o+=W([130,50,130,75],true)+W([130,115,130,125],"mid")+R(130,125,130,185,"330 Ω",-1)+'<path class="ref" style="stroke-width:2" d="M160 85 L132 75 M160 105 L132 115"/>'+METER(160,62,fI(I),"ammeter in series")+F([130,50,130,75,160,85],"b",k)+F([160,105,130,115,130,125],"b",k);}
+  else if(s.at==="res"){o+=R(130,50,130,185,"330 Ω",-1)+'<path class="ref" style="stroke-width:2;stroke:var(--bad)" d="M190 95 L132 68 M190 120 L132 180"/>'+METER(190,86,"fuse!","A mode: across R",true)+F([130,50,130,75],"x",1);}
+  else {o+=R(130,50,130,185,"330 Ω",-1)+'<path class="ref" style="stroke-width:2;stroke:var(--bad)" d="M190 95 L128 38 M190 120 L128 242"/>'+METER(190,86,"fuse!","A mode: across battery",true);}
+  o+=GND(130,185,blown?1:k,blown?"x":"b");
+  if(blown)o+=T(220,230,"≈ "+Math.round(V/0.5)+" A","blbl","start");
+  return {svg:finish(o,340,262,50,false,blown),I:I,blown:blown};
+}
+/* ---- 5. resistance in-circuit mistake ---- */
+function inDiag(s){
+  var R1=1000,R2=2200,o="",inC=s.where==="in",rd=inC?R1*R2/(R1+R2):R1,pwr=s.power;
+  o+='<path d="M120 60 H250 M120 190 H250" style="fill:none;stroke:var(--wire);stroke-width:2.4"/>';
+  if(inC)o+=R(150,60,150,190,"R1 1 kΩ",1);
+  else o+=R(150,78,150,190,"R1 1 kΩ",1)+'<path d="M150 60 V70" style="stroke:var(--wire);stroke-width:2.4"/><path d="M145 72 l10 6" style="stroke:var(--ink)"/>'+T(128,80,"lifted","lbl","end");
+  o+=R(225,60,225,190,"R2 2.2 kΩ",1);
+  if(pwr)o+='<rect x="16" y="14" width="150" height="22" rx="4" class="tag"/>'+T(91,30,"circuit still powered!","blbl");
+  var by=inC?60:78;
+  o+='<path class="ref" style="stroke-width:2" d="M102 124 L148 '+by+' M102 144 L148 190"/>';
+  o+=METER(10,108,pwr?"?!":fR(Math.round(rd)),"ohmmeter",pwr);
+  return {svg:svg(340,230,o),rd:rd};
+}
+/* ---- 6. resistance / continuity ---- */
+var DUTS={res:{n:"4.7 kΩ resistor",r:4700},good:{n:"good wire",r:0.2},cut:{n:"broken wire",r:Infinity},swo:{n:"open switch",r:Infinity},swc:{n:"closed switch",r:0.3}};
+function dutDiag(s){
+  var d=DUTS[s.dut],o="",beep=s.m==="cont"&&d.r<30,read=!isFinite(d.r)?"OL":(s.m==="cont"?(d.r<30?fx(d.r,1)+" Ω ♪":fR(d.r)):(d.r>=1000?fx(d.r/1000,2)+" kΩ":fx(d.r,1)+" Ω"));
+  if(s.dut==="res")o+=R(80,150,260,150,"4.7 kΩ");
+  else if(s.dut==="good")o+='<path d="M80 150 H260" style="stroke:var(--wire);stroke-width:3"/>';
+  else if(s.dut==="cut")o+='<path d="M80 150 H160 M180 150 H260" style="stroke:var(--wire);stroke-width:3"/><path class="burn" d="M162 136 l16 28 M178 136 l-16 28"/>';
+  else o+=SW(80,150,260,150,s.dut==="swc");
+  o+='<path class="ref" style="stroke-width:2" d="M120 64 L80 150 M200 64 L260 150"/><circle cx="80" cy="150" r="3.5" style="fill:var(--bad)"/><circle cx="260" cy="150" r="3.5" style="fill:var(--ink)"/>';
+  o+=METER(124,8,read,s.m==="cont"?"continuity":"ohms");
+  if(beep)o+=T(260,34,"♪ BEEP","nlbl","end");
+  o+=T(170,200,d.n,"lbl");
+  return {svg:svg(340,220,o),read:read,beep:beep,d:d};
+}
+/* ---- 7. capacitors ---- */
+function capmDiag(s){
+  var o="",Vt=3,Ri=10000,vc=s.vc,Rd=Math.min(4e7,vc>=Vt*0.999?4e7:Ri*vc/Math.max(1e-6,Vt-vc)),read;
+  if(s.mm==="volt")read=fx(s.vcharged,2)+" V";
+  else if(s.mm==="res")read=Rd>=4e7*0.999?"OL":(Rd>=1e6?fx(Rd/1e6,2)+" MΩ":Rd>=1000?fx(Rd/1000,1)+" kΩ":fx(Rd,0)+" Ω");
+  else read=eng(s.C,"F");
+  o+=CAP(200,110,170,"",true)+'<path d="M200 90 V110 M200 170 V190" style="stroke:var(--ink);stroke-width:2.5"/>'+T(214,146,eng(s.C,"F")+"?","lbl","start");
+  o+='<path class="ref" style="stroke-width:2" d="M100 60 L200 92 M190 60 L200 188"/><circle cx="200" cy="92" r="3.5" style="fill:var(--bad)"/><circle cx="200" cy="188" r="3.5" style="fill:var(--ink)"/>';
+  o+=METER(80,8,read,s.mm==="volt"?"volts":s.mm==="res"?"ohms":"capacitance");
+  return {svg:svg(340,220,o),Rd:Rd,read:read};
+}
+function capmSim(s,dt){if(s.mm==="res"){var tau=10000*s.C;s.vc=3+(s.vc-3)*Math.exp(-dt/tau);}hpush(s,{v:s.vc},12);}
+/* ---- 8. diode test ---- */
+function dtDiag(s){
+  var led=s.dev==="led",fwd=s.dir==="fwd",read=fwd?(led?"1.85 V":"0.62 V"):"OL",o="";
+  var dev=fwd?(led?LED(200,130,0.12):DIODE(200,100,160)):(led?'<g transform="rotate(180 200 130)">'+LED(200,130,0)+'</g>':DIODE(200,160,100));
+  o+=dev+'<path d="M200 70 V100 M200 160 V190" style="stroke:var(--ink);stroke-width:2.5"/>';
+  o+='<path class="ref" style="stroke-width:2" d="M110 64 L200 72 M200 64 L200 188"/>'.replace('M200 64 L200 188','M190 64 L200 188')+'<circle cx="200" cy="72" r="3.5" style="fill:var(--bad)"/><circle cx="200" cy="188" r="3.5" style="fill:var(--ink)"/>';
+  o+=METER(64,8,read,"diode test");
+  o+=T(80,86,"red on the anode","lbl","start");
+  return {svg:svg(340,210,o),read:read};
+}
+
+/* ---- quiz ---- */
+var TASKS=[
+ ["the voltage across a resistor in a powered circuit","Volts mode, probes across the resistor (in parallel)"],
+ ["the current flowing through an LED","Amps mode, with the meter in series (break the loop and put it in the gap)"],
+ ["the value of a resistor","Ohms mode, with the power off and the resistor out of the circuit"],
+ ["whether a wire is broken inside its insulation","Continuity mode, with the circuit unpowered"],
+ ["whether a diode is fitted or failed","Diode-test mode, circuit powered off"]
+];
+var bank=[
+ function(R){var q=R.pick(TASKS),others=TASKS.filter(function(x){return x!==q;});return mct("How do you measure <b>"+q[0]+"</b>?",q[1],R.shuffle(others.map(function(x){return x[1];})),"Voltage is measured across a part (parallel). Current has to go through the meter (series). Resistance, continuity and diode tests need the circuit powered off.");},
+ function(R){var V=R.pick([3,5,9,12]),r=R.pick([220,330,470,1000,2200,4700]),I=V/r;return mcn("A meter reads "+V+" V across a "+fR(r)+" resistor. What current is flowing through it?",I,"A",[I*1000,I/10],"Ohm's law: I = V ÷ R = "+V+" ÷ "+r+" = "+eng(I,"A")+".",{k:"mI",V:V,R:r,ans:I});},
+ function(R){var V=R.pick([6,9,12]),a=R.pick([1000,2000,3000]),b=R.pick([1000,2000,3000,6000]),v=V*b/(a+b);return mcn("A "+V+" V battery drives "+fR(a)+" (R1) and "+fR(b)+" (R2) in series. Your meter is across R2. What does it read?",v,"V",[V*a/(a+b),V/2,V],"Series resistors share the voltage in proportion: "+V+" × "+b+" ÷ "+(a+b)+" = "+eng(v,"V")+".",{k:"mDiv",V:V,a:a,b:b,ans:v});},
+ function(R){var V=R.pick([5,9,12]),i=R.pick([2,4,5,10,20]),r=V/(i/1000);return mcn("You put the meter in series with a "+V+" V supply and one resistor. It reads "+i+" mA. What is the resistor's value?",r,"Ω",[V*i,V/i,r/1000],"R = V ÷ I = "+V+" ÷ "+(i/1000)+" A = "+eng(r,"Ω")+".",{k:"mR",V:V,I:i/1000,ans:r});},
+ function(R){var a=R.pick([1000,2000,3000]),b=R.pick([1000,2000,3000,6000]),p=a*b/(a+b);return mcn("You measure R1 = "+fR(a)+" <b>without lifting a leg</b>, with R2 = "+fR(b)+" connected across it. What will the meter show?",p,"Ω",[a,a+b,Math.min(a,b)*2],"The meter sees both in parallel: "+a+" × "+b+" ÷ "+(a+b)+" = "+eng(p,"Ω")+", not R1 alone. Lift one leg of R1 first.",{k:"mPar",a:a,b:b,ans:p});},
+ function(R){return mct(R.pick(["Before using capacitance mode on a capacitor, what must you do?","What must you do to a capacitor before measuring its capacitance?"]),"Discharge it (through a resistor) and take it out of the circuit",["Charge it fully first","Connect it to 12 V","Nothing, the meter does it automatically"],"A charged capacitor can give wrong readings or damage the meter. Discharge it through a resistor first.");},
+ function(R){var d=R.pick([["a silicon diode connected the right way","about 0.6 V (0.5 to 0.7 V)"],["a diode connected backwards","OL (over limit, no conduction)"]]);return mct("In diode-test mode the meter shows what for <b>"+d[0]+"</b>?",d[1],["about 0.6 V (0.5 to 0.7 V)","OL (over limit, no conduction)","0.00 V","5.00 V"].filter(function(x){return x!==d[1];}),"Forward: the meter drives a small current and shows the diode's forward voltage drop. Backwards: nothing conducts, so it reads OL.");},
+ function(R){return mct("You switch the meter to amps mode and touch the probes straight across a battery. What happens?","A huge current flows through the meter, probably blowing its fuse",["It reads the battery's voltage","It reads 0 A and nothing happens","It measures the battery's resistance"],"In amps mode the meter is nearly a plain wire, so across a battery it is a short circuit. That's what the fuse is for.");},
+ function(R){var v=R.pick([2.5,3.3,5,6,9]);return mct("The meter shows <b>−"+v.toFixed(2)+" V</b> when measuring a battery. What does the minus sign mean?","The red probe is on the lower-voltage side. Swap the probes for a positive reading",["The battery is faulty","The battery is flat","The meter is broken"],"A minus sign just means the probes are the wrong way round. The voltage is "+v.toFixed(2)+" V either way.");}
+];
+
+(MODS.banks=MODS.banks||{}).meter=bank;
+MODS.push({id:"meter",n:4,title:"Measuring with a multimeter",blurb:"Voltage, current, resistance, continuity, diodes and capacitors. Where the probes go, which socket, what each reading means, and the mistakes that blow fuses.",mistakes:"The meter in amps mode across a battery, measuring resistance with the power on, measuring resistors still in the circuit.",needs:"Voltage, current & resistance",
+steps:[
+{title:"Meet the multimeter",part:"Part 1 · The tool",init:{mode:0},
+ diag:function(s){var m=MODES[s.mode];return {svg:dmmDiag(s),meters:[["Dial",m.name,true],["Sockets",jackText(s),false]],now:"<b>"+m.name+".</b> "+m.how+". Sockets: "+jackText(s)+"."};},
+ ctl:[{k:"mode",type:"seg",label:"Dial",opts:MODES.map(function(m,i){return [i,m.lab+" "+m.name.split(" ")[0]];})}],
+ text:`<p>A <b>multimeter</b> measures voltage, current and resistance with one box and two leads. Turn the dial and the meter becomes a different instrument.</p>
+<ul><li><b>Black lead:</b> always in <b>COM</b> (common).</li><li><b>Red lead:</b> in <b>V Ω</b> for volts, ohms, continuity, diode and capacitance.</li><li><b>Red lead for current:</b> in <b>mA</b> (small currents) or <b>10A</b> (large). These sockets are fused.</li></ul>
+<div class="why bad"><span class="k">The classic mistake</span>Leaving the red lead in the <b>current</b> socket and then measuring voltage across something. The meter becomes a short circuit and blows its fuse.</div>
+<p>Try each dial position and see where the leads go and how the meter must be connected.</p>
+<div class="why"><span class="k">Water version</span>A voltmeter is a pressure gauge: connect it <b>across</b> two points. An ammeter is a flow meter: it has to sit <b>inside</b> the pipe.</div>`},
+
+{title:"Measuring voltage: across the part",part:"Part 2 · Voltage and current",init:{V:9,at:"R1"},
+ diag:function(s){var d=voltDiag(s);return {svg:d.svg,meters:[["Reads",(d.reading<0?"−":"")+fx(Math.abs(d.reading),2)+" V",d.reading>=0],["Battery",fV(s.V),false],["R1 + R2 =",fx(d.v1,2)+" + "+fx(d.v2,2)+" = "+fx(d.v1+d.v2,2)+" V",true]],
+   now:s.at==="rev"?"The leads are on the same two points as R2, but swapped (red on the lower side). The size is the same and the sign flips. Nothing is wrong.":s.at==="all"?"Across both resistors, which is the whole battery: the readings add up (3 V + 6 V = 9 V).":"The meter is connected in parallel with "+s.at+", touching each end. It reads the voltage dropped across just that resistor."};},
+ ctl:[{k:"V",type:"seg",label:"Battery",opts:[[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"at",type:"seg",label:"Probes across",opts:[["R1","R1"],["R2","R2"],["all","both"],["rev","R2, probes swapped"]]}],
+ text:`<p>To measure voltage, touch the probes <b>across</b> the part, one on each side. The meter connects <b>in parallel</b>. You don't have to break the circuit.</p>
+<ul><li>Dial to <b>V</b> (DC volts, the straight line symbol).</li><li>Red probe on the more positive side, black on the other.</li><li>Read the display.</li></ul>
+<p>A voltmeter has a huge resistance (about 10 MΩ), so it takes almost no current and leaves the circuit alone.</p>
+<div class="why"><span class="k">Water version</span>A pressure gauge clipped across a narrow section of pipe: it tells you how much pressure is lost there, without letting any water out.</div>
+<p class="hint">The ground rule: voltage is always measured <i>between two points</i>. "5 V" on its own means 5 V compared with 0 V.</p>`},
+
+{title:"Measuring current: in series",part:"Part 2 · Voltage and current",init:{V:9,R:1000},
+ diag:function(s){var d=ampDiag(s);return {svg:d.svg,meters:[["Reads",fI(d.I),true],["Check: V ÷ R",fI(s.V/s.R),false]],
+   now:"The wire was cut and the meter put in the gap, so <b>all the current goes through the meter</b>. It reads "+fI(d.I)+", which matches V ÷ R = "+fx(s.V,0)+" ÷ "+s.R+"."};},
+ ctl:[{k:"V",type:"seg",label:"Battery",opts:[[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"R",type:"seg",label:"Resistor",opts:[[330,"330 Ω"],[1000,"1 kΩ"],[4700,"4.7 kΩ"]]}],
+ text:`<p>Current is a flow <b>through</b> something, so the meter must become <b>part of the loop</b>. That's <b>in series</b>.</p>
+<ul><li>Switch the circuit off.</li><li>Move the red lead to the <b>mA</b> socket and the dial to <b>A</b>.</li><li>Break the loop and connect the meter into the gap.</li><li>Switch on and read.</li><li>Afterwards, move the lead back to the <b>V Ω</b> socket.</li></ul>
+<p>An ammeter has almost <b>zero resistance</b>, so it doesn't disturb the current.</p>
+<div class="why"><span class="k">Water version</span>A flow meter (a little paddle wheel) fitted into the pipe. To fit it, you have to cut the pipe.</div>`},
+
+{title:"Mistake: an ammeter across the supply",part:"Mistake · Blowing the fuse",mist:true,init:{V:9,at:"res"},
+ diag:function(s){var d=shortDiag(s);return {svg:d.svg,bad:d.blown,meters:[["Meter placed",s.at==="series"?"in series ✓":s.at==="res"?"across the resistor ✗":"across the battery ✗",d.blown?"warn":true],["Current",d.blown?"≈ "+Math.round(s.V/0.5)+" A":fI(d.I),d.blown?"warn":true],["Fuse",d.blown?"blown":"fine",d.blown?"warn":true]],
+   now:d.blown?"In amps mode the meter is nearly a plain wire (under 1 Ω). Placed across a part, it short-circuits it: the current is limited only by the wires and battery, about "+Math.round(s.V/0.5)+" A. The meter's fuse blows, or worse, the battery overheats.":"In series, the 330 Ω still limits the current. The meter reads it safely."};},
+ ctl:[{k:"V",type:"seg",label:"Battery",opts:[[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"at",type:"seg",label:"Meter (amps mode)",opts:[["series","in series ✓"],["res","across the resistor ✗",1],["bat","across the battery ✗",1]]}],
+ text:`<div class="why bad"><span class="k">What goes wrong</span>Amps mode is a near-zero-resistance path. Put it across a resistor or battery, the way you would a voltmeter, and it's a <b>short circuit</b>. Big current flows. The meter's fuse blows (that's what it's for). A cheap meter without a fuse can fail or burn out.</div>
+<div class="why fix"><span class="k">The fix</span><ul><li><b>Current: in series only.</b></li><li><b>Voltage: across only.</b></li><li>When in doubt, start with the dial on <b>V</b> and the red lead in <b>V Ω</b>.</li></ul></div>
+<p class="hint">If the meter suddenly reads 0 A in a circuit that obviously works, check its fuse first.</p>`},
+
+{title:"Measuring resistance (and why not in the circuit)",part:"Part 3 · Resistance and continuity",mist:true,init:{where:"in",power:false},
+ diag:function(s){var d=inDiag(s);return {svg:d.svg,bad:s.where==="in"||s.power,meters:[["Meter reads",s.power?"unreliable":fR(Math.round(d.rd)),s.where==="in"||s.power?"warn":true],["R1 is really","1 kΩ",false]],
+   now:s.power?"The circuit is powered, so the meter's tiny test current is swamped by the circuit's own voltage. The reading is meaningless, and may damage the meter.":s.where==="in"?"R1 is still connected. The meter's test current also finds a second route through R2, so it measures R1 in parallel with R2: "+fR(Math.round(d.rd))+", not 1 kΩ.":"With one leg of R1 lifted out of the circuit, the meter measures R1 alone: 1 kΩ."};},
+ ctl:[{k:"where",type:"seg",label:"R1",opts:[["in","left in circuit ✗",1],["out","one leg lifted ✓"]]},{k:"power",type:"seg",label:"Power",opts:[[false,"off ✓"],[true,"on ✗",1]]}],
+ text:`<p>In <b>ohms mode</b> the meter sends a tiny current through the part and works out the resistance from the voltage it sees.</p>
+<div class="why bad"><span class="k">Two classic mistakes</span><ul><li><b>Power on:</b> the circuit's own voltage ruins the reading.</li><li><b>Part still wired in:</b> other parts give the current a second route, so the reading is lower than the real value.</li></ul></div>
+<div class="why fix"><span class="k">The fix</span><ul><li>Power <b>off</b>.</li><li>Lift <b>one leg</b> of the part out of the circuit (or remove it).</li><li>Dial to Ω, probes on each leg. Polarity doesn't matter for a resistor.</li></ul></div>
+<p class="hint">Reading "OL" (over limit) means a resistance too big for the range: an open circuit.</p>`},
+
+{title:"Resistance and continuity: wires, switches, resistors",part:"Part 3 · Resistance and continuity",init:{dut:"res",m:"ohm"},
+ diag:function(s){var d=dutDiag(s);return {svg:d.svg,meters:[["Reads",d.read,d.beep],["Beeps?",d.beep?"yes":"no",d.beep]],
+   now:d.beep?"A complete, low-resistance path: the continuity beeper sounds.":!isFinite(d.d.r)?"No complete path: the meter shows OL (open loop), and there's no beep.":"Reads the part's resistance."};},
+ ctl:[{k:"dut",type:"seg",label:"Part under test",opts:[["res","4.7 kΩ resistor"],["good","good wire"],["cut","broken wire"],["swo","switch open"],["swc","switch closed"]]},{k:"m",type:"seg",label:"Dial",opts:[["ohm","Ω ohms"],["cont","•)) continuity"]]}],
+ text:`<p><b>Continuity mode</b> is ohms mode with a beeper: it beeps if the resistance is under about 30 Ω.</p>
+<ul><li>Is this wire really connected at both ends?</li><li>Does this switch actually close?</li><li>Is the fuse intact?</li></ul>
+<p>Open (no path) reads <b>OL</b>. A good wire reads close to 0 Ω.</p>
+<div class="why bad"><span class="k">Remember</span>Power off first, always.</div>
+<p class="hint">Try each part in each mode, and note which ones beep.</p>`},
+
+{title:"Measuring a capacitor",part:"Part 4 · Capacitors and diodes",init:{mm:"res",C:100e-6,vc:0,vcharged:4.98},sim:capmSim,
+ diag:function(s){var d=capmDiag(s);return {svg:d.svg,meters:[["Reads",d.read,true],["Mode",s.mm==="volt"?"volts":s.mm==="res"?"ohms":"capacitance",false]],
+   now:s.mm==="res"?"In ohms mode the meter's test current charges the capacitor. The resistance reading <b>climbs from near zero up to OL</b>. That's normal: it's the capacitor filling. A short circuit would stay near 0, and a broken one would show OL straight away.":s.mm==="volt"?"A charged capacitor reads its stored voltage. It can hold that for minutes or hours, so discharge it before you handle it.":"Capacitance mode reads the value directly. Discharge the capacitor first and take it out of the circuit."};},
+ ctl:[{k:"mm",type:"seg",label:"Meter mode",opts:[["volt","volts (charged)"],["res","ohms (watch it climb)"],["cap","capacitance"]]},{k:"C",type:"seg",label:"Capacitor",opts:[[10e-6,"10 µF"],[100e-6,"100 µF"],[1000e-6,"1000 µF"]]},{type:"act",label:"Discharge it (empty)",run:function(s){s.vc=0;hclear(s);}}],
+ scope:function(s){return {panels:[{title:"Voltage on the capacitor from the meter's test",unit:"V",min:0,max:3,ticks:[0,1.5,3],series:[{key:"v",name:"Capacitor",c:1}]}],win:12};},
+ text:`<p>Three ways to check a capacitor with a multimeter:</p>
+<ol><li><b>Capacitance mode (⊣⊢):</b> discharge it, take it out, touch the leads (red on + for electrolytics). Read the value. Real values can be 20% off, which is normal.</li><li><b>Ohms mode:</b> the reading should <b>start low and climb</b> towards OL as the capacitor charges. Bigger capacitor, slower climb. Swap the leads and it climbs again.</li><li><b>Volts mode:</b> checks whether it still holds a charge.</li></ol>
+<div class="why bad"><span class="k">Safety</span>A charged capacitor can keep its voltage after the power is off. <b>Discharge through a resistor</b> (1 kΩ for small ones) before touching or measuring. A bare screwdriver makes a spark and can damage the part.</div>
+<p class="hint">Try ohms mode with 10 µF and then 1000 µF. Press Discharge between tries.</p>`},
+
+{title:"Testing a diode or LED",part:"Part 4 · Capacitors and diodes",init:{dev:"diode",dir:"fwd"},
+ diag:function(s){var d=dtDiag(s);return {svg:d.svg,meters:[["Reads",d.read,d.read!=="OL"]],
+   now:s.dir==="fwd"?"Red probe on the anode, black on the cathode: the meter pushes a small current through, and shows the voltage the diode drops"+(s.dev==="led"?". An LED may glow faintly while you test it.":"."):"Reversed: nothing conducts, so the meter shows OL. A good diode reads OL one way and about 0.5 to 0.7 V the other."};},
+ ctl:[{k:"dev",type:"seg",label:"Part",opts:[["diode","silicon diode"],["led","LED"]]},{k:"dir",type:"seg",label:"Probes",opts:[["fwd","red on anode"],["rev","reversed"]]}],
+ text:`<p><b>Diode-test mode</b> (the triangle and bar) checks the one-way behaviour.</p>
+<ul><li><b>Red on the anode, black on the cathode:</b> reads the forward drop (about 0.6 V for silicon, 1.7 V or more for LEDs).</li><li><b>Reverse:</b> OL.</li></ul>
+<p>Readings the same both ways mean it's faulty:</p>
+<ul><li>Close to 0 both ways: shorted.</li><li>OL both ways: open.</li></ul>
+<p class="hint">Use it to find which end of an unmarked diode is the cathode.</p>`},
+
+{quiz:true,gen:true,count:5,title:"Check: measuring",part:"Check",bank:bank},
+
+{final:true,title:"Explain it back",part:"Finish",
+ text:`<details class="reveal"><summary>1. How do you connect a meter to measure voltage, and to measure current?</summary><p>Voltage: across the part (parallel), no break needed. Current: in series, so the loop has to be broken and the meter put in the gap.</p></details>
+<details class="reveal"><summary>2. Why can't you measure resistance in a powered circuit?</summary><p>The meter sends its own tiny test current. The circuit's voltage corrupts the reading and may damage the meter.</p></details>
+<details class="reveal"><summary>3. Why does a resistor measured in the circuit read low?</summary><p>Other parts give the test current parallel paths. Lift one leg first.</p></details>
+<details class="reveal"><summary>4. What happens if you use amps mode across a battery?</summary><p>It's a short circuit through the meter: huge current, a blown fuse or a damaged meter.</p></details>
+<details class="reveal"><summary>5. How do you check a capacitor safely?</summary><p>Discharge it through a resistor, remove it, then use capacitance mode (or watch the ohms reading climb).</p></details>
+<h3>Practise</h3>
+<p>With a real meter: measure a 9 V battery in volts mode, then a resistor (out of circuit) in ohms mode, then an LED in diode-test mode.</p>`}
+]});
+})();
+
+/* ======================= MODULE: Series, parallel, KCL and KVL ======================= */
+(function(){
+function kf(I,max){return clamp(Math.sqrt(Math.abs(I)/max),0.06,1);}
+var VSEL=[[5,"5 V"],[9,"9 V"],[12,"12 V"]];
+var RSEL=[[100,"100 Ω"],[220,"220 Ω"],[470,"470 Ω"],[1000,"1 kΩ"],[2200,"2.2 kΩ"]];
+function par(rs){var g=0;rs.forEach(function(r){g+=1/r;});return 1/g;}
+
+function serDiag(s){
+  var V=s.V,R1=s.R1,R2=s.R2,I=V/(R1+R2),v1=I*R1,v2=I*R2,mid=V-v1,k=kf(I,0.12),o="";begin(24,262,V);
+  o+=FLAG(200,50,k,"b")+R(200,50,200,115,fR(R1),-1)+W([200,115,200,140],mid)+D(200,128,mid)+R(200,140,200,205,fR(R2),-1)+GND(200,205,k,"b");
+  o+=TAG(214,84,"drop "+fV(v1),"start")+TAG(214,176,"drop "+fV(v2),"start")+TAG(214,132,"middle "+fV(mid),"start")+TAG(100,128,"I = "+fI(I),"start");
+  return {svg:finish(o,340,262,50),I:I,v1:v1,v2:v2};
+}
+function parDiag(s,n){
+  var V=s.V,rs=[s.R1,s.R2,s.R3].slice(0,n),xs=n===2?[150,250]:[130,200,270],Is=rs.map(function(r){return V/r;}),It=0;Is.forEach(function(i){It+=i;});
+  var kt=kf(It,0.3),o="";begin(24,262,V);
+  var xl=xs[n-1];
+  o+=FLAG(70,80,kt,"b")+W([70,80,xl,80],true)+W([70,190,xl,190],false)+GND(70,190,kt,"b");
+  xs.forEach(function(x,i){var kb=kf(Is[i],0.3);
+    o+=R(x,80,x,190,fR(rs[i]),i===0&&n===2?-1:1)+D(x,80,true)+D(x,190,false)+F([70,80,x,80,x,190,70,190],"b",kb)+TAG(x,212,"I"+(i+1)+" "+fI(Is[i]),"middle");});
+  o+=TAG(70+8,70,"every branch gets "+fV(V),"start")+TAG(78,232,"total "+fI(It),"start");
+  return {svg:finish(o,340,262,50),Is:Is,It:It,Rt:par(rs)};
+}
+function kvlDiag(s){
+  var V=s.V,Rs=[[1000,2000,3000],[2000,2000,2000],[3000,1000,2000]][s.set-1],Rt=Rs[0]+Rs[1]+Rs[2],I=V/Rt,d=Rs.map(function(r){return I*r;}),k=kf(I,0.012),o="";
+  var h=[0,V,V-d[0],V-d[0]-d[1],0];h[4]=V-d[0]-d[1]-d[2];
+  begin(24,262,V);
+  o+=FLAG(110,50,k,"b")+R(110,50,110,100,fR(Rs[0]),1)+W([110,100,110,110],h[2])+R(110,110,110,160,fR(Rs[1]),1)+W([110,160,110,170],h[3])+R(110,170,110,220,fR(Rs[2]),1)+GND(110,220,k,"b");
+  var ys=[262,24,105,165,262],p=s.p;
+  function Y(v){return 236-190*v/V;}
+  var X=[226,250,274,298,322];
+  o+=T(274,28,"height = voltage","lbl");
+  o+='<path d="M222 '+Y(0)+' H328" style="stroke:var(--line)"/>'+T(222,Y(0)+13,"0 V","lbl","start");
+  var all="",run="";
+  for(var i=0;i<5;i++){var pt=X[i]+","+Y(h[i]).toFixed(1)+" ";all+=pt;if(i<=p)run+=pt;}
+  o+='<polyline points="'+all+'" style="fill:none;stroke:var(--line);stroke-width:2;stroke-dasharray:4 4"/>';
+  if(p>0)o+='<polyline points="'+run+'" style="fill:none;stroke:var(--s1);stroke-width:3"/>';
+  o+='<circle cx="'+X[p]+'" cy="'+Y(h[p]).toFixed(1)+'" r="6" style="fill:var(--s2);stroke:#fff;stroke-width:1.5"/>';
+  o+='<circle cx="110" cy="'+ys[p]+'" r="7" style="fill:var(--s2);stroke:#fff;stroke-width:1.5"/>';
+  return {svg:finish(o,340,262,50),h:h,d:d,Rs:Rs,I:I};
+}
+var STN=["Start: the battery's − (0 V)","Climb up through the battery","Down through R1","Down through R2","Down through R3, back to the start"];
+function mixDiag(s){
+  var V=s.V,R1=s.R1,Rp=par([s.R2,s.R3]),Rt=R1+Rp,It=V/Rt,v1=It*R1,vp=V-v1,i2=vp/s.R2,i3=vp/s.R3,k=kf(It,0.12),o="";begin(24,262,V);
+  o+=FLAG(200,50,k,"b")+R(200,50,200,100,fR(R1),-1)+W([200,100,200,115],vp)+D(200,115,vp)+W([150,115,250,115],vp)+W([150,195,250,195],false)+GND(200,195,k,"b");
+  o+=R(150,115,150,195,fR(s.R2),-1)+R(250,115,250,195,fR(s.R3),1)+D(150,115,vp)+D(250,115,vp)+D(200,195,false);
+  o+=F([150,115,150,195],"b",kf(i2,0.12))+F([250,115,250,195],"b",kf(i3,0.12));
+  o+=TAG(214,80,"R1 drops "+fV(v1),"start")+TAG(200,140,"pair "+fV(vp),"middle")+TAG(150,214,fI(i2),"middle")+TAG(250,214,fI(i3),"middle");
+  return {svg:finish(o,340,262,50),Rt:Rt,It:It,v1:v1,vp:vp,i2:i2,i3:i3,Rp:Rp};
+}
+function lampDiag(s){
+  var n=s.n,I=n*0.5,blown=I>3,o="";begin(24,262,12);if(blown)TOPV=false;
+  var xs=[];for(var i=0;i<n;i++)xs.push(110+i*40);var xl=xs[n-1];
+  o+=FLAG(60,100,blown?0:kf(I,3),blown?"x":"b")+W([60,100,xl,100],blown?false:true)+W([60,175,xl,175],false)+GND(60,175,blown?0:kf(I,3),"b");
+  xs.forEach(function(x){o+=W([x,100,x,111],blown?false:true)+LAMP(x,135,blown?0:0.9)+W([x,159,x,175],false)+D(x,100,!blown)+D(x,175,false);if(!blown)o+=F([60,100,x,100,x,175,60,175],"b",0.3);});
+  o+=TAG(66,84,"fuse 3 A "+(blown?"BLOWN":"ok"),"start")+TAG(66,205,"total "+(blown?"≥ ":"")+fx(I,1)+" A","start");
+  return {svg:finish(o,340,262,50,false,blown),I:I,blown:blown};
+}
+
+var VL=[6,9,12,15],RLs=[1000,2000,3000,4000,6000,10000];
+var bank=[
+ function(R){var a=R.pick(RLs),b=R.pick(RLs);return mcn("Two resistors, "+fR(a)+" and "+fR(b)+", are connected in <b>series</b>. What is the total resistance?",a+b,"Ω",[a*b/(a+b),(a+b)/2,Math.abs(a-b)],"Series resistances simply add: "+a+" + "+b+" = "+eng(a+b,"Ω")+".",{k:"serR",a:a,b:b,ans:a+b});},
+ function(R){var p=R.pick([[1000,1000],[2000,2000],[3000,6000],[2000,3000],[1000,3000],[4000,4000],[6000,3000],[2000,6000],[4000,12000]]),a=p[0],b=p[1],r=a*b/(a+b);return mcn("Two resistors, "+fR(a)+" and "+fR(b)+", are connected in <b>parallel</b>. What is the total resistance?",r,"Ω",[a+b,(a+b)/2,Math.min(a,b)*2],"Parallel: product ÷ sum = "+a+" × "+b+" ÷ "+(a+b)+" = "+eng(r,"Ω")+". It's always smaller than the smaller resistor.",{k:"parR",a:a,b:b,ans:r});},
+ function(R){var Iin=R.pick([30,40,50,60]),a=R.int(5,15),b=R.int(5,15),c=Iin-a-b;return mcn("Kirchhoff's current law: "+Iin+" mA flows into a junction. Two of the three wires leaving it carry "+a+" mA and "+b+" mA. How much goes down the third wire?",c/1000,"A",[(Iin+a+b)/1000,(Iin-a)/1000,(a+b)/1000],"Current in = current out. "+Iin+" − "+a+" − "+b+" = "+c+" mA.",{k:"kcl",Iin:Iin/1000,a:a/1000,b:b/1000,ans:c/1000});},
+ function(R){var V=R.pick([9,12,15]),a=R.pick([2,3,4]),b=R.pick([1,2,3,5]);while(V-a-b<1)b=R.pick([1,2,3]);var c=V-a-b;return mcn("Kirchhoff's voltage law: a "+V+" V battery drives three resistors in series. R1 drops "+a+" V and R2 drops "+b+" V. How much does R3 drop?",c,"V",[V,a+b,V-a],"The drops around a loop add up to the supply: "+V+" − "+a+" − "+b+" = "+c+" V.",{k:"kvl",V:V,a:a,b:b,ans:c});},
+ function(R){var V=R.pick([6,9,12]),a=R.pick([1000,2000,3000]),b=R.pick([1000,2000,3000,6000]),I=V/(a+b);return mcn("A "+V+" V battery is connected to "+fR(a)+" and "+fR(b)+" in series. What current flows?",I,"A",[V/a+V/b,V/(a*b/(a+b)),2*V/(a+b)],"Same current everywhere in series. Total R = "+(a+b)+" Ω, so I = "+V+" ÷ "+(a+b)+" = "+eng(I,"A")+".",{k:"serI",V:V,a:a,b:b,ans:I});},
+ function(R){var V=R.pick([6,9,12]),a=R.pick([1000,2000,3000]),b=R.pick([1000,2000,3000,6000]),v=V*b/(a+b);return mcn("A "+V+" V battery drives "+fR(a)+" (R1) and "+fR(b)+" (R2) in series. What is the voltage across R2?",v,"V",[V*a/(a+b),V/2,V],"Voltage divides in proportion to resistance: "+V+" × "+b+" ÷ "+(a+b)+" = "+eng(v,"V")+".",{k:"serV2",V:V,a:a,b:b,ans:v});},
+ function(R){var V=R.pick([6,9,12]),a=R.pick([1000,2000,3000]),b=R.pick([1000,2000,3000,6000]),I=V/a+V/b;return mcn("A "+V+" V battery is connected across "+fR(a)+" and "+fR(b)+" in <b>parallel</b>. What total current does the battery supply?",I,"A",[V/(a+b),V/a,V/b],"Each branch gets the full "+V+" V: "+eng(V/a,"A")+" + "+eng(V/b,"A")+" = "+eng(I,"A")+".",{k:"parI",V:V,a:a,b:b,ans:I});},
+ function(R){var r1=R.pick([1000,2000,500]),r2=R.pick([1000,2000,4000]),t=r1+r2/2;return mcn("A "+fR(r1)+" resistor is in series with two identical "+fR(r2)+" resistors in parallel. What is the total resistance?",t,"Ω",[r1+r2*2,r1+r2,(r1+r2)/2],"The parallel pair is "+r2+" ÷ 2 = "+(r2/2)+" Ω. Then add the series one: "+r1+" + "+(r2/2)+" = "+eng(t,"Ω")+".",{k:"mixR",r1:r1,r2:r2,ans:t});},
+ function(R){var c=R.pick([["series","the <b>current</b>","current","voltage"],["parallel","the <b>voltage across each branch</b>","voltage","current"]]);return mct("In a "+c[0]+" circuit, which quantity is the same for every part?",c[2][0].toUpperCase()+c[2].slice(1)+" (it's "+(c[0]==="series"?"the same single path":"the same pair of nodes")+")",[c[3][0].toUpperCase()+c[3].slice(1),"Power","Resistance"],c[0]==="series"?"One path, so the same current goes through every part. The voltage is shared out.":"All branches connect to the same two nodes, so they all have the same voltage. The current is shared out.");},
+ function(R){var V=R.pick([6,9,12]),a=R.pick([1000,2000,3000]),b=R.pick([1000,2000,4000,6000]),I=V/b;return mcn("A "+V+" V battery is connected across "+fR(a)+" (R1) and "+fR(b)+" (R2) in parallel. What current flows through R2?",I,"A",[V/(a+b),V/a,V/b/2],"R2 has the full "+V+" V across it: I = "+V+" ÷ "+b+" = "+eng(I,"A")+".",{k:"parBr",V:V,b:b,ans:I});},
+ function(R){return mct("You add another resistor in <b>parallel</b> with one already in the circuit. The total resistance…","Gets smaller",["Gets bigger","Stays the same","Is the sum of the two"],"More parallel paths make it easier for current to flow, so the total resistance drops. It's always lower than the smallest branch.");}
+];
+
+(MODS.banks=MODS.banks||{}).kirch=bank;
+MODS.push({id:"kirch",n:5,title:"Series, parallel, KCL and KVL",blurb:"What happens when resistors share a path or split it. Voltage dividers, the two Kirchhoff laws, and working through a combined circuit.",mistakes:"Adding too many loads in parallel, mixing up what's shared (current or voltage).",needs:"Voltage, current & resistance",
+steps:[
+{title:"Series: one path, shared voltage",part:"Part 1 · Series and parallel",init:{V:9,R1:1000,R2:2200},
+ diag:function(s){var d=serDiag(s);return {svg:d.svg,meters:[["Same current everywhere",fI(d.I),true],["Drop across R1",fV(d.v1),false],["Drop across R2",fV(d.v2),false],["R1 + R2",fR(s.R1+s.R2),false],["Drops add up to",fx(d.v1+d.v2,2)+" V = battery",true]],
+   now:"One single path, so <b>the same current</b> flows through both: "+fI(d.I)+". The battery's "+s.V+" V is shared out in proportion to resistance. Bigger resistance, bigger share ("+fV(d.v1)+" and "+fV(d.v2)+")."};},
+ ctl:[{k:"V",type:"seg",label:"Battery",opts:VSEL},{k:"R1",type:"seg",label:"R1",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL}],
+ text:`<p>Resistors <b>in series</b> are joined end to end, one after another. There's only <b>one path</b> for the current.</p>
+<ul><li><b>Same current</b> through all of them.</li><li>The <b>voltages add up</b> to the supply.</li><li><b>Total resistance</b> is the sum: R<sub>total</sub> = R1 + R2.</li></ul>
+<div class="formula">V<sub>R2</sub> = V × R2 ÷ (R1 + R2)</div>
+<p>That last one is the <b>voltage divider</b>: each resistor takes a share of the voltage equal to its share of the resistance.</p>
+<div class="why"><span class="k">Water version</span>Two narrow pipes in a row. Same flow through both. The pump's push is shared: the narrower pipe uses up more of the pressure.</div>
+<p class="hint">Change R1 and R2 and watch the two drops. Do they always add up to the battery?</p>`},
+
+{title:"Parallel: shared voltage, split current",part:"Part 1 · Series and parallel",init:{V:9,R1:1000,R2:2200,R3:1000},
+ diag:function(s){var d=parDiag(s,2);return {svg:d.svg,meters:[["Voltage on every branch",fV(s.V),true],["I1",fI(d.Is[0]),false],["I2",fI(d.Is[1]),false],["Total from battery",fI(d.It),true],["Total resistance",fR(Math.round(d.Rt*10)/10),false]],
+   now:"Each branch is wired straight across the battery, so <b>each gets the full "+s.V+" V</b>. The currents add: "+fI(d.Is[0])+" + "+fI(d.Is[1])+" = "+fI(d.It)+". The combined resistance ("+fR(Math.round(d.Rt))+") is <b>smaller than either resistor</b>, because there are now two paths."};},
+ ctl:[{k:"V",type:"seg",label:"Battery",opts:VSEL},{k:"R1",type:"seg",label:"R1",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL}],
+ text:`<p>Resistors <b>in parallel</b> are side by side, each connected across the same two points.</p>
+<ul><li><b>Same voltage</b> across every branch.</li><li>The <b>currents add</b> up.</li><li>Total resistance is <b>smaller than the smallest</b>.</li></ul>
+<div class="formula">1/R<sub>total</sub> = 1/R1 + 1/R2 &nbsp;&nbsp; or &nbsp;&nbsp; R<sub>total</sub> = R1 × R2 ÷ (R1 + R2)</div>
+<p>Two equal resistors in parallel give <b>half</b> of one. For two, "product over sum" is the quick way.</p>
+<div class="why"><span class="k">Water version</span>Two pipes side by side between the same two tanks. Both get the same pressure difference, and together they carry more water than either alone.</div>`},
+
+{title:"Three branches, and the shortcut",part:"Part 1 · Series and parallel",init:{V:9,R1:1000,R2:2200,R3:470},
+ diag:function(s){var d=parDiag(s,3);return {svg:d.svg,meters:[["Total resistance",fR(Math.round(d.Rt*10)/10),true],["Total current",fI(d.It),true],["Smallest branch",fR(Math.min(s.R1,s.R2,s.R3)),false]],
+   now:"With three branches: 1/R = 1/"+s.R1+" + 1/"+s.R2+" + 1/"+s.R3+". The answer, "+fR(Math.round(d.Rt))+", is below the smallest one ("+fR(Math.min(s.R1,s.R2,s.R3))+"). Every extra branch lowers the total."};},
+ ctl:[{k:"V",type:"seg",label:"Battery",opts:VSEL},{k:"R1",type:"seg",label:"R1",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL},{k:"R3",type:"seg",label:"R3",opts:RSEL}],
+ text:`<p>For three or more, use the reciprocal form: <b>1/R<sub>total</sub> = 1/R1 + 1/R2 + 1/R3</b>.</p>
+<h3>Quick shortcuts</h3>
+<ul><li><b>Equal resistors:</b> R ÷ number of them. Three 3 kΩ in parallel = 1 kΩ.</li><li><b>Two:</b> product ÷ sum.</li><li><b>Sanity check:</b> the answer must be <b>less than the smallest</b> branch.</li></ul>
+<p class="hint">Make one branch much smaller than the others: it dominates the total. A very large one barely matters.</p>`},
+
+{title:"Kirchhoff's current law: in equals out",part:"Part 2 · Kirchhoff's laws",init:{V:9,R1:1000,R2:2200,R3:470,hide:0,ans:false},
+ diag:function(s){var d=parDiag(s,3);var h=s.hide,sum=d.Is[0]+d.Is[1]+d.Is[2];
+   function sh(i){return (h===i+1&&!s.ans)?"?":fI(d.Is[i]);}
+   return {svg:d.svg,meters:[["Current into the junction",fI(sum),true],["I1",sh(0),h!==1],["I2",sh(1),h!==2],["I3",sh(2),h!==3],["I1 + I2 + I3",s.ans||h===0?fI(sum):"?",s.ans||h===0]],
+   now:h===0?"At the junction, current in = current out: "+fI(sum)+" arrives and splits into "+fI(d.Is[0])+", "+fI(d.Is[1])+" and "+fI(d.Is[2])+". No current is created or lost.":(s.ans?"The hidden current is: total − the other two. KCL found it.":"One branch is hidden. Use the total and the other two to work it out: <b>unknown = total − the known branches</b>. Then tick 'Show the answer' to check.")};},
+ ctl:[{k:"hide",type:"seg",label:"Hide a branch",opts:[[0,"none"],[1,"I1"],[2,"I2"],[3,"I3"]]},{k:"ans",type:"tog",label:"Show the answer"},{k:"R1",type:"seg",label:"R1",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL},{k:"R3",type:"seg",label:"R3",opts:RSEL}],
+ text:`<p><b>Kirchhoff's current law (KCL):</b></p>
+<div class="formula">current in = current out (at any junction)</div>
+<p>Charge isn't created or destroyed, so whatever flows into a junction must flow out.</p>
+<ul><li>Total current from the battery = I1 + I2 + I3.</li><li>If you know all but one, subtract to find it.</li></ul>
+<div class="why"><span class="k">Water version</span>A pipe splitting into three. Whatever flows into the junction flows out again. Water can't vanish or appear.</div>
+<p class="hint">Hide one branch, work it out, then check.</p>`},
+
+{title:"Kirchhoff's voltage law: a walk round the loop",part:"Part 2 · Kirchhoff's laws",init:{V:12,set:1,p:0},
+ diag:function(s){var d=kvlDiag(s),p=s.p;var ch=p===0?0:p===1?s.V:-d.d[p-2];
+   return {svg:d.svg,meters:[["You are",STN[p],true],["Height (voltage) now",fx(d.h[p],2)+" V",true],["Last change",p===0?"–":(ch>=0?"+":"−")+fx(Math.abs(ch),2)+" V",false],["Total so far",p===4?"0.00 V: back at the start ✓":fx(d.h[p],2)+" V",p===4]],
+   now:p===4?"The climb of +"+s.V+" V and the three drops add up to zero: "+s.V+" − "+fx(d.d[0],2)+" − "+fx(d.d[1],2)+" − "+fx(d.d[2],2)+" = 0. You're back where you started, so the net change has to be zero.":"Slide along the loop. The battery lifts you up by "+s.V+" V. Each resistor drops you down by its share."};},
+ ctl:[{k:"p",type:"range",label:"Walk round the loop",min:0,max:4,step:1,fmt:function(v){return ["start","after battery","after R1","after R2","after R3"][v];}},{k:"set",type:"seg",label:"Resistors",opts:[[1,"1k, 2k, 3k"],[2,"all 2k"],[3,"3k, 1k, 2k"]]},{k:"V",type:"seg",label:"Battery",opts:VSEL.concat([[12,"12 V"]]).slice(0,3)}],
+ text:`<p><b>Kirchhoff's voltage law (KVL):</b></p>
+<div class="formula">going all the way round any loop, the voltage changes add up to zero</div>
+<ul><li>The battery <b>raises</b> you by its voltage.</li><li>Each resistor <b>drops</b> you by I × R.</li><li>Back where you started, you're at the same level. So the rises equal the falls.</li></ul>
+<p>That's why in the series step the drops added up to the battery voltage. KVL is that fact stated as a rule.</p>
+<div class="why"><span class="k">Water version</span>Walk a closed track with hills. You can climb and drop as much as you like, but when you get back to the start, your total change in height is zero. The pump is the lift, the resistors are the slopes down.</div>
+<p class="hint">Drag the slider and read off the running total.</p>`},
+
+{title:"Series and parallel together",part:"Part 3 · Putting it together",init:{V:12,R1:1000,R2:2200,R3:2200},
+ diag:function(s){var d=mixDiag(s);return {svg:d.svg,meters:[["Total resistance",fR(Math.round(d.Rt)),true],["Total current",fI(d.It),true],["R1 drop",fV(d.v1),false],["Parallel pair",fV(d.vp),false],["I2 + I3",fI(d.i2)+" + "+fI(d.i3),false],["KCL: I2 + I3 =",fI(d.i2+d.i3)+" ✓ = total",true],["KVL: R1 + pair =",fx(d.v1+d.vp,2)+" V ✓ = battery",true]],
+   now:"Step by step: the parallel pair is "+fR(Math.round(d.Rp))+". Add R1 in series: "+fR(Math.round(d.Rt))+". Total current "+fI(d.It)+" = "+s.V+" ÷ "+Math.round(d.Rt)+". R1 drops "+fV(d.v1)+", leaving "+fV(d.vp)+" across the pair. Each branch gets that: "+fI(d.i2)+" and "+fI(d.i3)+"."};},
+ ctl:[{k:"V",type:"seg",label:"Battery",opts:VSEL},{k:"R1",type:"seg",label:"R1 (series)",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL},{k:"R3",type:"seg",label:"R3",opts:RSEL}],
+ text:`<p>Real circuits mix both. The method works from the outside in.</p>
+<ol><li><b>Combine the parallel part</b> into one equivalent resistor.</li><li><b>Add the series parts.</b> That's the total resistance.</li><li><b>I = V ÷ R<sub>total</sub></b> gives the battery current.</li><li><b>R1's drop</b> = I × R1. The rest of the battery voltage is across the pair.</li><li>Each parallel branch current = (voltage across the pair) ÷ its resistance.</li><li>Check: branch currents add to the total (KCL). Drops add to the battery (KVL).</li></ol>
+<p>The two meters at the bottom run both checks for you. They should always agree.</p>
+<p class="hint">Try to work out the numbers yourself before reading the meters.</p>`},
+
+{title:"Mistake: too many loads in parallel",part:"Mistake · Overload",mist:true,init:{n:2},
+ diag:function(s){var d=lampDiag(s);return {svg:d.svg,bad:d.blown,meters:[["Lamps",String(s.n),false],["Total current",(d.blown?"≥ ":"")+fx(d.I,1)+" A",d.blown?"warn":true],["Total resistance",fR(Math.round(240/s.n)/10),false],["Fuse (3 A)",d.blown?"blown":"fine",d.blown?"warn":true]],
+   now:d.blown?"Each lamp is a 24 Ω load across the 12 V supply and draws 0.5 A. "+s.n+" lamps in parallel need "+fx(d.I,1)+" A, over the 3 A fuse. It blows, and everything goes dark.":"Each lamp has the full 12 V across it and draws 0.5 A. "+s.n+" lamps draw "+fx(d.I,1)+" A in total. Adding more makes total resistance fall and total current climb."};},
+ ctl:[{k:"n",type:"range",label:"Lamps in parallel",min:1,max:6,step:1,fmt:function(v){return v+" lamp"+(v>1?"s":"");}}],
+ text:`<p>Every lamp added in parallel gets the full supply voltage, so each one still draws its own current. The supply has to provide <b>all of them together</b>.</p>
+<div class="why bad"><span class="k">The mistake</span>"Parallel is free: each thing works the same." True for the lamps, but the <b>total current</b> keeps growing as total resistance falls. Overload the supply and the fuse blows, wires heat up, or a battery dies quickly.</div>
+<div class="why fix"><span class="k">The fix</span>Add up the currents of all the loads (KCL). Make sure the supply, wires and fuse can handle the total.</div>
+<p>Here a 3 A fuse allows five lamps. A sixth blows it.</p>`},
+
+{quiz:true,gen:true,count:5,title:"Check: series, parallel, KCL and KVL",part:"Check",bank:bank},
+
+{final:true,title:"Explain it back",part:"Finish",
+ text:`<details class="reveal"><summary>1. What stays the same in series, and what in parallel?</summary><p>Series: the current is the same, the voltage is shared. Parallel: the voltage is the same, the current is shared.</p></details>
+<details class="reveal"><summary>2. How do you find total resistance in series and in parallel?</summary><p>Series: add them. Parallel: 1/R = 1/R1 + 1/R2 + … (product ÷ sum for two). Parallel is always smaller than the smallest.</p></details>
+<details class="reveal"><summary>3. State KCL and KVL in plain words.</summary><p>KCL: current in = current out at any junction. KVL: the voltage changes around any closed loop add up to zero (the battery's rise equals the resistors' drops).</p></details>
+<details class="reveal"><summary>4. How do you tackle a series-parallel circuit?</summary><p>Combine parallel parts, add series parts, find the total current, then work back outwards for each drop and branch current. Check with KCL and KVL.</p></details>
+<details class="reveal"><summary>5. Why can adding more loads in parallel be dangerous?</summary><p>Each load still draws its full current, so the total current climbs. The supply or fuse can overload.</p></details>
+<h3>Build it yourself</h3>
+<p>In a simulator or on a breadboard: 9 V, 1 kΩ and 2.2 kΩ in series. Measure each drop and the current (see the Multimeter module). Then put them in parallel and compare.</p>`}
+]});
+})();
+
+/*FRAG-END*/
 /* ======================= MODULE: RC circuits & timing ======================= */
 (function(){
 function rcDiag(s){
@@ -698,7 +1608,7 @@ steps:[
 <details class="reveal"><summary>2. What does τ = R × C tell you?</summary><p>The time to reach 63% full (or lose 63% when discharging). After about 5 τ it's practically finished. Bigger R or bigger C means slower.</p></details>
 <details class="reveal"><summary>3. How does the delay timer keep the LED on after you let go?</summary><p>The capacitor keeps supplying base current through the 22 kΩ. The transistor multiplies that small current to power the LED. When the capacitor falls below about 0.7 V, the base stops conducting and the LED goes out.</p></details>
 <details class="reveal"><summary>4. Name three mistakes from this module and their fixes.</summary><p>A switch across the battery is a short circuit, so put it in series. A backwards electrolytic leaks and heats, so the stripe (−) goes to the lower-voltage side. A missing base resistor overloads the transistor and kills the timing, so always use one.</p></details>
-<h3>Build it in VoltSim</h3>
+<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
 <p>Delay timer: 5 V battery, push button, 100 Ω, 220 µF electrolytic (stripe to the − rail), 22 kΩ, NPN transistor, 330 Ω, LED. Wire it exactly as in step 7. Then try 470 µF and time the difference.</p>`}
 ]});
 })();
@@ -946,7 +1856,7 @@ steps:[
 <details class="reveal"><summary>2. Describe one full cycle.</summary><p>Q1 turns on, its collector drops, and C1 kicks Q2's base to about −2.25 V, so Q2 is off. RB2 recharges C1 until Q2's base reaches 0.65 V. Q2 turns on, its collector drops, and C2 kicks Q1's base down, so Q1 is off. RB1 recharges C2 until Q1 turns on. Repeat.</p></details>
 <details class="reveal"><summary>3. What sets each LED's on-time?</summary><p>The RC on the opposite side: LED1's on-time is about 0.5 × RB2 × C1 here (0.69 × R × C in the textbook version without LEDs).</p></details>
 <details class="reveal"><summary>4. Three faults and what you'd see.</summary><p>Capacitor to its own base: both LEDs steady, no blink. R × C far too small: blinks too fast to see, so both LEDs look on. A backwards capacitor or LEDs with no resistors: drifting timing and heating, or burnt LEDs and a dead oscillator.</p></details>
-<h3>Build it in VoltSim</h3>
+<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
 <table class="parts"><tr><th>Qty</th><th>Part</th></tr><tr><td>1</td><td>5 V battery</td></tr><tr><td>2</td><td>NPN transistors (Q1, Q2)</td></tr><tr><td>2</td><td>LEDs + 470 Ω resistors (collector side)</td></tr><tr><td>2</td><td>47 kΩ base resistors (RB1, RB2) to the + rail</td></tr><tr><td>2</td><td>22 µF electrolytic: C1 from Q1 collector to Q2 base, C2 from Q2 collector to Q1 base (+ to the collectors)</td></tr></table>
 <p>If the simulator sits still at the start, it may be waiting for a mismatch. Use two slightly different capacitors (22 µF and 20 µF), or briefly short one base to the − rail to give it a nudge.</p>`}
 ]});
@@ -1128,7 +2038,7 @@ steps:[
 <details class="reveal"><summary>2. Why is switching off a coil dangerous for a transistor?</summary><p>The coil makes whatever voltage it takes to keep its current flowing. With no path, that's a spike of hundreds of volts at the collector, which breaks the transistor down.</p></details>
 <details class="reveal"><summary>3. How does a flyback diode fix it?</summary><p>It sits across the coil, reverse-biased normally. At switch-off it conducts, letting the current circulate through coil and diode and fade away. The collector only sees about 0.7 V above the supply.</p></details>
 <details class="reveal"><summary>4. What's τ for an inductor, and how is it different from RC?</summary><p>τ = L ÷ R. A bigger R makes an inductor faster (smaller final current), but makes an RC circuit slower.</p></details>
-<h3>Build it in VoltSim</h3>
+<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
 <p>Relay driver: 5 V battery, switch, 1 kΩ base resistor, 10 kΩ pull-down, NPN transistor, an inductor (100 mH with about 50 Ω series resistance) as the relay coil, and a diode across the coil with its bar at the + rail end. Toggle the diode in and out and compare the collector voltage on the simulator's scope.</p>`}
 ]});
 })();
@@ -1455,7 +2365,7 @@ steps:[
 <details class="reveal"><summary>3. What happens if you drop a MOSFET into a BJT circuit?</summary><p>Anything that relied on a resistor setting the base current stops working. With no gate current, the resistor drops nothing, so the MOSFET is simply fully on or off.</p></details>
 <details class="reveal"><summary>4. What happens if you drop a BJT into a MOSFET circuit?</summary><p>If the gate was driven directly, the base gets unlimited current and the BJT dies. With a resistor, it usually can't get enough base current for a big load, so it's partly on: a dim load and a hot transistor.</p></details>
 <details class="reveal"><summary>5. Work it out: base resistor for a 300 mA load, minimum gain 60, 5 V drive.</summary><p>300 ÷ 60 = 5 mA, × 2 margin = 10 mA. R = (5 − 0.75) ÷ 0.01 ≈ 425 Ω, so use 390 Ω. That's 11 mA, more than many pins can give, so a logic-level MOSFET is the better choice.</p></details>
-<h3>Build it in VoltSim</h3>
+<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
 <p>Build steps 1 and 3 side by side. Then try both swap labs: put a MOSFET where the BJT was in the dimmer, and a BJT (no base resistor) where the MOSFET was. Check both switch states each time.</p>`}
 ]});
 })();
@@ -1619,7 +2529,7 @@ steps:[
 <h3>Why NPN is usually preferred otherwise</h3>
 <ul><li>Higher gain and faster, for the same size and price, because the charge carriers in an NPN (electrons) move more easily than in a PNP.</li><li>Easy to drive: the base is pulled up from a logic pin that shares the same 0 V.</li></ul>
 <h3>Using both together</h3>
-<ul><li><b>Push-pull outputs</b>: an NPN pulls up and a PNP pulls down (or the reverse). That's how audio amplifiers and motor drivers push current both ways.</li><li><b>High-side switching at a higher voltage</b>: a small NPN drives the PNP's base. Step 8 shows why that's needed.</li></ul>
+<ul><li><b>Push-pull outputs</b>: an NPN pulls up and a PNP pulls down (or the reverse). That's how audio amplifiers and motor drivers push current both ways.</li><li><b>High-side switching at a higher voltage</b>: a small NPN drives the PNP's base. Step 9 shows why that's needed.</li></ul>
 <div class="why"><span class="k">The MOSFET versions</span>The same split exists for MOSFETs: N-channel for the low side, P-channel for the high side, with the same mirrored rules. Everything in this module applies to them too.</div>`},
 
 {title:"One dial, both transistors",part:"Part 2 · Both states",init:{f:0.5},
@@ -1631,7 +2541,7 @@ steps:[
 <ul><li><b>0 V:</b> NPN off, PNP on</li><li><b>5 V:</b> NPN on, PNP off</li><li><b>In between:</b> both on, as long as each base is at least 0.65 V from its own emitter in the right direction</li></ul>
 <div class="formula">NPN on: V<sub>base</sub> ≥ V<sub>emitter</sub> + 0.65 &nbsp;&nbsp; PNP on: V<sub>base</sub> ≤ V<sub>emitter</sub> − 0.65</div>
 <p>That one pair of rules lets you predict any BJT's state: look at its emitter first, then at its base.</p>
-<div class="why"><span class="k">Why “high” and “low” can mislead</span>Each transistor's reference point is its own emitter. A PNP with its emitter at 12 V is ON with its base at 5 V, even though 5 V is a logic “high”. That catch is coming up in step 8.</div>`},
+<div class="why"><span class="k">Why “high” and “low” can mislead</span>Each transistor's reference point is its own emitter. A PNP with its emitter at 12 V is ON with its base at 5 V, even though 5 V is a logic “high”. That catch is coming up in step 9.</div>`},
 
 {quiz:true,title:"Practice: NPN or PNP, and is it on?",part:"Practice",qs:[
  {q:"You need to switch the +5 V supply to a sensor board on and off, and its ground must stay connected to the main board. Which transistor, and where?",o:["PNP on the high side (emitter to +5 V, board between collector and 0 V)","NPN on the low side (break the board's ground)","NPN with its emitter on +5 V","No transistor can do this"],c:0,w:"Breaking a shared ground causes trouble, so switch the + side with a PNP (or a P-channel MOSFET)."},
@@ -1694,8 +2604,8 @@ steps:[
 <details class="reveal"><summary>3. What do you see if a PNP is fitted in an NPN circuit (or the reverse)?</summary><p>Backwards and weak: off when it should be on, and a faint glow when it should be off, because the collector-base diode conducts the wrong way.</p></details>
 <details class="reveal"><summary>4. Why not use an NPN on the high side?</summary><p>As an emitter follower its output is stuck about 0.7 V (or more, under load) below its base, so the load is under-powered and the transistor runs hot.</p></details>
 <details class="reveal"><summary>5. How do you switch 12 V on the high side from 5 V logic?</summary><p>PNP with its emitter on 12 V, a pull-up from base to 12 V to keep it off, and a small NPN driven by the logic that pulls the PNP's base down through a resistor to turn it on.</p></details>
-<h3>Build it in VoltSim</h3>
-<p>Build step 1 (NPN low side) and step 2 (PNP high side) next to each other. Then swap the transistors between them, test both switch states, and compare with the mistake steps. Finally build the 12 V PNP with an NPN helper from step 8.</p>`}
+<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
+<p>Build step 1 (NPN low side) and step 2 (PNP high side) next to each other. Then swap the transistors between them, test both switch states, and compare with the mistake steps. Finally build the 12 V PNP with an NPN helper from step 9.</p>`}
 ]});
 })();
 /* ======================= Op-amp primer: revise the pieces, build up to Stage 1 ======================= */
@@ -2020,7 +2930,7 @@ function compDiag(s,opt){
   /* op-amp + power */
   o+=OPAMP(200,150,"",!pw);
   if(pw){o+=FLAG(230,115,0.2+0.8*b,"b");o+=GND(230,185,0.2,"s");}
-  else{o+=T(238,98,"V+ not connected","blbl","start")+GND(230,185,0);}
+  else{o+=T(238,98,"Vcc not connected","blbl","start")+GND(230,185,0);}
   /* output LED */
   o+=W([270,150,300,150],out)+W([300,195,300,205],il>0?"mid":false);
   if(il>0)o+=F([230,128,230,140,262,150,300,150],"b",b)+F([300,195,300,205],"b",b);
@@ -2072,15 +2982,16 @@ steps:OPBUILD_STEPS.concat([
 {title:"An op-amp compares two voltages",part:"Part 2 · Comparator",init:{f:0.4},
  diag:function(s){var vp=5*(0.15+0.7*s.f),out=vp>2.5?4.95:0.05;return {svg:compDiag(s,{vm:2.5,vp:vp,out:out,f:s.f}),
    meters:[["V+ (pot)",fV(vp),vp>2.5],["V− (divider)",fV(2.5),false],["Output",out>2.5?"high (≈5 V)":"low (≈0 V)",out>2.5]],
-   now:vp>2.5?"V+ is higher than V−, so the output slams up to the top rail and the LED lights. The output current comes from the op-amp's own power pin (V+ → output), not from the inputs.":"V+ is lower than V−, so the output sits at the bottom rail and the LED is off. Move the pot past 2.5 V and watch it flip."};},
+   now:vp>2.5?"The + input is higher than the − input, so the output slams up to the top rail and the LED lights. The output current comes from the op-amp's own power pin (Vcc → output), not from the inputs.":"The + input is lower than the − input, so the output sits at the bottom rail and the LED is off. Move the pot past 2.5 V and watch it flip."};},
  ctl:[{k:"f",type:"range",label:"Pot",min:0,max:1,step:0.01,fmt:function(v){return fV(5*(0.15+0.7*v));}}],
  text:`<p>From here on, the op-amp you just built is drawn as a <b>triangle</b>. Real ones come as chips, but the pins are the same:</p>
-<ul><li><b>+ input</b> (non-inverting) and <b>− input</b> (inverting). These are just names, not voltages.</li><li>The <b>output</b> is the difference between them multiplied by a huge number: about 100 000 or more.</li><li>Two <b>power pins</b>, V+ and V−, connect to the rails. The output can't go beyond them.</li></ul>
+<ul><li><b>+ input</b> (non-inverting) and <b>− input</b> (inverting). These are just names, not voltages.</li><li>The <b>output</b> is the difference between them multiplied by a huge number: about 100 000 or more.</li><li>Two <b>power pins</b>, <b>Vcc</b> (to the + rail) and <b>Vee</b> (to the − rail or ground), connect to the supply. The output can't go beyond them.</li></ul>
+<div class="why"><span class="k">Two sets of names</span>Don't mix these up. The <b>inputs</b> are written V+ and V− (in rules like "V+ = V−"). The <b>power pins</b> are Vcc and Vee. A triangle has five pins: two inputs, one output, two power.</div>
 <div class="formula">output = huge × (V+ − V−), stuck between the rails</div>
 <p>Even a millivolt of difference, × 100 000, wants 100 V, so the output just slams into a rail. Used like this, with no feedback, an op-amp is a <b>comparator</b>:</p>
 <ul><li>V+ above V− → output high</li><li>V+ below V− → output low</li></ul>
 <div class="why"><span class="k">Inputs draw almost no current</span>Notice there are no current dashes into the inputs. An op-amp only <b>looks at</b> its input voltages. The current for the LED comes from the power pin. That's why it's drawn wired to both rails: a full loop, battery → V+ pin → output → LED → − rail.</div>
-<p class="hint">The diagram uses a rail-to-rail op-amp, whose output reaches within a few millivolts of each rail. Older types like the LM358 can't, as you'll see in step 3.</p>`},
+<p class="hint">The diagram uses a rail-to-rail op-amp, whose output reaches within a few millivolts of each rail. Older types like the LM358 can't, as you'll see in the non-inverting amplifier step.</p>`},
 
 {title:"Feedback and the golden rules: the buffer",part:"Part 3 · Feedback",init:{f:0.6,buf:false},
  diag:function(s){var d=bufDiag(s,{buf:s.buf,vout:5*s.f});return {svg:d.svg,
@@ -2119,10 +3030,10 @@ steps:OPBUILD_STEPS.concat([
  diag:function(s){var vp=5*(0.15+0.7*s.f),out=s.power?(vp>2.5?4.95:0.05):0;return {svg:compDiag(s,{vm:2.5,vp:vp,out:out,f:s.f,power:s.power}),bad:!s.power,
    meters:[["V+ (pot)",fV(vp),vp>2.5],["Output",s.power?(out>2.5?"high":"low"):"dead",s.power?out>2.5:"warn"]],
    now:s.power?"Powered: the comparator works.":"The op-amp has no supply, so it has nothing to make an output from. The output sits near 0 V whatever the inputs do. On a breadboard, a chip like this can also feed power in through its input pins and behave strangely."};},
- ctl:[{k:"f",type:"range",label:"Pot",min:0,max:1,step:0.01,fmt:function(v){return fV(5*(0.15+0.7*v));}},{k:"power",type:"tog",label:"V+ pin connected"}],
+ ctl:[{k:"f",type:"range",label:"Pot",min:0,max:1,step:0.01,fmt:function(v){return fV(5*(0.15+0.7*v));}},{k:"power",type:"tog",label:"Vcc pin connected"}],
  text:`<p>Many diagrams, and many simulators, leave the op-amp's power pins <b>off the drawing</b>, assuming you know they're there. On a real chip they must be wired.</p>
 <div class="why bad"><span class="k">What goes wrong</span>With no supply the op-amp is dead: its output can't go anywhere. Worse, signals on the inputs can partly power the chip through its internal protection diodes, so you get weird half-working behaviour that's hard to diagnose.</div>
-<div class="why fix"><span class="k">The fix</span>Wire <b>V+ to the + rail</b> and <b>V− to the − rail</b> (or to the negative supply in a dual-supply circuit). On the 8-pin dual op-amp: pin 8 = V+, pin 4 = V−. Add a 100 nF capacitor from V+ to V− close to the chip. It's a standard habit that stops noise and oscillation.</div>
+<div class="why fix"><span class="k">The fix</span>Wire <b>Vcc to the + rail</b> and <b>Vee to the − rail</b> (or to the negative supply in a dual-supply circuit). On the 8-pin dual op-amp: pin 8 = Vcc, pin 4 = Vee. Add a 100 nF capacitor between them close to the chip. It's a standard habit that stops noise and oscillation.</div>
 <div class="why"><span class="k">Also watch: inputs beyond the rails</span>Most op-amps misbehave if an input goes below the − rail or above the + rail (check “input common-mode range” in the datasheet). With a single 5 V supply, keep inputs between 0 and about 3.5–5 V depending on the part.</div>`},
 
 {quiz:true,title:"Quick check: op-amps",part:"Check 1",qs:[
@@ -2148,7 +3059,7 @@ steps:OPBUILD_STEPS.concat([
  {q:"Why did the LED dim the pot's voltage when connected straight to the wiper?",o:["Its current flowed through the pot's resistance and dropped voltage (loading)","LEDs make voltage","The pot was broken","Op-amps were missing"],c:0,w:"A divider only holds its voltage when almost no current is taken from it. Buffer it."},
  {q:"In the night light, what makes the output go high?",o:["The sensor voltage (V−) falling below the set point (V+) as it gets dark","The LDR getting hot","The pot turning off","Bright light"],c:0,w:"Dark → LDR resistance up → divider voltage down → below the set point → output high."},
  {q:"An LM358 on 5 V gives only about 3.5 V maximum out. Why?",o:["Its output can't get closer than about 1.5 V to its top rail","It's broken","Op-amps always lose half","The gain is too low"],c:0,w:"It's not a rail-to-rail part. Choose a rail-to-rail op-amp if you need the full range."},
- {q:"Which pins of an op-amp must always be wired, even if the diagram leaves them out?",o:["The power pins (V+ and V−)","Only the output","Only the + input","None"],c:0,w:"No power, no output."}
+ {q:"Which pins of an op-amp must always be wired, even if the diagram leaves them out?",o:["The power pins (Vcc and Vee)","Only the output","Only the + input","None"],c:0,w:"No power, no output."}
 ]},
 
 {final:true,title:"Explain it back",part:"Finish",
@@ -2158,7 +3069,7 @@ steps:OPBUILD_STEPS.concat([
 <details class="reveal"><summary>2. State the golden rules.</summary><p>With negative feedback, the output does whatever makes V− equal V+, and the inputs draw no current.</p></details>
 <details class="reveal"><summary>3. Why does a buffer help?</summary><p>It copies a voltage without drawing current from the source, and supplies the load's current from its own power pins, so the source voltage doesn't sag.</p></details>
 <details class="reveal"><summary>4. Four op-amp mistakes.</summary><p>Feedback to the + input (latches). Power pins not connected (dead or weird). Expecting output beyond the supply, or using a non-rail-to-rail part (clipping). Loading a divider directly.</p></details>
-<h3>Build it in VoltSim</h3>
+<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
 <p>Night light: 5 V battery, LDR + 10 kΩ divider into the op-amp's − input, a 10 kΩ pot (ends to the rails, wiper to the + input), op-amp power pins to both rails, output → 330 Ω → LED → − rail.</p>`}
 ])});
 })();
@@ -2294,19 +3205,32 @@ steps:[
 <details class="reveal"><summary>2. What is a Wheatstone bridge?</summary><p>Two dividers fed from the same supply. You measure the difference between their middle points: zero at balance (R1/R2 = R3/Rx), with the sign showing which way it's out.</p></details>
 <details class="reveal"><summary>3. Two advantages of a bridge.</summary><p>It cancels the large common voltage so tiny changes stand out, and the balance point doesn't depend on the supply voltage.</p></details>
 <details class="reveal"><summary>4. How does the thermostat decide HOT or COLD?</summary><p>Warmer means lower NTC resistance, so B rises. The comparator outputs high when B (+) is above A (−), lighting HOT. When low, the output sinks current from the COLD LED.</p></details>
-<h3>Build it in VoltSim</h3>
+<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
 <p>5 V battery. R1 = R2 = 10 kΩ (point A). NTC thermistor (10 kΩ at 25 °C) on top with 10 kΩ below (point B). Op-amp with power pins to both rails, B → +, A → −. Output → 330 Ω → red LED → − rail, and + rail → 330 Ω → green LED → output. If your simulator has no thermistor, use a pot in its place and turn it.</p>`}
 ]});
 })();
 /* ======================= APP ======================= */
-var XOR_URL="https://claude.ai/artifact/3yZewFv34wX9uj9tAgUaWi";
+var XOR_URL="xor-from-scratch.html";
 var MOD=null,cur=0,ST={},QA=load("answers",{}),ORDER={},VISITED=load("visited",{});
+var FOUND=5;
+var SEEDS=load("seeds",{}),PASSED=load("passed",{}),ATT=load("attempts",{}),GEN={};
 function modById(id){for(var i=0;i<MODS.length;i++)if(MODS[i].id===id)return MODS[i];return null;}
 function S(i){var key=MOD.id+"-"+i;if(!ST[key]){var st=MOD.steps[i];var s=st.init?JSON.parse(JSON.stringify(st.init)):{};s.t=0;s.h={t:[]};if(st.reset)st.reset(s);ST[key]=s;}return ST[key];}
 function step(){return MOD.steps[cur];}
 function qkey(i,q){return MOD.id+"-"+i+"-"+q;}
-function quizDone(i){var st=MOD.steps[i];if(!st.quiz)return true;for(var q=0;q<st.qs.length;q++)if(QA[qkey(i,q)]==null)return false;return true;}
-function modScore(m){var r=0,t=0;m.steps.forEach(function(st,i){if(!st.quiz)return;st.qs.forEach(function(q,j){t++;if(QA[m.id+"-"+i+"-"+j]===q.c)r++;});});return [r,t];}
+/* the questions for quiz step i of module m. Generated quizzes build fresh numbers from a stored seed;
+   "Try again" stores a new seed, so every attempt has different values and a different mix of questions */
+function QSof(m,i){var st=m.steps[i];if(!st.gen)return st.qs;var k=m.id+"-"+i,sd=SEEDS[k];
+  if(sd==null){sd=SEEDS[k]=1+Math.floor(Math.random()*2e9);save("seeds",SEEDS);}
+  var g=GEN[k];if(!g||g.sd!==sd){var R=RNG(sd),idx=R.shuffle(st.bank.map(function(_,n){return n;})).slice(0,st.count||5);
+    g=GEN[k]={sd:sd,qs:idx.map(function(n){var q=st.bank[n](R);q.bi=n;return q;})};}
+  return g.qs;}
+function QS(i){return QSof(MOD,i);}
+function passMark(n){return Math.ceil(n*0.8);}
+function quizDone(i){var st=MOD.steps[i];if(!st.quiz)return true;var qs=QS(i);for(var q=0;q<qs.length;q++)if(QA[qkey(i,q)]==null)return false;return true;}
+function quizRight(i){var qs=QS(i),r=0;qs.forEach(function(q,j){if(QA[qkey(i,j)]===q.c)r++;});return r;}
+function modScore(m){var r=0,t=0;m.steps.forEach(function(st,i){if(!st.quiz)return;QSof(m,i).forEach(function(q,j){t++;if(QA[m.id+"-"+i+"-"+j]===q.c)r++;});});return [r,t];}
+function passInfo(m){var n=0,p=0;m.steps.forEach(function(st,i){if(!st.quiz)return;n++;if(PASSED[m.id+"-"+i])p++;});return [p,n];}
 function shuffle(n,seed){var a=[];for(var i=0;i<n;i++)a.push(i);var x=seed*9301+49297;for(var j=n-1;j>0;j--){x=(x*9301+49297)%233280;var k=Math.floor(x/233280*(j+1));var t=a[j];a[j]=a[k];a[k]=t;}return a;}
 function esc(s){return String(s).replace(/"/g,"&quot;");}
 
@@ -2314,12 +3238,15 @@ function esc(s){return String(s).replace(/"/g,"&quot;");}
 function renderHome(){
   MOD=null;save("view",null);
   document.getElementById("dots").innerHTML="";document.getElementById("count").textContent="";document.getElementById("crumb").textContent="";
+  var GL=[["Voltage (V)","The push that moves current. Like water pressure."],["Current (A)","How much charge flows per second. Like flow rate."],["Resistance (Ω)","How hard it is to push current through. Like a narrow pipe."],["Rail","A long wire held at a fixed voltage: the + rail at the battery's + voltage, the 0 V rail (ground) at its −."],["Ground (0 V)","The reference level other voltages are measured against. Like sea level."],["Load","Whatever the circuit is driving: an LED, a motor, a lamp."],["Short circuit","A path with almost no resistance between + and −. Huge current, heat, damage."],["Node","A point where wires or parts join. Every point on one node has the same voltage."],["Forward voltage","The voltage a diode or LED drops when it conducts (about 0.7 V, or about 2 V for a red LED)."],["Gain","How many times bigger the output is than the input."],["Time constant τ","How long an RC or LR circuit takes to move 63% of the way. τ = R × C or L ÷ R."],["Pull-up / pull-down","A resistor that holds a wire at + or at 0 V when nothing else is driving it."]];
   var h='<div class="home"><div class="intro"><div class="eyebrow">A course in circuit electronics</div><h2>Learn circuits by building them, breaking them, and fixing them</h2>'+
-  '<ul><li>One circuit per module, one idea per step</li><li>Live diagrams you can switch and adjust</li><li>Every circuit drawn as a full loop, battery and back</li><li><b style="color:var(--bad)">Mistake steps</b>: make the common error, see what breaks, fix it</li><li>Go top to bottom: RC comes before the astable</li></ul></div><div class="mods">';
-  h+='<a class="mod" href="'+XOR_URL+'" target="_blank" rel="noopener"><span class="n">MODULE 1 · OPENS SEPARATELY</span><h3>XOR from scratch</h3><p>Transistors as switches, pull-ups and pull-downs, and NOT, NAND, OR and AND gates combined into an XOR.</p><span class="mistakes">Mistakes: the leaky OR stage, voltage budget.</span><span class="meta"><span>17 steps</span><span>open ↗</span></span></a>';
-  MODS.forEach(function(m){
-    var v=VISITED[m.id]||0,pct=Math.round(v/(m.steps.length-1)*100),sc=modScore(m);
-    h+='<button class="mod" data-mod="'+m.id+'"><span class="n">MODULE '+m.n+'</span><h3>'+m.title+'</h3><p>'+m.blurb+'</p><span class="mistakes">Mistakes: '+m.mistakes+'</span><div class="bar"><i style="width:'+clamp(pct,0,100)+'%"></i></div><span class="meta"><span>'+m.steps.length+' steps'+(v>0?" · step "+(v+1)+" reached":"")+'</span><span>quiz '+sc[0]+'/'+sc[1]+'</span></span></button>';
+  '<ul><li><b>No knowledge assumed.</b> Start with Modules 1 to 5: voltage, capacitors, parts, measuring, Kirchhoff</li><li>One circuit per module, one idea per step</li><li>Live diagrams you can switch and adjust</li><li>Water pictures first, then the real electrical term</li><li><b style="color:var(--bad)">Mistake steps</b>: make the common error, see what breaks, fix it</li><li>Checks have fresh numbers each attempt, with a pass mark</li><li>After the basics, go top to bottom. Each module lists what it needs</li></ul>'+
+  '<details class="reveal" style="margin-top:12px"><summary>Glossary: words used in this course</summary><ul>'+GL.map(function(g){return "<li><b>"+g[0]+":</b> "+g[1]+"</li>";}).join("")+'</ul></details></div><div class="mods">';
+  var xorCard='<a class="mod" href="'+XOR_URL+'" target="_blank" rel="noopener"><span class="n">MODULE '+(FOUND+1)+' · OPENS SEPARATELY</span><h3>XOR from scratch</h3><p>Transistors as switches, pull-ups and pull-downs, and NOT, NAND, OR and AND gates combined into an XOR.</p><span class="mistakes">Mistakes: the leaky OR stage, voltage budget.</span><span class="meta"><span>17 steps</span><span>open ↗</span></span></a>';
+  MODS.forEach(function(m,i){
+    if(i===FOUND)h+=xorCard;
+    var v=VISITED[m.id]||0,pct=Math.round(v/(m.steps.length-1)*100);
+    h+='<button class="mod" data-mod="'+m.id+'"><span class="n">MODULE '+m.n+(i<FOUND?" · BASICS":"")+'</span><h3>'+m.title+'</h3><p>'+m.blurb+'</p><span class="mistakes">Mistakes: '+m.mistakes+'</span>'+(m.needs?'<span class="needs">Needs: '+m.needs+'</span>':'')+'<div class="bar"><i style="width:'+clamp(pct,0,100)+'%"></i></div><span class="meta"><span>'+m.steps.length+' steps'+(v>0?" · step "+(v+1)+" reached":"")+'</span><span>checks passed '+passInfo(m)[0]+'/'+passInfo(m)[1]+'</span></span></button>';
   });
   h+='</div></div>';
   var el=document.getElementById("step");el.innerHTML=h;el.classList.remove("enter");void el.offsetWidth;el.classList.add("enter");
@@ -2351,24 +3278,28 @@ function renderStep(anim){
   var st=step(),el=document.getElementById("step"),h="";
   VISITED[MOD.id]=Math.max(VISITED[MOD.id]||0,cur);save("visited",VISITED);save("step-"+MOD.id,cur);
   h+='<div><div class="eyebrow'+(st.mist?" mist":"")+'">'+st.part+'</div><h2>'+st.title+'</h2></div>';
+  if(cur===0&&MOD.needs)h+='<div class="why"><span class="k">Before you start</span>This module builds on: '+MOD.needs+'. If something feels new, go back to it first.</div>';
   if(st.quiz){
+    var qs=QS(cur),ak=MOD.id+"-"+cur,sv=(ATT[ak]||0)*31+(st.gen?(SEEDS[ak]%1000):0);
     h+='<div class="quiz">';
-    st.qs.forEach(function(q,j){
-      var key=qkey(cur,j),ans=QA[key],ord=ORDER[key]||(ORDER[key]=shuffle(q.o.length,cur*7+j*3+MOD.n));
-      h+='<div class="q"><div class="qn">Question '+(j+1)+' of '+st.qs.length+'</div><div class="qt">'+q.q+'</div><div class="opts">';
+    if(st.gen)h+='<p class="hint" style="margin:0">Every attempt uses different numbers and a different mix of questions, so you can\'t memorise the answers. Pass mark: '+passMark(qs.length)+' of '+qs.length+'.</p>';
+    qs.forEach(function(q,j){
+      var key=qkey(cur,j),ans=QA[key],ord=ORDER[key]||(ORDER[key]=shuffle(q.o.length,cur*7+j*3+MOD.n+sv));
+      h+='<div class="q"><div class="qn">Question '+(j+1)+' of '+qs.length+'</div><div class="qt">'+q.q+'</div><div class="opts">';
       ord.forEach(function(oi){var cls="opt";if(ans!=null){if(oi===q.c)cls+=" right";else if(oi===ans)cls+=" wrong";}
         h+='<button class="'+cls+'" data-q="'+j+'" data-o="'+oi+'"'+(ans!=null?" disabled":"")+'>'+q.o[oi]+'</button>';});
       h+='</div>';
       if(ans!=null)h+='<div class="fb '+(ans===q.c?"ok":"no")+'"><b>'+(ans===q.c?"Correct.":"Not quite.")+'</b> '+q.w+'</div>';
       h+='</div>';
     });
-    var done=quizDone(cur),r=0;st.qs.forEach(function(q,j){if(QA[qkey(cur,j)]===q.c)r++;});
-    h+='<div class="score">'+(done?"You got "+r+" of "+st.qs.length+"."+(r<st.qs.length?" Read the explanations, and revisit any step that felt shaky.":" Nice work."):"Answer every question to continue.")+'</div>';
-    if(done&&r<st.qs.length)h+='<div><button class="btn" id="retry">Try this check again</button></div>';
+    var done=quizDone(cur),r=quizRight(cur),pm=passMark(qs.length),ok=r>=pm;
+    if(done&&ok&&!PASSED[ak]){PASSED[ak]=true;save("passed",PASSED);}
+    h+='<div class="score">'+(done?'<span class="pf '+(ok?"pass":"fail")+'">'+(ok?"PASSED ✓":"NOT YET ✗")+'</span> You got '+r+' of '+qs.length+' (pass mark '+pm+').'+(ok?(r<qs.length?" Check the explanations on the ones you missed.":" Full marks."):" Read the explanations, revisit the steps above, then try again."):"Answer every question to continue.")+'</div>';
+    if(done)h+='<div><button class="btn'+(ok?"":" primary")+'" id="retry">'+(ok?"Practise again with new numbers":"Try again with new numbers")+'</button></div>';
     h+='</div>';
   }else if(st.final||!st.diag){
     var sc=modScore(MOD);
-    h+='<div class="text">'+st.text+(st.final?'<div class="why"><span class="k">Your quiz score for this module</span><span class="score">'+sc[0]+' / '+sc[1]+'</span></div>':'')+'</div>';
+    h+='<div class="text">'+st.text+(st.final?'<div class="why"><span class="k">Your checks for this module</span><span class="score">'+passInfo(MOD)[0]+' of '+passInfo(MOD)[1]+' checks passed</span> <span class="hint">(latest answers: '+sc[0]+' / '+sc[1]+')</span></div>':'')+'</div>';
   }else{
     var s=S(cur);
     h+='<div class="cols"><div class="lab"><div class="canvas" id="cv"></div><div class="hint zoomhint">Tap the diagram to zoom in or out.</div><div class="controls" id="ctl">'+ctlHTML(st,s)+'</div>'+legend(st)+'<div class="meters" id="mt"></div><div class="now" id="now"></div><div id="sc"></div><div id="tb"></div></div><div class="text">'+st.text+'</div></div>';
@@ -2405,7 +3336,9 @@ document.addEventListener("click",function(e){
   if(t.id==="next"){go(cur+1);return;}
   if(t.id==="prev"){go(cur-1);return;}
   if(t.id==="tohome"){renderHome();return;}
-  if(t.id==="retry"){step().qs.forEach(function(q,j){delete QA[qkey(cur,j)];delete ORDER[qkey(cur,j)];});save("answers",QA);renderStep(false);return;}
+  if(t.id==="retry"){var rst=step(),rk=MOD.id+"-"+cur;QS(cur).forEach(function(q,j){delete QA[qkey(cur,j)];delete ORDER[qkey(cur,j)];});
+    if(rst.gen){SEEDS[rk]=1+Math.floor(Math.random()*2e9);save("seeds",SEEDS);}else{ATT[rk]=(ATT[rk]||0)+1;save("attempts",ATT);}
+    save("answers",QA);renderStep(false);window.scrollTo(0,0);return;}
   if(t.dataset.q!=null){QA[qkey(cur,t.dataset.q)]=+t.dataset.o;save("answers",QA);var y=window.scrollY;renderStep(false);window.scrollTo(0,y);return;}
   if(!MOD)return;var st=step(),s=S(cur);
   if(t.dataset.k){s[t.dataset.k]=!s[t.dataset.k];changed(t.dataset.k);return;}
@@ -2440,11 +3373,66 @@ function loop(ts){
   if(st.sim&&!s.paused){var k=typeof st.timeScale==="function"?st.timeScale(s):(st.timeScale||1);var sd=dt*k;s.t+=sd;st.sim(s,sd);}
   frame++;if(frame%2===0)updateLive();
 }
+/*POST-START*/
+/* ======================= post-build: numbering, prerequisites, extra number-practice checks ======================= */
+(function(){
+var B=MODS.banks||{};
+MODS.forEach(function(m,i){m.n=i+1+(i>=FOUND?1:0);});
+var NEEDS={rc:"Voltage, current & resistance; Capacitors from scratch",astable:"RC circuits & timing; the transistor basics in XOR from scratch",ind:"RC circuits & timing (the same idea of 'slow to change')",mos:"XOR from scratch (transistors as switches)",pnp:"MOSFET vs BJT (or at least NPN transistors from XOR)",opprimer:"NPN vs PNP",opamp:"Op-amp primer; Series, parallel (dividers)",bridge:"Other basic parts (sensors); Series, parallel (dividers); Op-amps (comparator)"};
+for(var k in NEEDS){var m0=modById(k);if(m0)m0.needs=NEEDS[k];}
+function addQuiz(id,title,bank,count){var m=modById(id);if(!m)return;m.steps.splice(m.steps.length-1,0,{quiz:true,gen:true,count:count||4,title:title,part:"Number practice",bank:bank});}
+function fx2(n){return (+n.toPrecision(4)).toString();}
+/* RC: reuse capacitor questions about time constants */
+if(B.caps)addQuiz("rc","Number practice: RC timing",[B.caps[0],B.caps[1],B.caps[2],B.caps[3],B.caps[6],B.caps[8]],4);
+/* astable */
+addQuiz("astable","Number practice: blink times",[
+ function(R){var rb=R.pick([22000,47000,100000]),c=R.pick([10e-6,22e-6,47e-6]),t=0.5*rb*c;return mcn("Using the module's rule, how long does one LED stay on with RB = "+fR(rb)+" and C = "+fC(c)+"?",t,"s",[0.69*rb*c,rb*c,t*1000],"time on ≈ 0.5 × RB × C = 0.5 × "+rb+" × "+(c*1e6)+" µF = "+eng(t,"s")+". (The textbook 0.69 assumes a bigger voltage swing than the LEDs allow.)",{k:"asOn",RB:rb,C:c,ans:t});},
+ function(R){var rb=R.pick([22000,47000,100000]),c=R.pick([10e-6,22e-6,47e-6]),t=rb*c;return mcn("Both halves use RB = "+fR(rb)+" and C = "+fC(c)+". How long is one full cycle (each LED on once)?",t,"s",[0.5*rb*c,2*rb*c,0.69*rb*c],"Each half is 0.5 × RB × C, so a full cycle is 2 × 0.5 × RB × C = RB × C = "+eng(t,"s")+".",{k:"asCycle",RB:rb,C:c,ans:t});},
+ function(R){var rb=R.pick([22000,47000]),c=R.pick([10e-6,22e-6]),f=R.pick([2,3,4]),t=0.5*rb*c*f;return mcn("One LED's on-time is set by RB = "+fR(rb)+" and C = "+fC(c)+". You swap in a capacitor "+f+" times bigger. What's the new on-time?",t,"s",[0.5*rb*c,0.5*rb*c/f,t*f],"On-time ∝ C. "+f+"× the capacitance gives "+f+"× the time: "+eng(0.5*rb*c,"s")+" × "+f+" = "+eng(t,"s")+".",{k:"asScale",RB:rb,C:c,f:f,ans:t});},
+ function(R){return mct("How many stable states does an astable multivibrator have?","None: it keeps flipping back and forth",["One","Two","Three"],"'Astable' means not stable in either state. Each state charges a capacitor until it triggers the flip to the other.");}
+],3);
+/* inductors */
+addQuiz("ind","Number practice: coil timing",[
+ function(R){var L=R.pick([0.01,0.1,1]),r=R.pick([10,22,100,220]),t=L/r;return mcn("An inductor of "+L+" H is in series with "+r+" Ω. What is the time constant τ = L ÷ R?",t,"s",[L*r,t*10,t/10],"τ = L ÷ R = "+L+" ÷ "+r+" = "+eng(t,"s")+". (Note: it's L divided by R, unlike an RC circuit where it's R times C.)",{k:"lr",L:L,R:r,ans:t});},
+ function(R){var L=R.pick([0.01,0.1,1]),r=R.pick([10,22,100,220]),t=L/r;return mcn("With "+L+" H and "+r+" Ω, about how long until the coil's current has essentially reached its final value (5τ)?",5*t,"s",[t,2*t,10*t],"τ = L ÷ R = "+eng(t,"s")+". After 5τ it's about 99% of the way: "+eng(5*t,"s")+".",{k:"lr5",L:L,R:r,ans:5*t});},
+ function(R){var V=R.pick([5,9,12]),r=R.pick([22,47,100,220]),I=V/r;return mcn("A "+V+" V supply drives a coil whose wire resistance is "+r+" Ω. Once the current has settled, how much flows?",I,"A",[I/2,2*I,V/(2*r)],"When the current stops changing, the coil is just its wire resistance: I = V ÷ R = "+V+" ÷ "+r+" = "+eng(I,"A")+".",{k:"lrI",V:V,R:r,ans:I});},
+ function(R){return mct("At the instant you switch a DC supply on to a coil, how much current flows?","Almost none: it builds up gradually",["The full V ÷ R straight away","Half of V ÷ R","An infinite current"],"An inductor resists changes in current, so the current rises gradually with time constant L ÷ R.");}
+],3);
+/* MOSFET vs BJT */
+addQuiz("mos","Number practice: base current and brightness",[
+ function(R){var rb=R.pick([47000,100000,220000,470000]),i=Math.min(100*4.3/rb,8.8e-3);return mcn("Using this module's rule (gain 100, base at 5 V, LED current limited to 8.8 mA), what LED current flows with a base resistor of "+fR(rb)+"?",i,"A",[100*4.3/rb,100*5/rb,4.3/rb],"LED current ≈ 100 × (5 − 0.7) ÷ RB = "+eng(100*4.3/rb,"A")+(100*4.3/rb>8.8e-3?", but the LED path can only carry 8.8 mA, so it caps there.":"."),{k:"bjtI",RB:rb,ans:i});},
+ function(R){var rb=R.pick([100000,220000,470000]),f=R.pick([2,3]),i=100*4.3/rb;return mcn("A base resistor of "+fR(rb)+" gives about "+eng(i,"A")+" through the LED. If you swap in a resistor "+f+" times bigger, what is the current now?",i/f,"A",[i*f,i,i/(f*f)],"Base current is V ÷ R, and the BJT multiplies it. "+f+"× the resistance gives 1/"+f+" of the current: "+eng(i/f,"A")+".",{k:"bjtScale",RB:rb,f:f,ans:i/f});},
+ function(R){return mct("What controls a MOSFET, and what controls a BJT?","MOSFET: the gate voltage (almost no current). BJT: the base current",["MOSFET: the base current. BJT: the gate voltage","Both are controlled by current only","Both are controlled by voltage only"],"A MOSFET's gate is insulated, so it's steered by voltage and draws almost no current. A BJT needs a base current.");}
+],3);
+/* NPN vs PNP: is it on? */
+addQuiz("pnp","Number practice: is it on?",[
+ function(R){var E=R.pick([0,0,1,2]),on=R.f()<0.5,B=on?E+R.pick([0.9,1.2,2,3,4]):E+R.pick([-1,0,0.2,0.4]);return mct("An NPN transistor has its emitter at "+E+" V and its base at "+fx2(B)+" V. Is it on or off?",on?"On":"Off",R.shuffle(["On","Off","Destroyed"]).filter(function(x){return x!==(on?"On":"Off");}).concat(["Can't tell"]),on?"An NPN turns on when its base is at least about 0.65 V above its emitter: "+fx2(B)+" − "+E+" = "+fx2(B-E)+" V.":"The base is only "+fx2(B-E)+" V above the emitter (needs about 0.65 V), so it's off.");},
+ function(R){var E=R.pick([5,12]),on=R.f()<0.5,B=on?E-R.pick([0.9,1.2,2,4,5]):E-R.pick([0,0.2,0.4,-0.5]);var m=mct("A PNP transistor has its emitter at "+E+" V and its base at "+fx2(B)+" V. Is it on or off?",on?"On":"Off",R.shuffle(["On","Off","Destroyed"]).filter(function(x){return x!==(on?"On":"Off");}).concat(["Can't tell"]),on?"A PNP turns on when its base is at least about 0.65 V <b>below</b> its emitter: "+E+" − "+fx2(B)+" = "+fx2(E-B)+" V.":"The base is only "+fx2(E-B)+" V below the emitter (needs about 0.65 V), so it's off.");return m;},
+ function(R){var p=R.pick([["a motor's ground side","an NPN on the low side"],["a sensor board's + supply, keeping its ground connected","a PNP on the high side"]]);return mct("You want to switch "+p[0]+". Which is the natural choice?",p[1],["an NPN on the high side","a PNP on the low side","either, with no difference"],"Low side: NPN (emitter to 0 V). High side: PNP (emitter to + rail). Matching type and position lets the transistor switch fully on.");}
+],3);
+/* Op-amps */
+function gstr(n){return "×"+(+n.toPrecision(4));}
+addQuiz("opamp","Number practice: gain and clipping",[
+ function(R){var rg=R.pick([1000,2000,5000,10000]),k=R.pick([1,2,4,5,9,10]),rf=rg*k;var cands=[k,k+2,2*(1+k),1+2*k,k+4].filter(function(x,i,a){return x!==1+k&&a.indexOf(x)===i;}).map(gstr);return mct("A non-inverting amplifier has Rf = "+fR(rf)+" and Rg = "+fR(rg)+". What is the gain?",gstr(1+k),cands,"gain = 1 + Rf ÷ Rg = 1 + "+rf+" ÷ "+rg+" = "+(1+k)+".");},
+ function(R){var vin=R.pick([0.5,0.8,1,1.2,1.5,2]),g=R.pick([2,3,5,11]),out=vin*g,clip=out>5,right=clip?"About 5 V: it clips at the supply":"About "+fx2(out)+" V";var wr=[clip?"About "+fx2(out)+" V":"About 5 V: it clips at the supply","About "+fx2(vin)+" V","About 0 V"];return mct("A rail-to-rail op-amp on a 5 V supply is set to a gain of "+g+". The input is "+fx2(vin)+" V. What's the output?",right,wr,clip?"Gain × input = "+fx2(out)+" V, but the output can't go above the supply, so it clips near 5 V.":"Output = gain × input = "+g+" × "+fx2(vin)+" = "+fx2(out)+" V, which is within the supply.");},
+ function(R){var g=R.pick([2,3,5,6,11]),rg=R.pick([1000,2000,10000]),rf=(g-1)*rg;return mcn("You want a non-inverting gain of "+g+" using Rg = "+fR(rg)+". What should Rf be?",rf,"Ω",[g*rg,rg/(g-1),(g+1)*rg],"gain = 1 + Rf ÷ Rg, so Rf = (gain − 1) × Rg = "+(g-1)+" × "+rg+" = "+eng(rf,"Ω")+".",{k:"opRf",g:g,Rg:rg,ans:rf});},
+ function(R){var v=R.pick([1.2,2.4,3.3,4.1]);return mct("A voltage follower (buffer) has an input of "+v+" V. What is its output?","About "+v+" V (a gain of 1)",["About "+(2*v).toFixed(1)+" V","About 0 V","About 5 V"],"The output is wired to the − input, so it settles where V− = V+. The output copies the input.");}
+],3);
+/* Bridge and dividers */
+addQuiz("bridge","Number practice: dividers and balance",[
+ function(R){var V=R.pick([5,9,12]),a=R.pick([1000,2000,4700,10000]),b=R.pick([1000,2000,4700,10000,22000]),v=V*b/(a+b);return mcn("A divider has R1 = "+fR(a)+" on top and R2 = "+fR(b)+" below, on a "+V+" V supply. What is the middle voltage (nothing connected to it)?",v,"V",[V*a/(a+b),V/2],"Vout = V × R2 ÷ (R1 + R2) = "+V+" × "+b+" ÷ "+(a+b)+" = "+eng(v,"V")+".",{k:"brDiv",V:V,a:a,b:b,ans:v});},
+ function(R){var r1=R.pick([1000,2000,5000,10000]),r2=R.pick([1000,2000,5000,10000,20000]),r3=R.pick([1000,2000,5000,10000]),rx=r3*r2/r1;return mcn("A bridge has R1 = "+fR(r1)+", R2 = "+fR(r2)+" and R3 = "+fR(r3)+". At what Rx is it balanced (R1 ÷ R2 = R3 ÷ Rx)?",rx,"Ω",[r3*r1/r2,r1*r2/r3,r3+r2-r1],"Rearranging R1 ÷ R2 = R3 ÷ Rx gives Rx = R3 × R2 ÷ R1 = "+r3+" × "+r2+" ÷ "+r1+" = "+eng(rx,"Ω")+".",{k:"brBal",R1:r1,R2:r2,R3:r3,ans:rx});},
+ function(R){var V=R.pick([5,9,12]),ra=R.pick([1000,2000,5000]),rb=R.pick([1000,2000,5000,10000]);while(rb===ra)rb=R.pick([1000,2000,5000,10000]);var va=V*rb/(ra+rb),vb=V/2;return mct("A divider (R1 = "+fR(ra)+" top, R2 = "+fR(rb)+" bottom) and a divider of two equal resistors share a "+V+" V supply. Which point is higher: the first divider's middle, or the equal pair's middle?",va>vb?"The first divider's middle":"The equal pair's middle",[va>vb?"The equal pair's middle":"The first divider's middle","They are equal","Can't tell"],"The equal pair sits at "+fx2(vb)+" V. The first divider sits at "+V+" × "+rb+" ÷ "+(ra+rb)+" = "+fx2(va)+" V.");}
+],3);
+})();
+
+/*POST-END*/
+/* test hook (lets a script drive the app headlessly) */
+window.__cfs={MODS:MODS,S:S,go:function(m,i){MOD=modById(m);cur=i;},render:function(){renderStep(false);},live:updateLive,QSof:QSof,RNG:RNG,eng:eng,clearState:function(){QA={};ORDER={};SEEDS={};GEN={};}};
 var v0=load("view",null);if(v0&&modById(v0))openMod(v0);else renderHome();
 requestAnimationFrame(loop);
 /* ======================= GitHub Pages extras: version, menu, full screen, self-update ======================= */
-const VERSION='v3 · 17 Oct 2026';
-XOR_URL="xor-from-scratch.html";
+const VERSION='v4 · 25 Nov 2026';
 (function(){
   var css=document.createElement("style");
   css.textContent=".pbar{display:flex;gap:8px;align-items:center}.mbtn{font:600 15px var(--mono);border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 11px;cursor:pointer}"+
