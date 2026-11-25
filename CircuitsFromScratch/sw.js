@@ -1,7 +1,7 @@
 /* Offline support. The apps, manifest and icons are kept on the phone, so they open instantly with
    no internet (or a hanging one). Each launch shows the stored copy straight away and quietly fetches the
    latest in the background; the app's own "new version" check then offers the update. */
-const PREFIX = 'circuits-', CACHE = PREFIX + 'v2';
+const PREFIX = 'circuits-', CACHE = PREFIX + 'v3';
 const SHELL = ['circuits-from-scratch.html', 'xor-from-scratch.html', 'circuits-from-scratch.webmanifest', 'icons/icon.svg', 'icons/icon-32.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys()
