@@ -594,13 +594,14 @@ steps:[
  text:`<p>You can't see electricity, so use a picture you can: <b>water in a closed loop of pipe</b>. Every circuit idea in this course has a water version.</p>
 <table class="cmp"><tr><th>Water</th><th>Electricity</th><th>Unit</th></tr>
 <tr><td>Pump pressure</td><td><b>Voltage</b> (the push)</td><td>volts, V</td></tr>
-<tr><td>Flow rate</td><td><b>Current</b> (how much moves per second)</td><td>amps, A (mA = thousandth)</td></tr>
-<tr><td>Narrow pipe</td><td><b>Resistance</b> (holds the flow back)</td><td>ohms, Ω (kΩ = thousand)</td></tr>
+<tr><td>Flow rate</td><td><b>Current</b> (how much moves per second)</td><td>amps, A (mA = milliamp, a thousandth of an amp)</td></tr>
+<tr><td>Narrow pipe</td><td><b>Resistance</b> (holds the flow back)</td><td>ohms, Ω (kΩ = kilohm, a thousand ohms)</td></tr>
 <tr><td>Pump</td><td><b>Battery</b></td><td></td></tr>
 <tr><td>Pipe</td><td><b>Wire</b></td><td></td></tr></table>
 <ul><li>Try the buttons. A stronger pump gives more flow.</li><li>A narrower pipe gives less flow.</li><li>Nothing flows unless the loop is complete.</li></ul>
 <div class="why"><span class="k">Say it with the real words</span><b>Voltage</b> pushes, <b>resistance</b> resists, and <b>current</b> is what results. More voltage means more current. More resistance means less current.</div>
-<details class="reveal"><summary>Where the picture stops being accurate</summary><ul><li>Wires have almost no resistance, like a huge pipe.</li><li>What moves is electric charge (tiny electrons), and the loop is always full of it already. Nothing is used up. The battery just pushes it around.</li><li>Pipes can leak. A wire only carries current if the loop is complete.</li></ul></details>`},
+<div class="why"><span class="k">Reading the diagrams</span>The battery sits on the left. The long wire along the top is the <b>+ rail</b> (the battery's + side). The wire along the bottom is the <b>0 V rail</b>, also called <b>ground</b>. Current flows from + round the loop to 0 V. A <b>rail</b> is just a long wire held at one voltage.</div>
+<details class="reveal"><summary>Where the picture stops being accurate</summary><ul><li>Wires have almost no resistance, like a huge pipe.</li><li>What moves is electric charge (tiny electrons), and the loop is always full of it already. Nothing is used up. The battery just pushes it around.</li><li>A water pipe can leak out of a hole. A wire cannot: current only flows round a complete loop, and the same amount comes back to the battery as left it.</li></ul></details>`},
 
 {title:"Ohm's law",part:"Part 1 · The big picture",init:{V:5,R:1000},
  diag:function(s){var d=ohmDiag(s);return {svg:d.svg,meters:[["Voltage across it",fV(s.V),true],["Resistance",fR(s.R),false],["Current (V ÷ R)",fI(d.I),true]],
@@ -609,7 +610,7 @@ steps:[
  text:`<p>One rule joins all three. It's called <b>Ohm's law</b>:</p>
 <div class="formula">V = I × R</div>
 <ul><li><b>Current:</b> I = V ÷ R</li><li><b>Voltage:</b> V = I × R</li><li><b>Resistance:</b> R = V ÷ I</li></ul>
-<p>Use volts, amps and ohms. Convert first: <b>5 mA = 0.005 A</b> and <b>2.2 kΩ = 2200 Ω</b>.</p>
+<p>Use volts, amps and ohms. The prefixes shrink or grow a unit: <b>k</b> (kilo) = × 1000, <b>m</b> (milli) = ÷ 1000, <b>µ</b> (micro) = ÷ 1,000,000. Convert first: <b>5 mA = 0.005 A</b> and <b>2.2 kΩ = 2200 Ω</b>.</p>
 <h3>Worked example</h3>
 <ul><li>9 V across 4.7 kΩ.</li><li>I = 9 ÷ 4700 = 0.0019 A.</li><li>That's <b>1.9 mA</b>.</li></ul>
 <div class="why"><span class="k">Water version</span>Same pump, half-width pipe: half the flow. Ohm's law just says exactly how much.</div>
@@ -642,8 +643,8 @@ steps:[
    meters:[["Supply",fV(s.Vs),true],["Resistor",s.R>0?fR(s.R):"none",s.R>0?false:"warn"],["LED current",d.burnt?"far too much":fI(d.I),d.burnt?"warn":d.I>1e-3],["Ideal for 10 mA",fR(Math.round((s.Vs-2)/0.01)),false]],
    now:d.burnt?"Nothing limits the current, so far more than the LED can take flows. It burns out in a flash.":(d.I<5e-4?"Very little current: the LED is dim or off.":"The LED takes about 2 V, so the resistor gets the other "+fV(s.Vs-2)+". I = "+fx(s.Vs-2,1)+" ÷ "+s.R+" = "+fI(d.I)+".")};},
  ctl:[{k:"Vs",type:"seg",label:"Supply",opts:[[3.3,"3.3 V"],[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"R",type:"seg",label:"Resistor",opts:[[0,"none ✗",1],[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"],[4700,"4.7 kΩ"]]}],
- text:`<p>An LED isn't like a resistor. Once it conducts, it keeps a <b>roughly fixed voltage across it</b> (about 2 V for red) and will take <b>as much current as you let it</b>. Too much and it dies.</p>
-<p>So a <b>series resistor</b> sets the current. It gets whatever voltage the LED doesn't:</p>
+ text:`<p>An <b>LED</b> (light-emitting diode) is a tiny lamp that only works one way round (the Other basic parts module covers it properly). It isn't like a resistor. Once it conducts, it keeps a <b>roughly fixed voltage across it</b> (about 2 V for red: its <b>voltage drop</b>, the voltage it uses up) and will take <b>as much current as you let it</b>. Too much and it dies.</p>
+<p>So a <b>series resistor</b> (one placed in the same loop, one after the other) sets the current. It gets whatever voltage the LED doesn't:</p>
 <div class="formula">R = (supply − LED drop) ÷ current</div>
 <ul><li>5 V supply, red LED, 10 mA wanted.</li><li>Resistor gets 5 − 2 = 3 V.</li><li>R = 3 ÷ 0.01 = <b>300 Ω</b>. Round to the next standard value, 330 Ω.</li></ul>
 <p>Most small LEDs are happy at <b>5 to 20 mA</b>.</p>
@@ -659,7 +660,7 @@ steps:[
 <details class="reveal"><summary>4. Why does a resistor have a power rating?</summary><p>Current through it makes heat, P = V × I. A ¼ W resistor can only shed 0.25 W before it overheats.</p></details>
 <details class="reveal"><summary>5. How do you pick the resistor for an LED?</summary><p>R = (supply − LED drop) ÷ wanted current. The resistor takes the voltage the LED doesn't.</p></details>
 <h3>Build it yourself</h3>
-<p>In a simulator (VoltSim or any other) or on a breadboard: 5 V supply, 330 Ω resistor, red LED, back to 0 V. Then swap in 1 kΩ and watch the LED dim.</p>`}
+<p>In a simulator (any circuit simulator) or on a breadboard: 5 V supply, 330 Ω resistor, red LED, back to the battery's − side (0 V). Then swap in 1 kΩ and watch the LED dim.</p>`}
 ]});
 })();
 
@@ -763,9 +764,9 @@ steps:[
  scope:function(s){return {panels:[{title:"Capacitor voltage",unit:"V",min:0,max:5,ticks:[0,2.5,5],series:[{key:"v",name:"Capacitor voltage",c:1}],refs:[{v:3.1,label:"LED goes out at 3.1 V"}]},{title:"LED current",unit:"mA",min:0,max:10,ticks:[0,5,10],series:[{key:"i",name:"LED current",c:2}]}],win:9};},
  text:`<p>A <b>capacitor</b> stores electric charge. Picture a <b>water tank split in half by a stretchy rubber sheet</b>. Water can't pass through the sheet. But push water into one side and the sheet stretches, which shoves the same amount of water out of the other side.</p>
 <ul><li>While the sheet is stretching, water flows round the loop.</li><li>The more it stretches, the harder it pushes back.</li><li>Once the sheet pushes back as hard as the pump pushes, <b>the flow stops</b>. The tank is full.</li></ul>
-<p>In the circuit, that rubber sheet is the thin gap between the capacitor's two plates. Watch the LED and the current.</p>
-<div class="why"><span class="k">The real words</span><b>Charging current</b> flows only while the capacitor's voltage is still changing. When its voltage equals the supply (here, supply minus the LED's drop), the current is <b>zero</b>. So a full capacitor <b>blocks steady DC</b>.</div>
-<ul><li>Press <b>Reset</b>, then watch the LED fade as the capacitor fills.</li><li>Hold <b>empty it</b> and see the LED flash back to life.</li><li>Try a bigger capacitor: it takes longer, like a bigger tank.</li></ul>`},
+<p>In the circuit, that rubber sheet is the thin gap between the capacitor's two plates. Watch the LED and the current: the graphs under the diagram (the <b>scope</b>) plot them against time.</p>
+<div class="why"><span class="k">The real words</span><b>Charging current</b> flows only while the capacitor's voltage is still changing. When its voltage equals the supply (here, the supply minus the LED's drop of about 2 V), the current is <b>zero</b>. So a full capacitor <b>blocks steady DC</b> (direct current: a steady flow one way, like from a battery).</div>
+<ul><li>Press <b>Reset (empty now)</b>, then watch the LED fade as the capacitor fills.</li><li>Press and hold <b>Hold to empty it</b>, and the LED flashes back to life.</li><li>Try a bigger capacitor: it takes longer, like a bigger tank.</li></ul>`},
 
 {title:"How long does it take? The time constant",part:"Part 1 · What a capacitor does",init:{v:0,R:10000,C:100e-6,t63:null},sim:tauSim,
  timeScale:function(s){return s.R*s.C*5/6;},
@@ -796,7 +797,7 @@ steps:[
 <h3>2. Time it (this step)</h3>
 <ul><li>Charge it through a known resistor (100 kΩ here).</li><li>Watch a voltmeter across it. Note when it reaches <b>63% of the supply</b>.</li><li>That time is τ. So <b>C = τ ÷ R</b>.</li></ul>
 <p>Press the buttons, wait, and work out each capacitor before revealing the answer.</p>
-<div class="why"><span class="k">Why 63%?</span>It's where the exponential curve of charging is after exactly one τ. It's easy to spot on a graph and gives you C directly.</div>`},
+<div class="why"><span class="k">Why 63%?</span>It's where the exponential curve of charging (a curve that changes fast at first, then slower and slower) is after exactly one τ. It's easy to spot on a graph and gives you C directly.</div>`},
 
 {title:"A light that fades out",part:"Part 3 · Timing",init:{v:0,C:4700e-6,btn:false,win:10},sim:fadeSim,
  diag:function(s){var d=fadeDiag(s);var onT=s.rel!=null?(s.off!=null?fT(s.off):fT(s.t-s.rel)+"…"):"–";return {svg:d.svg,
@@ -806,8 +807,8 @@ steps:[
  scope:function(s){return {panels:[{title:"Capacitor voltage",unit:"V",min:0,max:5,ticks:[0,2.5,5],series:[{key:"v",name:"Capacitor voltage",c:1}],refs:[{v:1.9,label:"LED needs 1.9 V"}]},{title:"LED current",unit:"mA",min:0,max:10,ticks:[0,5,10],series:[{key:"i",name:"LED current",c:2}]}],win:10};},
  text:`<p>Here the capacitor sits <b>beside</b> the LED instead of in series. The button charges it. When you let go, the capacitor is a small battery: it keeps the LED going until it runs out.</p>
 <ul><li>Hold the button for a second. The capacitor fills.</li><li>Release. The LED slowly fades.</li><li>Pick a bigger capacitor: it stays lit longer.</li></ul>
-<p>The fade time is roughly <b>R × C</b> times a few. Bigger C or bigger R makes it last longer. That's how <b>delay-off lights, fade effects and simple timers</b> work.</p>
-<div class="why"><span class="k">Why does it stop at 2 V, not 0 V?</span>An LED only conducts when it has about 1.9 V across it. When the capacitor falls to that, the LED goes out even though the capacitor isn't empty.</div>
+<p>The capacitor drains through the 330 Ω resistor beside the LED, so the time until the LED goes out is roughly <b>4 × R × C</b>. Bigger C or bigger R makes it last longer. That's how <b>delay-off lights, fade effects and simple timers</b> work.</p>
+<div class="why"><span class="k">Why does it stop at 2 V, not 0 V?</span>An LED only conducts when it has about 2 V across it. When the capacitor falls to that, the LED goes out even though the capacitor isn't empty.</div>
 <div class="why"><span class="k">Water version</span>A tank with a small tap on the bottom. Fill it, then let it dribble out through the tap. A bigger tank or narrower tap lasts longer. The LED is a sprinkler that only works above a minimum pressure.</div>`},
 
 {title:"Reading capacitor markings",part:"Part 4 · Practical facts",init:{ci:0},
@@ -830,7 +831,7 @@ steps:[
 <details class="reveal"><summary>4. How can you find an unknown capacitor's value without a capacitance meter?</summary><p>Charge it through a known resistor and time how long it takes to reach 63%. C = τ ÷ R.</p></details>
 <details class="reveal"><summary>5. What does a marking of 473 mean?</summary><p>47 followed by 3 zeros, in picofarads: 47 000 pF = 47 nF.</p></details>
 <h3>Build it yourself</h3>
-<p>5 V, 330 Ω, LED and a 1000 µF capacitor in series, back to 0 V. Watch the LED fade as it fills. Then parallel version: capacitor beside the LED, button on the supply.</p>`}
+<p>5 V, 330 Ω, LED and a 1000 µF capacitor in series (one after another in a single loop), back to 0 V. Watch the LED fade as it fills. Then parallel version: capacitor beside the LED, button on the supply.</p>`}
 ]});
 })();
 
@@ -960,7 +961,7 @@ steps:[
    meters:[["Fitted",s.dir==="fwd"?"the right way":"backwards",s.dir==="fwd"?true:"warn"],["Current",fI(d.I),d.I>1e-4],["Across the "+(d.led?"LED":"diode"),fV(d.Vd),d.I>0?false:"warn"]],
    now:s.dir==="fwd"?"Right way round: it conducts and drops about "+(d.led?"2":"0.7")+" V. The resistor gets the rest of the 5 V, which sets the current: "+fI(d.I)+".":"Backwards: it blocks. No current flows, so no voltage is dropped across the resistor, and the diode itself has the whole 5 V across it. The LED stays dark."};},
  ctl:[{k:"dev",type:"seg",label:"Part",opts:[["diode","silicon diode"],["led","red LED"]]},{k:"dir",type:"seg",label:"Fitted",opts:[["fwd","the right way"],["rev","backwards ✗",1]]}],
- text:`<p>A <b>diode</b> lets current through <b>one way only</b>: in at the <b>anode</b> (the flat side of the triangle), out at the <b>cathode</b> (the bar).</p>
+ text:`<p>A <b>diode</b> lets current through <b>one way only</b>: in at the <b>anode</b> (the wide base of the triangle symbol), out at the <b>cathode</b> (the bar). The <b>voltage drop</b> is the voltage the part uses up when it conducts.</p>
 <ul><li>Right way: it conducts and drops about <b>0.7 V</b> (silicon diode) or <b>1.8 to 3 V</b> (LED, depending on colour).</li><li>Backwards: it blocks.</li></ul>
 <p>An <b>LED</b> is a diode that gives off light when current flows.</p>
 <ul><li><b>Longer leg</b> is the anode (+).</li><li><b>Flat edge</b> on the case is the cathode (−).</li></ul>
@@ -977,7 +978,7 @@ steps:[
 <ul><li>Ends go to 5 V and 0 V.</li><li>The wiper (middle leg) gives <b>any voltage in between</b>.</li><li>Halfway gives half.</li></ul>
 <h3>Two legs: a variable resistor</h3>
 <ul><li>Use one end and the wiper.</li><li>Turning the knob changes the resistance in the loop. Handy for dimming.</li></ul>
-<div class="why"><span class="k">Water version</span>A long pipe with a movable outlet. The further along the outlet, the lower the pressure it gives. Real name: a <b>voltage divider</b>, covered properly in the series and parallel module.</div>`},
+<div class="why"><span class="k">Water version</span>A long pipe with a movable outlet. The further along the outlet, the lower the pressure it gives. Real name: a <b>voltage divider</b>, you met it in the Series and parallel module.</div>`},
 
 {title:"Light and temperature sensors",part:"Part 3 · Adjustable parts",init:{sen:"ldr",lvl:0.7,T:25},
  diag:function(s){var d=senDiag(s);return {svg:d.svg,meters:[[s.sen==="ldr"?"Light":"Temperature",s.sen==="ldr"?Math.round(s.lvl*100)+"%":s.T+" °C",true],["Sensor resistance",fR(Math.round(d.Rs/10)*10),false],["Output voltage",fV(d.vo),d.vo>2.5]],
@@ -985,7 +986,7 @@ steps:[
  ctl:[{k:"sen",type:"seg",label:"Sensor",opts:[["ldr","LDR (light)"],["ntc","NTC thermistor"]]},{k:"lvl",type:"range",label:"Light",min:0,max:1,step:0.01,fmt:function(v){return Math.round(v*100)+"%";}},{k:"T",type:"range",label:"Temperature",min:0,max:50,step:1,fmt:function(v){return v+" °C";}}],
  text:`<p>Some resistors change value with the world around them.</p>
 <ul><li><b>LDR</b> (light-dependent resistor): about <b>1 kΩ in bright light</b>, 100 kΩ or more in the dark.</li><li><b>NTC thermistor:</b> resistance <b>falls as it warms</b>. (NTC means negative temperature coefficient.) A common one is 10 kΩ at 25 °C.</li></ul>
-<p>A chip can't read resistance directly. So put the sensor over a fixed resistor and read the voltage in the middle. That's a divider, and the voltage moves as the sensor changes.</p>
+<p>A chip such as a microcontroller can't read resistance, only voltage. So put the sensor over a fixed resistor and read the voltage in the middle. That's a divider, and the voltage moves as the sensor changes.</p>
 <p class="hint">Move the sliders and watch the output voltage. Swap sensors with the buttons.</p>
 <div class="why"><span class="k">Water version</span>A valve that opens as light or heat increases. The Op-amps and Wheatstone modules turn this into a night light and a thermostat.</div>`},
 
@@ -994,7 +995,7 @@ steps:[
  ctl:[{k:"p",type:"range",label:"Part",min:0,max:11,step:1,fmt:function(v){return PARTS[v][0];}}],
  text:`<p>Slide through the twelve parts that appear across this course. For each: the symbol, what it does, and the water picture.</p>
 <ul><li><b>Resistor, capacitor, diode, LED, battery, switch:</b> covered in this and the previous modules.</li><li><b>Potentiometer, LDR, thermistor:</b> resistors you can change.</li><li><b>Inductor and NPN transistor:</b> they get their own modules later.</li></ul>
-<div class="why"><span class="k">Reading a diagram</span>Lines are wires, a dot is a join, and a little hump means one wire crosses another without connecting.</div>`},
+<div class="why"><span class="k">Reading a diagram</span>Lines are wires, a dot is a join, and wires that cross with no dot are not connected.</div>`},
 
 {quiz:true,gen:true,count:5,title:"Check: the basic parts",part:"Check",bank:bank},
 
@@ -1145,7 +1146,7 @@ steps:[
  diag:function(s){var m=MODES[s.mode];return {svg:dmmDiag(s),meters:[["Dial",m.name,true],["Sockets",jackText(s),false]],now:"<b>"+m.name+".</b> "+m.how+". Sockets: "+jackText(s)+"."};},
  ctl:[{k:"mode",type:"seg",label:"Dial",opts:MODES.map(function(m,i){return [i,m.lab+" "+m.name.split(" ")[0]];})}],
  text:`<p>A <b>multimeter</b> measures voltage, current and resistance with one box and two leads. Turn the dial and the meter becomes a different instrument.</p>
-<ul><li><b>Black lead:</b> always in <b>COM</b> (common).</li><li><b>Red lead:</b> in <b>V Ω</b> for volts, ohms, continuity, diode and capacitance.</li><li><b>Red lead for current:</b> in <b>mA</b> (small currents) or <b>10A</b> (large). These sockets are fused.</li></ul>
+<ul><li><b>Black lead:</b> always in <b>COM</b> (common).</li><li><b>Red lead:</b> in <b>V Ω</b> for volts, ohms, continuity, diode and capacitance.</li><li><b>Red lead for current:</b> in <b>mA</b> (small currents) or <b>10A</b> (large). These sockets are <b>fused</b>: a thin wire inside melts and breaks the circuit if too much current flows, protecting the meter.</li></ul>
 <div class="why bad"><span class="k">The classic mistake</span>Leaving the red lead in the <b>current</b> socket and then measuring voltage across something. The meter becomes a short circuit and blows its fuse.</div>
 <p>Try each dial position and see where the leads go and how the meter must be connected.</p>
 <div class="why"><span class="k">Water version</span>A voltmeter is a pressure gauge: connect it <b>across</b> two points. An ammeter is a flow meter: it has to sit <b>inside</b> the pipe.</div>`},
@@ -1155,10 +1156,10 @@ steps:[
    now:s.at==="rev"?"The leads are on the same two points as R2, but swapped (red on the lower side). The size is the same and the sign flips. Nothing is wrong.":s.at==="all"?"Across both resistors, which is the whole battery: the readings add up (3 V + 6 V = 9 V).":"The meter is connected in parallel with "+s.at+", touching each end. It reads the voltage dropped across just that resistor."};},
  ctl:[{k:"V",type:"seg",label:"Battery",opts:[[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"at",type:"seg",label:"Probes across",opts:[["R1","R1"],["R2","R2"],["all","both"],["rev","R2, probes swapped"]]}],
  text:`<p>To measure voltage, touch the probes <b>across</b> the part, one on each side. The meter connects <b>in parallel</b>. You don't have to break the circuit.</p>
-<ul><li>Dial to <b>V</b> (DC volts, the straight line symbol).</li><li>Red probe on the more positive side, black on the other.</li><li>Read the display.</li></ul>
+<ul><li>Dial to <b>V</b> (DC volts: steady, like a battery. The symbol is a straight line. A wavy line means AC, as in mains, which you can ignore here).</li><li>Red probe on the more positive side, black on the other.</li><li>Read the display.</li></ul>
 <p>A voltmeter has a huge resistance (about 10 MΩ), so it takes almost no current and leaves the circuit alone.</p>
 <div class="why"><span class="k">Water version</span>A pressure gauge clipped across a narrow section of pipe: it tells you how much pressure is lost there, without letting any water out.</div>
-<p class="hint">The ground rule: voltage is always measured <i>between two points</i>. "5 V" on its own means 5 V compared with 0 V.</p>`},
+<p class="hint">One thing to remember: voltage is always measured <i>between two points</i>. "5 V" on its own means 5 V compared with 0 V.</p>`},
 
 {title:"Measuring current: in series",part:"Part 2 · Voltage and current",init:{V:9,R:1000},
  diag:function(s){var d=ampDiag(s);return {svg:d.svg,meters:[["Reads",fI(d.I),true],["Check: V ÷ R",fI(s.V/s.R),false]],
@@ -1211,7 +1212,7 @@ steps:[
    now:s.dir==="fwd"?"Red probe on the anode, black on the cathode: the meter pushes a small current through, and shows the voltage the diode drops"+(s.dev==="led"?". An LED may glow faintly while you test it.":"."):"Reversed: nothing conducts, so the meter shows OL. A good diode reads OL one way and about 0.5 to 0.7 V the other."};},
  ctl:[{k:"dev",type:"seg",label:"Part",opts:[["diode","silicon diode"],["led","LED"]]},{k:"dir",type:"seg",label:"Probes",opts:[["fwd","red on anode"],["rev","reversed"]]}],
  text:`<p><b>Diode-test mode</b> (the triangle and bar) checks the one-way behaviour.</p>
-<ul><li><b>Red on the anode, black on the cathode:</b> reads the forward drop (about 0.6 V for silicon, 1.7 V or more for LEDs).</li><li><b>Reverse:</b> OL.</li></ul>
+<ul><li><b>Red on the anode, black on the cathode:</b> reads the forward drop (about 0.6 to 0.7 V for silicon, 1.7 V or more for LEDs).</li><li><b>Reverse:</b> OL.</li></ul>
 <p>Readings the same both ways mean it's faulty:</p>
 <ul><li>Close to 0 both ways: shorted.</li><li>OL both ways: open.</li></ul>
 <p class="hint">Use it to find which end of an unmarked diode is the cathode.</p>`},
@@ -1500,10 +1501,10 @@ steps:[
    now:!s.pos?(s.v<4.95?"Charging. Current flows from the + rail, through the switch and the 10 kΩ, onto the capacitor's top plate. The same amount flows off the bottom plate to the − rail. Nothing crosses the gap between the plates. As charge piles up, the capacitor's voltage rises and pushes back, so the current gets smaller and smaller.":"Full. The capacitor's voltage now equals the battery's 5 V, so there's no voltage left across the resistor and no current flows. Flip the switch to discharge."):(s.v>0.05?"Discharging. The capacitor now acts like a small battery: current flows out of its top plate, up through the 10 kΩ, through the switch, along the bottom rail and back into its bottom plate. The battery isn't part of this loop at all. As the capacitor empties, the current shrinks.":"Empty. No voltage, no current. Flip the switch back to charge.")};},
  ctl:[{k:"pos",type:"seg",label:"Switch",opts:[[0,"charge"],[1,"discharge"]]}],
  scope:function(s){return {panels:rcPanels(s),win:6};},
- text:`<p>A <b>capacitor</b> is two metal plates separated by a thin insulator. Charge can't cross the gap, but it can pile up on the plates. That stored charge is stored energy, a little like water in a tank.</p>
+ text:`<div class="why"><span class="k">Recap</span>You met capacitors in the Capacitors module. This module reuses that idea: the same fill-and-empty curve, now with a scope trace, and then a working timer.</div><p>A <b>capacitor</b> is two metal plates separated by a thin insulator. Charge can't cross the gap, but it can pile up on the plates. That stored charge is stored energy, a little like water in a tank.</p>
 <p>The switch here has two positions:</p>
 <ul><li><b>charge:</b> connects the resistor to the + rail.</li><li><b>discharge:</b> connects it to the − rail instead, so the capacitor can empty itself through the resistor.</li></ul>
-<p>Watch the scope under the diagram. When charging starts, the current is biggest at first and then dies away, while the voltage rises quickly and then levels off at 5 V. The curve is the same shape every time.</p>
+<p>Watch the scope under the diagram (a graph of voltage or current against time, like an oscilloscope screen). When charging starts, the current is biggest at first and then dies away, while the voltage rises quickly and then levels off at 5 V. The curve is the same shape every time.</p>
 <div class="why"><span class="k">Why does the current slow down?</span>The current is pushed by the voltage <b>across the resistor</b>, which is the battery's 5 V minus the capacitor's voltage. Empty capacitor: all 5 V is across the resistor, so the current is big (5 V ÷ 10 kΩ = 0.5 mA). Nearly full: almost nothing is left across the resistor, so almost no current flows.</div>
 <p class="hint">The little + and − marks on the plates grow as charge builds up. The curved plate is the capacitor's negative side. Electrolytic capacitors like this one have a + side and a − side, and getting them backwards is a mistake you'll see in step 5.</p>`},
 
@@ -1608,7 +1609,7 @@ steps:[
 <details class="reveal"><summary>2. What does τ = R × C tell you?</summary><p>The time to reach 63% full (or lose 63% when discharging). After about 5 τ it's practically finished. Bigger R or bigger C means slower.</p></details>
 <details class="reveal"><summary>3. How does the delay timer keep the LED on after you let go?</summary><p>The capacitor keeps supplying base current through the 22 kΩ. The transistor multiplies that small current to power the LED. When the capacitor falls below about 0.7 V, the base stops conducting and the LED goes out.</p></details>
 <details class="reveal"><summary>4. Name three mistakes from this module and their fixes.</summary><p>A switch across the battery is a short circuit, so put it in series. A backwards electrolytic leaks and heats, so the stripe (−) goes to the lower-voltage side. A missing base resistor overloads the transistor and kills the timing, so always use one.</p></details>
-<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
+<h3>Build it yourself (any circuit simulator, or a breadboard)</h3>
 <p>Delay timer: 5 V battery, push button, 100 Ω, 220 µF electrolytic (stripe to the − rail), 22 kΩ, NPN transistor, 330 Ω, LED. Wire it exactly as in step 7. Then try 470 µF and time the difference.</p>`}
 ]});
 })();
@@ -1856,7 +1857,7 @@ steps:[
 <details class="reveal"><summary>2. Describe one full cycle.</summary><p>Q1 turns on, its collector drops, and C1 kicks Q2's base to about −2.25 V, so Q2 is off. RB2 recharges C1 until Q2's base reaches 0.65 V. Q2 turns on, its collector drops, and C2 kicks Q1's base down, so Q1 is off. RB1 recharges C2 until Q1 turns on. Repeat.</p></details>
 <details class="reveal"><summary>3. What sets each LED's on-time?</summary><p>The RC on the opposite side: LED1's on-time is about 0.5 × RB2 × C1 here (0.69 × R × C in the textbook version without LEDs).</p></details>
 <details class="reveal"><summary>4. Three faults and what you'd see.</summary><p>Capacitor to its own base: both LEDs steady, no blink. R × C far too small: blinks too fast to see, so both LEDs look on. A backwards capacitor or LEDs with no resistors: drifting timing and heating, or burnt LEDs and a dead oscillator.</p></details>
-<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
+<h3>Build it yourself (any circuit simulator, or a breadboard)</h3>
 <table class="parts"><tr><th>Qty</th><th>Part</th></tr><tr><td>1</td><td>5 V battery</td></tr><tr><td>2</td><td>NPN transistors (Q1, Q2)</td></tr><tr><td>2</td><td>LEDs + 470 Ω resistors (collector side)</td></tr><tr><td>2</td><td>47 kΩ base resistors (RB1, RB2) to the + rail</td></tr><tr><td>2</td><td>22 µF electrolytic: C1 from Q1 collector to Q2 base, C2 from Q2 collector to Q1 base (+ to the collectors)</td></tr></table>
 <p>If the simulator sits still at the start, it may be waiting for a mismatch. Use two slightly different capacitors (22 µF and 20 µF), or briefly short one base to the − rail to give it a nudge.</p>`}
 ]});
@@ -1969,7 +1970,7 @@ steps:[
  ctl:[{k:"sw",type:"tog",label:"Switch"}],
  scope:function(s){return {panels:coilPanels(s)};},win:0.008,
  text:`<p>An <b>inductor</b> is a coil of wire. Current flowing through it builds a magnetic field, and building or collapsing that field takes energy and time.</p>
-<p>The result: <b>an inductor resists changes in current.</b> Think of a heavy flywheel. It's hard to get spinning and hard to stop, but easy to keep turning steadily.</p>
+<p>The result: <b>an inductor resists changes in current.</b> Think of a heavy flywheel. It's hard to get spinning and hard to stop, but easy to keep turning steadily.</p><div class="why"><span class="k">Water version</span>A long pipe full of heavy, moving water. It takes time to get the water moving, and once it's moving it doesn't want to stop: slam the tap shut and the water piles up and bangs the pipe (engineers call it water hammer). That bang is the voltage kick you'll see at switch-off. The real term for this reluctance to change is <b>inductance</b>.</div>
 <ul><li><b>Switch on:</b> the coil pushes back, so the current rises gradually instead of jumping.</li><li><b>Steady current:</b> the coil acts like plain wire.</li><li><b>Switch off:</b> the coil tries to keep the current going. More on that in step 3, because it's dramatic.</li></ul>
 <div class="why"><span class="k">Compare with a capacitor</span>A capacitor resists changes in <b>voltage</b>: its current is biggest at the start. An inductor resists changes in <b>current</b>: its current is smallest at the start. They're mirror images.</div>
 <p class="hint">Real coils react in thousandths of a second, so this simulation runs 1000× slower than real life. The scope's time axis shows real time.</p>`},
@@ -1992,7 +1993,7 @@ steps:[
  ctl:[{k:"sw",type:"tog",label:"Switch"},{k:"led",type:"tog",label:"LED across the coil"}],
  scope:function(s){return {panels:[{title:"Coil current",unit:"mA",min:0,max:50,ticks:[0,25,50],series:[{key:"i",name:"Coil current",c:1}]},{title:"Point P",unit:"V",min:-10,max:6,ticks:[-10,0,5],series:[{key:"v",name:"Point P",c:2}],refs:[{v:-9.5,label:"off the chart"}]}]};},win:0.008,
  text:`<p>Here's the surprising part. When you <b>open</b> the switch, the coil's current can't stop instantly, just as a flywheel can't. The coil makes <b>whatever voltage it takes</b> to keep the current flowing in the same direction for a moment.</p>
-<ul><li><b>With the reversed LED:</b> the current has a path, up through the LED and back into the coil. P goes about 2 V below 0 and the LED flashes even though the battery is disconnected. The coil's stored energy powers it.</li><li><b>Without the LED:</b> there's no path at all. The voltage climbs until something gives: here a spark jumps across the opening switch contacts. That spike can be hundreds of volts from a 5 V battery.</li></ul>
+<ul><li><b>With the reversed LED:</b> the current has a path, up through the LED and back into the coil. point P (where the coil meets the switch, marked on the diagram) goes about 2 V below 0 and the LED flashes even though the battery is disconnected. The coil's stored energy powers it.</li><li><b>Without the LED:</b> there's no path at all. The voltage climbs until something gives: here a spark jumps across the opening switch contacts. That spike can be hundreds of volts from a 5 V battery.</li></ul>
 <div class="why"><span class="k">The rule</span>V = L × (rate of change of current). Stop a current suddenly and the rate of change is enormous, so the voltage is too. This is how car ignition coils make sparks from a 12 V battery.</div>
 <p class="hint">Why point the LED backwards? So it does nothing in normal running (P is positive) and only conducts when the kick makes P negative.</p>`},
 
@@ -2002,7 +2003,7 @@ steps:[
    now:s.dead?"The kick destroyed the transistor. When it switched off, the coil drove its collector to a huge voltage, far above the 40–60 V a small transistor can survive, and it broke down. Small transistors often fail short-circuited, so now the coil is stuck on whatever the switch does. Fit the diode and press Replace.":s.sw?"Switch on: base current turns the transistor on, current builds up in the relay coil and the relay clicks on."+(s.dio?" The diode is reverse-biased, so it does nothing.":" Now switch off and watch."):(s.dio&&s.idio>1e-4?"Switched off: the coil's current now loops round through the diode and back into the coil, fading away harmlessly. The collector only rises to about 5.7 V (5 V + the diode's 0.7 V).":"Off and idle.")};},
  ctl:[{k:"sw",type:"tog",label:"Switch"},{k:"dio",type:"tog",label:"Flyback diode fitted"},{label:"Replace transistor",type:"act",run:function(s){s.dead=false;s.i=0;s.spikeT=null;}}],
  scope:function(s){return {panels:[{title:"Coil current",unit:"mA",min:0,max:100,ticks:[0,50,100],series:[{key:"i",name:"Coil current",c:1}]},{title:"Collector voltage",unit:"V",min:0,max:12,ticks:[0,5,12],series:[{key:"v",name:"Collector",c:2}],refs:[{v:11.5,label:"spike off the chart"}]}]};},win:0.012,
- text:`<p>Relays, motors and solenoids are coils. Driving one from a transistor is very common, and so is this mistake.</p>
+ text:`<p>Relays (switches worked by an electromagnet), motors and solenoids (a coil that pulls a metal rod in) are all coils. Driving one from a transistor is very common, and so is this mistake.</p>
 <div class="why bad"><span class="k">What goes wrong</span>When the transistor switches off, the coil kicks exactly as in step 3. Now the place where the voltage spikes is the transistor's collector. A small transistor survives perhaps 40–60 V. The spike goes far higher and breaks it down. It may survive a few clicks and then fail, often stuck on.</div>
 <div class="why fix"><span class="k">The fix: a flyback diode</span>Put a diode across the coil, pointing <b>towards the + rail</b> (stripe/bar at the + end). In normal running it's reverse-biased and does nothing. At switch-off it gives the coil's current a loop to circulate in, so the collector only rises to about 5.7 V.</div>
 <p>Try it: switch on and off without the diode, then fit it, press <b>Replace transistor</b> and repeat.</p>
@@ -2038,7 +2039,7 @@ steps:[
 <details class="reveal"><summary>2. Why is switching off a coil dangerous for a transistor?</summary><p>The coil makes whatever voltage it takes to keep its current flowing. With no path, that's a spike of hundreds of volts at the collector, which breaks the transistor down.</p></details>
 <details class="reveal"><summary>3. How does a flyback diode fix it?</summary><p>It sits across the coil, reverse-biased normally. At switch-off it conducts, letting the current circulate through coil and diode and fade away. The collector only sees about 0.7 V above the supply.</p></details>
 <details class="reveal"><summary>4. What's τ for an inductor, and how is it different from RC?</summary><p>τ = L ÷ R. A bigger R makes an inductor faster (smaller final current), but makes an RC circuit slower.</p></details>
-<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
+<h3>Build it yourself (any circuit simulator, or a breadboard)</h3>
 <p>Relay driver: 5 V battery, switch, 1 kΩ base resistor, 10 kΩ pull-down, NPN transistor, an inductor (100 mH with about 50 Ω series resistance) as the relay coil, and a diode across the coil with its bar at the + rail end. Toggle the diode in and out and compare the collector voltage on the simulator's scope.</p>`}
 ]});
 })();
@@ -2220,7 +2221,7 @@ steps:[
  diag:function(s){var d=bjtDiag(s),c=d.c;return {svg:d.svg,meters:bjtMeters(c,s),
    now:s.sw?"ON state. The switch feeds 0.43 mA through the 10 kΩ into the base: (5 − 0.7) ÷ 10 000. The transistor multiplies that by its gain (about 100), which could allow 43 mA, far more than the LED circuit can draw (8.8 mA). So it's fully on, or saturated: collector to emitter drops to about 0.1 V, like a closed switch.":"OFF state. The switch is open and the 10 kΩ pull-down holds the input at 0 V, so no current flows into the base. With no base current there's no collector current: collector to emitter acts like an open switch. The LED's loop is broken, so the LED is dark."};},
  ctl:[{k:"sw",type:"tog",label:"Switch"}],
- text:`<p>Let's look at each transistor properly on its own before comparing them. First the <b>NPN BJT</b> (bipolar junction transistor), the one used in every module so far.</p>
+ text:`<p>Let's look at each transistor properly on its own before comparing them. First the <b>NPN BJT</b> (bipolar junction transistor), the kind used in the XOR, RC timer and flasher modules.</p><div class="why"><span class="k">Water version</span>A big tap whose handle is pushed by a thin trickle of water: a small flow into the base controls a much bigger flow through the collector. The real term for how many times bigger is <b>gain</b>.</div>
 <h3>Its one rule</h3>
 <div class="formula">collector current = gain (β) × base current, until the load can't take any more</div>
 <ul><li><b>OFF:</b> no base current gives no collector current.</li><li><b>Partly ON (“active”):</b> a little base current gives a proportional collector current. This is how BJTs amplify.</li><li><b>Fully ON (“saturated”):</b> so much base current that the collector current is limited by the load instead. The transistor acts like a closed switch with about 0.1–0.2 V across it.</li></ul>
@@ -2365,7 +2366,7 @@ steps:[
 <details class="reveal"><summary>3. What happens if you drop a MOSFET into a BJT circuit?</summary><p>Anything that relied on a resistor setting the base current stops working. With no gate current, the resistor drops nothing, so the MOSFET is simply fully on or off.</p></details>
 <details class="reveal"><summary>4. What happens if you drop a BJT into a MOSFET circuit?</summary><p>If the gate was driven directly, the base gets unlimited current and the BJT dies. With a resistor, it usually can't get enough base current for a big load, so it's partly on: a dim load and a hot transistor.</p></details>
 <details class="reveal"><summary>5. Work it out: base resistor for a 300 mA load, minimum gain 60, 5 V drive.</summary><p>300 ÷ 60 = 5 mA, × 2 margin = 10 mA. R = (5 − 0.75) ÷ 0.01 ≈ 425 Ω, so use 390 Ω. That's 11 mA, more than many pins can give, so a logic-level MOSFET is the better choice.</p></details>
-<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
+<h3>Build it yourself (any circuit simulator, or a breadboard)</h3>
 <p>Build steps 1 and 3 side by side. Then try both swap labs: put a MOSFET where the BJT was in the dimmer, and a BJT (no base resistor) where the MOSFET was. Check both switch states each time.</p>`}
 ]});
 })();
@@ -2604,7 +2605,7 @@ steps:[
 <details class="reveal"><summary>3. What do you see if a PNP is fitted in an NPN circuit (or the reverse)?</summary><p>Backwards and weak: off when it should be on, and a faint glow when it should be off, because the collector-base diode conducts the wrong way.</p></details>
 <details class="reveal"><summary>4. Why not use an NPN on the high side?</summary><p>As an emitter follower its output is stuck about 0.7 V (or more, under load) below its base, so the load is under-powered and the transistor runs hot.</p></details>
 <details class="reveal"><summary>5. How do you switch 12 V on the high side from 5 V logic?</summary><p>PNP with its emitter on 12 V, a pull-up from base to 12 V to keep it off, and a small NPN driven by the logic that pulls the PNP's base down through a resistor to turn it on.</p></details>
-<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
+<h3>Build it yourself (any circuit simulator, or a breadboard)</h3>
 <p>Build step 1 (NPN low side) and step 2 (PNP high side) next to each other. Then swap the transistors between them, test both switch states, and compare with the mistake steps. Finally build the 12 V PNP with an NPN helper from step 9.</p>`}
 ]});
 })();
@@ -2907,7 +2908,7 @@ return [
 <tr><td>Output: one NPN follower</td><td><b>Push-pull</b> NPN + PNP (or MOSFET) output</td><td>Can source and sink current. Rail-to-rail parts get within millivolts of each rail.</td></tr>
 <tr><td>Nothing to stop oscillation</td><td>A small <b>compensation capacitor</b> (about 30 pF)</td><td>Slows the gain stage at high frequency so feedback can't turn into oscillation.</td></tr>
 <tr><td>Inputs draw µA</td><td>nA (BJT) to pA (MOSFET inputs)</td><td>Better transistors, so rule 2 is nearly exact.</td></tr>
-<tr><td>Output range about 0–4.2 V</td><td>LM358: 0 to about 3.5 V on 5 V. Rail-to-rail: almost 0–5 V</td><td>Output stage design. That's why the earlier step's LM358 clipped.</td></tr></table>
+<tr><td>Output range about 0–4.2 V</td><td>LM358: 0 to about 3.5 V on 5 V. Rail-to-rail: almost 0–5 V</td><td>Output stage design. That's why an LM358 on 5 V only reaches about 3.5 V (you'll see it clip in the amplifier step).</td></tr></table>
 <p>From the next step on, we draw the whole thing as a <b>triangle</b>: + and − inputs, an output, and the power pins. But now you know what's inside: a pair sharing a current, a gain transistor, and a follower.</p>
 <div class="why"><span class="k">Keep this picture in mind</span>Every op-amp rule and mistake that follows has a reason inside the triangle. The power pins feed the tail, the gain stage and the follower: no power, no op-amp. Feedback to + makes the pair tip further the same way. The output can't exceed the rails because the follower's transistor can't.</div>`}
 ];
@@ -3063,13 +3064,13 @@ steps:OPBUILD_STEPS.concat([
 ]},
 
 {final:true,title:"Explain it back",part:"Finish",
- text:`<details class="reveal"><summary>What are the three stages inside an op-amp, and what does each do?</summary><p>① A differential pair: two transistors share a fixed tail current, and the input difference decides the split. ② A gain stage: a transistor that turns that small change into a big voltage swing. ③ An output stage: an emitter follower (push-pull in real chips) that supplies load current without collapsing the gain stage.</p></details>
-<details class="reveal"><summary>Why does feedback make the inputs equal?</summary><p>With huge gain, any difference between the inputs drives the output hard in the direction that removes it. The only resting point is where the difference is nearly zero. The bigger the gain, the closer to zero.</p></details>
-<details class="reveal"><summary>1. What does an op-amp do with no feedback?</summary><p>It compares its inputs and slams the output to the top rail if V+ > V−, or to the bottom rail otherwise. That's a comparator.</p></details>
-<details class="reveal"><summary>2. State the golden rules.</summary><p>With negative feedback, the output does whatever makes V− equal V+, and the inputs draw no current.</p></details>
-<details class="reveal"><summary>3. Why does a buffer help?</summary><p>It copies a voltage without drawing current from the source, and supplies the load's current from its own power pins, so the source voltage doesn't sag.</p></details>
-<details class="reveal"><summary>4. Four op-amp mistakes.</summary><p>Feedback to the + input (latches). Power pins not connected (dead or weird). Expecting output beyond the supply, or using a non-rail-to-rail part (clipping). Loading a divider directly.</p></details>
-<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
+ text:`<details class="reveal"><summary>1. What are the three stages inside an op-amp, and what does each do?</summary><p>① A differential pair: two transistors share a fixed tail current, and the input difference decides the split. ② A gain stage: a transistor that turns that small change into a big voltage swing. ③ An output stage: an emitter follower (push-pull in real chips) that supplies load current without collapsing the gain stage.</p></details>
+<details class="reveal"><summary>2. Why does feedback make the inputs equal?</summary><p>With huge gain, any difference between the inputs drives the output hard in the direction that removes it. The only resting point is where the difference is nearly zero. The bigger the gain, the closer to zero.</p></details>
+<details class="reveal"><summary>3. What does an op-amp do with no feedback?</summary><p>It compares its inputs and slams the output to the top rail if V+ > V−, or to the bottom rail otherwise. That's a comparator.</p></details>
+<details class="reveal"><summary>4. State the golden rules.</summary><p>With negative feedback, the output does whatever makes V− equal V+, and the inputs draw no current.</p></details>
+<details class="reveal"><summary>5. Why does a buffer help?</summary><p>It copies a voltage without drawing current from the source, and supplies the load's current from its own power pins, so the source voltage doesn't sag.</p></details>
+<details class="reveal"><summary>6. Four op-amp mistakes.</summary><p>Feedback to the + input (latches). Power pins not connected (dead or weird). Expecting output beyond the supply, or using a non-rail-to-rail part (clipping). Loading a divider directly.</p></details>
+<h3>Build it yourself (any circuit simulator, or a breadboard)</h3>
 <p>Night light: 5 V battery, LDR + 10 kΩ divider into the op-amp's − input, a 10 kΩ pot (ends to the rails, wiper to the + input), op-amp power pins to both rails, output → 330 Ω → LED → − rail.</p>`}
 ])});
 })();
@@ -3125,7 +3126,7 @@ steps:[
  diag:function(s){var d=divDiag(s);return {svg:d.svg,meters:[["Vout (calculated)",fV(d.vth),true],["Vout (actual)",fV(d.v),Math.abs(d.v-d.vth)>0.05?"warn":true],["LED current",fI(d.il),d.il>1e-4]],
    now:s.led?"With the LED connected, current is drawn from the middle point. That current flows through R1, which drops extra voltage, so Vout sags below the formula's value. The divider is being loaded.":"Two resistors in series share the 5 V in proportion to their resistance. Equal resistors give exactly half: 2.5 V."};},
  ctl:[{k:"r2",type:"seg",label:"R2",opts:[[4700,"4.7k"],[10000,"10k"],[22000,"22k"],[47000,"47k"]]},{k:"led",type:"tog",label:"LED load on Vout"}],
- text:`<p>Two resistors in series across a supply make a <b>voltage divider</b>. The middle point sits at a fixed fraction of the supply:</p>
+ text:`<p>Two resistors in series across a supply make a <b>voltage divider</b> (you met this in the Series and parallel module). The middle point sits at a fixed fraction of the supply:</p>
 <div class="formula">Vout = V × R2 ÷ (R1 + R2)</div>
 <p>R1 = R2 gives half. Make R2 bigger and Vout rises.</p>
 <p>Dividers are everywhere: a pot is an adjustable divider, and most sensors (LDRs, thermistors) are used as one half of a divider, turning a change in resistance into a change in voltage.</p>
@@ -3205,7 +3206,7 @@ steps:[
 <details class="reveal"><summary>2. What is a Wheatstone bridge?</summary><p>Two dividers fed from the same supply. You measure the difference between their middle points: zero at balance (R1/R2 = R3/Rx), with the sign showing which way it's out.</p></details>
 <details class="reveal"><summary>3. Two advantages of a bridge.</summary><p>It cancels the large common voltage so tiny changes stand out, and the balance point doesn't depend on the supply voltage.</p></details>
 <details class="reveal"><summary>4. How does the thermostat decide HOT or COLD?</summary><p>Warmer means lower NTC resistance, so B rises. The comparator outputs high when B (+) is above A (−), lighting HOT. When low, the output sinks current from the COLD LED.</p></details>
-<h3>Build it yourself (VoltSim, any simulator, or a breadboard)</h3>
+<h3>Build it yourself (any circuit simulator, or a breadboard)</h3>
 <p>5 V battery. R1 = R2 = 10 kΩ (point A). NTC thermistor (10 kΩ at 25 °C) on top with 10 kΩ below (point B). Op-amp with power pins to both rails, B → +, A → −. Output → 330 Ω → red LED → − rail, and + rail → 330 Ω → green LED → output. If your simulator has no thermistor, use a pot in its place and turn it.</p>`}
 ]});
 })();
@@ -3238,9 +3239,9 @@ function esc(s){return String(s).replace(/"/g,"&quot;");}
 function renderHome(){
   MOD=null;save("view",null);
   document.getElementById("dots").innerHTML="";document.getElementById("count").textContent="";document.getElementById("crumb").textContent="";
-  var GL=[["Voltage (V)","The push that moves current. Like water pressure."],["Current (A)","How much charge flows per second. Like flow rate."],["Resistance (Ω)","How hard it is to push current through. Like a narrow pipe."],["Rail","A long wire held at a fixed voltage: the + rail at the battery's + voltage, the 0 V rail (ground) at its −."],["Ground (0 V)","The reference level other voltages are measured against. Like sea level."],["Load","Whatever the circuit is driving: an LED, a motor, a lamp."],["Short circuit","A path with almost no resistance between + and −. Huge current, heat, damage."],["Node","A point where wires or parts join. Every point on one node has the same voltage."],["Forward voltage","The voltage a diode or LED drops when it conducts (about 0.7 V, or about 2 V for a red LED)."],["Gain","How many times bigger the output is than the input."],["Time constant τ","How long an RC or LR circuit takes to move 63% of the way. τ = R × C or L ÷ R."],["Pull-up / pull-down","A resistor that holds a wire at + or at 0 V when nothing else is driving it."]];
+  var GL=[["Voltage (V)","The push that moves current. Like water pressure."],["Current (A)","How much charge flows per second. Like flow rate."],["Resistance (Ω)","How hard it is to push current through. Like a narrow pipe."],["Rail","A long wire held at a fixed voltage: the + rail at the battery's + voltage, the 0 V rail (ground) at its −."],["Ground (0 V)","The reference level other voltages are measured against. Like sea level."],["Load","Whatever the circuit is driving: an LED, a motor, a lamp."],["Short circuit","A path with almost no resistance between + and −. Huge current, heat, damage."],["Node","A point where wires or parts join. Every point on one node has the same voltage."],["Forward voltage","The voltage a diode or LED drops when it conducts (about 0.7 V, or about 2 V for a red LED)."],["Gain","How many times bigger the output is than the input."],["Time constant τ","How long an RC or LR circuit takes to move 63% of the way. τ = R × C or L ÷ R."],["DC (direct current)","Current that flows steadily one way, like from a battery. AC (alternating current) swaps direction many times a second, like mains."],["Prefixes","k (kilo) = × 1000, m (milli) = ÷ 1000, µ (micro) = ÷ 1,000,000, n (nano) = ÷ 1,000,000,000, p (pico) = a millionth of a millionth. So 4.7 kΩ = 4700 Ω and 22 µF = 0.000022 F."],["Series","Parts joined one after another in a single path. The same current goes through each."],["Parallel","Parts side by side across the same two points. Each gets the same voltage."],["Voltage drop","The voltage a part uses up when current flows through it."],["LED","Light-emitting diode: a tiny lamp that only works one way round."],["Diode","A one-way valve for current."],["Relay / solenoid","Coils that work something mechanical when current flows: a relay closes a switch, a solenoid pulls a metal rod."],["Microcontroller","A tiny programmable chip. Its pins output either 0 V or the supply voltage (3.3 V or 5 V), and can read voltages too."],["Datasheet","The maker's specification sheet for a part: limits, pinouts and typical values."],["Breadboard","A plastic board of connected holes for building circuits without soldering."],["Pull-up / pull-down","A resistor that holds a wire at + or at 0 V when nothing else is driving it."]];
   var h='<div class="home"><div class="intro"><div class="eyebrow">A course in circuit electronics</div><h2>Learn circuits by building them, breaking them, and fixing them</h2>'+
-  '<ul><li><b>No knowledge assumed.</b> Start with Modules 1 to 5: voltage, capacitors, parts, measuring, Kirchhoff</li><li>One circuit per module, one idea per step</li><li>Live diagrams you can switch and adjust</li><li>Water pictures first, then the real electrical term</li><li><b style="color:var(--bad)">Mistake steps</b>: make the common error, see what breaks, fix it</li><li>Checks have fresh numbers each attempt, with a pass mark</li><li>After the basics, go top to bottom. Each module lists what it needs</li></ul>'+
+  '<ul><li><b>No knowledge assumed.</b> Start with Modules 1 to 5: voltage and current, series and parallel, capacitors, parts, measuring</li><li>One circuit per module, one idea per step</li><li>Live diagrams you can switch and adjust</li><li>Water pictures first, then the real electrical term</li><li><b style="color:var(--bad)">Mistake steps</b>: make the common error, see what breaks, fix it</li><li>Checks have fresh numbers each attempt, with a pass mark</li><li>After the basics, go top to bottom. Each module lists what it needs</li></ul>'+
   '<details class="reveal" style="margin-top:12px"><summary>Glossary: words used in this course</summary><ul>'+GL.map(function(g){return "<li><b>"+g[0]+":</b> "+g[1]+"</li>";}).join("")+'</ul></details></div><div class="mods">';
   var xorCard='<a class="mod" href="'+XOR_URL+'" target="_blank" rel="noopener"><span class="n">MODULE '+(FOUND+1)+' · OPENS SEPARATELY</span><h3>XOR from scratch</h3><p>Transistors as switches, pull-ups and pull-downs, and NOT, NAND, OR and AND gates combined into an XOR.</p><span class="mistakes">Mistakes: the leaky OR stage, voltage budget.</span><span class="meta"><span>17 steps</span><span>open ↗</span></span></a>';
   MODS.forEach(function(m,i){
@@ -3377,7 +3378,9 @@ function loop(ts){
 /* ======================= post-build: numbering, prerequisites, extra number-practice checks ======================= */
 (function(){
 var B=MODS.banks||{};
+(function(){var ord=["basics","kirch","caps","parts","meter"],first=ord.map(modById),rest=MODS.filter(function(m){return ord.indexOf(m.id)<0;});MODS.length=0;first.concat(rest).forEach(function(m){MODS.push(m);});})();
 MODS.forEach(function(m,i){m.n=i+1+(i>=FOUND?1:0);});
+var NEEDS0={kirch:"Voltage, current & resistance",caps:"Voltage, current & resistance; Series, parallel, KCL and KVL (the idea of 'in series')",parts:"Voltage, current & resistance; Series, parallel, KCL and KVL (for dividers); Capacitors from scratch",meter:"Voltage, current & resistance; Series, parallel, KCL and KVL; Capacitors from scratch; Other basic parts"};for(var k0 in NEEDS0){var m1=modById(k0);if(m1)m1.needs=NEEDS0[k0];}
 var NEEDS={rc:"Voltage, current & resistance; Capacitors from scratch",astable:"RC circuits & timing; the transistor basics in XOR from scratch",ind:"RC circuits & timing (the same idea of 'slow to change')",mos:"XOR from scratch (transistors as switches)",pnp:"MOSFET vs BJT (or at least NPN transistors from XOR)",opprimer:"NPN vs PNP",opamp:"Op-amp primer; Series, parallel (dividers)",bridge:"Other basic parts (sensors); Series, parallel (dividers); Op-amps (comparator)"};
 for(var k in NEEDS){var m0=modById(k);if(m0)m0.needs=NEEDS[k];}
 function addQuiz(id,title,bank,count){var m=modById(id);if(!m)return;m.steps.splice(m.steps.length-1,0,{quiz:true,gen:true,count:count||4,title:title,part:"Number practice",bank:bank});}
@@ -3432,7 +3435,7 @@ window.__cfs={MODS:MODS,S:S,go:function(m,i){MOD=modById(m);cur=i;},render:funct
 var v0=load("view",null);if(v0&&modById(v0))openMod(v0);else renderHome();
 requestAnimationFrame(loop);
 /* ======================= GitHub Pages extras: version, menu, full screen, self-update ======================= */
-const VERSION='v4 · 25 Nov 2026';
+const VERSION='v5 · 25 Nov 2026';
 (function(){
   var css=document.createElement("style");
   css.textContent=".pbar{display:flex;gap:8px;align-items:center}.mbtn{font:600 15px var(--mono);border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 11px;cursor:pointer}"+
