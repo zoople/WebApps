@@ -528,13 +528,13 @@ function waterDiag(s){
   o+=W([50,200,50,180,290,180,290,200],true)+W([290,260,290,280,50,280,50,240],false)+BATL(50,220,V+" V")+R(290,200,290,260,fR(Rv),-1);
   o+=F([50,200,50,180,290,180,290,200,290,260,290,280,50,280,50,240],"b",k);
   o+=T(150,176,"current","lbl");
-  return {svg:svg(340,300,o),I:I};
+  return {svg:svg(340,300,o),I:I,o:o};
 }
 function ohmDiag(s){
   var V=s.V,Rv=s.R,I=V/Rv,k=kf(I,0.25),o="";begin(24,262,V);
   o+=FLAG(200,60,k,"b")+R(200,60,200,200,fR(Rv),-1)+GND(200,200,k,"b");
-  o+=TAG(214,78,"top of resistor "+fV(V),"start")+TAG(214,192,"bottom 0 V","start")+TAG(214,136,"drop "+fV(V),"start");
-  o+=TAG(100,136,"I = "+fI(I),"start");
+  o+=TAG(214,78,"top of resistor "+fV(V),"start")+TAG(214,192,"bottom 0 V","start")+TAG(214,136,"across it "+fV(V),"start");
+  o+=TAG(100,136,s.ans===false?"I = ?":"I = "+fI(I),"start");
   return {svg:finish(o,340,262,50),I:I};
 }
 function bandDiag(s){
@@ -566,6 +566,30 @@ function ledDiag(s){
   return {svg:finish(o,340,262,50),I:I,burnt:burnt};
 }
 
+var RS2=[[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"],[4700,"4.7 kΩ"],[10000,"10 kΩ"]];
+function pushDiag(s){
+  var d=waterDiag({V:s.V,R:1000}),o=d.o,X0=52,Y0=438,W=250,H=96,I=s.V/1000;
+  o+=T(8,322,"CURRENT AGAINST PUSH (pipe fixed at 1 kΩ)","nlbl","start");
+  o+='<path d="M'+X0+' '+(Y0-H)+' V'+Y0+' H'+(X0+W)+'" style="fill:none;stroke:var(--ink);stroke-width:1.6"/>';
+  [0,6,12].forEach(function(v){o+=T(X0+W*v/12,Y0+14,String(v),"lbl");o+=T(X0-6,Y0-H*v/12+4,String(v),"lbl","end");});
+  o+=T(X0+W/2,Y0+28,"push (volts)","lbl")+T(14,Y0-H-8,"mA","lbl","start");
+  o+='<path d="M'+X0+' '+Y0+' L'+(X0+W)+' '+(Y0-H)+'" style="fill:none;stroke:var(--line);stroke-width:2"/>';
+  VS.forEach(function(v){o+='<circle cx="'+(X0+W*v[0]/12)+'" cy="'+(Y0-H*v[0]/12)+'" r="3.5" style="fill:var(--line)"/>';});
+  var cx=X0+W*s.V/12,cy=Y0-H*s.V/12;
+  o+='<path d="M'+cx+' '+Y0+' V'+cy+' H'+X0+'" style="fill:none;stroke:var(--s2);stroke-width:1.2;stroke-dasharray:4 3"/><circle cx="'+cx+'" cy="'+cy+'" r="6" style="fill:var(--s2)"/>';
+  return {svg:svg(340,470,o),I:I};
+}
+function pipeDiag(s){
+  var d=waterDiag({V:5,R:s.R}),o=d.o,I=5/s.R,y=336;
+  o+=T(8,322,"PUSH FIXED AT 5 V. TRY EACH PIPE","nlbl","start");
+  o+=T(70,y,"pipe (Ω)","lbl")+T(170,y,"current","lbl")+T(275,y,"current × pipe","lbl");
+  RS2.forEach(function(r,i){var yy=y+20+i*20,seen=((s.seen||0)>>i)&1,cur=r[0]===s.R,Ii=5/r[0];
+    if(cur)o+='<rect x="14" y="'+(yy-14)+'" width="312" height="19" rx="4" style="fill:var(--line);opacity:.35"/>';
+    o+=T(70,yy,r[1],"nlbl")+T(170,yy,seen?fx(Ii*1000,2)+" mA":"?","nlbl")+T(275,yy,seen?fV(Ii*r[0]):"?","nlbl");});
+  return {svg:svg(340,460,o),I:I};
+}
+function mkSeen(i){return function(s,v){s.R=v;s.seen=(s.seen||0)|(1<<i);};}
+
 /* ---------- quiz bank ---------- */
 var VL=[3,5,6,9,12],RL=[100,200,220,330,470,500,1000,2200,4700,10000];
 var bank=[
@@ -585,36 +609,60 @@ var bank=[
 ];
 
 (MODS.banks=MODS.banks||{}).basics=bank;
-MODS.push({id:"basics",n:1,title:"Voltage, current & resistance",blurb:"Start here. What electricity is doing in a wire, using water pipes as the picture. Ohm's law, resistors, reading their colour bands, and picking one for an LED.",mistakes:"A resistor that's too small for its job, an LED with no resistor.",needs:"",
+MODS.push({id:"basics",n:1,title:"Voltage, current & resistance",blurb:"Start here. What electricity is doing in a wire, using water pipes as the picture. You find the rule linking push, flow and pipe yourself (Ohm's law), then learn to read resistors, spot overheating, and pick one for an LED.",mistakes:"A resistor that's too small for its job, an LED with no resistor.",needs:"",
 steps:[
 {title:"Electricity as water in pipes",part:"Part 1 · The big picture",init:{V:5,R:1000},
  diag:function(s){var d=waterDiag(s);return {svg:d.svg,meters:[["Pressure (voltage)",fV(s.V),true],["Pipe (resistance)",fR(s.R),false],["Flow (current)",fI(d.I),d.I>1e-6]],
    now:"The pump pushes with "+fV(s.V)+" of 'pressure' through a pipe of "+fR(s.R)+". The flow is "+fI(d.I)+". Narrower pipe or weaker pump means less flow. Same circuit drawn underneath: battery, resistor, and the loop of wire."};},
  ctl:[{k:"V",type:"seg",label:"Pump / battery",opts:VS},{k:"R",type:"seg",label:"Pipe / resistor",opts:RSEL}],
  text:`<p>You can't see electricity, so use a picture you can: <b>water in a closed loop of pipe</b>. Every circuit idea in this course has a water version.</p>
+<p>Three things decide what the water does: how hard it is pushed, how much moves, and how narrow the pipe is. Electricity has the same three.</p>
 <table class="cmp"><tr><th>Water</th><th>Electricity</th><th>Unit</th></tr>
 <tr><td>Pump pressure</td><td><b>Voltage</b> (the push)</td><td>volts, V</td></tr>
 <tr><td>Flow rate</td><td><b>Current</b> (how much moves per second)</td><td>amps, A (mA = milliamp, a thousandth of an amp)</td></tr>
-<tr><td>Narrow pipe</td><td><b>Resistance</b> (holds the flow back)</td><td>ohms, Ω (kΩ = kilohm, a thousand ohms)</td></tr>
+<tr><td>Narrow pipe</td><td><b>Resistance</b> (holds the flow back). A <b>resistor</b> is a part made to add a known amount of it.</td><td>ohms, Ω (kΩ = kilohm, a thousand ohms)</td></tr>
 <tr><td>Pump</td><td><b>Battery</b></td><td></td></tr>
 <tr><td>Pipe</td><td><b>Wire</b></td><td></td></tr></table>
 <ul><li>Try the buttons. A stronger pump gives more flow.</li><li>A narrower pipe gives less flow.</li><li>Nothing flows unless the loop is complete.</li></ul>
 <div class="why"><span class="k">Say it with the real words</span><b>Voltage</b> pushes, <b>resistance</b> resists, and <b>current</b> is what results. More voltage means more current. More resistance means less current.</div>
-<div class="why"><span class="k">Reading the diagrams</span>The battery sits on the left. The long wire along the top is the <b>+ rail</b> (the battery's + side). The wire along the bottom is the <b>0 V rail</b>, also called <b>ground</b>. Current flows from + round the loop to 0 V. A <b>rail</b> is just a long wire held at one voltage.</div>
 <details class="reveal"><summary>Where the picture stops being accurate</summary><ul><li>Wires have almost no resistance, like a huge pipe.</li><li>What moves is electric charge (tiny electrons), and the loop is always full of it already. Nothing is used up. The battery just pushes it around.</li><li>A water pipe can leak out of a hole. A wire cannot: current only flows round a complete loop, and the same amount comes back to the battery as left it.</li></ul></details>`},
 
-{title:"Ohm's law",part:"Part 1 · The big picture",init:{V:5,R:1000},
- diag:function(s){var d=ohmDiag(s);return {svg:d.svg,meters:[["Voltage across it",fV(s.V),true],["Resistance",fR(s.R),false],["Current (V ÷ R)",fI(d.I),true]],
-   now:"I = V ÷ R = "+s.V+" ÷ "+s.R+" = "+d.I.toFixed(5).replace(/0+$/,"")+" A, which is "+fI(d.I)+". Double the voltage and the current doubles. Double the resistance and the current halves."};},
- ctl:[{k:"V",type:"seg",label:"Voltage",opts:VS},{k:"R",type:"seg",label:"Resistance",opts:[[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"],[4700,"4.7 kΩ"],[10000,"10 kΩ"]]}],
- text:`<p>One rule joins all three. It's called <b>Ohm's law</b>:</p>
+{title:"Push harder: what happens to the flow?",part:"Part 1 · Finding the rule",init:{V:3,R:1000},
+ diag:function(s){var d=pushDiag(s);return {svg:d.svg,meters:[["Push (voltage)",fV(s.V),true],["Flow (current)",fI(d.I),true],["Flow per volt of push",fI(d.I/s.V)+" per V",false]],
+   now:"Push of "+fV(s.V)+" gives a flow of "+fI(d.I)+". Every extra volt adds the same extra flow ("+fI(d.I/s.V)+"), so the dots fall on a straight line through zero."};},
+ ctl:[{k:"V",type:"seg",label:"Pump / battery",opts:VS}],
+ text:`<p>Start with one pipe, and change only the pump. <b>Question: if you push twice as hard, how much more water moves?</b></p>
+<ul><li>Press <b>1.5 V</b>, then <b>3 V</b>, then <b>6 V</b>. Watch the flow and the dot on the graph.</li><li>3 V is double 1.5 V. What happened to the flow?</li><li>6 V is double 3 V. What happened this time?</li></ul>
+<p>Twice the push gives <b>twice the flow</b>, three times gives three times. The last meter shows why: for this pipe, <b>every volt pushes the same amount of current</b>.</p>
+<div class="why"><span class="k">The real words</span>Current is <b>proportional</b> to voltage: double one and the other doubles. On the graph that is a straight line through zero.</div>
+<p>One question is left. That "flow per volt" number belongs to this pipe. A narrower pipe would give a smaller number. How do we measure the pipe itself? That's the next step.</p>`},
+
+{title:"Change the pipe: what is resistance?",part:"Part 1 · Finding the rule",init:{R:1000,seen:4},
+ diag:function(s){var d=pipeDiag(s);return {svg:d.svg,meters:[["Push (voltage)","5 V",false],["Pipe (resistance)",fR(s.R),false],["Flow (current)",fI(d.I),true],["Current × resistance",fV(d.I*s.R),true]],
+   now:"Pipe "+fR(s.R)+" with a push of 5 V: current "+fx(d.I*1000,2)+" mA. Now multiply: "+fx(d.I*1000,2)+" mA × "+fR(s.R)+" = "+fV(d.I*s.R)+". Try the other pipes and the table fills in. Is the last column ever different?"};},
+ ctl:[{k:"R",type:"seg",label:"Pipe / resistor",opts:RS2,set:function(s,v){var i=RS2.map(function(o){return o[0];}).indexOf(v);s.R=v;s.seen=(s.seen||0)|(1<<i);}}],
+ text:`<p>Now keep the push fixed at <b>5 V</b> and change only the pipe. <b>Question: how do you put a number on a pipe's narrowness?</b></p>
+<ul><li>Press each resistor in turn. The table records the current.</li><li>A narrower pipe (bigger ohms) gives a smaller current.</li><li>Look at the last column. Multiply the current by the resistance every time.</li></ul>
+<p>Every row gives the <b>same answer: 5 V, the push</b>. That isn't luck. It's what resistance <b>means</b>.</p>
+<div class="why"><span class="k">The real words</span><b>Resistance</b> is the voltage needed to push a current through. One <b>ohm (Ω)</b> is the pipe that needs 1 volt to pass 1 amp. A 1 kΩ resistor needs 1 V for 1 mA, so 5 V gives 5 mA, exactly what you saw.</div>
+<p>Written as a sum: <b>current × resistance = voltage</b>. That is the next step.</p>`},
+
+{title:"Ohm's law: the pattern, written down",part:"Part 1 · Finding the rule",init:{V:5,R:1000,ans:false},
+ diag:function(s){var d=ohmDiag(s);var sh=s.ans!==false;return {svg:d.svg,meters:[["Voltage across it",fV(s.V),true],["Resistance",fR(s.R),false],["Current (V ÷ R)",sh?fI(d.I):"?",sh]],
+   now:sh?"I = V ÷ R = "+s.V+" ÷ "+s.R+" = "+d.I.toFixed(5).replace(/0+$/,"")+" A, which is "+fI(d.I)+". Double the voltage and the current doubles. Double the resistance and the current halves.":"Work out the current yourself: voltage ÷ resistance. Then tick <b>Show the answer</b> to check."};},
+ ctl:[{k:"V",type:"seg",label:"Voltage",opts:VS},{k:"R",type:"seg",label:"Resistance",opts:[[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"],[4700,"4.7 kΩ"],[10000,"10 kΩ"]]},{k:"ans",type:"tog",label:"Show the answer"}],
+ text:`<p>You just found two patterns:</p>
+<ul><li>More push means proportionally more current.</li><li>Current × resistance always came out equal to the push.</li></ul>
+<p>Those are the same fact. Write the second one as an equation and you have <b>Ohm's law</b>:</p>
 <div class="formula">V = I × R</div>
-<ul><li><b>Current:</b> I = V ÷ R</li><li><b>Voltage:</b> V = I × R</li><li><b>Resistance:</b> R = V ÷ I</li></ul>
+<p>Read it as: <b>the push needed = the flow you want × how hard the pipe resists.</b> Rearrange it to answer whichever question you have:</p>
+<ul><li>Know the push and the pipe, want the flow? <b>I = V ÷ R</b></li><li>Know the flow and the pipe, want the push? <b>V = I × R</b></li><li>Know the push and the flow, want the pipe? <b>R = V ÷ I</b></li></ul>
 <p>Use volts, amps and ohms. The prefixes shrink or grow a unit: <b>k</b> (kilo) = × 1000, <b>m</b> (milli) = ÷ 1000, <b>µ</b> (micro) = ÷ 1,000,000. Convert first: <b>5 mA = 0.005 A</b> and <b>2.2 kΩ = 2200 Ω</b>.</p>
 <h3>Worked example</h3>
 <ul><li>9 V across 4.7 kΩ.</li><li>I = 9 ÷ 4700 = 0.0019 A.</li><li>That's <b>1.9 mA</b>.</li></ul>
 <div class="why"><span class="k">Water version</span>Same pump, half-width pipe: half the flow. Ohm's law just says exactly how much.</div>
-<p class="hint">Try: 12 V and 330 Ω. Predict the current, then check the meter.</p>`},
+<div class="why"><span class="k">Reading the diagrams</span>This is the same circuit drawn as a circuit diagram. The battery sits on the left. The long wire along the top is the <b>+ rail</b> (the battery's + side). The wire along the bottom is the <b>0 V rail</b>, also called <b>ground</b>. Current flows from + round the loop to 0 V. A <b>rail</b> is just a long wire held at one voltage.</div>
+<p class="hint">Predict, then check: leave <b>Show the answer</b> off, pick 12 V and 330 Ω, work out the current, then tick the box.</p>`},
 
 {title:"Reading a resistor's colour bands",part:"Part 2 · Resistors in real life",init:{d1:4,d2:7,m:2},
  diag:function(s){var d=bandDiag(s);return {svg:d.svg,meters:[["Value",fR(d.val),true],["Digits",s.d1+" "+s.d2,false],["Zeros",String(s.m),false]],
@@ -628,11 +676,14 @@ steps:[
 
 {title:"Power: resistors get hot",part:"Part 2 · Resistors in real life",mist:true,init:{V:9,R:100},
  diag:function(s){var d=powDiag(s);var st=d.P>0.6?"burnt":d.P>0.25?"overloaded":"fine";return {svg:d.svg,bad:d.P>0.25,
-   meters:[["Heat produced",fx(d.P,2)+" W",d.P>0.25?"warn":true],["Rating of this resistor","0.25 W",false],["Status",st,d.P>0.25?"warn":true]],
+   meters:[["Push × flow",fV(s.V)+" × "+fI(d.I),false],["Heat produced",fx(d.P,2)+" W",d.P>0.25?"warn":true],["Rating of this resistor","0.25 W",false],["Status",st,d.P>0.25?"warn":true]],
    now:d.P>0.6?"Far over its rating. The resistor would cook, smoke and fail. "+fx(d.P,2)+" W is "+Math.round(d.P/0.25)+"× what it can take.":d.P>0.25?"Over the 0.25 W rating: it gets too hot to touch and its value drifts. Use a higher-resistance part, or a bigger-wattage resistor.":"Within its rating: "+fx(d.P,2)+" W is "+Math.round(d.P/0.25*100)+"% of what a quarter-watt resistor can take."};},
  ctl:[{k:"V",type:"seg",label:"Voltage",opts:[[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"R",type:"seg",label:"Resistor",opts:[[47,"47 Ω"],[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"]]}],
- text:`<p>Current through resistance makes <b>heat</b>. The energy per second is <b>power</b>, measured in <b>watts (W)</b>:</p>
-<div class="formula">P = V × I &nbsp;&nbsp; or &nbsp;&nbsp; P = V² ÷ R</div>
+ text:`<p><b>Where does the pump's effort go?</b> Pushing water through a narrow pipe is hard work, and the friction heats the pipe. How much heat per second depends on two things: how hard you push, and how much water you push. Push twice as hard, or move twice as much, and you get twice the heat.</p>
+<p>So heat per second is <b>push × flow</b>. That is <b>power</b>, measured in <b>watts (W)</b>: 1 W is 1 volt pushing 1 amp.</p>
+<div class="formula">P = V × I</div>
+<p>Ohm's law gives I = V ÷ R. Put that in and you get a handy second form, for when you know the voltage and resistance but not the current:</p>
+<div class="formula">P = V × V ÷ R = V² ÷ R</div>
 <p>Typical hobby resistors are rated <b>¼ W (0.25 W)</b>. Go over that and they overheat.</p>
 <div class="why bad"><span class="k">The mistake</span>Choosing a resistor only by its ohms. A 100 Ω across 9 V is "correct" in value, but it makes 0.81 W: over three times the rating.</div>
 <div class="why fix"><span class="k">The fix</span>Work out P = V² ÷ R first. Stay under about half the rating. If it's too much, raise the resistance, or use a ½ W, 1 W or bigger part.</div>
@@ -644,7 +695,8 @@ steps:[
    now:d.burnt?"Nothing limits the current, so far more than the LED can take flows. It burns out in a flash.":(d.I<5e-4?"Very little current: the LED is dim or off.":"The LED takes about 2 V, so the resistor gets the other "+fV(s.Vs-2)+". I = "+fx(s.Vs-2,1)+" ÷ "+s.R+" = "+fI(d.I)+".")};},
  ctl:[{k:"Vs",type:"seg",label:"Supply",opts:[[3.3,"3.3 V"],[5,"5 V"],[9,"9 V"],[12,"12 V"]]},{k:"R",type:"seg",label:"Resistor",opts:[[0,"none ✗",1],[100,"100 Ω"],[330,"330 Ω"],[1000,"1 kΩ"],[4700,"4.7 kΩ"]]}],
  text:`<p>An <b>LED</b> (light-emitting diode) is a tiny lamp that only works one way round (the Other basic parts module covers it properly). It isn't like a resistor. Once it conducts, it keeps a <b>roughly fixed voltage across it</b> (about 2 V for red: its <b>voltage drop</b>, the voltage it uses up) and will take <b>as much current as you let it</b>. Too much and it dies.</p>
-<p>So a <b>series resistor</b> (one placed in the same loop, one after the other) sets the current. It gets whatever voltage the LED doesn't:</p>
+<p>So we add a <b>series resistor</b> (one in the same loop, one after the other) to hold the current back. Work it out in three moves:</p>
+<ul><li><b>1. Share the push.</b> The same current goes through both parts, and the supply's push is used up between them. The LED uses about 2 V, so the resistor gets what is left: <b>supply − 2 V</b>. (The Series and parallel module shows exactly why.)</li><li><b>2. Pick the current</b> you want, say 10 mA.</li><li><b>3. Apply Ohm's law to the resistor alone</b>: R = V ÷ I, using its share of the voltage.</li></ul>
 <div class="formula">R = (supply − LED drop) ÷ current</div>
 <ul><li>5 V supply, red LED, 10 mA wanted.</li><li>Resistor gets 5 − 2 = 3 V.</li><li>R = 3 ÷ 0.01 = <b>300 Ω</b>. Round to the next standard value, 330 Ω.</li></ul>
 <p>Most small LEDs are happy at <b>5 to 20 mA</b>.</p>
@@ -655,7 +707,7 @@ steps:[
 
 {final:true,title:"Explain it back",part:"Finish",
  text:`<details class="reveal"><summary>1. What do voltage, current and resistance mean, in water terms and electrical terms?</summary><p>Voltage is the push (pump pressure). Current is the flow (how much moves per second). Resistance is how hard it is to push through (a narrow pipe).</p></details>
-<details class="reveal"><summary>2. State Ohm's law three ways.</summary><p>V = I × R, I = V ÷ R, R = V ÷ I. Use volts, amps, ohms.</p></details>
+<details class="reveal"><summary>2. What is Ohm's law, and how did you find it?</summary><p>V = I × R (also I = V ÷ R and R = V ÷ I), in volts, amps and ohms. Doubling the push doubled the current, and current × resistance always equalled the push. Resistance is exactly that: volts needed per amp.</p></details>
 <details class="reveal"><summary>3. How do you read a 3-band resistor?</summary><p>Two digits, then that many zeros. Brown, black, red is 10 followed by two zeros: 1000 Ω.</p></details>
 <details class="reveal"><summary>4. Why does a resistor have a power rating?</summary><p>Current through it makes heat, P = V × I. A ¼ W resistor can only shed 0.25 W before it overheats.</p></details>
 <details class="reveal"><summary>5. How do you pick the resistor for an LED?</summary><p>R = (supply − LED drop) ÷ wanted current. The resistor takes the voltage the LED doesn't.</p></details>
@@ -776,13 +828,14 @@ steps:[
    now:"τ = "+fR(s.R)+" × "+fC(s.C)+" = "+fT(tau)+". The clock here runs "+(tau*5/6>=1?Math.round(tau*5/6)+"× faster":(Math.round(100/(tau*5/6))/100)+"× slower")+" than real time so that every setting takes about 6 seconds to fill. After one τ the capacitor is at 63%; after 5τ it's about 99% full."};},
  ctl:[{k:"R",type:"seg",label:"Resistor",opts:[[1000,"1 kΩ"],[10000,"10 kΩ"],[47000,"47 kΩ"]]},{k:"C",type:"seg",label:"Capacitor",opts:[[10e-6,"10 µF"],[100e-6,"100 µF"],[470e-6,"470 µF"]]},{type:"act",label:"Empty it and start again",run:function(s){s.v=0;s.t=0;s.t63=null;hclear(s);}}],
  scope:function(s){var tau=s.R*s.C;return {panels:[{title:"Capacitor voltage",unit:"V",min:0,max:5,ticks:[0,2.5,5],series:[{key:"v",name:"Capacitor voltage",c:1}],refs:[{v:3.16,label:"63% = one τ"}]},{title:"Current",unit:"mA",min:0,max:5/s.R*1000,ticks:[0,5/s.R*500,5/s.R*1000],series:[{key:"i",name:"Charging current",c:2}]}],win:tau*6};},
- text:`<p>How fast does the tank fill? Two things set it:</p>
-<ul><li><b>Pipe width:</b> a narrower pipe (more resistance R) is slower.</li><li><b>Tank size:</b> a bigger tank (more capacitance C) is slower.</li></ul>
+ text:`<p><b>Question: what decides how long the tank takes to fill?</b> Run two experiments. Each time, press <b>Empty it and start again</b> and read <b>Reached 63% at</b> (time in the real circuit).</p>
+<ul><li><b>Start:</b> 1 kΩ and 10 µF. Note the time.</li><li><b>Wider resistance:</b> change 1 kΩ to 10 kΩ, ten times bigger. The time becomes ten times longer.</li><li><b>Bigger tank:</b> go back to 1 kΩ and change 10 µF to 100 µF. Again ten times longer.</li></ul>
+<p>A narrower pipe (more resistance R) slows the filling, and a bigger tank (more capacitance C) slows it too. The time scales with R and with C, so with <b>R × C</b>. That product gets its own name, the <b>time constant</b>, written τ (the Greek letter tau):</p>
 <div class="formula">τ = R × C</div>
-<p>τ (the Greek letter tau, "time constant") is measured in <b>seconds</b> when R is in ohms and C in farads.</p>
-<ul><li>After <b>1τ</b>: about 63% charged.</li><li>After <b>5τ</b>: about 99%, "full" for practical purposes.</li></ul>
-<p>It fills fast at first, when the voltage gap is big, and slows as it nears full. The same shape appears in every RC circuit.</p>
-<p class="hint">Example: 10 kΩ × 100 µF = 10 000 Ω × 0.0001 F = 1 s.</p>`},
+<p>τ comes out in <b>seconds</b> when R is in ohms and C is in farads. Example: 10 kΩ × 100 µF = 10 000 Ω × 0.0001 F = 1 s.</p>
+<h3>Why 63%?</h3>
+<ul><li>At the start the tank is empty, so the push is biggest and it fills fast.</li><li>As it fills, the capacitor pushes back, the gap to the supply shrinks, and the current shrinks with it. So it fills slower and slower.</li><li>In every time τ, it covers <b>63% of the distance still left</b>. After 1τ: 63% full. After 2τ: 63% of the rest, so 86%. After 5τ: about 99%, "full" for practical purposes.</li></ul>
+<p>The same shape appears in every RC circuit. (The curve is called an <b>exponential</b>.)</p>`},
 
 {title:"Measuring a mystery capacitor",part:"Part 2 · Measuring",init:{v:0,cap:"b",ans:false,t63:null},sim:mysSim,
  onChange:function(s){s.v=0;s.t=0;s.t63=null;hclear(s);},
@@ -1307,25 +1360,43 @@ var bank=[
 (MODS.banks=MODS.banks||{}).kirch=bank;
 MODS.push({id:"kirch",n:5,title:"Series, parallel, KCL and KVL",blurb:"What happens when resistors share a path or split it. Voltage dividers, the two Kirchhoff laws, and working through a combined circuit.",mistakes:"Adding too many loads in parallel, mixing up what's shared (current or voltage).",needs:"Voltage, current & resistance",
 steps:[
-{title:"Series: one path, shared voltage",part:"Part 1 · Series and parallel",init:{V:9,R1:1000,R2:2200},
- diag:function(s){var d=serDiag(s);return {svg:d.svg,meters:[["Same current everywhere",fI(d.I),true],["Drop across R1",fV(d.v1),false],["Drop across R2",fV(d.v2),false],["R1 + R2",fR(s.R1+s.R2),false],["Drops add up to",fx(d.v1+d.v2,2)+" V = battery",true]],
-   now:"One single path, so <b>the same current</b> flows through both: "+fI(d.I)+". The battery's "+s.V+" V is shared out in proportion to resistance. Bigger resistance, bigger share ("+fV(d.v1)+" and "+fV(d.v2)+")."};},
+{title:"Series: one path",part:"Part 1 · Series and parallel",init:{V:9,R1:1000,R2:2200},
+ diag:function(s){var d=serDiag(s);return {svg:d.svg,meters:[["Current through R1",fI(d.I),true],["Current through R2",fI(d.I),true],["Total resistance R1 + R2",fR(s.R1+s.R2),false],["Battery ÷ (R1 + R2)",fI(d.I),true]],
+   now:"One single path, so <b>the same current</b> flows through both: "+fI(d.I)+". The two resistors together act like one of "+fR(s.R1)+" + "+fR(s.R2)+" = "+fR(s.R1+s.R2)+", and Ohm's law gives "+s.V+" ÷ "+(s.R1+s.R2)+" = "+fI(d.I)+"."};},
  ctl:[{k:"V",type:"seg",label:"Battery",opts:VSEL},{k:"R1",type:"seg",label:"R1",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL}],
- text:`<p>Resistors <b>in series</b> are joined end to end, one after another. There's only <b>one path</b> for the current.</p>
-<ul><li><b>Same current</b> through all of them.</li><li>The <b>voltages add up</b> to the supply.</li><li><b>Total resistance</b> is the sum: R<sub>total</sub> = R1 + R2.</li></ul>
-<div class="formula">V<sub>R2</sub> = V × R2 ÷ (R1 + R2)</div>
-<p>That last one is the <b>voltage divider</b>: each resistor takes a share of the voltage equal to its share of the resistance.</p>
-<div class="why"><span class="k">Water version</span>Two narrow pipes in a row. Same flow through both. The pump's push is shared: the narrower pipe uses up more of the pressure.</div>
-<p class="hint">Change R1 and R2 and watch the two drops. Do they always add up to the battery?</p>`},
+ text:`<p>Put <b>two</b> resistors in the loop, one after the other. They are <b>in series</b>. There is only one path for the current. <b>Question: what stays the same, and what adds up?</b></p>
+<ul><li>Compare the two current meters. Change R1 and R2. Are they ever different?</li><li>Never. Water can't pile up or vanish inside a single pipe, so the same flow passes every point.</li><li>Two narrow pipes in a row are harder to push through than either one alone. The resistances <b>add</b>.</li></ul>
+<div class="formula">R<sub>total</sub> = R1 + R2</div>
+<p>Now Ohm's law finishes the job. The battery pushes through a resistance of R1 + R2, so the current is <b>I = V ÷ (R1 + R2)</b>. The last meter checks it.</p>
+<div class="why"><span class="k">Water version</span>Two narrow pipes in a row. The same flow goes through both, and together they hold it back more than one would.</div>
+<p class="hint">Next question: the current is the same, but is the battery's push shared out equally between the two?</p>`},
+
+{title:"Series: who gets how much of the push?",part:"Part 1 · Series and parallel",init:{V:9,R1:1000,R2:2200},
+ diag:function(s){var d=serDiag(s),Rt=s.R1+s.R2;return {svg:d.svg,meters:[["Drop across R1",fV(d.v1),false],["Drop across R2",fV(d.v2),false],["R2's share of the resistance",fx(100*s.R2/Rt,0)+" %",true],["R2's share of the voltage",fx(100*d.v2/s.V,0)+" %",true],["Drops add up to",fx(d.v1+d.v2,2)+" V = battery",true]],
+   now:"The same current ("+fI(d.I)+") passes both, so each resistor uses up I × its own resistance: "+fV(d.v1)+" and "+fV(d.v2)+". R2 is "+fx(100*s.R2/Rt,0)+"% of the resistance and takes "+fx(100*d.v2/s.V,0)+"% of the voltage. The shares match."};},
+ ctl:[{k:"V",type:"seg",label:"Battery",opts:VSEL},{k:"R1",type:"seg",label:"R1",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL}],
+ text:`<p>The current is the same in both resistors. <b>Question: how much of the battery's push does each one use up?</b> (A resistor's <b>drop</b> is the voltage across it, the push it uses up.)</p>
+<ul><li>Ohm's law works on each resistor on its own: drop = I × its resistance.</li><li>I is the same for both, so the drops are in the same ratio as the resistances. The bigger resistor takes the bigger share.</li><li>Watch the two percentage meters. Change R1 and R2 and try to make them differ.</li></ul>
+<p>Put numbers on it. The current is V ÷ (R1 + R2), and R2's drop is that current times R2:</p>
+<div class="formula">V<sub>R2</sub> = V ÷ (R1 + R2) × R2 = V × R2 ÷ (R1 + R2)</div>
+<p>This is the <b>voltage divider</b>. Two resistors in series chop a bigger voltage into a smaller one, and each takes a share equal to its share of the resistance.</p>
+<h3>Worked example</h3>
+<ul><li>9 V battery, R1 = 1 kΩ, R2 = 2.2 kΩ.</li><li>Total = 3.2 kΩ, so R2's share is 2.2 ÷ 3.2 = 0.6875.</li><li>V<sub>R2</sub> = 9 × 0.6875 = <b>6.19 V</b>. R1 gets the other 2.81 V.</li></ul>
+<div class="why"><span class="k">Why it's useful</span>You can make any smaller voltage from a bigger one, and a sensor whose resistance changes becomes a voltage that changes. You'll use this idea again in the parts and bridge modules.</div>
+<div class="why"><span class="k">Water version</span>Two narrow pipes in a row. The same flow goes through both. The pump's push is used up along the way, and the narrower pipe uses up more of it.</div>
+<p class="hint">The two drops always add up to the battery. Is that a coincidence? The voltage-law step explains.</p>`},
 
 {title:"Parallel: shared voltage, split current",part:"Part 1 · Series and parallel",init:{V:9,R1:1000,R2:2200,R3:1000},
  diag:function(s){var d=parDiag(s,2);return {svg:d.svg,meters:[["Voltage on every branch",fV(s.V),true],["I1",fI(d.Is[0]),false],["I2",fI(d.Is[1]),false],["Total from battery",fI(d.It),true],["Total resistance",fR(Math.round(d.Rt*10)/10),false]],
    now:"Each branch is wired straight across the battery, so <b>each gets the full "+s.V+" V</b>. The currents add: "+fI(d.Is[0])+" + "+fI(d.Is[1])+" = "+fI(d.It)+". The combined resistance ("+fR(Math.round(d.Rt))+") is <b>smaller than either resistor</b>, because there are now two paths."};},
  ctl:[{k:"V",type:"seg",label:"Battery",opts:VSEL},{k:"R1",type:"seg",label:"R1",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL}],
- text:`<p>Resistors <b>in parallel</b> are side by side, each connected across the same two points.</p>
-<ul><li><b>Same voltage</b> across every branch.</li><li>The <b>currents add</b> up.</li><li>Total resistance is <b>smaller than the smallest</b>.</li></ul>
-<div class="formula">1/R<sub>total</sub> = 1/R1 + 1/R2 &nbsp;&nbsp; or &nbsp;&nbsp; R<sub>total</sub> = R1 × R2 ÷ (R1 + R2)</div>
-<p>Two equal resistors in parallel give <b>half</b> of one. For two, "product over sum" is the quick way.</p>
+ text:`<p>Now put the resistors <b>side by side</b>, each joined across the same two points. That is <b>in parallel</b>. <b>Question: what stays the same, and what adds up?</b></p>
+<ul><li>Each branch is wired straight across the battery, so each gets the <b>full push</b>: the same voltage.</li><li>Each branch passes its own current, V ÷ its resistance. The battery supplies all of them, so the <b>currents add</b>.</li><li>More paths make it easier for the current to flow, so the total resistance goes <b>down</b>.</li></ul>
+<p>Put numbers on it. Call the whole thing one resistor R<sub>total</sub>, so the battery current is V ÷ R<sub>total</sub>. That must equal the branch currents added:</p>
+<div class="formula">V ÷ R<sub>total</sub> = V ÷ R1 + V ÷ R2</div>
+<p>V appears in every term, so divide it away:</p>
+<div class="formula">1/R<sub>total</sub> = 1/R1 + 1/R2</div>
+<p>For two resistors, tidying that up gives a quicker form: <b>R<sub>total</sub> = R1 × R2 ÷ (R1 + R2)</b> ("product over sum"). Two equal resistors in parallel give <b>half</b> of one.</p>
 <div class="why"><span class="k">Water version</span>Two pipes side by side between the same two tanks. Both get the same pressure difference, and together they carry more water than either alone.</div>`},
 
 {title:"Three branches, and the shortcut",part:"Part 1 · Series and parallel",init:{V:9,R1:1000,R2:2200,R3:470},
@@ -1343,9 +1414,8 @@ steps:[
    return {svg:d.svg,meters:[["Current into the junction",fI(sum),true],["I1",sh(0),h!==1],["I2",sh(1),h!==2],["I3",sh(2),h!==3],["I1 + I2 + I3",s.ans||h===0?fI(sum):"?",s.ans||h===0]],
    now:h===0?"At the junction, current in = current out: "+fI(sum)+" arrives and splits into "+fI(d.Is[0])+", "+fI(d.Is[1])+" and "+fI(d.Is[2])+". No current is created or lost.":(s.ans?"The hidden current is: total − the other two. KCL found it.":"One branch is hidden. Use the total and the other two to work it out: <b>unknown = total − the known branches</b>. Then tick 'Show the answer' to check.")};},
  ctl:[{k:"hide",type:"seg",label:"Hide a branch",opts:[[0,"none"],[1,"I1"],[2,"I2"],[3,"I3"]]},{k:"ans",type:"tog",label:"Show the answer"},{k:"R1",type:"seg",label:"R1",opts:RSEL},{k:"R2",type:"seg",label:"R2",opts:RSEL},{k:"R3",type:"seg",label:"R3",opts:RSEL}],
- text:`<p><b>Kirchhoff's current law (KCL):</b></p>
+ text:`<p>In the parallel steps, the battery's current always equalled the branch currents added together. <b>Is that a coincidence?</b> No. A junction is a point where wires meet, and charge can't pile up there or appear from nowhere, so whatever flows in must flow out. This is <b>Kirchhoff's current law (KCL)</b>:</p>
 <div class="formula">current in = current out (at any junction)</div>
-<p>Charge isn't created or destroyed, so whatever flows into a junction must flow out.</p>
 <ul><li>Total current from the battery = I1 + I2 + I3.</li><li>If you know all but one, subtract to find it.</li></ul>
 <div class="why"><span class="k">Water version</span>A pipe splitting into three. Whatever flows into the junction flows out again. Water can't vanish or appear.</div>
 <p class="hint">Hide one branch, work it out, then check.</p>`},
@@ -1355,10 +1425,11 @@ steps:[
    return {svg:d.svg,meters:[["You are",STN[p],true],["Height (voltage) now",fx(d.h[p],2)+" V",true],["Last change",p===0?"–":(ch>=0?"+":"−")+fx(Math.abs(ch),2)+" V",false],["Total so far",p===4?"0.00 V: back at the start ✓":fx(d.h[p],2)+" V",p===4]],
    now:p===4?"The climb of +"+s.V+" V and the three drops add up to zero: "+s.V+" − "+fx(d.d[0],2)+" − "+fx(d.d[1],2)+" − "+fx(d.d[2],2)+" = 0. You're back where you started, so the net change has to be zero.":"Slide along the loop. The battery lifts you up by "+s.V+" V. Each resistor drops you down by its share."};},
  ctl:[{k:"p",type:"range",label:"Walk round the loop",min:0,max:4,step:1,fmt:function(v){return ["start","after battery","after R1","after R2","after R3"][v];}},{k:"set",type:"seg",label:"Resistors",opts:[[1,"1k, 2k, 3k"],[2,"all 2k"],[3,"3k, 1k, 2k"]]},{k:"V",type:"seg",label:"Battery",opts:VSEL.concat([[12,"12 V"]]).slice(0,3)}],
- text:`<p><b>Kirchhoff's voltage law (KVL):</b></p>
+ text:`<p>In the series steps, the drops always added up to the battery voltage. <b>Is that a coincidence?</b> Think of the voltage at each point in the loop as a <b>height</b>. Walk round the loop and watch your height:</p>
+<ul><li>The battery <b>lifts</b> you by its voltage.</li><li>Each resistor <b>lowers</b> you by its drop, I × R.</li><li>You finish back where you started, so your height is the same as at the beginning. The climbs and the falls must cancel.</li></ul>
+<p>If they didn't, the loop would be giving out energy for nothing, or going round for ever with nothing to hold it back. This is <b>Kirchhoff's voltage law (KVL)</b>:</p>
 <div class="formula">going all the way round any loop, the voltage changes add up to zero</div>
-<ul><li>The battery <b>raises</b> you by its voltage.</li><li>Each resistor <b>drops</b> you by I × R.</li><li>Back where you started, you're at the same level. So the rises equal the falls.</li></ul>
-<p>That's why in the series step the drops added up to the battery voltage. KVL is that fact stated as a rule.</p>
+<p>It is the reason the series drops add to the battery voltage, and it is what the voltage divider was built on.</p>
 <div class="why"><span class="k">Water version</span>Walk a closed track with hills. You can climb and drop as much as you like, but when you get back to the start, your total change in height is zero. The pump is the lift, the resistors are the slopes down.</div>
 <p class="hint">Drag the slider and read off the running total.</p>`},
 
@@ -1980,7 +2051,9 @@ steps:[
  diag:function(s){var tau=s.L/(s.R+10);return {svg:coilDiag(s),meters:[["τ = L ÷ R",fT(tau),true],["Final current",fI(3.1/(s.R+10)),true],["Coil current",fI(s.i),s.i>1e-4]],now:"A bigger coil (L) or a smaller resistance (R) means a slower rise. After 1 τ the current reaches 63% of its final value, and after 5 τ it's basically there: the same rule as the capacitor."};},
  ctl:[{k:"sw",type:"tog",label:"Switch"},{k:"R",type:"seg",label:"R",opts:[[47,"47 Ω"],[100,"100 Ω"],[220,"220 Ω"]]},{k:"L",type:"seg",label:"L",opts:[[0.1,"100 mH"],[0.47,"470 mH"]]}],
  scope:function(s){return {panels:coilPanels(s,70),win:s.win||0.008};},
- text:`<p>Inductance is measured in <b>henries (H)</b>. 100 mH is 0.1 H.</p>
+ text:`<p><b>Question: what decides how fast the current builds up?</b> Press the switch, watch the scope, then change one thing at a time and press it again.</p>
+<ul><li>Change L from 100 mH to 470 mH: the build-up gets <b>slower</b>. A bigger coil resists change more.</li><li>Change R from 47 Ω to 220 Ω: the build-up gets <b>faster</b>. A bigger R means a smaller final current (Ohm's law again), so there is less to build up.</li></ul>
+<p>Time grows with L and shrinks with R, so it scales with <b>L ÷ R</b>. That is the <b>time constant</b> τ of a coil. Inductance L is measured in <b>henries (H)</b>; 100 mH is 0.1 H.</p>
 <div class="formula">τ = L ÷ R &nbsp;&nbsp; 0.1 H ÷ 110 Ω ≈ 0.9 ms</div>
 <p>(110 Ω = the 100 Ω resistor plus about 10 Ω of wire in the coil itself.)</p>
 <p>Notice the difference from RC: for a capacitor, a <b>bigger</b> R makes it slower. For an inductor, a bigger R makes it <b>faster</b>, because the final current is smaller, so there's less to build up.</p>
@@ -3435,7 +3508,7 @@ window.__cfs={MODS:MODS,S:S,go:function(m,i){MOD=modById(m);cur=i;},render:funct
 var v0=load("view",null);if(v0&&modById(v0))openMod(v0);else renderHome();
 requestAnimationFrame(loop);
 /* ======================= GitHub Pages extras: version, menu, full screen, self-update ======================= */
-const VERSION='v5 · 25 Nov 2026';
+const VERSION='v6 · 28 Nov 2026';
 (function(){
   var css=document.createElement("style");
   css.textContent=".pbar{display:flex;gap:8px;align-items:center}.mbtn{font:600 15px var(--mono);border:1.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 11px;cursor:pointer}"+
